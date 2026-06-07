@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, ArrowRight, Activity } from "lucide-react";
 import { toast } from "sonner";
 import { upsertCharacterArc } from "@/lib/arc.functions";
+import { useAutosave } from "@/hooks/use-autosave";
+import { SaveStatus } from "./SaveStatus";
 import { TMHBadge } from "./TMHBadge";
 import { tmhLabel, tmhVar } from "./tmh";
 
