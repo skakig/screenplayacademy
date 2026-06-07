@@ -285,7 +285,7 @@ function BlockEditor({
   const [val, setVal] = useState<string>(block.content ?? "");
   const ref = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => { setVal(block.content); }, [block.content]);
+  useEffect(() => { setVal(block.content ?? ""); }, [block.content]);
 
   const flush = () => { if (val !== block.content) onUpdate({ content: val }); };
 
