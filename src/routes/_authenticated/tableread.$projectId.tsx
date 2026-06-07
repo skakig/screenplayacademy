@@ -14,6 +14,7 @@ import { Mic, Loader2, Sparkles, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { generateTableRead, refreshTableReadUrl } from "@/lib/tableread.functions";
+import { listElevenLabsVoices } from "@/lib/elevenlabs-voices.functions";
 
 export const Route = createFileRoute("/_authenticated/tableread/$projectId")({
   head: () => ({ meta: [{ title: "Table Read — SceneSmith AI" }] }),
@@ -25,6 +26,14 @@ function TableRead() {
   const qc = useQueryClient();
   const callGen = useServerFn(generateTableRead);
   const callRefresh = useServerFn(refreshTableReadUrl);
+  const callVoiceList = useServerFn(listElevenLabsVoices);
+
+  const voicesQ = useQuery({
+    queryKey: ["elevenlabs-voices"],
+    queryFn: () => callVoiceList(),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
 
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
@@ -99,12 +108,17 @@ function TableRead() {
             {characters.map((c: any) => (
               <div key={c.id} className="grid grid-cols-[1fr_1.4fr] gap-2 items-center">
                 <span className="text-xs font-medium truncate">{c.name}</span>
-                <Input
+                <Select
                   value={voiceMap[c.id] ?? c.elevenlabs_voice_id ?? ""}
-                  onChange={(e) => setVoiceMap({ ...voiceMap, [c.id]: e.target.value })}
-                  placeholder="ElevenLabs voice ID"
-                  className="h-8 text-xs"
-                />
+                  onValueChange={(v) => setVoiceMap({ ...voiceMap, [c.id]: v })}
+                >
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={voicesQ.isLoading ? "Loading…" : "Auto"} /></SelectTrigger>
+                  <SelectContent>
+                    {(voicesQ.data?.voices ?? []).map((v) => (
+                      <SelectItem key={v.voice_id} value={v.voice_id}>{v.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             ))}
           </div>
