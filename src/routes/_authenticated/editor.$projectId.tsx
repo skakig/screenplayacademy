@@ -16,6 +16,18 @@ import { aiAssist } from "@/lib/ai.functions";
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
   component: Editor,
+  errorComponent: ({ error, reset }) => (
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="max-w-md text-center space-y-3">
+        <h2 className="text-xl font-semibold">The editor hit a snag</h2>
+        <p className="text-sm text-muted-foreground break-words">{error?.message ?? "Unknown error"}</p>
+        <div className="flex gap-2 justify-center">
+          <button onClick={reset} className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm">Try again</button>
+          <a href="/dashboard" className="px-4 py-2 rounded-md border text-sm">Dashboard</a>
+        </div>
+      </div>
+    </div>
+  ),
 });
 
 const BLOCK_TYPES = [
@@ -270,10 +282,10 @@ function BlockEditor({
   focusBlockId: string | null;
   onFocusDone: () => void;
 }) {
-  const [val, setVal] = useState(block.content);
+  const [val, setVal] = useState<string>(block.content ?? "");
   const ref = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => { setVal(block.content); }, [block.content]);
+  useEffect(() => { setVal(block.content ?? ""); }, [block.content]);
 
   const flush = () => { if (val !== block.content) onUpdate({ content: val }); };
 
@@ -463,7 +475,7 @@ function BlockEditor({
       {/* Block controls */}
       <div className="absolute -left-12 top-0 opacity-0 group-hover:opacity-100 transition flex flex-col gap-0.5 font-sans">
         <Select value={block.block_type} onValueChange={(v) => onUpdate({ block_type: v })}>
-          <SelectTrigger className="h-6 w-10 text-[10px] px-1"><span>{block.block_type[0].toUpperCase()}</span></SelectTrigger>
+          <SelectTrigger className="h-6 w-10 text-[10px] px-1"><span>{(block.block_type || "a")[0].toUpperCase()}</span></SelectTrigger>
           <SelectContent>{BLOCK_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
         </Select>
         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onDelete}>
@@ -475,8 +487,8 @@ function BlockEditor({
 }
 
 function formatExport(b: any): string {
-  const c = b.content;
-  switch (b.block_type) {
+  const c = String(b?.content ?? "");
+  switch (b?.block_type) {
     case "scene_heading": return c.toUpperCase();
     case "character": return `\t\t\t${c.toUpperCase()}`;
     case "dialogue": return `\t\t${c}`;
