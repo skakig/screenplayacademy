@@ -97,77 +97,389 @@ export type Database = {
         }
         Relationships: []
       }
+      character_relationships: {
+        Row: {
+          character_id: string
+          conflict_level: number | null
+          created_at: string
+          id: string
+          other_wants: string | null
+          power_dynamic: string | null
+          private_truth: string | null
+          project_id: string
+          public_dynamic: string | null
+          related_character_id: string
+          relationship_arc: string | null
+          relationship_type: string | null
+          secret_between: string | null
+          trust_level: number | null
+          updated_at: string
+          wants_from_other: string | null
+        }
+        Insert: {
+          character_id: string
+          conflict_level?: number | null
+          created_at?: string
+          id?: string
+          other_wants?: string | null
+          power_dynamic?: string | null
+          private_truth?: string | null
+          project_id: string
+          public_dynamic?: string | null
+          related_character_id: string
+          relationship_arc?: string | null
+          relationship_type?: string | null
+          secret_between?: string | null
+          trust_level?: number | null
+          updated_at?: string
+          wants_from_other?: string | null
+        }
+        Update: {
+          character_id?: string
+          conflict_level?: number | null
+          created_at?: string
+          id?: string
+          other_wants?: string | null
+          power_dynamic?: string | null
+          private_truth?: string | null
+          project_id?: string
+          public_dynamic?: string | null
+          related_character_id?: string
+          relationship_arc?: string | null
+          relationship_type?: string | null
+          secret_between?: string | null
+          trust_level?: number | null
+          updated_at?: string
+          wants_from_other?: string | null
+        }
+        Relationships: []
+      }
+      character_scene_states: {
+        Row: {
+          character_id: string
+          continuity_notes: string | null
+          created_at: string
+          emotional_state: string | null
+          fear_in_scene: string | null
+          goal_in_scene: string | null
+          id: string
+          moral_pressure: string | null
+          project_id: string
+          relationship_shift: string | null
+          scene_id: string
+          secret_status: string | null
+          tactic: string | null
+          tmh_level: number | null
+          updated_at: string
+        }
+        Insert: {
+          character_id: string
+          continuity_notes?: string | null
+          created_at?: string
+          emotional_state?: string | null
+          fear_in_scene?: string | null
+          goal_in_scene?: string | null
+          id?: string
+          moral_pressure?: string | null
+          project_id: string
+          relationship_shift?: string | null
+          scene_id: string
+          secret_status?: string | null
+          tactic?: string | null
+          tmh_level?: number | null
+          updated_at?: string
+        }
+        Update: {
+          character_id?: string
+          continuity_notes?: string | null
+          created_at?: string
+          emotional_state?: string | null
+          fear_in_scene?: string | null
+          goal_in_scene?: string | null
+          id?: string
+          moral_pressure?: string | null
+          project_id?: string
+          relationship_shift?: string | null
+          scene_id?: string
+          secret_status?: string | null
+          tactic?: string | null
+          tmh_level?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       characters: {
         Row: {
+          act1_state: string | null
+          act2_pressure: string | null
           age: string | null
+          alias: string | null
           archetype: string | null
+          betrayal_triggers: string | null
+          biggest_loss: string | null
+          biggest_shame: string | null
           character_arc: string | null
+          character_type: string | null
+          childhood: string | null
+          climax_choice: string | null
+          color_palette: string | null
+          conflict_style: string | null
           contradiction: string | null
+          core_lie: string | null
+          core_temptation: string | null
+          core_vice: string | null
+          core_virtue: string | null
+          corruption_path: string | null
           costume_notes: string | null
           created_at: string
+          dark_night_state: string | null
+          defining_wound: string | null
+          directness_level: string | null
           elevenlabs_voice_id: string | null
+          emotional_openness: string | null
+          ending_behavior: string | null
+          ending_belief: string | null
           external_goal: string | null
+          favorite_phrases: string | null
           fear: string | null
+          fear_response: string | null
+          final_image: string | null
+          flaws: string | null
+          forbidden_phrases: string | null
+          formative_relationship: string | null
+          group_name: string
+          habits: string | null
+          how_they_apologize: string | null
+          how_they_lie: string | null
+          how_they_threaten: string | null
+          humor_style: string | null
           id: string
           image_prompt: string | null
           internal_need: string | null
+          lies_about: string | null
+          life_before_story: string | null
+          midpoint_shift: string | null
+          might_do_under_pressure: string | null
+          moral_blind_spot: string | null
+          moral_test: string | null
+          moral_wound: string | null
+          movement_style: string | null
           name: string
+          never_says_aloud: string | null
+          occupation: string | null
+          portrait_url: string | null
           project_id: string
+          redemption_path: string | null
           relationships: string | null
           role: string | null
           secret: string | null
+          sentence_rhythm: string | null
+          signature_props: string | null
+          silence_pattern: string | null
           speech_patterns: string | null
+          starting_behavior: string | null
+          starting_belief: string | null
+          status: string | null
+          strengths: string | null
+          subtext_pattern: string | null
+          summary: string | null
+          temperament: string | null
+          tmh_aspirational: number | null
+          tmh_baseline: number | null
+          tmh_shadow: number | null
+          tmh_stress: number | null
+          trust_triggers: string | null
           updated_at: string
           visual_description: string | null
+          visual_symbol: string | null
+          vocabulary_level: string | null
+          voice_archetype: string | null
           voice_style: string | null
+          voice_summary: string | null
+          what_they_justify: string | null
+          would_never_do: string | null
           wound: string | null
         }
         Insert: {
+          act1_state?: string | null
+          act2_pressure?: string | null
           age?: string | null
+          alias?: string | null
           archetype?: string | null
+          betrayal_triggers?: string | null
+          biggest_loss?: string | null
+          biggest_shame?: string | null
           character_arc?: string | null
+          character_type?: string | null
+          childhood?: string | null
+          climax_choice?: string | null
+          color_palette?: string | null
+          conflict_style?: string | null
           contradiction?: string | null
+          core_lie?: string | null
+          core_temptation?: string | null
+          core_vice?: string | null
+          core_virtue?: string | null
+          corruption_path?: string | null
           costume_notes?: string | null
           created_at?: string
+          dark_night_state?: string | null
+          defining_wound?: string | null
+          directness_level?: string | null
           elevenlabs_voice_id?: string | null
+          emotional_openness?: string | null
+          ending_behavior?: string | null
+          ending_belief?: string | null
           external_goal?: string | null
+          favorite_phrases?: string | null
           fear?: string | null
+          fear_response?: string | null
+          final_image?: string | null
+          flaws?: string | null
+          forbidden_phrases?: string | null
+          formative_relationship?: string | null
+          group_name?: string
+          habits?: string | null
+          how_they_apologize?: string | null
+          how_they_lie?: string | null
+          how_they_threaten?: string | null
+          humor_style?: string | null
           id?: string
           image_prompt?: string | null
           internal_need?: string | null
+          lies_about?: string | null
+          life_before_story?: string | null
+          midpoint_shift?: string | null
+          might_do_under_pressure?: string | null
+          moral_blind_spot?: string | null
+          moral_test?: string | null
+          moral_wound?: string | null
+          movement_style?: string | null
           name: string
+          never_says_aloud?: string | null
+          occupation?: string | null
+          portrait_url?: string | null
           project_id: string
+          redemption_path?: string | null
           relationships?: string | null
           role?: string | null
           secret?: string | null
+          sentence_rhythm?: string | null
+          signature_props?: string | null
+          silence_pattern?: string | null
           speech_patterns?: string | null
+          starting_behavior?: string | null
+          starting_belief?: string | null
+          status?: string | null
+          strengths?: string | null
+          subtext_pattern?: string | null
+          summary?: string | null
+          temperament?: string | null
+          tmh_aspirational?: number | null
+          tmh_baseline?: number | null
+          tmh_shadow?: number | null
+          tmh_stress?: number | null
+          trust_triggers?: string | null
           updated_at?: string
           visual_description?: string | null
+          visual_symbol?: string | null
+          vocabulary_level?: string | null
+          voice_archetype?: string | null
           voice_style?: string | null
+          voice_summary?: string | null
+          what_they_justify?: string | null
+          would_never_do?: string | null
           wound?: string | null
         }
         Update: {
+          act1_state?: string | null
+          act2_pressure?: string | null
           age?: string | null
+          alias?: string | null
           archetype?: string | null
+          betrayal_triggers?: string | null
+          biggest_loss?: string | null
+          biggest_shame?: string | null
           character_arc?: string | null
+          character_type?: string | null
+          childhood?: string | null
+          climax_choice?: string | null
+          color_palette?: string | null
+          conflict_style?: string | null
           contradiction?: string | null
+          core_lie?: string | null
+          core_temptation?: string | null
+          core_vice?: string | null
+          core_virtue?: string | null
+          corruption_path?: string | null
           costume_notes?: string | null
           created_at?: string
+          dark_night_state?: string | null
+          defining_wound?: string | null
+          directness_level?: string | null
           elevenlabs_voice_id?: string | null
+          emotional_openness?: string | null
+          ending_behavior?: string | null
+          ending_belief?: string | null
           external_goal?: string | null
+          favorite_phrases?: string | null
           fear?: string | null
+          fear_response?: string | null
+          final_image?: string | null
+          flaws?: string | null
+          forbidden_phrases?: string | null
+          formative_relationship?: string | null
+          group_name?: string
+          habits?: string | null
+          how_they_apologize?: string | null
+          how_they_lie?: string | null
+          how_they_threaten?: string | null
+          humor_style?: string | null
           id?: string
           image_prompt?: string | null
           internal_need?: string | null
+          lies_about?: string | null
+          life_before_story?: string | null
+          midpoint_shift?: string | null
+          might_do_under_pressure?: string | null
+          moral_blind_spot?: string | null
+          moral_test?: string | null
+          moral_wound?: string | null
+          movement_style?: string | null
           name?: string
+          never_says_aloud?: string | null
+          occupation?: string | null
+          portrait_url?: string | null
           project_id?: string
+          redemption_path?: string | null
           relationships?: string | null
           role?: string | null
           secret?: string | null
+          sentence_rhythm?: string | null
+          signature_props?: string | null
+          silence_pattern?: string | null
           speech_patterns?: string | null
+          starting_behavior?: string | null
+          starting_belief?: string | null
+          status?: string | null
+          strengths?: string | null
+          subtext_pattern?: string | null
+          summary?: string | null
+          temperament?: string | null
+          tmh_aspirational?: number | null
+          tmh_baseline?: number | null
+          tmh_shadow?: number | null
+          tmh_stress?: number | null
+          trust_triggers?: string | null
           updated_at?: string
           visual_description?: string | null
+          visual_symbol?: string | null
+          vocabulary_level?: string | null
+          voice_archetype?: string | null
           voice_style?: string | null
+          voice_summary?: string | null
+          what_they_justify?: string | null
+          would_never_do?: string | null
           wound?: string | null
         }
         Relationships: [

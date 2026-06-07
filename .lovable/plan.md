@@ -1,70 +1,120 @@
-## 1. Fix the Editor crash ("This page didn't load")
+# Your Characters — Cinematic Cast Hub
 
-The route `/editor/$projectId` is throwing into the root error boundary. Likely culprits in `src/routes/_authenticated/editor.$projectId.tsx`:
+Build a full character system at `/characters/$projectId` with a 3‑pane cinematic layout, rich profile tabs, relationships, scene usage, and AI generators (with graceful demo fallbacks). ElevenLabs voice IDs are persisted per character and reused by the Table Read.
 
-- `block.block_type[0].toUpperCase()` on a row whose `block_type` is empty/null.
-- `c.toUpperCase()` / `c.replace(...)` in `formatExport` when `content` is `null`.
-- `useState(block.content)` + `val.slice(...)` when `content` is `null` (slash-command handler runs on null).
-- Stale row from a previously failed `insertBlockAfter` (fractional `order_index` + re-normalize loop is not atomic).
+## 1. Database (one migration)
 
-Plan:
-- Open the editor in the browser, capture the real stack from console/runtime errors, and fix the exact throw.
-- Defensively coerce `content ?? ""` everywhere (`val`, `formatExport`, slash logic) and guard `block.block_type` in the per-block select trigger.
-- Wrap the editor's `<section>` body in a local React error boundary (so a single bad block can't blank the whole route) with a "Reset block" action.
-- Replace the fractional-index + N-update normalization in `insertBlockAfter` with a single atomic re-order: fetch current orders, shift `>= afterOrder+1` by +1, then insert at `afterOrder+1`. Less round-trips, no transient duplicate indices.
+Extend `characters` and add two new tables.
 
-## 2. Real ElevenLabs table read ("Listen to your story")
+`**characters**` — add columns (keep existing):
 
-Currently `src/lib/tableread.functions.ts` only inserts a `queued`/`coming_soon` row — no audio is produced. Wire it end-to-end.
+- `alias`, `character_type`, `occupation`, `status`, `summary`
+- `core_lie`, `core_secret` (already partly there), `group_name` (text, default `'Main Cast'`)
+- Backstory: `childhood`, `defining_wound`, `formative_relationship`, `biggest_loss`, `biggest_shame`, `life_before_story`, `lies_about`, `never_says_aloud`
+- Personality: `temperament`, `strengths`, `flaws`, `habits`, `conflict_style`, `fear_response`, `trust_triggers`, `betrayal_triggers`, `humor_style`
+- TMH: `tmh_baseline` int, `tmh_stress` int, `tmh_aspirational` int, `tmh_shadow` int, `moral_wound`, `moral_blind_spot`, `core_temptation`, `core_virtue`, `core_vice`, `moral_test`, `what_they_justify`, `would_never_do`, `might_do_under_pressure`, `redemption_path`, `corruption_path`
+- Voice: `voice_summary`, `vocabulary_level`, `sentence_rhythm`, `directness_level`, `emotional_openness`, `favorite_phrases`, `forbidden_phrases`, `how_they_lie`, `how_they_apologize`, `how_they_threaten`, `subtext_pattern`, `silence_pattern`, `voice_archetype` (keep `elevenlabs_voice_id`, `voice_style`, `speech_patterns`)
+- Visual: `color_palette`, `signature_props`, `visual_symbol`, `movement_style`, `portrait_url` (keep `visual_description`, `costume_notes`, `image_prompt`)
+- Arc: `starting_belief`, `ending_belief`, `starting_behavior`, `ending_behavior`, `act1_state`, `act2_pressure`, `midpoint_shift`, `dark_night_state`, `climax_choice`, `final_image`
 
-Connector:
-- Link the existing ElevenLabs workspace connection to this project via `standard_connectors--connect` (`connector_id: "elevenlabs"`). This injects `ELEVENLABS_API_KEY` server-side — no key in client code, no manual secret.
+`**character_relationships**` (new)
 
-Server function (`generateTableRead`):
-- Load the selected scene's `script_blocks` (or all blocks if no scene picked) in order.
-- Convert blocks into spoken lines using the export rules:
-  - `scene_heading` → narrator (only if `narrator` toggle on)
-  - `action` → narrator (if on)
-  - `character` → sets the speaker for the following `dialogue` / `parenthetical`
-  - `dialogue` → that character's assigned voice
-  - `parenthetical` → spoken softly by same character (or skipped, configurable; default: skip)
-  - `transition` / `shot` → narrator (if on)
-  - `note` → always excluded (matches editor export rule)
-- Pick voices: per-character `voiceMap[characterId]` from the UI, falling back to `characters.elevenlabs_voice_id`, then to a default narrator voice (`JBFqnCBsd6RMkjVDRZzb` / George) for unmapped lines.
-- For each line call `POST https://api.elevenlabs.io/v1/text-to-speech/{voiceId}?output_format=mp3_44100_128` with `eleven_multilingual_v2`. Use request-stitching (`previous_text` / `next_text`) for prosody continuity. Limit concurrency to ~3.
-- Concatenate the resulting MP3 buffers in order (simple binary concat of MP3 frames is acceptable for playback; document the trade-off).
-- Upload the final MP3 to the existing private `table-reads` storage bucket at `{userId}/{projectId}/{audioAssetId}.mp3`.
-- Insert/update the `audio_assets` row with `status: 'ready'`, `audio_url` set to a long-lived signed URL (e.g. 7 days), `duration_seconds` estimated from line count, and `voice_map` of resolved voice IDs.
-- On any failure: mark the row `status: 'failed'`, return a structured error to the client; UI shows a retry.
-- Keep the `sfx` toggle behind a "Pro — coming soon" badge for now (no SFX in this pass).
+- `id`, `project_id`, `character_id`, `related_character_id`, `relationship_type`, `public_dynamic`, `private_truth`, `power_dynamic`, `wants_from_other`, `other_wants`, `secret_between`, `trust_level` int, `conflict_level` int, `relationship_arc`, timestamps
+- RLS via `owns_project(project_id)`; GRANTs for `authenticated` + `service_role`
 
-Client (`tableread.$projectId.tsx`):
-- Resolve signed URLs for existing `ready` rows when listing (server function `signTableReadUrl({ audioAssetId })` that re-signs from the stored object path so links don't expire in the UI).
-- While generating, show progress state; on success, refresh the list and auto-play the newest read.
-- Persist voice assignments back onto `characters.elevenlabs_voice_id` when the user types one in (so it sticks across reads).
-- Add a small ElevenLabs Voice ID helper text + link to the ElevenLabs voice library.
+`**character_scene_states**` (new)
 
-## 3. Save / persistence sanity pass
+- `id`, `project_id`, `character_id`, `scene_id`, `emotional_state`, `goal_in_scene`, `fear_in_scene`, `tactic`, `tmh_level` int, `moral_pressure`, `relationship_shift`, `secret_status`, `continuity_notes`, timestamps
+- RLS via `owns_project(project_id)`; unique `(character_id, scene_id)`
 
-- Confirm `audio_assets` RLS allows `SELECT`/`INSERT`/`UPDATE` only via `owns_project(project_id)`; add policies if missing.
-- Confirm `table-reads` bucket has storage policies that allow the project owner to read their own audio (path prefix = `auth.uid()`). Add policies if missing.
-- Persist character voice updates via `supabase.from('characters').update({ elevenlabs_voice_id }).eq('id', ...)`.
+## 2. Route & Layout
 
-## Acceptance
+`src/routes/_authenticated/characters.$projectId.tsx` — three‑pane cinematic shell:
 
-- Navigating from Dashboard → "The Road to El Alamein" → Editor renders the empty/blank-page state without throwing.
-- Slash commands, Tab, and Enter all work on blocks with empty or null content.
-- On the Table Read page, clicking **Generate Table Read** produces an MP3 audible in the in-page `<audio>` player within ~30s for a short scene, with each character spoken in their assigned voice.
-- The generated read survives a page reload (signed URL re-issued server-side).
-- `ELEVENLABS_API_KEY` is never referenced in client code.
+```text
+┌──────────┬─────────────────────────┬──────────────┐
+│ Groups   │ Character Card Grid     │ Inspector    │
+│ sidebar  │ (cinematic dark cards)  │ (selected)   │
+└──────────┴─────────────────────────┴──────────────┘
+```
 
-## Technical notes
+- **Left sidebar**: 9 fixed groups + counts + "New Character" button. Filters grid.
+- **Center grid**: cinematic cards (dark bg, soft border, hover glow, TMH color badge, stress badge, arc arrow, voice/portrait/secret/warning icons, completeness %, Open Profile / Use in Scene).
+- **Right inspector**: condensed summary of selected character + quick AI action buttons; "Open full profile" opens the tab modal.
 
-- Stack: TanStack Start server functions (`createServerFn` + `requireSupabaseAuth`), Supabase Storage, ElevenLabs REST (`xi-api-key`, no SDK).
-- No edge functions added — all server logic stays in `src/lib/tableread.functions.ts` and a small `src/lib/tableread-sign.functions.ts`.
-- Files touched:
-  - `src/routes/_authenticated/editor.$projectId.tsx` (crash fix + null guards + local error boundary)
-  - `src/lib/tableread.functions.ts` (real TTS pipeline)
-  - `src/lib/tableread-sign.functions.ts` (new, signed-URL helper)
-  - `src/routes/_authenticated/tableread.$projectId.tsx` (signed-URL fetch, persist voice IDs, polish)
-  - Optional migration if `audio_assets` / `table-reads` policies are missing.
+Also add nav entry from project hub to this page.
+
+## 3. Character Profile (modal with 9 tabs)
+
+`src/components/characters/CharacterProfileDialog.tsx` — shadcn `Dialog` + `Tabs`:
+Overview · Backstory · Personality · TMH Moral Profile · Voice & Dialogue · Visual Identity · Relationships · Arc · Scene Usage.
+
+Each tab = a small form section, auto‑saves on blur via a `saveCharacter` server fn (debounced). Completeness % computed from filled fields.
+
+- TMH tab: 4 sliders (1–9) with color‑coded labels (L1 Survival → L9 Transcendence) and an expandable info panel explaining TMH as "moral behavior under pressure."
+- Voice tab: ElevenLabs voice picker (reuses `listVoices` from table read) → writes `elevenlabs_voice_id`. Note: "voice reused by Table Read."
+- Visual tab: "Generate Portrait" → image-gen (Lovable AI image) → uploads to `storyboards` bucket → sets `portrait_url`.
+- Relationships tab: list + add/edit dialog of `character_relationships` rows with trust/conflict sliders.
+- Scene Usage tab: lists scenes (join `scenes`), inline `character_scene_states` editor per scene.
+
+## 4. AI Server Functions
+
+`src/lib/characters.functions.ts` (all `requireSupabaseAuth`, all owner‑checked):
+
+- `listCharacters({ projectId })`, `getCharacter({ id })`, `upsertCharacter`, `deleteCharacter`
+- `listRelationships`, `upsertRelationship`, `deleteRelationship`
+- `listSceneStates`, `upsertSceneState`
+- AI: `generateFullCharacter`, `generateBackstory`, `generateTMHProfile`, `generateDialogueVoice`, `generateVisualPrompt`, `runMoralPressureTest`, `analyzeCharacterArc`, `testDialogue`, `findContradictions`, `suggestSceneUse`, `generatePortrait`
+
+AI calls go through Lovable AI Gateway (`google/gemini-3-flash-preview`) with structured output. If `LOVABLE_API_KEY` is missing or call fails, return a **polished deterministic demo** synthesized from existing fields — no dead buttons.
+
+## 5. ElevenLabs Voice Cache
+
+- Add `src/lib/elevenlabs-voices.functions.ts` `listElevenLabsVoices()` server fn.
+- Cache strategy: in‑memory `Map<string,{at:number,data:Voice[]}>` keyed by `'all'`, 10‑minute TTL inside the server fn module; plus client‑side TanStack Query (`staleTime: 10*60_000`, `gcTime: 30*60_000`) so the voice list is fetched at most once per session and shared between Voice tab + Table Read.
+- Table Read page (`tableread.$projectId.tsx`) updated to consume the same query key.
+
+## 6. UI/Design tokens
+
+Add tokens to `src/styles.css`:
+
+- TMH level colors L1–L9 (semantic `--tmh-l1`…`--tmh-l9`)
+- `--card-cinematic`, `--glow-primary` (subtle shadow)
+- Card variant in shadcn `card.tsx` extension or local CVA.
+
+No raw hex in components — all via tokens.
+
+## 7. Security
+
+- RLS on all 3 tables uses `owns_project(project_id)`.
+- GRANT SELECT/INSERT/UPDATE/DELETE to `authenticated`; ALL to `service_role`. No `anon`.
+- Portraits uploaded under `storyboards/<project_id>/characters/<char_id>.png`; signed URLs via existing pattern.
+
+## 8. Files to create / edit
+
+Create:
+
+- migration (1 file)
+- `src/routes/_authenticated/characters.$projectId.tsx`
+- `src/components/characters/CharacterGrid.tsx`
+- `src/components/characters/CharacterCard.tsx`
+- `src/components/characters/CharacterGroupsSidebar.tsx`
+- `src/components/characters/CharacterInspector.tsx`
+- `src/components/characters/CharacterProfileDialog.tsx` (+ one file per tab section under `./tabs/`)
+- `src/components/characters/RelationshipEditor.tsx`
+- `src/components/characters/TMHInfoPanel.tsx`
+- `src/lib/characters.functions.ts`
+- `src/lib/elevenlabs-voices.functions.ts`
+
+Edit:
+
+- `src/styles.css` (TMH + cinematic tokens)
+- `src/lib/tableread.functions.ts` / page — switch to shared voice query
+- project hub: add "Your Characters" link
+
+## Out of scope (this round)
+
+- Realtime collab on character edits
+- Importing characters across projects
+- Auto-linking scenes via NLP (manual scene‑state entries only)
+- Character image generation so we have a visual representation of our characters while working.

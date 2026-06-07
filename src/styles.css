@@ -101,3 +101,37 @@
 .screenplay .blk-transition { text-transform: uppercase; text-align: right; font-weight: 600; color: var(--color-accent); margin: 1em 0; }
 .screenplay .blk-shot { text-transform: uppercase; font-weight: 600; color: var(--color-accent); }
 .screenplay .blk-note { background: oklch(0.65 0.18 245 / 0.08); border-left: 3px solid var(--color-accent); padding: 0.4em 0.8em; font-style: italic; color: var(--color-muted-foreground); }
+
+/* TMH level palette — moral behavior under pressure, NOT a moral judgment. */
+:root {
+  --tmh-l1: oklch(0.55 0.18 25);    /* survival — deep red-orange */
+  --tmh-l2: oklch(0.62 0.16 45);    /* self-interest — burnt orange */
+  --tmh-l3: oklch(0.72 0.14 70);    /* social contract — amber */
+  --tmh-l4: oklch(0.78 0.13 95);    /* fairness — warm gold */
+  --tmh-l5: oklch(0.75 0.12 145);   /* empathy — sage */
+  --tmh-l6: oklch(0.70 0.13 180);   /* altruism — teal */
+  --tmh-l7: oklch(0.66 0.15 230);   /* integrity — electric blue */
+  --tmh-l8: oklch(0.62 0.18 285);   /* virtue — violet */
+  --tmh-l9: oklch(0.78 0.10 320);   /* transcendence — lavender-pearl */
+}
+
+/* Cinematic character card */
+.cine-card {
+  background:
+    radial-gradient(circle at 100% 0%, oklch(0.82 0.14 82 / 0.06), transparent 40%),
+    linear-gradient(180deg, oklch(0.22 0.018 260) 0%, oklch(0.17 0.012 260) 100%);
+  border: 1px solid oklch(0.30 0.015 260 / 0.7);
+  transition: transform 200ms ease, box-shadow 300ms ease, border-color 200ms ease;
+}
+.cine-card:hover {
+  transform: translateY(-2px);
+  border-color: oklch(0.82 0.14 82 / 0.45);
+  box-shadow:
+    0 16px 50px -20px oklch(0.05 0 0 / 0.7),
+    0 0 0 1px oklch(0.82 0.14 82 / 0.25),
+    0 0 24px -6px oklch(0.82 0.14 82 / 0.25);
+}
+.cine-card.selected {
+  border-color: oklch(0.82 0.14 82 / 0.7);
+  box-shadow: 0 0 0 1px oklch(0.82 0.14 82 / 0.5), 0 12px 40px -16px oklch(0.82 0.14 82 / 0.35);
+}
