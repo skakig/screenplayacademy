@@ -79,7 +79,6 @@ export function CharacterArcSection({
     },
   });
 
-  const save = useMutation({
   const set = (patch: any) => setLocal((l: any) => ({ ...l, ...patch }));
 
   const start = local.starting_tmh_level as number | undefined;
