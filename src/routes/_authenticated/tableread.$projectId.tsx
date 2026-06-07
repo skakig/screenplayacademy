@@ -121,7 +121,7 @@ function TableRead() {
           </Button>
           <p className="text-[11px] text-muted-foreground flex items-start gap-1.5 mt-2">
             <Lock className="h-3 w-3 mt-0.5 shrink-0" />
-            AI voices powered by ElevenLabs. If the service isn't connected yet, your project is queued and you'll be notified when it's ready.
+            Voices powered by ElevenLabs. Find voice IDs in the <a href="https://elevenlabs.io/voice-library" target="_blank" rel="noreferrer" className="underline">Voice Library</a>. Leave blank to auto-assign.
           </p>
         </Card>
 
