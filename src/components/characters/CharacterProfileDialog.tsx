@@ -103,10 +103,16 @@ export function CharacterProfileDialog({
     onError: (e: any) => toast.error(e?.message ?? "Save failed"),
   });
 
-  const saveField = (key: string) => () => {
-    if (!local) return;
-    if ((character ?? {})[key] !== local[key]) save.mutate({ [key]: local[key] });
-  };
+  const autosave = useAutosave<any>({
+    local,
+    remote: character,
+    enabled: !!characterId && !!character,
+    onSave: async (patch) => {
+      await callUpsert({ data: { id: characterId!, project_id: projectId, patch } });
+      qc.invalidateQueries({ queryKey: ["character", characterId] });
+      qc.invalidateQueries({ queryKey: ["characters", projectId] });
+    },
+  });
 
   const runAi = async (key: string, fn: () => Promise<any>) => {
     setAiBusy(key);
