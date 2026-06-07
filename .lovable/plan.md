@@ -1,56 +1,55 @@
 ## Goal
 
-Inside `CharacterProfileDialog`, upgrade the existing **Arc** tab so the selected character has a real **Character Arc** editor bound to the `character_arcs` table, plus a visual **TMH Movement** preview (start → midpoint → ending, with optional regression).
+1. Make Character Arc edits **persist to Supabase** and the **TMH sparkline reload** when the dialog reopens.
+2. Add a **comprehensive debounced autosave** to the whole Character dialog so nothing typed is lost, with a visible save-status indicator.
 
-The current Arc tab only edits free-text fields on the `characters` row (starting_belief, climax_choice, etc.). It does not touch `character_arcs`, so arc_type, TMH start/midpoint/ending/regression, core_lie, truth_learned, temptation, moral_test are unreachable from the dialog.
+## What's already in place
 
-## What gets built
+- `CharacterArcSection` commits each field via the existing `upsertCharacterArc` server fn on slider commit / textarea blur, and invalidates `["character-arc", characterId]`. That row is keyed by `character_id`, so reopening already refetches.
+- The rest of the dialog only saves when the user clicks the per-tab "Save" button, so typed text can be lost on close.
 
-### 1. New component: `src/components/characters/CharacterArcSection.tsx`
+## Changes
 
-A self-contained section rendered at the top of the Arc tab.
+### 1. New hook `src/hooks/use-autosave.ts`
 
-- Reads `character_arcs` for `(project_id, character_id)` via `supabase.from("character_arcs").select().eq().maybeSingle()` inside a `useQuery` keyed `["character-arc", characterId]`.
-- Persists via the existing `upsertCharacterArc` server fn (already in `src/lib/arc.functions.ts`), debounced on blur per field (same pattern as `story-arc.$projectId.tsx`).
-- Fields, in order:
-  - **Arc Type** (select): Transformation, Fall, Flat / Tested, Redemption, Corruption, Tragedy, Coming of Age.
-  - **Starting belief**, **Ending belief**, **Core lie**, **Truth learned** (textareas).
-  - **Temptation**, **Moral test**, **Climax choice**, **Final image** (textareas).
-  - **TMH Movement** block — four 1–9 sliders for `starting_tmh_level`, `midpoint_tmh_level`, `ending_tmh_level`, `regression_level`. Each commits on `onValueCommit`.
+Generic debounced field-diff autosaver.
 
-### 2. TMH Movement preview (inside the same section)
+- Inputs: `local`, `remote`, `delay` (default 800 ms), `onSave(patch)`, `ignoreKeys` (e.g. `id`, `created_at`, `updated_at`, `project_id`).
+- Behavior:
+  - Computes `patch = shallow diff(local, remote)` whenever `local` changes.
+  - Debounces and calls `onSave(patch)` when patch is non-empty.
+  - Tracks `status: "idle" | "dirty" | "saving" | "saved" | "error"` and `lastSavedAt`.
+  - Flush-on-unmount: on cleanup or when `flush()` is called (dialog close), it immediately fires the pending save synchronously via the latest patch.
+- Returns `{ status, lastSavedAt, flush }`.
 
-A compact visual strip above the sliders:
+### 2. Wire autosave into `CharacterProfileDialog`
 
-```text
-[L6 Altruism] ──▶ [L2 Self-Interest] ──▶ [L7 Integrity]   (regress: L1)
-   start              midpoint              ending
-```
+- Use the hook against `local` (all character fields) and `character` (server snapshot), saving via the existing `upsertCharacter` server fn — same shape already used by per-tab Save.
+- Call `flush()` in `onOpenChange(false)` so closing the dialog forces a final save.
+- Replace each tab's `<SaveBar>` with a single header **SaveStatus** indicator next to the "Generate Full" button:
+  - `"Saving…"` (spinner) / `"Saved · just now"` / `"Saved · 12s ago"` / `"Unsaved changes"` / `"Save failed — retry"` (clickable).
+- Keep a small manual "Save now" link inside the indicator for power users / error retry.
+- Suppress autosave for fields already saved imperatively (group select, ElevenLabs voice, TMH sliders) by filtering them out of the diff via `ignoreKeys` — they continue to write through their own `save.mutate` calls.
 
-- Renders three `<TMHBadge>` chips with arrows between them. If `regression_level` is set, append a dimmed `regress: L#` chip.
-- Below the chips, a 9-row horizontal sparkline rendered with inline SVG: x-axis = start / midpoint / ending; y-axis = TMH 1–9. Line color uses the band color of the **ending** level (via the existing `tmhVar(level)` helper). Dots use each point's band color. No new chart lib.
-- If only some levels are filled, only those points are drawn; if none, show a muted hint: "Set TMH levels below to preview the moral arc."
+### 3. Tighten `CharacterArcSection` autosave
 
-### 3. Dialog wiring
+- Switch its per-field commits from `onBlur` to the same `useAutosave` hook against the local arc state, so typing autosaves after 800 ms without needing to leave the field.
+- Keep slider `onValueCommit` for instant TMH saves (sliders don't blur in a useful way).
+- Render the same SaveStatus chip inside the Character Arc card header.
+- On mount / reopen, the existing `useQuery(["character-arc", characterId])` already refetches; add `refetchOnMount: "always"` to guarantee fresh server values populate the sparkline immediately when the dialog reopens.
 
-In `CharacterProfileDialog.tsx`, inside the existing `<TabsContent value="arc">`:
-- Mount `<CharacterArcSection projectId={projectId} characterId={characterId} />` **above** the current free-text grid.
-- Keep the existing free-text grid and the "Find contradictions" card as a secondary "Notes" block titled "Arc notes (on character)" so prior data stays editable.
+### 4. Reopen behavior
 
-### 4. No schema changes, no new server fns
+In `CharacterProfileDialog`, set `refetchOnMount: "always"` on the `["character", characterId]` query so reopening pulls the latest character row (mirrors the same change in the arc query).
 
-`character_arcs` already exists with all needed columns and RLS. `upsertCharacterArc` already exists. We only add UI and one query.
+### 5. UX details
 
-## Technical notes
+- Indicator placement: dialog header, right of the "Generate Full" button.
+- Network-failure handling: hook keeps `local` dirty, surfaces `"Save failed — retry"`, retries automatically on the next change or on click.
+- No new tables, no new server fns, no schema changes.
 
-- TanStack Query invalidation on save: `["character-arc", characterId]`.
-- Reuse `TMH_LEVELS`, `tmhLabel`, `tmhVar`, `TMHBadge` from `src/components/characters/tmh.ts` / `TMHBadge.tsx`.
-- Sliders use the shadcn `Slider`, same pattern as the TMH tab in the same dialog.
-- All controls are disabled until the initial fetch resolves, to avoid overwriting a real row with empty values.
-- SVG sparkline is ~220×60, semantic tokens only (`stroke`/`fill` via CSS vars), no hex literals in components.
+## Out of scope
 
-## Out of scope (this pass)
-
-- Editing `character_arcs` from the Characters list grid.
-- Scene-by-scene TMH track (lives in StoryPulse / `character_scene_arc_states`).
-- AI "Generate character arc" button (existing `analyzeCharacterArc` stays as today).
+- Optimistic per-keystroke server writes (single debounced batch per 800 ms is enough).
+- Conflict resolution against concurrent edits in another tab.
+- Autosave for `RelationshipsTab` (it already writes per-row via its own server fns).
