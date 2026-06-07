@@ -162,12 +162,22 @@ function Editor() {
             )}
           </div>
           {blocks.length > 0 && (
-            <div className="max-w-[680px] mx-auto mt-4 flex justify-end">
+            <div className="max-w-[680px] mx-auto mt-4 flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => {
                 const text = blocks.filter((b) => b.block_type !== "note").map(formatExport).join("\n\n");
                 navigator.clipboard.writeText(text);
                 toast.success("Screenplay copied to clipboard");
-              }}><Copy className="h-3.5 w-3.5 mr-1.5" />Copy Screenplay</Button>
+              }}><Copy className="h-3.5 w-3.5 mr-1.5" />Copy</Button>
+              <Button variant="outline" size="sm" onClick={() => {
+                const text = blocks.filter((b) => b.block_type !== "note").map(formatExport).join("\n\n");
+                const blob = new Blob([text], { type: "text/plain" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${(project?.title || "screenplay").replace(/[^a-z0-9]+/gi, "_")}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}>Download .txt</Button>
             </div>
           )}
         </section>
