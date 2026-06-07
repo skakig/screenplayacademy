@@ -450,8 +450,11 @@ function BlockEditor({
                 executeSlash(t.value);
               }}
             >
-              <span>{t.label}</span>
-              <span className="text-[10px] text-muted-foreground font-mono">{t.shortcut}</span>
+              <div className="flex flex-col">
+                <span>{t.label}</span>
+                <span className="text-[10px] text-muted-foreground font-mono">{t.aliases.slice(0, 3).join(" ")}</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground font-mono shrink-0">{t.shortcut}</span>
             </button>
           ))}
         </div>
