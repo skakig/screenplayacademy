@@ -100,7 +100,7 @@ export function CharacterArcSection({
         <Label className="text-xs">Arc type</Label>
         <Select
           value={local.arc_type ?? ""}
-          onValueChange={(v) => { set({ arc_type: v }); commit("arc_type", v); }}
+          onValueChange={(v) => { set({ arc_type: v }); }}
         >
           <SelectTrigger><SelectValue placeholder="Choose an arc shape" /></SelectTrigger>
           <SelectContent>
@@ -148,7 +148,7 @@ export function CharacterArcSection({
               min={1} max={9} step={1}
               value={[local[key] ?? 5]}
               onValueChange={(v) => set({ [key]: v[0] })}
-              onValueCommit={(v) => commit(key, v[0])}
+              onValueCommit={() => { void autosave.saveNow(); }}
               disabled={isLoading}
             />
             <p className="text-[10px] text-muted-foreground">{tmhLabel(local[key])}</p>
@@ -166,7 +166,7 @@ export function CharacterArcSection({
               rows={2}
               placeholder={placeholder}
               onChange={(e) => set({ [key]: e.target.value })}
-              onBlur={(e) => commit(key, e.target.value)}
+              onBlur={() => { void autosave.saveNow(); }}
               disabled={isLoading}
             />
           </div>
