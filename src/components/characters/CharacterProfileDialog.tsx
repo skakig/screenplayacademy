@@ -23,6 +23,8 @@ import { tmhLabel, GROUPS, completenessPct } from "./tmh";
 import { RelationshipsTab } from "./RelationshipsTab";
 import { SceneUsageTab } from "./SceneUsageTab";
 import { CharacterArcSection } from "./CharacterArcSection";
+import { SaveStatus } from "./SaveStatus";
+import { useAutosave } from "@/hooks/use-autosave";
 import {
   upsertCharacter, generateFullCharacter, generateBackstory, generateTMHProfile,
   generateDialogueVoice, generateVisualPrompt, runMoralPressureTest, analyzeCharacterArc,
@@ -67,6 +69,7 @@ export function CharacterProfileDialog({
   const { data: character } = useQuery({
     queryKey: ["character", characterId],
     enabled: !!characterId && open,
+    refetchOnMount: "always",
     queryFn: async (): Promise<any> => (await supabase.from("characters").select("*").eq("id", characterId!).single()).data,
   });
 
@@ -100,10 +103,16 @@ export function CharacterProfileDialog({
     onError: (e: any) => toast.error(e?.message ?? "Save failed"),
   });
 
-  const saveField = (key: string) => () => {
-    if (!local) return;
-    if ((character ?? {})[key] !== local[key]) save.mutate({ [key]: local[key] });
-  };
+  const autosave = useAutosave<any>({
+    local,
+    remote: character,
+    enabled: !!characterId && !!character,
+    onSave: async (patch) => {
+      await callUpsert({ data: { id: characterId!, project_id: projectId, patch } });
+      qc.invalidateQueries({ queryKey: ["character", characterId] });
+      qc.invalidateQueries({ queryKey: ["characters", projectId] });
+    },
+  });
 
   const runAi = async (key: string, fn: () => Promise<any>) => {
     setAiBusy(key);
@@ -124,7 +133,7 @@ export function CharacterProfileDialog({
   if (!characterId) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={async (o) => { if (!o) await autosave.flush(); onOpenChange(o); }}>
       <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden p-0 flex flex-col">
         <DialogHeader className="px-6 pt-5 pb-3 border-b border-border/60">
           <div className="flex items-center gap-4">
@@ -144,10 +153,13 @@ export function CharacterProfileDialog({
                 <span className="text-[11px] text-muted-foreground">Profile {pct}% complete</span>
               </div>
             </div>
-            <Button size="sm" variant="outline" disabled={!!aiBusy} onClick={() => runAi("full", () => callFull({ data: { characterId } }))}>
-              {aiBusy === "full" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
-              Generate Full
-            </Button>
+            <div className="flex items-center gap-3">
+              <SaveStatus status={autosave.status} lastSavedAt={autosave.lastSavedAt} onRetry={() => void autosave.saveNow()} />
+              <Button size="sm" variant="outline" disabled={!!aiBusy} onClick={() => runAi("full", () => callFull({ data: { characterId } }))}>
+                {aiBusy === "full" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
+                Generate Full
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -200,7 +212,6 @@ export function CharacterProfileDialog({
                     <TextField label="Core contradiction" value={local.contradiction} onChange={(v: string) => set({ contradiction: v })} multiline />
                     <TextField label="Archetype" value={local.archetype} onChange={(v: string) => set({ archetype: v })} />
                   </div>
-                  <SaveBar onSave={() => save.mutate(local)} pending={save.isPending} />
                 </TabsContent>
 
                 {/* BACKSTORY */}
@@ -209,7 +220,6 @@ export function CharacterProfileDialog({
                   {["childhood","defining_wound","formative_relationship","biggest_loss","biggest_shame","life_before_story","lies_about","never_says_aloud"].map((k) => (
                     <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
                   ))}
-                  <SaveBar onSave={() => save.mutate(local)} pending={save.isPending} />
                 </TabsContent>
 
                 {/* PERSONALITY */}
@@ -219,7 +229,6 @@ export function CharacterProfileDialog({
                       <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
                     ))}
                   </div>
-                  <SaveBar onSave={() => save.mutate(local)} pending={save.isPending} />
                 </TabsContent>
 
                 {/* TMH */}
@@ -246,7 +255,6 @@ export function CharacterProfileDialog({
                       <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
                     ))}
                   </div>
-                  <SaveBar onSave={() => save.mutate(local)} pending={save.isPending} />
 
                   <Card className="p-3 bg-secondary/30 border-dashed">
                     <div className="flex items-center gap-2 mb-2 text-xs font-semibold"><AlertTriangle className="h-3.5 w-3.5 text-accent" />Run Moral Pressure Test</div>
@@ -283,7 +291,6 @@ export function CharacterProfileDialog({
                       <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
                     ))}
                   </div>
-                  <SaveBar onSave={() => save.mutate(local)} pending={save.isPending} />
 
                   <Card className="p-3 bg-secondary/30 border-dashed">
                     <div className="flex items-center gap-2 mb-2 text-xs font-semibold"><MessageSquareQuote className="h-3.5 w-3.5 text-accent" />Test dialogue</div>
@@ -321,7 +328,6 @@ export function CharacterProfileDialog({
                     ))}
                   </div>
                   <TextField label="Image prompt" value={local.image_prompt} onChange={(v: string) => set({ image_prompt: v })} multiline rows={4} />
-                  <SaveBar onSave={() => save.mutate(local)} pending={save.isPending} />
                 </TabsContent>
 
                 {/* RELATIONSHIPS */}
@@ -340,7 +346,6 @@ export function CharacterProfileDialog({
                       <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
                     ))}
                   </div>
-                  <SaveBar onSave={() => save.mutate(local)} pending={save.isPending} />
 
                   <Card className="p-3 bg-secondary/30 border-dashed">
                     <div className="flex items-center gap-2 mb-2 text-xs font-semibold"><Search className="h-3.5 w-3.5 text-accent" />Find contradictions</div>
@@ -377,16 +382,6 @@ function prettyLabel(k: string): string {
   return k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function SaveBar({ onSave, pending }: { onSave: () => void; pending: boolean }) {
-  return (
-    <div className="flex justify-end pt-2">
-      <Button size="sm" onClick={onSave} disabled={pending}>
-        {pending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null}
-        Save
-      </Button>
-    </div>
-  );
-}
 
 function AiBar({ label, busy, onClick }: { label: string; busy: boolean; onClick: () => void }) {
   return (

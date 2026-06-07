@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -8,8 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, ArrowRight, Activity } from "lucide-react";
-import { toast } from "sonner";
+
 import { upsertCharacterArc } from "@/lib/arc.functions";
+import { useAutosave } from "@/hooks/use-autosave";
+import { SaveStatus } from "./SaveStatus";
 import { TMHBadge } from "./TMHBadge";
 import { tmhLabel, tmhVar } from "./tmh";
 
@@ -53,6 +55,7 @@ export function CharacterArcSection({
 
   const { data: arc, isLoading } = useQuery({
     queryKey: ["character-arc", characterId],
+    refetchOnMount: "always",
     queryFn: async (): Promise<any> => {
       const { data } = await supabase
         .from("character_arcs")
@@ -66,20 +69,17 @@ export function CharacterArcSection({
   const [local, setLocal] = useState<any>({});
   useEffect(() => { setLocal(arc ?? {}); }, [arc]);
 
-  const save = useMutation({
-    mutationFn: async (patch: any) =>
-      callUpsert({ data: { project_id: projectId, character_id: characterId, patch } }),
-    onSuccess: () => {
+  const autosave = useAutosave<any>({
+    local,
+    remote: arc,
+    enabled: !isLoading,
+    onSave: async (patch) => {
+      await callUpsert({ data: { project_id: projectId, character_id: characterId, patch } });
       qc.invalidateQueries({ queryKey: ["character-arc", characterId] });
     },
-    onError: (e: any) => toast.error(e?.message ?? "Save failed"),
   });
 
   const set = (patch: any) => setLocal((l: any) => ({ ...l, ...patch }));
-  const commit = (key: string, value: any) => {
-    if ((arc ?? {})[key] === value) return;
-    save.mutate({ [key]: value });
-  };
 
   const start = local.starting_tmh_level as number | undefined;
   const mid = local.midpoint_tmh_level as number | undefined;
@@ -93,6 +93,7 @@ export function CharacterArcSection({
         <Activity className="h-4 w-4 text-primary" />
         <h3 className="font-display text-base">Character Arc</h3>
         {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+        <div className="ml-auto"><SaveStatus status={autosave.status} lastSavedAt={autosave.lastSavedAt} onRetry={() => void autosave.saveNow()} /></div>
       </div>
 
       {/* Arc type */}
@@ -100,7 +101,7 @@ export function CharacterArcSection({
         <Label className="text-xs">Arc type</Label>
         <Select
           value={local.arc_type ?? ""}
-          onValueChange={(v) => { set({ arc_type: v }); commit("arc_type", v); }}
+          onValueChange={(v) => { set({ arc_type: v }); }}
         >
           <SelectTrigger><SelectValue placeholder="Choose an arc shape" /></SelectTrigger>
           <SelectContent>
@@ -148,7 +149,7 @@ export function CharacterArcSection({
               min={1} max={9} step={1}
               value={[local[key] ?? 5]}
               onValueChange={(v) => set({ [key]: v[0] })}
-              onValueCommit={(v) => commit(key, v[0])}
+              onValueCommit={() => { void autosave.saveNow(); }}
               disabled={isLoading}
             />
             <p className="text-[10px] text-muted-foreground">{tmhLabel(local[key])}</p>
@@ -166,7 +167,7 @@ export function CharacterArcSection({
               rows={2}
               placeholder={placeholder}
               onChange={(e) => set({ [key]: e.target.value })}
-              onBlur={(e) => commit(key, e.target.value)}
+              onBlur={() => { void autosave.saveNow(); }}
               disabled={isLoading}
             />
           </div>
