@@ -97,6 +97,69 @@ export type Database = {
         }
         Relationships: []
       }
+      character_arcs: {
+        Row: {
+          arc_type: string | null
+          character_id: string
+          climax_choice: string | null
+          core_lie: string | null
+          created_at: string
+          ending_belief: string | null
+          ending_tmh_level: number | null
+          final_image: string | null
+          id: string
+          midpoint_tmh_level: number | null
+          moral_test: string | null
+          project_id: string
+          regression_level: number | null
+          starting_belief: string | null
+          starting_tmh_level: number | null
+          temptation: string | null
+          truth_learned: string | null
+          updated_at: string
+        }
+        Insert: {
+          arc_type?: string | null
+          character_id: string
+          climax_choice?: string | null
+          core_lie?: string | null
+          created_at?: string
+          ending_belief?: string | null
+          ending_tmh_level?: number | null
+          final_image?: string | null
+          id?: string
+          midpoint_tmh_level?: number | null
+          moral_test?: string | null
+          project_id: string
+          regression_level?: number | null
+          starting_belief?: string | null
+          starting_tmh_level?: number | null
+          temptation?: string | null
+          truth_learned?: string | null
+          updated_at?: string
+        }
+        Update: {
+          arc_type?: string | null
+          character_id?: string
+          climax_choice?: string | null
+          core_lie?: string | null
+          created_at?: string
+          ending_belief?: string | null
+          ending_tmh_level?: number | null
+          final_image?: string | null
+          id?: string
+          midpoint_tmh_level?: number | null
+          moral_test?: string | null
+          project_id?: string
+          regression_level?: number | null
+          starting_belief?: string | null
+          starting_tmh_level?: number | null
+          temptation?: string | null
+          truth_learned?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       character_relationships: {
         Row: {
           character_id: string
@@ -151,6 +214,69 @@ export type Database = {
           trust_level?: number | null
           updated_at?: string
           wants_from_other?: string | null
+        }
+        Relationships: []
+      }
+      character_scene_arc_states: {
+        Row: {
+          arc_movement: string | null
+          character_id: string
+          cost: string | null
+          created_at: string
+          emotional_state_end: string | null
+          emotional_state_start: string | null
+          goal_in_scene: string | null
+          id: string
+          lie_believed: string | null
+          need_in_scene: string | null
+          project_id: string
+          relationship_shift: string | null
+          revelation: string | null
+          scene_id: string
+          tactic: string | null
+          tmh_end_level: number | null
+          tmh_start_level: number | null
+          updated_at: string
+        }
+        Insert: {
+          arc_movement?: string | null
+          character_id: string
+          cost?: string | null
+          created_at?: string
+          emotional_state_end?: string | null
+          emotional_state_start?: string | null
+          goal_in_scene?: string | null
+          id?: string
+          lie_believed?: string | null
+          need_in_scene?: string | null
+          project_id: string
+          relationship_shift?: string | null
+          revelation?: string | null
+          scene_id: string
+          tactic?: string | null
+          tmh_end_level?: number | null
+          tmh_start_level?: number | null
+          updated_at?: string
+        }
+        Update: {
+          arc_movement?: string | null
+          character_id?: string
+          cost?: string | null
+          created_at?: string
+          emotional_state_end?: string | null
+          emotional_state_start?: string | null
+          goal_in_scene?: string | null
+          id?: string
+          lie_believed?: string | null
+          need_in_scene?: string | null
+          project_id?: string
+          relationship_shift?: string | null
+          revelation?: string | null
+          scene_id?: string
+          tactic?: string | null
+          tmh_end_level?: number | null
+          tmh_start_level?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -636,6 +762,75 @@ export type Database = {
         }
         Relationships: []
       }
+      scene_arc_beats: {
+        Row: {
+          act: string | null
+          arc_status: string | null
+          created_at: string
+          emotional_charge: number | null
+          external_plot_change: string | null
+          id: string
+          moral_pressure: string | null
+          project_id: string
+          question_answered: string | null
+          question_raised: string | null
+          relationship_change: string | null
+          scene_id: string
+          scene_purpose: string | null
+          scene_strength_score: number | null
+          scene_turn: string | null
+          sequence_name: string | null
+          stakes_change: string | null
+          story_beat: string | null
+          theme_connection: string | null
+          updated_at: string
+        }
+        Insert: {
+          act?: string | null
+          arc_status?: string | null
+          created_at?: string
+          emotional_charge?: number | null
+          external_plot_change?: string | null
+          id?: string
+          moral_pressure?: string | null
+          project_id: string
+          question_answered?: string | null
+          question_raised?: string | null
+          relationship_change?: string | null
+          scene_id: string
+          scene_purpose?: string | null
+          scene_strength_score?: number | null
+          scene_turn?: string | null
+          sequence_name?: string | null
+          stakes_change?: string | null
+          story_beat?: string | null
+          theme_connection?: string | null
+          updated_at?: string
+        }
+        Update: {
+          act?: string | null
+          arc_status?: string | null
+          created_at?: string
+          emotional_charge?: number | null
+          external_plot_change?: string | null
+          id?: string
+          moral_pressure?: string | null
+          project_id?: string
+          question_answered?: string | null
+          question_raised?: string | null
+          relationship_change?: string | null
+          scene_id?: string
+          scene_purpose?: string | null
+          scene_strength_score?: number | null
+          scene_turn?: string | null
+          sequence_name?: string | null
+          stakes_change?: string | null
+          story_beat?: string | null
+          theme_connection?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scenes: {
         Row: {
           conflict: string | null
@@ -755,6 +950,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      story_arcs: {
+        Row: {
+          arc_type: string | null
+          central_question: string | null
+          climax_choice: string | null
+          created_at: string
+          darkest_moment: string | null
+          final_state: string | null
+          id: string
+          midpoint_shift: string | null
+          opening_state: string | null
+          project_id: string
+          structure_model: string | null
+          theme: string | null
+          updated_at: string
+        }
+        Insert: {
+          arc_type?: string | null
+          central_question?: string | null
+          climax_choice?: string | null
+          created_at?: string
+          darkest_moment?: string | null
+          final_state?: string | null
+          id?: string
+          midpoint_shift?: string | null
+          opening_state?: string | null
+          project_id: string
+          structure_model?: string | null
+          theme?: string | null
+          updated_at?: string
+        }
+        Update: {
+          arc_type?: string | null
+          central_question?: string | null
+          climax_choice?: string | null
+          created_at?: string
+          darkest_moment?: string | null
+          final_state?: string | null
+          id?: string
+          midpoint_shift?: string | null
+          opening_state?: string | null
+          project_id?: string
+          structure_model?: string | null
+          theme?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       storyboard_assets: {
         Row: {
