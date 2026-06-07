@@ -69,6 +69,7 @@ export function CharacterProfileDialog({
   const { data: character } = useQuery({
     queryKey: ["character", characterId],
     enabled: !!characterId && open,
+    refetchOnMount: "always",
     queryFn: async (): Promise<any> => (await supabase.from("characters").select("*").eq("id", characterId!).single()).data,
   });
 
