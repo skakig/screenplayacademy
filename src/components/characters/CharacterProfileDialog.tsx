@@ -22,6 +22,7 @@ import { TMHBadge } from "./TMHBadge";
 import { tmhLabel, GROUPS, completenessPct } from "./tmh";
 import { RelationshipsTab } from "./RelationshipsTab";
 import { SceneUsageTab } from "./SceneUsageTab";
+import { CharacterArcSection } from "./CharacterArcSection";
 import {
   upsertCharacter, generateFullCharacter, generateBackstory, generateTMHProfile,
   generateDialogueVoice, generateVisualPrompt, runMoralPressureTest, analyzeCharacterArc,
