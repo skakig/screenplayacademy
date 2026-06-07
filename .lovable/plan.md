@@ -1,72 +1,70 @@
+## 1. Fix the Editor crash ("This page didn't load")
 
-# SceneSmith AI — Finish the MVP
+The route `/editor/$projectId` is throwing into the root error boundary. Likely culprits in `src/routes/_authenticated/editor.$projectId.tsx`:
 
-Phase 1+2 are live (auth, dashboard, projects, editor with script blocks, scenes, characters, AI assist for a few tools). This plan covers everything still missing from your spec.
+- `block.block_type[0].toUpperCase()` on a row whose `block_type` is empty/null.
+- `c.toUpperCase()` / `c.replace(...)` in `formatExport` when `content` is `null`.
+- `useState(block.content)` + `val.slice(...)` when `content` is `null` (slash-command handler runs on null).
+- Stale row from a previously failed `insertBlockAfter` (fractional `order_index` + re-normalize loop is not atomic).
 
-## 1. Public landing page (`/`)
-Replace the current redirect-only `src/routes/index.tsx` with a real cinematic landing page (SSR on, signed-in users see a "Go to Dashboard" CTA instead of being redirected):
-- Hero: "Write the script. See the scene. Hear the table read." + your subheadline + **Start Writing Free** CTA → `/auth`.
-- Feature grid: Editor, Characters, Scenes, Storyboard, Table Read, Pitch Package.
-- "How it works" 3-step section, pricing teaser, footer.
-- `head()` with title/description/OG tags.
+Plan:
+- Open the editor in the browser, capture the real stack from console/runtime errors, and fix the exact throw.
+- Defensively coerce `content ?? ""` everywhere (`val`, `formatExport`, slash logic) and guard `block.block_type` in the per-block select trigger.
+- Wrap the editor's `<section>` body in a local React error boundary (so a single bad block can't blank the whole route) with a "Reset block" action.
+- Replace the fractional-index + N-update normalization in `insertBlockAfter` with a single atomic re-order: fetch current orders, shift `>= afterOrder+1` by +1, then insert at `afterOrder+1`. Less round-trips, no transient duplicate indices.
 
-## 2. Database additions
-One migration to add the missing tables and an export-ready field on projects:
+## 2. Real ElevenLabs table read ("Listen to your story")
 
-- `storyboard_assets` — project_id, scene_id, prompt, style, image_url (storage), status, order_index.
-- `audio_assets` — project_id, scene_id, kind ('table_read'|'sfx'), audio_url, voice_map jsonb, duration_seconds, status.
-- `pitch_packages` — project_id (unique), logline, short_synopsis, one_page_synopsis, treatment, character_bible, tone_statement, comparables, target_audience, budget_tier, poster_prompt, trailer_vo, pitch_email, generated_at.
+Currently `src/lib/tableread.functions.ts` only inserts a `queued`/`coming_soon` row — no audio is produced. Wire it end-to-end.
 
-All with `owns_project(project_id)` RLS, GRANTs to authenticated + service_role, updated_at triggers. Plus storage buckets `storyboards` (private) and `table-reads` (private) with owner-scoped policies on `storage.objects`.
+Connector:
+- Link the existing ElevenLabs workspace connection to this project via `standard_connectors--connect` (`connector_id: "elevenlabs"`). This injects `ELEVENLABS_API_KEY` server-side — no key in client code, no manual secret.
 
-## 3. Screenplay editor polish
-Currently functional but minimal. Add to `editor.$projectId.tsx`:
-- Left **scene list sidebar** — clickable to filter blocks by scene + "New scene" button.
-- Center: keep block list; add slash-command menu (`/` opens block-type picker) and Tab/Enter shortcuts to cycle types (Scene Heading → Action → Character → Dialogue → Parenthetical).
-- Right **AI assistant sidebar** with the full tool list (see §5).
-- Visual formatting via CSS classes in `styles.css`: uppercase scene headings, centered uppercase character cues, narrower dialogue (~3.5"), narrower parentheticals (~2.5"), right-aligned uppercase transitions, full-width action, muted/italic notes excluded from export.
-- **Export**: "Copy as Fountain" and "Download .txt" buttons (client-side, plain text industry-style format, notes stripped).
+Server function (`generateTableRead`):
+- Load the selected scene's `script_blocks` (or all blocks if no scene picked) in order.
+- Convert blocks into spoken lines using the export rules:
+  - `scene_heading` → narrator (only if `narrator` toggle on)
+  - `action` → narrator (if on)
+  - `character` → sets the speaker for the following `dialogue` / `parenthetical`
+  - `dialogue` → that character's assigned voice
+  - `parenthetical` → spoken softly by same character (or skipped, configurable; default: skip)
+  - `transition` / `shot` → narrator (if on)
+  - `note` → always excluded (matches editor export rule)
+- Pick voices: per-character `voiceMap[characterId]` from the UI, falling back to `characters.elevenlabs_voice_id`, then to a default narrator voice (`JBFqnCBsd6RMkjVDRZzb` / George) for unmapped lines.
+- For each line call `POST https://api.elevenlabs.io/v1/text-to-speech/{voiceId}?output_format=mp3_44100_128` with `eleven_multilingual_v2`. Use request-stitching (`previous_text` / `next_text`) for prosody continuity. Limit concurrency to ~3.
+- Concatenate the resulting MP3 buffers in order (simple binary concat of MP3 frames is acceptable for playback; document the trade-off).
+- Upload the final MP3 to the existing private `table-reads` storage bucket at `{userId}/{projectId}/{audioAssetId}.mp3`.
+- Insert/update the `audio_assets` row with `status: 'ready'`, `audio_url` set to a long-lived signed URL (e.g. 7 days), `duration_seconds` estimated from line count, and `voice_map` of resolved voice IDs.
+- On any failure: mark the row `status: 'failed'`, return a structured error to the client; UI shows a retry.
+- Keep the `sfx` toggle behind a "Pro — coming soon" badge for now (no SFX in this pass).
 
-## 4. Pages to build
-New route files under `_authenticated/`:
-- `projects.tsx` — full list with search, status badges, last-edited, "+ New Project".
-- `projects.new.tsx` — guided form: title, type, genre, tone, target length, logline, AI help level.
-- `storyboard.$projectId.tsx` — scene selector, prompt preview, style selector, **Generate Panel** button. If `IMAGE_GEN_ENABLED` secret missing → Coming Soon / Pro upsell card; otherwise call edge function. Image grid from `storyboard_assets`.
-- `tableread.$projectId.tsx` — scene selector, per-character voice assignments, narrator/SFX toggles, **Generate Table Read** button → ElevenLabs edge function (or Coming Soon state). Audio `<audio>` player from `audio_assets`.
-- `pitch.$projectId.tsx` — single **Generate Pitch Package** button. Renders all 12 fields from `pitch_packages` in sectioned cards; per-section "Copy" buttons.
-- `pricing.tsx` — 4 tier cards (Free / Creator $19 / Pro $49 / Studio $149) with the exact feature lists from your spec. CTAs are stubbed (no Stripe yet) — buttons show "Coming soon" toast. Schema is Stripe-ready (we'll add `stripe_customer_id`, `subscription_tier`, `current_period_end` to `profiles`).
-- `settings.tsx` — profile (name, avatar, email read-only), current plan + "Manage subscription" stub, sign out, danger zone.
+Client (`tableread.$projectId.tsx`):
+- Resolve signed URLs for existing `ready` rows when listing (server function `signTableReadUrl({ audioAssetId })` that re-signs from the stored object path so links don't expire in the UI).
+- While generating, show progress state; on success, refresh the list and auto-play the newest read.
+- Persist voice assignments back onto `characters.elevenlabs_voice_id` when the user types one in (so it sticks across reads).
+- Add a small ElevenLabs Voice ID helper text + link to the ElevenLabs voice library.
 
-Update `AppShell`/nav to surface Projects, Pricing, Settings; `ProjectNav` to surface Editor / Scenes / Characters / Storyboard / Table Read / Pitch.
+## 3. Save / persistence sanity pass
 
-## 5. AI assistant — full tool set
-Extend existing `src/lib/ai.functions.ts` `aiAssist` server fn to support all 13 tools with proper prompts and project/scene/selection context:
-logline, outline, character, rewrite_scene, sharpen_dialogue, add_subtext, more_visual, reduce_exposition, increase_tension, find_plot_holes, summarize_scene, storyboard_prompt, pitch_package.
+- Confirm `audio_assets` RLS allows `SELECT`/`INSERT`/`UPDATE` only via `owns_project(project_id)`; add policies if missing.
+- Confirm `table-reads` bucket has storage policies that allow the project owner to read their own audio (path prefix = `auth.uid()`). Add policies if missing.
+- Persist character voice updates via `supabase.from('characters').update({ elevenlabs_voice_id }).eq('id', ...)`.
 
-`pitch_package` writes to `pitch_packages`; `storyboard_prompt` returns text used by storyboard page. All persist a row in `ai_requests`.
+## Acceptance
 
-## 6. Edge-function-style placeholders
-Per your spec, expose these as **TanStack server functions** (not Supabase Edge Functions — see stack guidance):
-- `ai-generate-logline`, `ai-build-outline`, `ai-create-character`, `ai-rewrite-scene`, `ai-script-doctor`, `ai-generate-storyboard-prompt`, `ai-generate-pitch-package` → thin wrappers calling `aiAssist` with the right tool key.
-- `elevenlabs-table-read` → if `ELEVENLABS_API_KEY` secret missing, returns `{status: 'coming_soon', demo_url}`. Otherwise stitches per-line TTS, uploads to `table-reads` bucket, inserts `audio_assets`.
-- `image-generate-storyboard` → uses Lovable AI image model (`google/gemini-2.5-flash-image`) by default; uploads PNG to `storyboards` bucket, inserts `storyboard_assets`. Graceful demo (placeholder image URL) on failure.
-
-All keys stay server-side. No frontend exposure.
-
-## 7. Polish (Phase 5)
-- Empty states with primary CTA on every page ("No projects yet → Create your first project").
-- Loading skeletons, toast errors, mobile breakpoints on editor (collapse sidebars to drawers).
-- 429/402 gateway errors surfaced as friendly toasts pointing to Pricing.
+- Navigating from Dashboard → "The Road to El Alamein" → Editor renders the empty/blank-page state without throwing.
+- Slash commands, Tab, and Enter all work on blocks with empty or null content.
+- On the Table Read page, clicking **Generate Table Read** produces an MP3 audible in the in-page `<audio>` player within ~30s for a short scene, with each character spoken in their assigned voice.
+- The generated read survives a page reload (signed URL re-issued server-side).
+- `ELEVENLABS_API_KEY` is never referenced in client code.
 
 ## Technical notes
-- TanStack Start serverFns under `src/lib/*.functions.ts`; auth via existing `requireSupabaseAuth`.
-- Storage buckets created via `supabase--storage_create_bucket`; RLS on `storage.objects` scoped by path prefix `{user_id}/...`.
-- ElevenLabs + image gen: I'll request `ELEVENLABS_API_KEY` only when you're ready to wire it; the UI ships in Coming Soon state by default so the MVP works without it.
-- Stripe: schema-ready columns added now; checkout flow deferred (built-in Lovable payments tool is the recommended path when you're ready).
 
-## Out of scope for this pass
-- Real Stripe checkout (schema only).
-- Team workspaces / Studio tier collaboration.
-- Realtime multi-user editing.
-
-Approve to build, or tell me which pieces to drop/reorder.
+- Stack: TanStack Start server functions (`createServerFn` + `requireSupabaseAuth`), Supabase Storage, ElevenLabs REST (`xi-api-key`, no SDK).
+- No edge functions added — all server logic stays in `src/lib/tableread.functions.ts` and a small `src/lib/tableread-sign.functions.ts`.
+- Files touched:
+  - `src/routes/_authenticated/editor.$projectId.tsx` (crash fix + null guards + local error boundary)
+  - `src/lib/tableread.functions.ts` (real TTS pipeline)
+  - `src/lib/tableread-sign.functions.ts` (new, signed-URL helper)
+  - `src/routes/_authenticated/tableread.$projectId.tsx` (signed-URL fetch, persist voice IDs, polish)
+  - Optional migration if `audio_assets` / `table-reads` policies are missing.
