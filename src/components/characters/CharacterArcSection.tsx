@@ -215,7 +215,7 @@ function TmhSparkline({ start, mid, end }: { start?: number; mid?: number; end?:
       <path d={path} fill="none" stroke={tmhVar(endLevel)} strokeWidth={2} />
       {points.map((p) => (
         <g key={p.label}>
-          <circle cx={p.x} cy={y(p.level)} r={4} fill={tmhVar(p.level)} stroke="hsl(var(--background))" strokeWidth={1.5} />
+          <circle cx={p.x} cy={y(p.level)} r={4} fill={tmhVar(p.level)} stroke="var(--background)" strokeWidth={1.5} />
         </g>
       ))}
     </svg>
