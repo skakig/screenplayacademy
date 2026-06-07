@@ -19,14 +19,14 @@ export const Route = createFileRoute("/_authenticated/editor/$projectId")({
 });
 
 const BLOCK_TYPES = [
-  { value: "scene_heading", label: "Scene Heading", shortcut: "/scene" },
-  { value: "action", label: "Action", shortcut: "/action" },
-  { value: "character", label: "Character", shortcut: "/character" },
-  { value: "dialogue", label: "Dialogue", shortcut: "/dialogue" },
-  { value: "parenthetical", label: "Parenthetical", shortcut: "/parenthetical" },
-  { value: "transition", label: "Transition", shortcut: "/transition" },
-  { value: "shot", label: "Shot", shortcut: "/shot" },
-  { value: "note", label: "Note", shortcut: "/note" },
+  { value: "scene_heading", label: "Scene Heading", shortcut: "/scene", aliases: ["/heading", "/h", "/int", "/ext"] },
+  { value: "action", label: "Action", shortcut: "/action", aliases: ["/a", "/desc", "/description"] },
+  { value: "character", label: "Character", shortcut: "/character", aliases: ["/char", "/c", "/name"] },
+  { value: "dialogue", label: "Dialogue", shortcut: "/dialogue", aliases: ["/dia", "/d", "/line", "/speech"] },
+  { value: "parenthetical", label: "Parenthetical", shortcut: "/parenthetical", aliases: ["/parenth", "/p", "/wryly", "/beat"] },
+  { value: "transition", label: "Transition", shortcut: "/transition", aliases: ["/trans", "/t", "/cut", "/fade"] },
+  { value: "shot", label: "Shot", shortcut: "/shot", aliases: ["/s", "/camera", "/angle"] },
+  { value: "note", label: "Note", shortcut: "/note", aliases: ["/n", "/comment", "/reminder"] },
 ];
 
 const AI_TOOLS = [
@@ -317,7 +317,8 @@ function BlockEditor({
   const filtered = BLOCK_TYPES.filter((t) =>
     t.label.toLowerCase().includes(query) ||
     t.value.toLowerCase().includes(query) ||
-    t.shortcut.toLowerCase().includes(query)
+    t.shortcut.toLowerCase().includes(query) ||
+    t.aliases.some((a) => a.toLowerCase().includes(query))
   );
 
   const closeSlash = useCallback(() => {
@@ -449,8 +450,11 @@ function BlockEditor({
                 executeSlash(t.value);
               }}
             >
-              <span>{t.label}</span>
-              <span className="text-[10px] text-muted-foreground font-mono">{t.shortcut}</span>
+              <div className="flex flex-col">
+                <span>{t.label}</span>
+                <span className="text-[10px] text-muted-foreground font-mono">{t.aliases.slice(0, 3).join(" ")}</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground font-mono shrink-0">{t.shortcut}</span>
             </button>
           ))}
         </div>
