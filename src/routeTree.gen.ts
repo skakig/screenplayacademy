@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedStoryboardProjectIdRouteImport } from './routes/_authenticated/storyboard.$projectId'
 import { Route as AuthenticatedScenesProjectIdRouteImport } from './routes/_authenticated/scenes.$projectId'
 import { Route as AuthenticatedProjectsNewRouteImport } from './routes/_authenticated/projects.new'
 import { Route as AuthenticatedEditorProjectIdRouteImport } from './routes/_authenticated/editor.$projectId'
@@ -55,6 +56,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStoryboardProjectIdRoute =
+  AuthenticatedStoryboardProjectIdRouteImport.update({
+    id: '/storyboard/$projectId',
+    path: '/storyboard/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedScenesProjectIdRoute =
   AuthenticatedScenesProjectIdRouteImport.update({
     id: '/scenes/$projectId',
@@ -91,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
   '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
+  '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -103,6 +111,7 @@ export interface FileRoutesByTo {
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
   '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
+  '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -117,6 +126,7 @@ export interface FileRoutesById {
   '/_authenticated/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
   '/_authenticated/projects/new': typeof AuthenticatedProjectsNewRoute
   '/_authenticated/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
+  '/_authenticated/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/editor/$projectId'
     | '/projects/new'
     | '/scenes/$projectId'
+    | '/storyboard/$projectId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/editor/$projectId'
     | '/projects/new'
     | '/scenes/$projectId'
+    | '/storyboard/$projectId'
   id:
     | '__root__'
     | '/'
@@ -156,6 +168,7 @@ export interface FileRouteTypes {
     | '/_authenticated/editor/$projectId'
     | '/_authenticated/projects/new'
     | '/_authenticated/scenes/$projectId'
+    | '/_authenticated/storyboard/$projectId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -216,6 +229,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/storyboard/$projectId': {
+      id: '/_authenticated/storyboard/$projectId'
+      path: '/storyboard/$projectId'
+      fullPath: '/storyboard/$projectId'
+      preLoaderRoute: typeof AuthenticatedStoryboardProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/scenes/$projectId': {
       id: '/_authenticated/scenes/$projectId'
       path: '/scenes/$projectId'
@@ -267,6 +287,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCharactersProjectIdRoute: typeof AuthenticatedCharactersProjectIdRoute
   AuthenticatedEditorProjectIdRoute: typeof AuthenticatedEditorProjectIdRoute
   AuthenticatedScenesProjectIdRoute: typeof AuthenticatedScenesProjectIdRoute
+  AuthenticatedStoryboardProjectIdRoute: typeof AuthenticatedStoryboardProjectIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -276,6 +297,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCharactersProjectIdRoute: AuthenticatedCharactersProjectIdRoute,
   AuthenticatedEditorProjectIdRoute: AuthenticatedEditorProjectIdRoute,
   AuthenticatedScenesProjectIdRoute: AuthenticatedScenesProjectIdRoute,
+  AuthenticatedStoryboardProjectIdRoute: AuthenticatedStoryboardProjectIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -290,3 +312,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
