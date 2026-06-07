@@ -153,10 +153,13 @@ export function CharacterProfileDialog({
                 <span className="text-[11px] text-muted-foreground">Profile {pct}% complete</span>
               </div>
             </div>
-            <Button size="sm" variant="outline" disabled={!!aiBusy} onClick={() => runAi("full", () => callFull({ data: { characterId } }))}>
-              {aiBusy === "full" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
-              Generate Full
-            </Button>
+            <div className="flex items-center gap-3">
+              <SaveStatus status={autosave.status} lastSavedAt={autosave.lastSavedAt} onRetry={() => void autosave.saveNow()} />
+              <Button size="sm" variant="outline" disabled={!!aiBusy} onClick={() => runAi("full", () => callFull({ data: { characterId } }))}>
+                {aiBusy === "full" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
+                Generate Full
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
