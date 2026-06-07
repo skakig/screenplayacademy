@@ -282,7 +282,7 @@ function BlockEditor({
   focusBlockId: string | null;
   onFocusDone: () => void;
 }) {
-  const [val, setVal] = useState(block.content);
+  const [val, setVal] = useState<string>(block.content ?? "");
   const ref = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { setVal(block.content); }, [block.content]);
