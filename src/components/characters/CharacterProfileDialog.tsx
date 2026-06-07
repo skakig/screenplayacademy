@@ -133,7 +133,7 @@ export function CharacterProfileDialog({
   if (!characterId) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={async (o) => { if (!o) await autosave.flush(); onOpenChange(o); }}>
       <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden p-0 flex flex-col">
         <DialogHeader className="px-6 pt-5 pb-3 border-b border-border/60">
           <div className="flex items-center gap-4">
