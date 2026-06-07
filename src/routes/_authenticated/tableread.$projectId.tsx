@@ -24,6 +24,7 @@ function TableRead() {
   const { projectId } = Route.useParams();
   const qc = useQueryClient();
   const callGen = useServerFn(generateTableRead);
+  const callRefresh = useServerFn(refreshTableReadUrl);
 
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
@@ -47,6 +48,7 @@ function TableRead() {
   const [sfx, setSfx] = useState(false);
   const [voiceMap, setVoiceMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [latestId, setLatestId] = useState<string | null>(null);
 
   useEffect(() => { if (!sceneId && scenes.length) setSceneId(scenes[0].id); }, [scenes, sceneId]);
 
@@ -54,13 +56,24 @@ function TableRead() {
     mutationFn: async () => callGen({ data: { projectId, sceneId, voiceMap, narrator, sfx } }),
     onSuccess: (audio: any) => {
       qc.invalidateQueries({ queryKey: ["audios", projectId] });
+      qc.invalidateQueries({ queryKey: ["characters", projectId] });
       if (audio?.status === "coming_soon") toast.info(audio.message ?? "Coming soon");
+      else if (audio?.status === "ready") { toast.success("Table read ready"); setLatestId(audio.id); }
       else toast.success("Table read queued");
     },
     onError: (e: any) => toast.error(e.message ?? "Failed"),
   });
 
   const run = async () => { setLoading(true); try { await gen.mutateAsync(); } finally { setLoading(false); } };
+
+  const refresh = async (id: string) => {
+    try {
+      const { url } = await callRefresh({ data: { audioAssetId: id } });
+      qc.setQueryData(["audios", projectId], (old: any[] | undefined) =>
+        (old ?? []).map((a) => (a.id === id ? { ...a, audio_url: url } : a)),
+      );
+    } catch (e: any) { toast.error(e.message ?? "Could not refresh link"); }
+  };
 
   return (
     <AppShell>
