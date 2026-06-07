@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { ProjectNav } from "@/components/ProjectNav";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Plus, Trash2, Loader2, Copy } from "lucide-react";
+import { Sparkles, Plus, Trash2, Loader2, Copy, Command } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { aiAssist } from "@/lib/ai.functions";
@@ -19,14 +19,14 @@ export const Route = createFileRoute("/_authenticated/editor/$projectId")({
 });
 
 const BLOCK_TYPES = [
-  { value: "scene_heading", label: "Scene Heading" },
-  { value: "action", label: "Action" },
-  { value: "character", label: "Character" },
-  { value: "dialogue", label: "Dialogue" },
-  { value: "parenthetical", label: "Parenthetical" },
-  { value: "transition", label: "Transition" },
-  { value: "shot", label: "Shot" },
-  { value: "note", label: "Note" },
+  { value: "scene_heading", label: "Scene Heading", shortcut: "/scene" },
+  { value: "action", label: "Action", shortcut: "/action" },
+  { value: "character", label: "Character", shortcut: "/character" },
+  { value: "dialogue", label: "Dialogue", shortcut: "/dialogue" },
+  { value: "parenthetical", label: "Parenthetical", shortcut: "/parenthetical" },
+  { value: "transition", label: "Transition", shortcut: "/transition" },
+  { value: "shot", label: "Shot", shortcut: "/shot" },
+  { value: "note", label: "Note", shortcut: "/note" },
 ];
 
 const AI_TOOLS = [
@@ -59,6 +59,8 @@ function Editor() {
     },
   });
 
+  const [focusBlockId, setFocusBlockId] = useState<string | null>(null);
+
   const addBlock = useMutation({
     mutationFn: async (block_type: string) => {
       const order_index = blocks.length;
@@ -69,6 +71,31 @@ function Editor() {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["blocks", projectId] }),
+  });
+
+  const insertBlockAfter = useMutation({
+    mutationFn: async ({ block_type, afterOrder }: { block_type: string; afterOrder: number }) => {
+      // Insert with fractional order to place it right after
+      const { data, error } = await supabase.from("script_blocks")
+        .insert({ project_id: projectId, block_type, content: "", order_index: afterOrder + 0.5 })
+        .select().single();
+      if (error) throw error;
+      // Re-normalize order indices
+      const { data: all } = await supabase.from("script_blocks")
+        .select("id, order_index")
+        .eq("project_id", projectId)
+        .order("order_index");
+      if (all) {
+        for (let i = 0; i < all.length; i++) {
+          await supabase.from("script_blocks").update({ order_index: i }).eq("id", all[i].id);
+        }
+      }
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["blocks", projectId] });
+      if (data?.id) setFocusBlockId(data.id);
+    },
   });
 
   const updateBlock = useMutation({
@@ -131,6 +158,14 @@ function Editor() {
             <p className="text-xs text-muted-foreground">{project?.project_type}</p>
             {project?.genre && <p className="text-xs text-muted-foreground mt-1">{project.genre}</p>}
           </div>
+          <div className="mt-6">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Shortcuts</h3>
+            <div className="text-[10px] text-muted-foreground space-y-1 font-mono">
+              <p><span className="text-primary">/</span> — slash commands</p>
+              <p><span className="text-primary">Tab</span> — cycle block type</p>
+              <p><span className="text-primary">Enter</span> — new block</p>
+            </div>
+          </div>
         </aside>
 
         {/* Editor */}
@@ -148,6 +183,9 @@ function Editor() {
                   block={b}
                   onUpdate={(patch) => updateBlock.mutate({ id: b.id, ...patch })}
                   onDelete={() => deleteBlock.mutate(b.id)}
+                  onInsertAfter={(block_type) => insertBlockAfter.mutate({ block_type, afterOrder: b.order_index })}
+                  focusBlockId={focusBlockId}
+                  onFocusDone={() => setFocusBlockId(null)}
                 />
               ))
             )}
@@ -217,7 +255,21 @@ function Editor() {
   );
 }
 
-function BlockEditor({ block, onUpdate, onDelete }: { block: any; onUpdate: (patch: { content?: string; block_type?: string }) => void; onDelete: () => void }) {
+function BlockEditor({
+  block,
+  onUpdate,
+  onDelete,
+  onInsertAfter,
+  focusBlockId,
+  onFocusDone,
+}: {
+  block: any;
+  onUpdate: (patch: { content?: string; block_type?: string }) => void;
+  onDelete: () => void;
+  onInsertAfter: (block_type: string) => void;
+  focusBlockId: string | null;
+  onFocusDone: () => void;
+}) {
   const [val, setVal] = useState(block.content);
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -233,6 +285,14 @@ function BlockEditor({ block, onUpdate, onDelete }: { block: any; onUpdate: (pat
     }
   }, [val]);
 
+  // focus newly inserted blocks
+  useEffect(() => {
+    if (focusBlockId === block.id && ref.current) {
+      ref.current.focus();
+      onFocusDone();
+    }
+  }, [focusBlockId, block.id, onFocusDone]);
+
   const placeholder: Record<string, string> = {
     scene_heading: "INT. LOCATION - DAY",
     action: "Describe what we see...",
@@ -244,18 +304,159 @@ function BlockEditor({ block, onUpdate, onDelete }: { block: any; onUpdate: (pat
     note: "Note to self...",
   };
 
+  // Slash command state
+  const [slashOpen, setSlashOpen] = useState(false);
+  const [slashStart, setSlashStart] = useState<number>(-1);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const query = slashOpen && slashStart >= 0
+    ? val.slice(slashStart + 1).toLowerCase()
+    : "";
+
+  const filtered = BLOCK_TYPES.filter((t) =>
+    t.label.toLowerCase().includes(query) ||
+    t.value.toLowerCase().includes(query) ||
+    t.shortcut.toLowerCase().includes(query)
+  );
+
+  const closeSlash = useCallback(() => {
+    setSlashOpen(false);
+    setSlashStart(-1);
+    setSelectedIndex(0);
+  }, []);
+
+  const executeSlash = useCallback((blockType: string) => {
+    // Remove slash text from current block
+    const beforeSlash = val.slice(0, slashStart);
+    const newVal = beforeSlash;
+    setVal(newVal);
+    onUpdate({ content: newVal });
+    closeSlash();
+    onInsertAfter(blockType);
+  }, [val, slashStart, closeSlash, onUpdate, onInsertAfter]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (slashOpen) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeSlash();
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((i) => (i + 1) % filtered.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((i) => (i - 1 + filtered.length) % filtered.length);
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (filtered[selectedIndex]) {
+          executeSlash(filtered[selectedIndex].value);
+        }
+        return;
+      }
+      if (e.key === "Tab") {
+        e.preventDefault();
+        if (filtered[selectedIndex]) {
+          executeSlash(filtered[selectedIndex].value);
+        }
+        return;
+      }
+    } else {
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const idx = BLOCK_TYPES.findIndex((t) => t.value === block.block_type);
+        const next = BLOCK_TYPES[(idx + 1) % BLOCK_TYPES.length];
+        onUpdate({ block_type: next.value });
+        return;
+      }
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        onInsertAfter("action");
+        return;
+      }
+    }
+
+    if (e.key === "/" && !slashOpen) {
+      const pos = e.currentTarget.selectionStart;
+      setSlashOpen(true);
+      setSlashStart(pos);
+      setSelectedIndex(0);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newVal = e.target.value;
+    setVal(newVal);
+
+    if (slashOpen) {
+      // If the slash was removed (backspace, etc.), close menu
+      if (slashStart >= newVal.length || newVal[slashStart] !== "/") {
+        closeSlash();
+      }
+    }
+  };
+
+  // Close slash menu on click outside
+  useEffect(() => {
+    if (!slashOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        closeSlash();
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [slashOpen, closeSlash]);
+
   return (
     <div className={`group relative blk-${block.block_type}`}>
       <textarea
         ref={ref}
         value={val}
-        onChange={(e) => setVal(e.target.value)}
+        onChange={handleChange}
         onBlur={flush}
+        onKeyDown={handleKeyDown}
         placeholder={placeholder[block.block_type]}
         rows={1}
         className="w-full bg-transparent border-none outline-none resize-none focus:bg-primary/5 rounded px-1 -mx-1 placeholder:text-muted-foreground/40"
         style={{ fontFamily: "inherit", fontSize: "inherit", color: "inherit", textAlign: "inherit", textTransform: "inherit", fontWeight: "inherit", fontStyle: "inherit" } as any}
       />
+
+      {/* Slash command menu */}
+      {slashOpen && filtered.length > 0 && (
+        <div
+          ref={menuRef}
+          className="absolute left-0 top-full mt-1 z-50 w-56 rounded-md border border-border bg-popover shadow-lg p-1 font-sans"
+        >
+          <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+            <Command className="h-3 w-3" /> Insert block
+          </div>
+          {filtered.map((t, i) => (
+            <button
+              key={t.value}
+              className={`w-full text-left flex items-center justify-between px-2 py-1.5 text-xs rounded-sm transition-colors ${
+                i === selectedIndex ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
+              }`}
+              onMouseEnter={() => setSelectedIndex(i)}
+              onClick={(e) => {
+                e.stopPropagation();
+                executeSlash(t.value);
+              }}
+            >
+              <span>{t.label}</span>
+              <span className="text-[10px] text-muted-foreground font-mono">{t.shortcut}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Block controls */}
       <div className="absolute -left-12 top-0 opacity-0 group-hover:opacity-100 transition flex flex-col gap-0.5 font-sans">
         <Select value={block.block_type} onValueChange={(v) => onUpdate({ block_type: v })}>
           <SelectTrigger className="h-6 w-10 text-[10px] px-1"><span>{block.block_type[0].toUpperCase()}</span></SelectTrigger>
