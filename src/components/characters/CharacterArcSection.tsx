@@ -55,6 +55,7 @@ export function CharacterArcSection({
 
   const { data: arc, isLoading } = useQuery({
     queryKey: ["character-arc", characterId],
+    refetchOnMount: "always",
     queryFn: async (): Promise<any> => {
       const { data } = await supabase
         .from("character_arcs")
@@ -67,6 +68,16 @@ export function CharacterArcSection({
 
   const [local, setLocal] = useState<any>({});
   useEffect(() => { setLocal(arc ?? {}); }, [arc]);
+
+  const autosave = useAutosave<any>({
+    local,
+    remote: arc,
+    enabled: !isLoading,
+    onSave: async (patch) => {
+      await callUpsert({ data: { project_id: projectId, character_id: characterId, patch } });
+      qc.invalidateQueries({ queryKey: ["character-arc", characterId] });
+    },
+  });
 
   const save = useMutation({
     mutationFn: async (patch: any) =>
