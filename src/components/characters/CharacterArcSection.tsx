@@ -93,6 +93,7 @@ export function CharacterArcSection({
         <Activity className="h-4 w-4 text-primary" />
         <h3 className="font-display text-base">Character Arc</h3>
         {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+        <div className="ml-auto"><SaveStatus status={autosave.status} lastSavedAt={autosave.lastSavedAt} onRetry={() => void autosave.saveNow()} /></div>
       </div>
 
       {/* Arc type */}
