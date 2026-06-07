@@ -487,8 +487,8 @@ function BlockEditor({
 }
 
 function formatExport(b: any): string {
-  const c = b.content;
-  switch (b.block_type) {
+  const c = String(b?.content ?? "");
+  switch (b?.block_type) {
     case "scene_heading": return c.toUpperCase();
     case "character": return `\t\t\t${c.toUpperCase()}`;
     case "dialogue": return `\t\t${c}`;
