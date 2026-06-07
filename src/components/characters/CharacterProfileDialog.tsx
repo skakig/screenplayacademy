@@ -212,7 +212,6 @@ export function CharacterProfileDialog({
                     <TextField label="Core contradiction" value={local.contradiction} onChange={(v: string) => set({ contradiction: v })} multiline />
                     <TextField label="Archetype" value={local.archetype} onChange={(v: string) => set({ archetype: v })} />
                   </div>
-                  <SaveBar onSave={() => save.mutate(local)} pending={save.isPending} />
                 </TabsContent>
 
                 {/* BACKSTORY */}
@@ -221,7 +220,6 @@ export function CharacterProfileDialog({
                   {["childhood","defining_wound","formative_relationship","biggest_loss","biggest_shame","life_before_story","lies_about","never_says_aloud"].map((k) => (
                     <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
                   ))}
-                  <SaveBar onSave={() => save.mutate(local)} pending={save.isPending} />
                 </TabsContent>
 
                 {/* PERSONALITY */}
@@ -231,7 +229,6 @@ export function CharacterProfileDialog({
                       <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
                     ))}
                   </div>
-                  <SaveBar onSave={() => save.mutate(local)} pending={save.isPending} />
                 </TabsContent>
 
                 {/* TMH */}
@@ -258,7 +255,6 @@ export function CharacterProfileDialog({
                       <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
                     ))}
                   </div>
-                  <SaveBar onSave={() => save.mutate(local)} pending={save.isPending} />
 
                   <Card className="p-3 bg-secondary/30 border-dashed">
                     <div className="flex items-center gap-2 mb-2 text-xs font-semibold"><AlertTriangle className="h-3.5 w-3.5 text-accent" />Run Moral Pressure Test</div>
@@ -295,7 +291,6 @@ export function CharacterProfileDialog({
                       <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
                     ))}
                   </div>
-                  <SaveBar onSave={() => save.mutate(local)} pending={save.isPending} />
 
                   <Card className="p-3 bg-secondary/30 border-dashed">
                     <div className="flex items-center gap-2 mb-2 text-xs font-semibold"><MessageSquareQuote className="h-3.5 w-3.5 text-accent" />Test dialogue</div>
@@ -333,7 +328,6 @@ export function CharacterProfileDialog({
                     ))}
                   </div>
                   <TextField label="Image prompt" value={local.image_prompt} onChange={(v: string) => set({ image_prompt: v })} multiline rows={4} />
-                  <SaveBar onSave={() => save.mutate(local)} pending={save.isPending} />
                 </TabsContent>
 
                 {/* RELATIONSHIPS */}
@@ -352,7 +346,6 @@ export function CharacterProfileDialog({
                       <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
                     ))}
                   </div>
-                  <SaveBar onSave={() => save.mutate(local)} pending={save.isPending} />
 
                   <Card className="p-3 bg-secondary/30 border-dashed">
                     <div className="flex items-center gap-2 mb-2 text-xs font-semibold"><Search className="h-3.5 w-3.5 text-accent" />Find contradictions</div>
