@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedTablereadProjectIdRouteImport } from './routes/_authenticated/tableread.$projectId'
 import { Route as AuthenticatedStoryboardProjectIdRouteImport } from './routes/_authenticated/storyboard.$projectId'
 import { Route as AuthenticatedScenesProjectIdRouteImport } from './routes/_authenticated/scenes.$projectId'
 import { Route as AuthenticatedProjectsNewRouteImport } from './routes/_authenticated/projects.new'
@@ -56,6 +57,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTablereadProjectIdRoute =
+  AuthenticatedTablereadProjectIdRouteImport.update({
+    id: '/tableread/$projectId',
+    path: '/tableread/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedStoryboardProjectIdRoute =
   AuthenticatedStoryboardProjectIdRouteImport.update({
     id: '/storyboard/$projectId',
@@ -99,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/projects/new': typeof AuthenticatedProjectsNewRoute
   '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
   '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
+  '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -112,6 +120,7 @@ export interface FileRoutesByTo {
   '/projects/new': typeof AuthenticatedProjectsNewRoute
   '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
   '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
+  '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -127,6 +136,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/new': typeof AuthenticatedProjectsNewRoute
   '/_authenticated/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
   '/_authenticated/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
+  '/_authenticated/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/projects/new'
     | '/scenes/$projectId'
     | '/storyboard/$projectId'
+    | '/tableread/$projectId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/projects/new'
     | '/scenes/$projectId'
     | '/storyboard/$projectId'
+    | '/tableread/$projectId'
   id:
     | '__root__'
     | '/'
@@ -169,6 +181,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/new'
     | '/_authenticated/scenes/$projectId'
     | '/_authenticated/storyboard/$projectId'
+    | '/_authenticated/tableread/$projectId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -227,6 +240,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tableread/$projectId': {
+      id: '/_authenticated/tableread/$projectId'
+      path: '/tableread/$projectId'
+      fullPath: '/tableread/$projectId'
+      preLoaderRoute: typeof AuthenticatedTablereadProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/storyboard/$projectId': {
@@ -288,6 +308,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedEditorProjectIdRoute: typeof AuthenticatedEditorProjectIdRoute
   AuthenticatedScenesProjectIdRoute: typeof AuthenticatedScenesProjectIdRoute
   AuthenticatedStoryboardProjectIdRoute: typeof AuthenticatedStoryboardProjectIdRoute
+  AuthenticatedTablereadProjectIdRoute: typeof AuthenticatedTablereadProjectIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -298,6 +319,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedEditorProjectIdRoute: AuthenticatedEditorProjectIdRoute,
   AuthenticatedScenesProjectIdRoute: AuthenticatedScenesProjectIdRoute,
   AuthenticatedStoryboardProjectIdRoute: AuthenticatedStoryboardProjectIdRoute,
+  AuthenticatedTablereadProjectIdRoute: AuthenticatedTablereadProjectIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
