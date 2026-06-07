@@ -140,7 +140,18 @@ function TableRead() {
                     <span className="font-medium capitalize">{a.kind} · {a.status}</span>
                     <span className="text-muted-foreground">{new Date(a.created_at).toLocaleString()}</span>
                   </div>
-                  {a.audio_url ? <audio controls src={a.audio_url} className="w-full" /> : (
+                  {a.audio_url ? (
+                    <>
+                      <audio controls src={a.audio_url} className="w-full" autoPlay={a.id === latestId} onError={() => refresh(a.id)} />
+                      <div className="mt-2 flex justify-end">
+                        <Button variant="ghost" size="sm" className="h-6 text-[11px]" onClick={() => refresh(a.id)}>Refresh link</Button>
+                      </div>
+                    </>
+                  ) : a.status === "failed" ? (
+                    <p className="text-xs text-destructive">Generation failed. Try again or simplify the scene.</p>
+                  ) : a.status === "generating" ? (
+                    <p className="text-xs text-muted-foreground italic flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" />Performing the read…</p>
+                  ) : (
                     <p className="text-xs text-muted-foreground italic">Audio will appear here once generation completes.</p>
                   )}
                 </Card>
