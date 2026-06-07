@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, ArrowRight, Activity } from "lucide-react";
-import { toast } from "sonner";
+
 import { upsertCharacterArc } from "@/lib/arc.functions";
 import { useAutosave } from "@/hooks/use-autosave";
 import { SaveStatus } from "./SaveStatus";
