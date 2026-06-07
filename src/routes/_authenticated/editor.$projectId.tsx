@@ -207,7 +207,7 @@ function Editor() {
   );
 }
 
-function BlockEditor({ block, onUpdate, onDelete }: any) {
+function BlockEditor({ block, onUpdate, onDelete }: { block: any; onUpdate: (patch: { content?: string; block_type?: string }) => void; onDelete: () => void }) {
   const [val, setVal] = useState(block.content);
   const ref = useRef<HTMLTextAreaElement>(null);
 
