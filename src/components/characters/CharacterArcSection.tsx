@@ -80,19 +80,7 @@ export function CharacterArcSection({
   });
 
   const save = useMutation({
-    mutationFn: async (patch: any) =>
-      callUpsert({ data: { project_id: projectId, character_id: characterId, patch } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["character-arc", characterId] });
-    },
-    onError: (e: any) => toast.error(e?.message ?? "Save failed"),
-  });
-
   const set = (patch: any) => setLocal((l: any) => ({ ...l, ...patch }));
-  const commit = (key: string, value: any) => {
-    if ((arc ?? {})[key] === value) return;
-    save.mutate({ [key]: value });
-  };
 
   const start = local.starting_tmh_level as number | undefined;
   const mid = local.midpoint_tmh_level as number | undefined;
