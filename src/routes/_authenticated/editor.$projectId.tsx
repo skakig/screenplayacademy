@@ -19,14 +19,14 @@ export const Route = createFileRoute("/_authenticated/editor/$projectId")({
 });
 
 const BLOCK_TYPES = [
-  { value: "scene_heading", label: "Scene Heading", shortcut: "/scene" },
-  { value: "action", label: "Action", shortcut: "/action" },
-  { value: "character", label: "Character", shortcut: "/character" },
-  { value: "dialogue", label: "Dialogue", shortcut: "/dialogue" },
-  { value: "parenthetical", label: "Parenthetical", shortcut: "/parenthetical" },
-  { value: "transition", label: "Transition", shortcut: "/transition" },
-  { value: "shot", label: "Shot", shortcut: "/shot" },
-  { value: "note", label: "Note", shortcut: "/note" },
+  { value: "scene_heading", label: "Scene Heading", shortcut: "/scene", aliases: ["/heading", "/h", "/int", "/ext"] },
+  { value: "action", label: "Action", shortcut: "/action", aliases: ["/a", "/desc", "/description"] },
+  { value: "character", label: "Character", shortcut: "/character", aliases: ["/char", "/c", "/name"] },
+  { value: "dialogue", label: "Dialogue", shortcut: "/dialogue", aliases: ["/dia", "/d", "/line", "/speech"] },
+  { value: "parenthetical", label: "Parenthetical", shortcut: "/parenthetical", aliases: ["/parenth", "/p", "/wryly", "/beat"] },
+  { value: "transition", label: "Transition", shortcut: "/transition", aliases: ["/trans", "/t", "/cut", "/fade"] },
+  { value: "shot", label: "Shot", shortcut: "/shot", aliases: ["/s", "/camera", "/angle"] },
+  { value: "note", label: "Note", shortcut: "/note", aliases: ["/n", "/comment", "/reminder"] },
 ];
 
 const AI_TOOLS = [
