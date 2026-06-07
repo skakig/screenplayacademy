@@ -317,7 +317,8 @@ function BlockEditor({
   const filtered = BLOCK_TYPES.filter((t) =>
     t.label.toLowerCase().includes(query) ||
     t.value.toLowerCase().includes(query) ||
-    t.shortcut.toLowerCase().includes(query)
+    t.shortcut.toLowerCase().includes(query) ||
+    t.aliases.some((a) => a.toLowerCase().includes(query))
   );
 
   const closeSlash = useCallback(() => {
