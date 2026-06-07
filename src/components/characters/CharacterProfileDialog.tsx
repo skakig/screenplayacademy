@@ -382,16 +382,6 @@ function prettyLabel(k: string): string {
   return k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function SaveBar({ onSave, pending }: { onSave: () => void; pending: boolean }) {
-  return (
-    <div className="flex justify-end pt-2">
-      <Button size="sm" onClick={onSave} disabled={pending}>
-        {pending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null}
-        Save
-      </Button>
-    </div>
-  );
-}
 
 function AiBar({ label, busy, onClick }: { label: string; busy: boolean; onClick: () => void }) {
   return (
