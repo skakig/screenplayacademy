@@ -210,7 +210,7 @@ function TmhSparkline({ start, mid, end }: { start?: number; mid?: number; end?:
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-16">
       {/* baseline grid for L1, L5, L9 */}
       {[1, 5, 9].map((l) => (
-        <line key={l} x1={0} x2={W} y1={y(l)} y2={y(l)} stroke="hsl(var(--border) / 0.6)" strokeDasharray="2 3" />
+        <line key={l} x1={0} x2={W} y1={y(l)} y2={y(l)} stroke="var(--border)" strokeDasharray="2 3" opacity={0.6} />
       ))}
       <path d={path} fill="none" stroke={tmhVar(endLevel)} strokeWidth={2} />
       {points.map((p) => (
