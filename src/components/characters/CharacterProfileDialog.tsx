@@ -23,6 +23,8 @@ import { tmhLabel, GROUPS, completenessPct } from "./tmh";
 import { RelationshipsTab } from "./RelationshipsTab";
 import { SceneUsageTab } from "./SceneUsageTab";
 import { CharacterArcSection } from "./CharacterArcSection";
+import { SaveStatus } from "./SaveStatus";
+import { useAutosave } from "@/hooks/use-autosave";
 import {
   upsertCharacter, generateFullCharacter, generateBackstory, generateTMHProfile,
   generateDialogueVoice, generateVisualPrompt, runMoralPressureTest, analyzeCharacterArc,
