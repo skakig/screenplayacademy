@@ -18,11 +18,13 @@ import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedTablereadProjectIdRouteImport } from './routes/_authenticated/tableread.$projectId'
 import { Route as AuthenticatedStoryboardProjectIdRouteImport } from './routes/_authenticated/storyboard.$projectId'
+import { Route as AuthenticatedStoryArcProjectIdRouteImport } from './routes/_authenticated/story-arc.$projectId'
 import { Route as AuthenticatedScenesProjectIdRouteImport } from './routes/_authenticated/scenes.$projectId'
 import { Route as AuthenticatedProjectsNewRouteImport } from './routes/_authenticated/projects.new'
 import { Route as AuthenticatedPitchProjectIdRouteImport } from './routes/_authenticated/pitch.$projectId'
 import { Route as AuthenticatedEditorProjectIdRouteImport } from './routes/_authenticated/editor.$projectId'
 import { Route as AuthenticatedCharactersProjectIdRouteImport } from './routes/_authenticated/characters.$projectId'
+import { Route as AuthenticatedArcTimelineProjectIdRouteImport } from './routes/_authenticated/arc-timeline.$projectId'
 
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
@@ -70,6 +72,12 @@ const AuthenticatedStoryboardProjectIdRoute =
     path: '/storyboard/$projectId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedStoryArcProjectIdRoute =
+  AuthenticatedStoryArcProjectIdRouteImport.update({
+    id: '/story-arc/$projectId',
+    path: '/story-arc/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedScenesProjectIdRoute =
   AuthenticatedScenesProjectIdRouteImport.update({
     id: '/scenes/$projectId',
@@ -100,6 +108,12 @@ const AuthenticatedCharactersProjectIdRoute =
     path: '/characters/$projectId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedArcTimelineProjectIdRoute =
+  AuthenticatedArcTimelineProjectIdRouteImport.update({
+    id: '/arc-timeline/$projectId',
+    path: '/arc-timeline/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -108,11 +122,13 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
+  '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
   '/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
   '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
+  '/story-arc/$projectId': typeof AuthenticatedStoryArcProjectIdRoute
   '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
   '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
 }
@@ -123,11 +139,13 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
+  '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
   '/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
   '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
+  '/story-arc/$projectId': typeof AuthenticatedStoryArcProjectIdRoute
   '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
   '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
 }
@@ -140,11 +158,13 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/_authenticated/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/_authenticated/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
   '/_authenticated/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
   '/_authenticated/projects/new': typeof AuthenticatedProjectsNewRoute
   '/_authenticated/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
+  '/_authenticated/story-arc/$projectId': typeof AuthenticatedStoryArcProjectIdRoute
   '/_authenticated/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
   '/_authenticated/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
 }
@@ -157,11 +177,13 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/projects'
     | '/settings'
+    | '/arc-timeline/$projectId'
     | '/characters/$projectId'
     | '/editor/$projectId'
     | '/pitch/$projectId'
     | '/projects/new'
     | '/scenes/$projectId'
+    | '/story-arc/$projectId'
     | '/storyboard/$projectId'
     | '/tableread/$projectId'
   fileRoutesByTo: FileRoutesByTo
@@ -172,11 +194,13 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/projects'
     | '/settings'
+    | '/arc-timeline/$projectId'
     | '/characters/$projectId'
     | '/editor/$projectId'
     | '/pitch/$projectId'
     | '/projects/new'
     | '/scenes/$projectId'
+    | '/story-arc/$projectId'
     | '/storyboard/$projectId'
     | '/tableread/$projectId'
   id:
@@ -188,11 +212,13 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/projects'
     | '/_authenticated/settings'
+    | '/_authenticated/arc-timeline/$projectId'
     | '/_authenticated/characters/$projectId'
     | '/_authenticated/editor/$projectId'
     | '/_authenticated/pitch/$projectId'
     | '/_authenticated/projects/new'
     | '/_authenticated/scenes/$projectId'
+    | '/_authenticated/story-arc/$projectId'
     | '/_authenticated/storyboard/$projectId'
     | '/_authenticated/tableread/$projectId'
   fileRoutesById: FileRoutesById
@@ -269,6 +295,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoryboardProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/story-arc/$projectId': {
+      id: '/_authenticated/story-arc/$projectId'
+      path: '/story-arc/$projectId'
+      fullPath: '/story-arc/$projectId'
+      preLoaderRoute: typeof AuthenticatedStoryArcProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/scenes/$projectId': {
       id: '/_authenticated/scenes/$projectId'
       path: '/scenes/$projectId'
@@ -304,6 +337,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCharactersProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/arc-timeline/$projectId': {
+      id: '/_authenticated/arc-timeline/$projectId'
+      path: '/arc-timeline/$projectId'
+      fullPath: '/arc-timeline/$projectId'
+      preLoaderRoute: typeof AuthenticatedArcTimelineProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -324,10 +364,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRouteWithChildren
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedArcTimelineProjectIdRoute: typeof AuthenticatedArcTimelineProjectIdRoute
   AuthenticatedCharactersProjectIdRoute: typeof AuthenticatedCharactersProjectIdRoute
   AuthenticatedEditorProjectIdRoute: typeof AuthenticatedEditorProjectIdRoute
   AuthenticatedPitchProjectIdRoute: typeof AuthenticatedPitchProjectIdRoute
   AuthenticatedScenesProjectIdRoute: typeof AuthenticatedScenesProjectIdRoute
+  AuthenticatedStoryArcProjectIdRoute: typeof AuthenticatedStoryArcProjectIdRoute
   AuthenticatedStoryboardProjectIdRoute: typeof AuthenticatedStoryboardProjectIdRoute
   AuthenticatedTablereadProjectIdRoute: typeof AuthenticatedTablereadProjectIdRoute
 }
@@ -336,10 +378,13 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRouteWithChildren,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedArcTimelineProjectIdRoute:
+    AuthenticatedArcTimelineProjectIdRoute,
   AuthenticatedCharactersProjectIdRoute: AuthenticatedCharactersProjectIdRoute,
   AuthenticatedEditorProjectIdRoute: AuthenticatedEditorProjectIdRoute,
   AuthenticatedPitchProjectIdRoute: AuthenticatedPitchProjectIdRoute,
   AuthenticatedScenesProjectIdRoute: AuthenticatedScenesProjectIdRoute,
+  AuthenticatedStoryArcProjectIdRoute: AuthenticatedStoryArcProjectIdRoute,
   AuthenticatedStoryboardProjectIdRoute: AuthenticatedStoryboardProjectIdRoute,
   AuthenticatedTablereadProjectIdRoute: AuthenticatedTablereadProjectIdRoute,
 }

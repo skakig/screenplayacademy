@@ -1,120 +1,101 @@
-# Your Characters — Cinematic Cast Hub
 
-Build a full character system at `/characters/$projectId` with a 3‑pane cinematic layout, rich profile tabs, relationships, scene usage, and AI generators (with graceful demo fallbacks). ElevenLabs voice IDs are persisted per character and reused by the Table Read.
+# StoryPulse — Arc Engine
+
+Make every scene answer one question: *what changes because this scene exists?* The Arc Engine sits inside the screenplay editor and across a dedicated timeline page, tracking story beats, character moral movement (TMH 1–9), relationship shifts, and scene strength.
+
+Public-facing name: **StoryPulse**. Internal/system name: **Arc Engine**.
+
+---
 
 ## 1. Database (one migration)
 
-Extend `characters` and add two new tables.
+Four new tables, all RLS-scoped via `owns_project(project_id)`, with `authenticated` + `service_role` grants and `updated_at` triggers.
 
-`**characters**` — add columns (keep existing):
+- `story_arcs` — project-level arc: type, structure model, central question, theme, opening/midpoint/darkest/climax/final state.
+- `character_arcs` — per character: arc type (Transformation, Fall, Flat/Tested, Redemption, Corruption), starting/ending belief, core lie, truth learned, TMH start/midpoint/ending/regression levels, temptation, moral test, climax choice, final image.
+- `scene_arc_beats` — per scene: act, sequence, story beat, scene purpose, external plot change, relationship change, moral pressure, theme connection, stakes change, scene turn, question raised, question answered, emotional charge 1–10, scene strength 0–100, arc status (Unreviewed / Strong / Needs Work / Missing Turn / No Character Movement / No Stakes Change).
+- `character_scene_arc_states` — per (scene, character): goal, need, lie believed, tactic, emotional state start/end, TMH start/end, arc movement (Rise / Fall / Regression / Revelation / Resistance / No Change), cost, revelation, relationship shift. Unique `(scene_id, character_id)`.
 
-- `alias`, `character_type`, `occupation`, `status`, `summary`
-- `core_lie`, `core_secret` (already partly there), `group_name` (text, default `'Main Cast'`)
-- Backstory: `childhood`, `defining_wound`, `formative_relationship`, `biggest_loss`, `biggest_shame`, `life_before_story`, `lies_about`, `never_says_aloud`
-- Personality: `temperament`, `strengths`, `flaws`, `habits`, `conflict_style`, `fear_response`, `trust_triggers`, `betrayal_triggers`, `humor_style`
-- TMH: `tmh_baseline` int, `tmh_stress` int, `tmh_aspirational` int, `tmh_shadow` int, `moral_wound`, `moral_blind_spot`, `core_temptation`, `core_virtue`, `core_vice`, `moral_test`, `what_they_justify`, `would_never_do`, `might_do_under_pressure`, `redemption_path`, `corruption_path`
-- Voice: `voice_summary`, `vocabulary_level`, `sentence_rhythm`, `directness_level`, `emotional_openness`, `favorite_phrases`, `forbidden_phrases`, `how_they_lie`, `how_they_apologize`, `how_they_threaten`, `subtext_pattern`, `silence_pattern`, `voice_archetype` (keep `elevenlabs_voice_id`, `voice_style`, `speech_patterns`)
-- Visual: `color_palette`, `signature_props`, `visual_symbol`, `movement_style`, `portrait_url` (keep `visual_description`, `costume_notes`, `image_prompt`)
-- Arc: `starting_belief`, `ending_belief`, `starting_behavior`, `ending_behavior`, `act1_state`, `act2_pressure`, `midpoint_shift`, `dark_night_state`, `climax_choice`, `final_image`
+Note: existing `character_scene_states` overlaps partially; we keep it (already wired to characters hub) and add the richer `character_scene_arc_states` for editor-driven beats. Future cleanup can merge them.
 
-`**character_relationships**` (new)
+---
 
-- `id`, `project_id`, `character_id`, `related_character_id`, `relationship_type`, `public_dynamic`, `private_truth`, `power_dynamic`, `wants_from_other`, `other_wants`, `secret_between`, `trust_level` int, `conflict_level` int, `relationship_arc`, timestamps
-- RLS via `owns_project(project_id)`; GRANTs for `authenticated` + `service_role`
+## 2. Editor sidebar — `Arc` tab
 
-`**character_scene_states**` (new)
+Right sidebar on `/editor/$projectId` gets four tabs: **AI Assistant**, **Arc**, **Characters**, **Notes**. The Arc tab is contextual to the currently selected scene (derived from the cursor's nearest `scene_heading` block).
 
-- `id`, `project_id`, `character_id`, `scene_id`, `emotional_state`, `goal_in_scene`, `fear_in_scene`, `tactic`, `tmh_level` int, `moral_pressure`, `relationship_shift`, `secret_status`, `continuity_notes`, timestamps
-- RLS via `owns_project(project_id)`; unique `(character_id, scene_id)`
+Sections inside the Arc tab:
 
-## 2. Route & Layout
+- **Scene Arc** — editable form bound to `scene_arc_beats`, auto-saving on blur. Includes a top "Arc Header" preview that can also be pinned above the script block in Write Mode.
+- **Character Movement** — for each character appearing in the scene, an expandable card editing `character_scene_arc_states` (TMH sliders, arc movement chip, cost, revelation).
+- **AI Arc Tools** — buttons listed in the spec (Find scene turn, Strengthen character movement, Add moral pressure, Connect scene to theme, Raise stakes, Make protagonist choose, Pressure the wound, Diagnose weak scene, Suggest stronger ending, Suggest midpoint reversal, Strengthen climax choice, Fix Act 2 sag). Each calls a server fn; polished demo output when `LOVABLE_API_KEY` is absent — never dead.
 
-`src/routes/_authenticated/characters.$projectId.tsx` — three‑pane cinematic shell:
+Editor itself gets a small collapsible **Scene Arc Header** rendered above each scene heading block, showing purpose / beat / turn / TMH movement, so writers see the arc inline without leaving Write Mode.
 
-```text
-┌──────────┬─────────────────────────┬──────────────┐
-│ Groups   │ Character Card Grid     │ Inspector    │
-│ sidebar  │ (cinematic dark cards)  │ (selected)   │
-└──────────┴─────────────────────────┴──────────────┘
-```
+---
 
-- **Left sidebar**: 9 fixed groups + counts + "New Character" button. Filters grid.
-- **Center grid**: cinematic cards (dark bg, soft border, hover glow, TMH color badge, stress badge, arc arrow, voice/portrait/secret/warning icons, completeness %, Open Profile / Use in Scene).
-- **Right inspector**: condensed summary of selected character + quick AI action buttons; "Open full profile" opens the tab modal.
+## 3. New page — Arc Timeline (`/arc-timeline/$projectId`)
 
-Also add nav entry from project hub to this page.
+Horizontal/vertical scrollable timeline with one card per scene in `order_index`. Each card shows: scene number, heading, act, story beat, purpose, turn, stakes change, main characters (avatars), scene strength score, arc status badge, color-coded movement strip (Plot / Char / Rel / Moral / Weak).
 
-## 3. Character Profile (modal with 9 tabs)
+- Filters: All / Weak / No Turn / No Character Movement / No Stakes Change / Protagonist / Antagonist / Relationship / High Moral Pressure.
+- **Character Track**: select a character → timeline filters to scenes featuring that character, showing TMH path (L_start → L_end), cost, revelation, and a sparkline of the TMH trajectory.
+- Warnings rail (live, computed client-side from the data): long protagonist silence, repeated emotional state, flat arc stretches, ending vs. wound mismatch, climax-vs-TMH mismatch.
 
-`src/components/characters/CharacterProfileDialog.tsx` — shadcn `Dialog` + `Tabs`:
-Overview · Backstory · Personality · TMH Moral Profile · Voice & Dialogue · Visual Identity · Relationships · Arc · Scene Usage.
+---
 
-Each tab = a small form section, auto‑saves on blur via a `saveCharacter` server fn (debounced). Completeness % computed from filled fields.
+## 4. New pages — Story Arc & Character Arc
 
-- TMH tab: 4 sliders (1–9) with color‑coded labels (L1 Survival → L9 Transcendence) and an expandable info panel explaining TMH as "moral behavior under pressure."
-- Voice tab: ElevenLabs voice picker (reuses `listVoices` from table read) → writes `elevenlabs_voice_id`. Note: "voice reused by Table Read."
-- Visual tab: "Generate Portrait" → image-gen (Lovable AI image) → uploads to `storyboards` bucket → sets `portrait_url`.
-- Relationships tab: list + add/edit dialog of `character_relationships` rows with trust/conflict sliders.
-- Scene Usage tab: lists scenes (join `scenes`), inline `character_scene_states` editor per scene.
+- `/story-arc/$projectId` — single editable record from `story_arcs` with structure-model picker (Three-Act Feature, Five-Act TV, Save the Cat, Hero's Journey, Short Film, TV Pilot, Comic Issue, Audio Drama).
+- Character Arc lives as a new **Arc** tab inside the existing `CharacterProfileDialog` so it stays in the Characters hub. Stores into `character_arcs` and reuses the TMH sliders + arc-type select.
 
-## 4. AI Server Functions
+Both are added to the project nav (`ProjectNav.tsx`).
 
-`src/lib/characters.functions.ts` (all `requireSupabaseAuth`, all owner‑checked):
+---
 
-- `listCharacters({ projectId })`, `getCharacter({ id })`, `upsertCharacter`, `deleteCharacter`
-- `listRelationships`, `upsertRelationship`, `deleteRelationship`
-- `listSceneStates`, `upsertSceneState`
-- AI: `generateFullCharacter`, `generateBackstory`, `generateTMHProfile`, `generateDialogueVoice`, `generateVisualPrompt`, `runMoralPressureTest`, `analyzeCharacterArc`, `testDialogue`, `findContradictions`, `suggestSceneUse`, `generatePortrait`
+## 5. Server functions (`src/lib/arc.functions.ts`)
 
-AI calls go through Lovable AI Gateway (`google/gemini-3-flash-preview`) with structured output. If `LOVABLE_API_KEY` is missing or call fails, return a **polished deterministic demo** synthesized from existing fields — no dead buttons.
+All use `requireSupabaseAuth`, validate with Zod, and re-check ownership via `owns_project`. CRUD upserts plus AI generators:
 
-## 5. ElevenLabs Voice Cache
+- `upsertSceneArc`, `upsertCharacterSceneArc`, `upsertStoryArc`, `upsertCharacterArc`.
+- `findSceneTurn`, `strengthenCharacterMovement`, `addMoralPressure`, `connectSceneToTheme`, `raiseStakes`, `makeProtagonistChoose`, `pressureTheWound`, `diagnoseWeakScene`, `suggestStrongerEnding`, `suggestMidpointReversal`, `strengthenClimaxChoice`, `fixAct2Sag`.
+- `diagnoseProject` — returns a structured warning list (weak scenes, flat protagonist stretch, antagonist silence, wound unresolved, repeated TMH band in climax).
+- `computeSceneStrength` — deterministic 0–100 score from filled fields + presence of turn/stakes/choice; no AI required, so it always works.
 
-- Add `src/lib/elevenlabs-voices.functions.ts` `listElevenLabsVoices()` server fn.
-- Cache strategy: in‑memory `Map<string,{at:number,data:Voice[]}>` keyed by `'all'`, 10‑minute TTL inside the server fn module; plus client‑side TanStack Query (`staleTime: 10*60_000`, `gcTime: 30*60_000`) so the voice list is fetched at most once per session and shared between Voice tab + Table Read.
-- Table Read page (`tableread.$projectId.tsx`) updated to consume the same query key.
+AI calls go through the existing `callJson` / `callText` helpers in `characters.functions.ts` (Lovable AI Gateway, Gemini Flash). Demo fallbacks return polished, project-aware text built from the scene/character fields.
 
-## 6. UI/Design tokens
+---
 
-Add tokens to `src/styles.css`:
+## 6. Diagnostics & scene strength
 
-- TMH level colors L1–L9 (semantic `--tmh-l1`…`--tmh-l9`)
-- `--card-cinematic`, `--glow-primary` (subtle shadow)
-- Card variant in shadcn `card.tsx` extension or local CVA.
+`computeSceneStrength` runs on every scene save and after AI tools, writing back to `scene_arc_beats.scene_strength_score` and `arc_status`. Categories scored: clear objective, conflict, turn, story-state change, character-state change, stakes rise, theme link, visual action, ending momentum. Surfaced as a chip on each card and a "Strong / Needs work" breakdown in the sidebar.
 
-No raw hex in components — all via tokens.
+---
 
-## 7. Security
+## Technical notes
 
-- RLS on all 3 tables uses `owns_project(project_id)`.
-- GRANT SELECT/INSERT/UPDATE/DELETE to `authenticated`; ALL to `service_role`. No `anon`.
-- Portraits uploaded under `storyboards/<project_id>/characters/<char_id>.png`; signed URLs via existing pattern.
+- All new tables follow the four-step pattern (CREATE → GRANT → ENABLE RLS → POLICY) using `owns_project(project_id)` (already executable by `authenticated`).
+- Use `useServerFn` + TanStack Query mutations; invalidate `["scene-arc", sceneId]`, `["scene-arcs", projectId]`, `["character-arc", characterId]`, `["story-arc", projectId]`.
+- Sidebar tabs use existing `Tabs` primitive; the editor's current right pane gets refactored to host them without disturbing the autosave loop or `/slash` aliases shipped earlier.
+- Color coding uses existing semantic tokens (`--primary`, `--accent`, `--destructive`, `--muted`) plus the TMH band colors already defined for `TMHBadge`.
+- Demo outputs deterministic: same input → same text, so users never see blank states.
 
-## 8. Files to create / edit
+---
 
-Create:
+## Build order (matches the spec)
 
-- migration (1 file)
-- `src/routes/_authenticated/characters.$projectId.tsx`
-- `src/components/characters/CharacterGrid.tsx`
-- `src/components/characters/CharacterCard.tsx`
-- `src/components/characters/CharacterGroupsSidebar.tsx`
-- `src/components/characters/CharacterInspector.tsx`
-- `src/components/characters/CharacterProfileDialog.tsx` (+ one file per tab section under `./tabs/`)
-- `src/components/characters/RelationshipEditor.tsx`
-- `src/components/characters/TMHInfoPanel.tsx`
-- `src/lib/characters.functions.ts`
-- `src/lib/elevenlabs-voices.functions.ts`
+1. Migration + `scene_arc_beats` fields wired into the editor's Arc sidebar tab.
+2. `character_scene_arc_states` editor + collapsible Scene Arc Header in Write Mode.
+3. AI Arc Tools (server fns + buttons, with demo fallbacks).
+4. `/arc-timeline/$projectId` page with filters and Character Track.
+5. `/story-arc/$projectId` page + Character Arc tab in the Characters hub.
+6. `diagnoseProject` warnings rail + scene strength scoring everywhere.
 
-Edit:
+---
 
-- `src/styles.css` (TMH + cinematic tokens)
-- `src/lib/tableread.functions.ts` / page — switch to shared voice query
-- project hub: add "Your Characters" link
+## Out of scope (this pass)
 
-## Out of scope (this round)
-
-- Realtime collab on character edits
-- Importing characters across projects
-- Auto-linking scenes via NLP (manual scene‑state entries only)
-- Character image generation so we have a visual representation of our characters while working.
+- Merging the older `character_scene_states` into `character_scene_arc_states` (kept side-by-side for now).
+- Drag-to-reorder on the timeline (uses existing `order_index` only).
+- Realtime multi-writer collaboration.
+- Export of arc data to PDF/Final Draft (future pitch package work).

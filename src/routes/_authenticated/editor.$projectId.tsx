@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sparkles, Plus, Trash2, Loader2, Copy, Command } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArcSidebar } from "@/components/arc/ArcSidebar";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { aiAssist } from "@/lib/ai.functions";
@@ -232,35 +234,46 @@ function Editor() {
           )}
         </section>
 
-        {/* AI Sidebar */}
-        <aside className="hidden lg:block border-l border-border/60 p-4 min-h-[calc(100vh-104px)] bg-card/20">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold">AI Assistant</h3>
-          </div>
-          <Select value={aiTool} onValueChange={setAiTool}>
-            <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>{AI_TOOLS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-          </Select>
-          <Textarea
-            value={aiPrompt}
-            onChange={(e) => setAiPrompt(e.target.value)}
-            placeholder="Add specific instructions (optional)..."
-            className="mt-2 text-xs min-h-[80px]"
-          />
-          <Button className="w-full mt-2" size="sm" onClick={runAi} disabled={aiLoading}>
-            {aiLoading ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Thinking...</> : <><Sparkles className="h-3.5 w-3.5 mr-1.5" />Run</>}
-          </Button>
-          {aiOutput && (
-            <ScrollArea className="mt-4 h-[400px] rounded-md border border-border/60 bg-background/50 p-3">
-              <p className="text-xs whitespace-pre-wrap text-foreground/90 font-mono">{aiOutput}</p>
-            </ScrollArea>
-          )}
-          {aiOutput && (
-            <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => { navigator.clipboard.writeText(aiOutput); toast.success("Copied"); }}>
-              <Copy className="h-3.5 w-3.5 mr-1.5" />Copy
-            </Button>
-          )}
+        {/* Right sidebar */}
+        <aside className="hidden lg:block border-l border-border/60 min-h-[calc(100vh-104px)] bg-card/20">
+          <Tabs defaultValue="arc" className="w-full">
+            <TabsList className="w-full rounded-none border-b border-border/40 bg-transparent h-10">
+              <TabsTrigger value="arc" className="text-xs flex-1">Arc</TabsTrigger>
+              <TabsTrigger value="ai" className="text-xs flex-1">AI</TabsTrigger>
+            </TabsList>
+            <TabsContent value="arc" className="m-0">
+              <ArcSidebar projectId={projectId} />
+            </TabsContent>
+            <TabsContent value="ai" className="m-0 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold">AI Assistant</h3>
+              </div>
+              <Select value={aiTool} onValueChange={setAiTool}>
+                <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>{AI_TOOLS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              </Select>
+              <Textarea
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="Add specific instructions (optional)..."
+                className="mt-2 text-xs min-h-[80px]"
+              />
+              <Button className="w-full mt-2" size="sm" onClick={runAi} disabled={aiLoading}>
+                {aiLoading ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Thinking...</> : <><Sparkles className="h-3.5 w-3.5 mr-1.5" />Run</>}
+              </Button>
+              {aiOutput && (
+                <ScrollArea className="mt-4 h-[400px] rounded-md border border-border/60 bg-background/50 p-3">
+                  <p className="text-xs whitespace-pre-wrap text-foreground/90 font-mono">{aiOutput}</p>
+                </ScrollArea>
+              )}
+              {aiOutput && (
+                <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => { navigator.clipboard.writeText(aiOutput); toast.success("Copied"); }}>
+                  <Copy className="h-3.5 w-3.5 mr-1.5" />Copy
+                </Button>
+              )}
+            </TabsContent>
+          </Tabs>
         </aside>
       </div>
     </AppShell>
