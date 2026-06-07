@@ -20,6 +20,7 @@ import { Route as AuthenticatedTablereadProjectIdRouteImport } from './routes/_a
 import { Route as AuthenticatedStoryboardProjectIdRouteImport } from './routes/_authenticated/storyboard.$projectId'
 import { Route as AuthenticatedScenesProjectIdRouteImport } from './routes/_authenticated/scenes.$projectId'
 import { Route as AuthenticatedProjectsNewRouteImport } from './routes/_authenticated/projects.new'
+import { Route as AuthenticatedPitchProjectIdRouteImport } from './routes/_authenticated/pitch.$projectId'
 import { Route as AuthenticatedEditorProjectIdRouteImport } from './routes/_authenticated/editor.$projectId'
 import { Route as AuthenticatedCharactersProjectIdRouteImport } from './routes/_authenticated/characters.$projectId'
 
@@ -81,6 +82,12 @@ const AuthenticatedProjectsNewRoute =
     path: '/new',
     getParentRoute: () => AuthenticatedProjectsRoute,
   } as any)
+const AuthenticatedPitchProjectIdRoute =
+  AuthenticatedPitchProjectIdRouteImport.update({
+    id: '/pitch/$projectId',
+    path: '/pitch/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedEditorProjectIdRoute =
   AuthenticatedEditorProjectIdRouteImport.update({
     id: '/editor/$projectId',
@@ -103,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
+  '/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
   '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
   '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
@@ -117,6 +125,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
+  '/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
   '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
   '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
@@ -133,6 +142,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/_authenticated/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
+  '/_authenticated/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
   '/_authenticated/projects/new': typeof AuthenticatedProjectsNewRoute
   '/_authenticated/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
   '/_authenticated/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/characters/$projectId'
     | '/editor/$projectId'
+    | '/pitch/$projectId'
     | '/projects/new'
     | '/scenes/$projectId'
     | '/storyboard/$projectId'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/characters/$projectId'
     | '/editor/$projectId'
+    | '/pitch/$projectId'
     | '/projects/new'
     | '/scenes/$projectId'
     | '/storyboard/$projectId'
@@ -178,6 +190,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/characters/$projectId'
     | '/_authenticated/editor/$projectId'
+    | '/_authenticated/pitch/$projectId'
     | '/_authenticated/projects/new'
     | '/_authenticated/scenes/$projectId'
     | '/_authenticated/storyboard/$projectId'
@@ -270,6 +283,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsNewRouteImport
       parentRoute: typeof AuthenticatedProjectsRoute
     }
+    '/_authenticated/pitch/$projectId': {
+      id: '/_authenticated/pitch/$projectId'
+      path: '/pitch/$projectId'
+      fullPath: '/pitch/$projectId'
+      preLoaderRoute: typeof AuthenticatedPitchProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/editor/$projectId': {
       id: '/_authenticated/editor/$projectId'
       path: '/editor/$projectId'
@@ -306,6 +326,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedCharactersProjectIdRoute: typeof AuthenticatedCharactersProjectIdRoute
   AuthenticatedEditorProjectIdRoute: typeof AuthenticatedEditorProjectIdRoute
+  AuthenticatedPitchProjectIdRoute: typeof AuthenticatedPitchProjectIdRoute
   AuthenticatedScenesProjectIdRoute: typeof AuthenticatedScenesProjectIdRoute
   AuthenticatedStoryboardProjectIdRoute: typeof AuthenticatedStoryboardProjectIdRoute
   AuthenticatedTablereadProjectIdRoute: typeof AuthenticatedTablereadProjectIdRoute
@@ -317,6 +338,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedCharactersProjectIdRoute: AuthenticatedCharactersProjectIdRoute,
   AuthenticatedEditorProjectIdRoute: AuthenticatedEditorProjectIdRoute,
+  AuthenticatedPitchProjectIdRoute: AuthenticatedPitchProjectIdRoute,
   AuthenticatedScenesProjectIdRoute: AuthenticatedScenesProjectIdRoute,
   AuthenticatedStoryboardProjectIdRoute: AuthenticatedStoryboardProjectIdRoute,
   AuthenticatedTablereadProjectIdRoute: AuthenticatedTablereadProjectIdRoute,
