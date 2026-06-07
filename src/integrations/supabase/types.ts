@@ -14,13 +14,334 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ai_requests: {
+        Row: {
+          created_at: string
+          id: string
+          input: Json | null
+          output: Json | null
+          project_id: string | null
+          request_type: string
+          status: string | null
+          tokens_used: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          input?: Json | null
+          output?: Json | null
+          project_id?: string | null
+          request_type: string
+          status?: string | null
+          tokens_used?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          input?: Json | null
+          output?: Json | null
+          project_id?: string | null
+          request_type?: string
+          status?: string | null
+          tokens_used?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      characters: {
+        Row: {
+          age: string | null
+          archetype: string | null
+          character_arc: string | null
+          contradiction: string | null
+          costume_notes: string | null
+          created_at: string
+          elevenlabs_voice_id: string | null
+          external_goal: string | null
+          fear: string | null
+          id: string
+          image_prompt: string | null
+          internal_need: string | null
+          name: string
+          project_id: string
+          relationships: string | null
+          role: string | null
+          secret: string | null
+          speech_patterns: string | null
+          updated_at: string
+          visual_description: string | null
+          voice_style: string | null
+          wound: string | null
+        }
+        Insert: {
+          age?: string | null
+          archetype?: string | null
+          character_arc?: string | null
+          contradiction?: string | null
+          costume_notes?: string | null
+          created_at?: string
+          elevenlabs_voice_id?: string | null
+          external_goal?: string | null
+          fear?: string | null
+          id?: string
+          image_prompt?: string | null
+          internal_need?: string | null
+          name: string
+          project_id: string
+          relationships?: string | null
+          role?: string | null
+          secret?: string | null
+          speech_patterns?: string | null
+          updated_at?: string
+          visual_description?: string | null
+          voice_style?: string | null
+          wound?: string | null
+        }
+        Update: {
+          age?: string | null
+          archetype?: string | null
+          character_arc?: string | null
+          contradiction?: string | null
+          costume_notes?: string | null
+          created_at?: string
+          elevenlabs_voice_id?: string | null
+          external_goal?: string | null
+          fear?: string | null
+          id?: string
+          image_prompt?: string | null
+          internal_need?: string | null
+          name?: string
+          project_id?: string
+          relationships?: string | null
+          role?: string | null
+          secret?: string | null
+          speech_patterns?: string | null
+          updated_at?: string
+          visual_description?: string | null
+          voice_style?: string | null
+          wound?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "characters_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          plan: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          plan?: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          plan?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          ai_help_level: string | null
+          created_at: string
+          genre: string | null
+          id: string
+          logline: string | null
+          project_type: string
+          status: string
+          target_length: string | null
+          title: string
+          tone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_help_level?: string | null
+          created_at?: string
+          genre?: string | null
+          id?: string
+          logline?: string | null
+          project_type?: string
+          status?: string
+          target_length?: string | null
+          title: string
+          tone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_help_level?: string | null
+          created_at?: string
+          genre?: string | null
+          id?: string
+          logline?: string | null
+          project_type?: string
+          status?: string
+          target_length?: string | null
+          title?: string
+          tone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scenes: {
+        Row: {
+          conflict: string | null
+          created_at: string
+          emotional_purpose: string | null
+          id: string
+          location: string | null
+          order_index: number
+          plot_purpose: string | null
+          project_id: string
+          reversal: string | null
+          scene_heading: string | null
+          status: string
+          time_of_day: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          conflict?: string | null
+          created_at?: string
+          emotional_purpose?: string | null
+          id?: string
+          location?: string | null
+          order_index?: number
+          plot_purpose?: string | null
+          project_id: string
+          reversal?: string | null
+          scene_heading?: string | null
+          status?: string
+          time_of_day?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          conflict?: string | null
+          created_at?: string
+          emotional_purpose?: string | null
+          id?: string
+          location?: string | null
+          order_index?: number
+          plot_purpose?: string | null
+          project_id?: string
+          reversal?: string | null
+          scene_heading?: string | null
+          status?: string
+          time_of_day?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scenes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      script_blocks: {
+        Row: {
+          block_type: string
+          character_id: string | null
+          content: string
+          created_at: string
+          id: string
+          metadata: Json
+          order_index: number
+          project_id: string
+          scene_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          block_type?: string
+          character_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          order_index?: number
+          project_id: string
+          scene_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          block_type?: string
+          character_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          order_index?: number
+          project_id?: string
+          scene_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_blocks_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "script_blocks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "script_blocks_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      owns_project: { Args: { _project_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
