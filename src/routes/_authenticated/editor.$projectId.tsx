@@ -33,7 +33,7 @@ const AI_TOOLS = [
   "Generate logline", "Build outline", "Create character",
   "Rewrite selected scene", "Make dialogue sharper", "Add subtext",
   "Make scene more visual", "Reduce exposition", "Increase tension",
-  "Find plot holes", "Summarize scene",
+  "Find plot holes", "Summarize scene", "Create storyboard prompt",
 ];
 
 function Editor() {
