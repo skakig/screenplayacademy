@@ -9,38 +9,128 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedScenesProjectIdRouteImport } from './routes/_authenticated/scenes.$projectId'
+import { Route as AuthenticatedEditorProjectIdRouteImport } from './routes/_authenticated/editor.$projectId'
+import { Route as AuthenticatedCharactersProjectIdRouteImport } from './routes/_authenticated/characters.$projectId'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedScenesProjectIdRoute =
+  AuthenticatedScenesProjectIdRouteImport.update({
+    id: '/scenes/$projectId',
+    path: '/scenes/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedEditorProjectIdRoute =
+  AuthenticatedEditorProjectIdRouteImport.update({
+    id: '/editor/$projectId',
+    path: '/editor/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCharactersProjectIdRoute =
+  AuthenticatedCharactersProjectIdRouteImport.update({
+    id: '/characters/$projectId',
+    path: '/characters/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
+  '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
+  '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
+  '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
+  '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
+  '/_authenticated/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
+  '/_authenticated/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/characters/$projectId'
+    | '/editor/$projectId'
+    | '/scenes/$projectId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/characters/$projectId'
+    | '/editor/$projectId'
+    | '/scenes/$projectId'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/characters/$projectId'
+    | '/_authenticated/editor/$projectId'
+    | '/_authenticated/scenes/$projectId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +138,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/scenes/$projectId': {
+      id: '/_authenticated/scenes/$projectId'
+      path: '/scenes/$projectId'
+      fullPath: '/scenes/$projectId'
+      preLoaderRoute: typeof AuthenticatedScenesProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/editor/$projectId': {
+      id: '/_authenticated/editor/$projectId'
+      path: '/editor/$projectId'
+      fullPath: '/editor/$projectId'
+      preLoaderRoute: typeof AuthenticatedEditorProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/characters/$projectId': {
+      id: '/_authenticated/characters/$projectId'
+      path: '/characters/$projectId'
+      fullPath: '/characters/$projectId'
+      preLoaderRoute: typeof AuthenticatedCharactersProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedCharactersProjectIdRoute: typeof AuthenticatedCharactersProjectIdRoute
+  AuthenticatedEditorProjectIdRoute: typeof AuthenticatedEditorProjectIdRoute
+  AuthenticatedScenesProjectIdRoute: typeof AuthenticatedScenesProjectIdRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedCharactersProjectIdRoute: AuthenticatedCharactersProjectIdRoute,
+  AuthenticatedEditorProjectIdRoute: AuthenticatedEditorProjectIdRoute,
+  AuthenticatedScenesProjectIdRoute: AuthenticatedScenesProjectIdRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
