@@ -40,7 +40,7 @@ export function SceneUsageTab({ projectId, characterId }: { projectId: string; c
           key={scene.id}
           scene={scene}
           existing={byScene.get(scene.id)}
-          onSave={async (patch) => {
+          onSave={async (patch: any) => {
             await callUpsert({ data: { id: byScene.get(scene.id)?.id, project_id: projectId, character_id: characterId, scene_id: scene.id, patch } });
             toast.success("Saved");
             qc.invalidateQueries({ queryKey: ["scene-states", characterId] });

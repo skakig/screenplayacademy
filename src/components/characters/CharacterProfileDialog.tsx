@@ -66,7 +66,7 @@ export function CharacterProfileDialog({
   const { data: character } = useQuery({
     queryKey: ["character", characterId],
     enabled: !!characterId && open,
-    queryFn: async () => (await supabase.from("characters").select("*").eq("id", characterId!).single()).data,
+    queryFn: async (): Promise<any> => (await supabase.from("characters").select("*").eq("id", characterId!).single()).data,
   });
 
   const voicesQ = useQuery({

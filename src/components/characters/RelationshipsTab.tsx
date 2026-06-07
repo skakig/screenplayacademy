@@ -73,13 +73,13 @@ export function RelationshipsTab({ projectId, characterId }: { projectId: string
                 <SelectContent>{REL_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <Field label="Public dynamic" value={draft.public_dynamic} onChange={(v) => setDraft({ ...draft, public_dynamic: v })} />
-            <Field label="Private truth" value={draft.private_truth} onChange={(v) => setDraft({ ...draft, private_truth: v })} />
-            <Field label="Power dynamic" value={draft.power_dynamic} onChange={(v) => setDraft({ ...draft, power_dynamic: v })} />
-            <Field label="Secret between them" value={draft.secret_between} onChange={(v) => setDraft({ ...draft, secret_between: v })} />
-            <Field label="What they want from the other" value={draft.wants_from_other} onChange={(v) => setDraft({ ...draft, wants_from_other: v })} multiline />
-            <Field label="What the other wants from them" value={draft.other_wants} onChange={(v) => setDraft({ ...draft, other_wants: v })} multiline />
-            <Field label="Relationship arc" value={draft.relationship_arc} onChange={(v) => setDraft({ ...draft, relationship_arc: v })} multiline />
+            <Field label="Public dynamic" value={draft.public_dynamic} onChange={(v: string) => setDraft({ ...draft, public_dynamic: v })} />
+            <Field label="Private truth" value={draft.private_truth} onChange={(v: string) => setDraft({ ...draft, private_truth: v })} />
+            <Field label="Power dynamic" value={draft.power_dynamic} onChange={(v: string) => setDraft({ ...draft, power_dynamic: v })} />
+            <Field label="Secret between them" value={draft.secret_between} onChange={(v: string) => setDraft({ ...draft, secret_between: v })} />
+            <Field label="What they want from the other" value={draft.wants_from_other} onChange={(v: string) => setDraft({ ...draft, wants_from_other: v })} multiline />
+            <Field label="What the other wants from them" value={draft.other_wants} onChange={(v: string) => setDraft({ ...draft, other_wants: v })} multiline />
+            <Field label="Relationship arc" value={draft.relationship_arc} onChange={(v: string) => setDraft({ ...draft, relationship_arc: v })} multiline />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
