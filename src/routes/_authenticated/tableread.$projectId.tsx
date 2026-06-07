@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Mic, Loader2, Sparkles, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { generateTableRead } from "@/lib/tableread.functions";
+import { generateTableRead, refreshTableReadUrl } from "@/lib/tableread.functions";
 
 export const Route = createFileRoute("/_authenticated/tableread/$projectId")({
   head: () => ({ meta: [{ title: "Table Read — SceneSmith AI" }] }),
