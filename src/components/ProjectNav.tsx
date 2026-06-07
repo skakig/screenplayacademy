@@ -1,11 +1,13 @@
 import { Link } from "@tanstack/react-router";
-import { FileText, Users, LayoutGrid, Image as ImageIcon, Mic, Sparkles } from "lucide-react";
+import { FileText, Users, LayoutGrid, Image as ImageIcon, Mic, Sparkles, Activity, GitBranch } from "lucide-react";
 
 export function ProjectNav({ projectId, title }: { projectId: string; title?: string }) {
   const items = [
     { to: "/editor/$projectId", label: "Editor", icon: FileText },
     { to: "/scenes/$projectId", label: "Scenes", icon: LayoutGrid },
     { to: "/characters/$projectId", label: "Characters", icon: Users },
+    { to: "/story-arc/$projectId", label: "Story Arc", icon: GitBranch },
+    { to: "/arc-timeline/$projectId", label: "StoryPulse", icon: Activity },
     { to: "/storyboard/$projectId", label: "Storyboard", icon: ImageIcon },
     { to: "/tableread/$projectId", label: "Table Read", icon: Mic },
     { to: "/pitch/$projectId", label: "Pitch", icon: Sparkles },
