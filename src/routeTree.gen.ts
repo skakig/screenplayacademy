@@ -13,6 +13,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedScenesProjectIdRouteImport } from './routes/_authenticated/scenes.$projectId'
@@ -38,6 +39,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProjectsRoute = AuthenticatedProjectsRouteImport.update({
   id: '/projects',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
+  '/settings': typeof AuthenticatedSettingsRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
+  '/settings': typeof AuthenticatedSettingsRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRouteWithChildren
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/_authenticated/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
   '/_authenticated/projects/new': typeof AuthenticatedProjectsNewRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/dashboard'
     | '/projects'
+    | '/settings'
     | '/characters/$projectId'
     | '/editor/$projectId'
     | '/projects/new'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/dashboard'
     | '/projects'
+    | '/settings'
     | '/characters/$projectId'
     | '/editor/$projectId'
     | '/projects/new'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/_authenticated/dashboard'
     | '/_authenticated/projects'
+    | '/_authenticated/settings'
     | '/_authenticated/characters/$projectId'
     | '/_authenticated/editor/$projectId'
     | '/_authenticated/projects/new'
@@ -182,6 +194,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/projects': {
       id: '/_authenticated/projects'
@@ -244,6 +263,7 @@ const AuthenticatedProjectsRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRouteWithChildren
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedCharactersProjectIdRoute: typeof AuthenticatedCharactersProjectIdRoute
   AuthenticatedEditorProjectIdRoute: typeof AuthenticatedEditorProjectIdRoute
   AuthenticatedScenesProjectIdRoute: typeof AuthenticatedScenesProjectIdRoute
@@ -252,6 +272,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRouteWithChildren,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedCharactersProjectIdRoute: AuthenticatedCharactersProjectIdRoute,
   AuthenticatedEditorProjectIdRoute: AuthenticatedEditorProjectIdRoute,
   AuthenticatedScenesProjectIdRoute: AuthenticatedScenesProjectIdRoute,
