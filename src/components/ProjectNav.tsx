@@ -1,15 +1,18 @@
 import { Link } from "@tanstack/react-router";
-import { FileText, Users, LayoutGrid } from "lucide-react";
+import { FileText, Users, LayoutGrid, Image as ImageIcon, Mic, Sparkles } from "lucide-react";
 
 export function ProjectNav({ projectId, title }: { projectId: string; title?: string }) {
   const items = [
     { to: "/editor/$projectId", label: "Editor", icon: FileText },
     { to: "/scenes/$projectId", label: "Scenes", icon: LayoutGrid },
     { to: "/characters/$projectId", label: "Characters", icon: Users },
+    { to: "/storyboard/$projectId", label: "Storyboard", icon: ImageIcon },
+    { to: "/tableread/$projectId", label: "Table Read", icon: Mic },
+    { to: "/pitch/$projectId", label: "Pitch", icon: Sparkles },
   ] as const;
   return (
     <div className="border-b border-border/60 bg-card/30 backdrop-blur">
-      <div className="max-w-[1600px] mx-auto px-4 h-12 flex items-center gap-4">
+      <div className="max-w-[1600px] mx-auto px-4 h-12 flex items-center gap-3 overflow-x-auto">
         {title && <span className="font-display text-sm font-semibold text-foreground/90 truncate max-w-[220px]">{title}</span>}
         <div className="h-4 w-px bg-border" />
         <nav className="flex items-center gap-1 text-sm">
@@ -18,8 +21,8 @@ export function ProjectNav({ projectId, title }: { projectId: string; title?: st
               key={to}
               to={to}
               params={{ projectId }}
-              className="px-3 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center gap-1.5"
-              activeProps={{ className: "px-3 py-1.5 rounded-md bg-secondary text-primary flex items-center gap-1.5" }}
+              className="px-3 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center gap-1.5 whitespace-nowrap"
+              activeProps={{ className: "px-3 py-1.5 rounded-md bg-secondary text-primary flex items-center gap-1.5 whitespace-nowrap" }}
             >
               <Icon className="h-3.5 w-3.5" />{label}
             </Link>

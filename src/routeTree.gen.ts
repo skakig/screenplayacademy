@@ -9,14 +9,26 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedTablereadProjectIdRouteImport } from './routes/_authenticated/tableread.$projectId'
+import { Route as AuthenticatedStoryboardProjectIdRouteImport } from './routes/_authenticated/storyboard.$projectId'
 import { Route as AuthenticatedScenesProjectIdRouteImport } from './routes/_authenticated/scenes.$projectId'
+import { Route as AuthenticatedProjectsNewRouteImport } from './routes/_authenticated/projects.new'
+import { Route as AuthenticatedPitchProjectIdRouteImport } from './routes/_authenticated/pitch.$projectId'
 import { Route as AuthenticatedEditorProjectIdRouteImport } from './routes/_authenticated/editor.$projectId'
 import { Route as AuthenticatedCharactersProjectIdRouteImport } from './routes/_authenticated/characters.$projectId'
 
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -31,15 +43,49 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedProjectsRoute = AuthenticatedProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTablereadProjectIdRoute =
+  AuthenticatedTablereadProjectIdRouteImport.update({
+    id: '/tableread/$projectId',
+    path: '/tableread/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStoryboardProjectIdRoute =
+  AuthenticatedStoryboardProjectIdRouteImport.update({
+    id: '/storyboard/$projectId',
+    path: '/storyboard/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedScenesProjectIdRoute =
   AuthenticatedScenesProjectIdRouteImport.update({
     id: '/scenes/$projectId',
     path: '/scenes/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProjectsNewRoute =
+  AuthenticatedProjectsNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedProjectsRoute,
+  } as any)
+const AuthenticatedPitchProjectIdRoute =
+  AuthenticatedPitchProjectIdRouteImport.update({
+    id: '/pitch/$projectId',
+    path: '/pitch/$projectId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedEditorProjectIdRoute =
@@ -58,65 +104,115 @@ const AuthenticatedCharactersProjectIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/pricing': typeof PricingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/projects': typeof AuthenticatedProjectsRouteWithChildren
+  '/settings': typeof AuthenticatedSettingsRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
+  '/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
+  '/projects/new': typeof AuthenticatedProjectsNewRoute
   '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
+  '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
+  '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/pricing': typeof PricingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/projects': typeof AuthenticatedProjectsRouteWithChildren
+  '/settings': typeof AuthenticatedSettingsRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
+  '/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
+  '/projects/new': typeof AuthenticatedProjectsNewRoute
   '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
+  '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
+  '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/pricing': typeof PricingRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/projects': typeof AuthenticatedProjectsRouteWithChildren
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/_authenticated/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
+  '/_authenticated/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
+  '/_authenticated/projects/new': typeof AuthenticatedProjectsNewRoute
   '/_authenticated/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
+  '/_authenticated/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
+  '/_authenticated/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/auth'
+    | '/pricing'
     | '/dashboard'
+    | '/projects'
+    | '/settings'
     | '/characters/$projectId'
     | '/editor/$projectId'
+    | '/pitch/$projectId'
+    | '/projects/new'
     | '/scenes/$projectId'
+    | '/storyboard/$projectId'
+    | '/tableread/$projectId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/pricing'
     | '/dashboard'
+    | '/projects'
+    | '/settings'
     | '/characters/$projectId'
     | '/editor/$projectId'
+    | '/pitch/$projectId'
+    | '/projects/new'
     | '/scenes/$projectId'
+    | '/storyboard/$projectId'
+    | '/tableread/$projectId'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/pricing'
     | '/_authenticated/dashboard'
+    | '/_authenticated/projects'
+    | '/_authenticated/settings'
     | '/_authenticated/characters/$projectId'
     | '/_authenticated/editor/$projectId'
+    | '/_authenticated/pitch/$projectId'
+    | '/_authenticated/projects/new'
     | '/_authenticated/scenes/$projectId'
+    | '/_authenticated/storyboard/$projectId'
+    | '/_authenticated/tableread/$projectId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  PricingRoute: typeof PricingRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -138,6 +234,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projects': {
+      id: '/_authenticated/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof AuthenticatedProjectsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -145,11 +255,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tableread/$projectId': {
+      id: '/_authenticated/tableread/$projectId'
+      path: '/tableread/$projectId'
+      fullPath: '/tableread/$projectId'
+      preLoaderRoute: typeof AuthenticatedTablereadProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/storyboard/$projectId': {
+      id: '/_authenticated/storyboard/$projectId'
+      path: '/storyboard/$projectId'
+      fullPath: '/storyboard/$projectId'
+      preLoaderRoute: typeof AuthenticatedStoryboardProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/scenes/$projectId': {
       id: '/_authenticated/scenes/$projectId'
       path: '/scenes/$projectId'
       fullPath: '/scenes/$projectId'
       preLoaderRoute: typeof AuthenticatedScenesProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projects/new': {
+      id: '/_authenticated/projects/new'
+      path: '/new'
+      fullPath: '/projects/new'
+      preLoaderRoute: typeof AuthenticatedProjectsNewRouteImport
+      parentRoute: typeof AuthenticatedProjectsRoute
+    }
+    '/_authenticated/pitch/$projectId': {
+      id: '/_authenticated/pitch/$projectId'
+      path: '/pitch/$projectId'
+      fullPath: '/pitch/$projectId'
+      preLoaderRoute: typeof AuthenticatedPitchProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/editor/$projectId': {
@@ -169,18 +307,41 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedProjectsRouteChildren {
+  AuthenticatedProjectsNewRoute: typeof AuthenticatedProjectsNewRoute
+}
+
+const AuthenticatedProjectsRouteChildren: AuthenticatedProjectsRouteChildren = {
+  AuthenticatedProjectsNewRoute: AuthenticatedProjectsNewRoute,
+}
+
+const AuthenticatedProjectsRouteWithChildren =
+  AuthenticatedProjectsRoute._addFileChildren(
+    AuthenticatedProjectsRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRouteWithChildren
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedCharactersProjectIdRoute: typeof AuthenticatedCharactersProjectIdRoute
   AuthenticatedEditorProjectIdRoute: typeof AuthenticatedEditorProjectIdRoute
+  AuthenticatedPitchProjectIdRoute: typeof AuthenticatedPitchProjectIdRoute
   AuthenticatedScenesProjectIdRoute: typeof AuthenticatedScenesProjectIdRoute
+  AuthenticatedStoryboardProjectIdRoute: typeof AuthenticatedStoryboardProjectIdRoute
+  AuthenticatedTablereadProjectIdRoute: typeof AuthenticatedTablereadProjectIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedProjectsRoute: AuthenticatedProjectsRouteWithChildren,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedCharactersProjectIdRoute: AuthenticatedCharactersProjectIdRoute,
   AuthenticatedEditorProjectIdRoute: AuthenticatedEditorProjectIdRoute,
+  AuthenticatedPitchProjectIdRoute: AuthenticatedPitchProjectIdRoute,
   AuthenticatedScenesProjectIdRoute: AuthenticatedScenesProjectIdRoute,
+  AuthenticatedStoryboardProjectIdRoute: AuthenticatedStoryboardProjectIdRoute,
+  AuthenticatedTablereadProjectIdRoute: AuthenticatedTablereadProjectIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -190,6 +351,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  PricingRoute: PricingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

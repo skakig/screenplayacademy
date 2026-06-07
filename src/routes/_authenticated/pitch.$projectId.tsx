@@ -1,0 +1,100 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { AppShell } from "@/components/AppShell";
+import { ProjectNav } from "@/components/ProjectNav";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Sparkles, Copy, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { generatePitchPackage } from "@/lib/ai.functions";
+
+export const Route = createFileRoute("/_authenticated/pitch/$projectId")({
+  head: () => ({ meta: [{ title: "Pitch Package — SceneSmith AI" }] }),
+  component: Pitch,
+});
+
+const SECTIONS: { key: string; label: string }[] = [
+  { key: "logline", label: "Logline" },
+  { key: "short_synopsis", label: "Short Synopsis" },
+  { key: "one_page_synopsis", label: "One-Page Synopsis" },
+  { key: "treatment", label: "Treatment" },
+  { key: "character_bible", label: "Character Bible" },
+  { key: "tone_statement", label: "Tone Statement" },
+  { key: "comparables", label: "Comparable Films" },
+  { key: "target_audience", label: "Target Audience" },
+  { key: "budget_tier", label: "Budget Tier" },
+  { key: "poster_prompt", label: "Poster Prompt" },
+  { key: "trailer_vo", label: "Trailer Voiceover" },
+  { key: "pitch_email", label: "Pitch Email" },
+];
+
+function Pitch() {
+  const { projectId } = Route.useParams();
+  const qc = useQueryClient();
+  const callGen = useServerFn(generatePitchPackage);
+
+  const { data: project } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: async () => (await supabase.from("projects").select("*").eq("id", projectId).single()).data,
+  });
+  const { data: pitch } = useQuery({
+    queryKey: ["pitch", projectId],
+    queryFn: async () => (await supabase.from("pitch_packages").select("*").eq("project_id", projectId).maybeSingle()).data,
+  });
+
+  const [loading, setLoading] = useState(false);
+  const gen = useMutation({
+    mutationFn: async () => callGen({ data: { projectId } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["pitch", projectId] }); toast.success("Pitch package generated"); },
+    onError: (e: any) => toast.error(e.message ?? "Failed"),
+  });
+  const run = async () => { setLoading(true); try { await gen.mutateAsync(); } finally { setLoading(false); } };
+
+  return (
+    <AppShell>
+      <ProjectNav projectId={projectId} title={project?.title} />
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Pitch Package</h1>
+            <p className="text-muted-foreground">Industry-ready pitch in one click.</p>
+          </div>
+          <Button onClick={run} disabled={loading} size="lg">
+            {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</> : <><Sparkles className="h-4 w-4 mr-2" />{pitch ? "Regenerate" : "Generate Pitch Package"}</>}
+          </Button>
+        </div>
+
+        {!pitch ? (
+          <Card className="p-12 text-center border-dashed">
+            <Sparkles className="h-10 w-10 text-primary mx-auto mb-3" />
+            <h3 className="font-semibold mb-1">No pitch package yet</h3>
+            <p className="text-sm text-muted-foreground mb-4">We'll write your logline, synopsis, treatment, comps, pitch email and more.</p>
+            <Button onClick={run} disabled={loading}>{loading ? "Generating..." : "Generate now"}</Button>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {SECTIONS.map((s) => {
+              const v = (pitch as any)[s.key];
+              if (!v) return null;
+              return (
+                <Card key={s.key} className="p-5">
+                  <div className="flex items-start justify-between mb-2 gap-2">
+                    <h3 className="font-display text-lg font-semibold">{s.label}</h3>
+                    <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(v); toast.success("Copied"); }}>
+                      <Copy className="h-3.5 w-3.5 mr-1.5" />Copy
+                    </Button>
+                  </div>
+                  <p className="whitespace-pre-wrap text-sm text-foreground/90">{v}</p>
+                </Card>
+              );
+            })}
+            {pitch.generated_at && <p className="text-xs text-muted-foreground text-center">Generated {new Date(pitch.generated_at).toLocaleString()}</p>}
+          </div>
+        )}
+      </div>
+    </AppShell>
+  );
+}
