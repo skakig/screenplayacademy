@@ -22,6 +22,7 @@ import { TMHBadge } from "./TMHBadge";
 import { tmhLabel, GROUPS, completenessPct } from "./tmh";
 import { RelationshipsTab } from "./RelationshipsTab";
 import { SceneUsageTab } from "./SceneUsageTab";
+import { CharacterArcSection } from "./CharacterArcSection";
 import {
   upsertCharacter, generateFullCharacter, generateBackstory, generateTMHProfile,
   generateDialogueVoice, generateVisualPrompt, runMoralPressureTest, analyzeCharacterArc,
@@ -329,8 +330,11 @@ export function CharacterProfileDialog({
                 </TabsContent>
 
                 {/* ARC */}
-                <TabsContent value="arc" className="space-y-3 mt-0">
+                <TabsContent value="arc" className="space-y-4 mt-0">
+                  <CharacterArcSection projectId={projectId} characterId={characterId} />
+
                   <AiBar label="Analyze Character Arc" busy={aiBusy === "arc"} onClick={() => runAi("arc", () => callArc({ data: { characterId } }))} />
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground pt-2">Arc notes (on character)</div>
                   <div className="grid grid-cols-2 gap-3">
                     {["starting_belief","ending_belief","starting_behavior","ending_behavior","act1_state","act2_pressure","midpoint_shift","dark_night_state","climax_choice","final_image","character_arc"].map((k) => (
                       <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
