@@ -58,6 +58,45 @@ export type Database = {
           },
         ]
       }
+      audio_assets: {
+        Row: {
+          audio_url: string | null
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          kind: string
+          project_id: string
+          scene_id: string | null
+          status: string
+          updated_at: string
+          voice_map: Json
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          kind?: string
+          project_id: string
+          scene_id?: string | null
+          status?: string
+          updated_at?: string
+          voice_map?: Json
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          kind?: string
+          project_id?: string
+          scene_id?: string | null
+          status?: string
+          updated_at?: string
+          voice_map?: Json
+        }
+        Relationships: []
+      }
       characters: {
         Row: {
           age: string | null
@@ -141,32 +180,101 @@ export type Database = {
           },
         ]
       }
+      pitch_packages: {
+        Row: {
+          budget_tier: string | null
+          character_bible: string | null
+          comparables: string | null
+          created_at: string
+          generated_at: string | null
+          id: string
+          logline: string | null
+          one_page_synopsis: string | null
+          pitch_email: string | null
+          poster_prompt: string | null
+          project_id: string
+          short_synopsis: string | null
+          target_audience: string | null
+          tone_statement: string | null
+          trailer_vo: string | null
+          treatment: string | null
+          updated_at: string
+        }
+        Insert: {
+          budget_tier?: string | null
+          character_bible?: string | null
+          comparables?: string | null
+          created_at?: string
+          generated_at?: string | null
+          id?: string
+          logline?: string | null
+          one_page_synopsis?: string | null
+          pitch_email?: string | null
+          poster_prompt?: string | null
+          project_id: string
+          short_synopsis?: string | null
+          target_audience?: string | null
+          tone_statement?: string | null
+          trailer_vo?: string | null
+          treatment?: string | null
+          updated_at?: string
+        }
+        Update: {
+          budget_tier?: string | null
+          character_bible?: string | null
+          comparables?: string | null
+          created_at?: string
+          generated_at?: string | null
+          id?: string
+          logline?: string | null
+          one_page_synopsis?: string | null
+          pitch_email?: string | null
+          poster_prompt?: string | null
+          project_id?: string
+          short_synopsis?: string | null
+          target_audience?: string | null
+          tone_statement?: string | null
+          trailer_vo?: string | null
+          treatment?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           created_at: string
+          current_period_end: string | null
           email: string | null
           full_name: string | null
           id: string
           plan: string
+          stripe_customer_id: string | null
+          subscription_tier: string
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          current_period_end?: string | null
           email?: string | null
           full_name?: string | null
           id: string
           plan?: string
+          stripe_customer_id?: string | null
+          subscription_tier?: string
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
+          current_period_end?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
           plan?: string
+          stripe_customer_id?: string | null
+          subscription_tier?: string
           updated_at?: string
         }
         Relationships: []
@@ -335,6 +443,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      storyboard_assets: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string | null
+          order_index: number
+          project_id: string
+          prompt: string
+          scene_id: string | null
+          status: string
+          style: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          order_index?: number
+          project_id: string
+          prompt: string
+          scene_id?: string | null
+          status?: string
+          style?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          order_index?: number
+          project_id?: string
+          prompt?: string
+          scene_id?: string | null
+          status?: string
+          style?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {
