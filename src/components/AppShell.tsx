@@ -1,15 +1,25 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Film, LogOut } from "lucide-react";
+import { Film, LogOut, LayoutDashboard, FolderKanban, Settings, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const signOut = async () => {
+    await qc.cancelQueries();
+    qc.clear();
     await supabase.auth.signOut();
     navigate({ to: "/auth", replace: true });
   };
+  const nav = [
+    { to: "/dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
+    { to: "/projects" as const, label: "Projects", icon: FolderKanban },
+    { to: "/pricing" as const, label: "Pricing", icon: Sparkles },
+    { to: "/settings" as const, label: "Settings", icon: Settings },
+  ];
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-border/60 bg-card/40 backdrop-blur sticky top-0 z-30">
@@ -19,7 +29,17 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="font-bold tracking-tight">SceneSmith<span className="text-primary"> AI</span></span>
           </Link>
           <nav className="hidden md:flex items-center gap-1 text-sm">
-            <Link to="/dashboard" className="px-3 py-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground" activeProps={{ className: "px-3 py-1.5 rounded-md bg-secondary text-foreground" }}>Dashboard</Link>
+            {nav.map((n) => (
+              <Link
+                key={n.to}
+                to={n.to}
+                className="px-3 py-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground flex items-center gap-1.5"
+                activeProps={{ className: "px-3 py-1.5 rounded-md bg-secondary text-foreground flex items-center gap-1.5" }}
+              >
+                <n.icon className="h-3.5 w-3.5" />
+                {n.label}
+              </Link>
+            ))}
           </nav>
           <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="h-4 w-4 mr-1.5" />Sign out</Button>
         </div>
