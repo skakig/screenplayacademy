@@ -1012,6 +1012,8 @@ function Editor() {
               }}>Download .txt</Button>
             </div>
           )}
+          </>
+          )}
         </section>
 
 
