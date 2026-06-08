@@ -91,21 +91,15 @@ function Editor() {
 
   const insertBlockAfter = useMutation({
     mutationFn: async ({ block_type, afterOrder }: { block_type: string; afterOrder: number }) => {
-      // Insert with fractional order to place it right after
+      // Find the next block's order_index to compute midpoint (fractional ordering — no bulk renumber)
+      const sorted = [...blocks].sort((a, b) => a.order_index - b.order_index);
+      const idx = sorted.findIndex((b) => b.order_index === afterOrder);
+      const nextOrder = idx >= 0 && sorted[idx + 1] ? sorted[idx + 1].order_index : afterOrder + 1;
+      const newOrder = (afterOrder + nextOrder) / 2;
       const { data, error } = await supabase.from("script_blocks")
-        .insert({ project_id: projectId, block_type, content: "", order_index: afterOrder + 0.5 })
+        .insert({ project_id: projectId, block_type, content: "", order_index: newOrder })
         .select().single();
       if (error) throw error;
-      // Re-normalize order indices
-      const { data: all } = await supabase.from("script_blocks")
-        .select("id, order_index")
-        .eq("project_id", projectId)
-        .order("order_index");
-      if (all) {
-        for (let i = 0; i < all.length; i++) {
-          await supabase.from("script_blocks").update({ order_index: i }).eq("id", all[i].id);
-        }
-      }
       return data;
     },
     onSuccess: (data) => {
