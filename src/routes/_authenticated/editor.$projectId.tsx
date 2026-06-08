@@ -202,7 +202,14 @@ function Editor() {
         {/* Editor */}
         <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10">
           <div className="screenplay max-w-[680px] mx-auto bg-card/30 border border-border/40 rounded-lg p-8 lg:p-12 shadow-2xl">
-            {blocks.length === 0 ? (
+            {blocksLoading ? (
+              <div className="space-y-3 py-8 font-sans">
+                <div className="h-5 w-2/3 bg-muted/50 rounded animate-pulse" />
+                <div className="h-4 w-full bg-muted/40 rounded animate-pulse" />
+                <div className="h-4 w-5/6 bg-muted/40 rounded animate-pulse" />
+                <div className="h-4 w-3/4 bg-muted/40 rounded animate-pulse" />
+              </div>
+            ) : blocks.length === 0 ? (
               <div className="text-center py-16 font-sans">
                 <p className="text-lg font-semibold mb-1">
                   {fromGuided ? "Let's write your opening scene." : "Your blank page awaits."}
