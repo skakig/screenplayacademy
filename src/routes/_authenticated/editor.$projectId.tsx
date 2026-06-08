@@ -129,12 +129,20 @@ function Editor() {
   const [saveStatus, setSaveStatus] = useState<AutosaveStatus>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const pendingCount = useRef(0);
+  // Content typed into a yet-to-be-persisted (temp-*) block. Flushed to the
+  // real row once the optimistic insert returns the real id.
+  const pendingTempContent = useRef<Map<string, string>>(new Map());
 
   const markDirty = useCallback(() => {
-    pendingCount.current += 1;
+    // Only update visual state — pending save count is incremented per
+    // actual save operation in markSaving, NOT per keystroke (otherwise
+    // the indicator gets stuck on "Saving…").
     setSaveStatus("dirty");
   }, []);
-  const markSaving = useCallback(() => setSaveStatus("saving"), []);
+  const markSaving = useCallback(() => {
+    pendingCount.current += 1;
+    setSaveStatus("saving");
+  }, []);
   const markSaved = useCallback(() => {
     pendingCount.current = Math.max(0, pendingCount.current - 1);
     if (pendingCount.current === 0) {
@@ -235,12 +243,17 @@ function Editor() {
         (old ?? []).map((b) => (b.id === ctx?.tempId ? data : b))
       );
       if (data?.id) setFocusBlockId(data.id);
+      // Flush any text the user already typed into the temp row.
+      const buffered = ctx?.tempId ? pendingTempContent.current.get(ctx.tempId) : undefined;
+      if (ctx?.tempId) pendingTempContent.current.delete(ctx.tempId);
+      if (buffered && data?.id) void saveBlock(data.id, { content: buffered });
       emitEvent({ event_type: "block_created", project_id: projectId, context: { block_type } });
       if (block_type === "scene_heading") {
         emitEvent({ event_type: "scene_created", project_id: projectId, context: { has_turn: false } });
       }
     },
     onError: (_e, _v, ctx: any) => {
+      if (ctx?.tempId) pendingTempContent.current.delete(ctx.tempId);
       if (ctx?.prev) qc.setQueryData(["blocks", projectId], ctx.prev);
     },
   });
@@ -275,15 +288,25 @@ function Editor() {
         (old ?? []).map((b) => (b.id === ctx?.tempId ? data : b))
       );
       if (data?.id) setFocusBlockId(data.id);
+      const buffered = ctx?.tempId ? pendingTempContent.current.get(ctx.tempId) : undefined;
+      if (ctx?.tempId) pendingTempContent.current.delete(ctx.tempId);
+      if (buffered && data?.id) void saveBlock(data.id, { content: buffered });
     },
     onError: (_e, _v, ctx: any) => {
+      if (ctx?.tempId) pendingTempContent.current.delete(ctx.tempId);
       if (ctx?.prev) qc.setQueryData(["blocks", projectId], ctx.prev);
       toast.error("Couldn't insert line");
     },
   });
 
   const saveBlock = useCallback(async (id: string, patch: { content?: string; block_type?: string; metadata?: Record<string, any> }) => {
-    if (id.startsWith("temp-")) return; // optimistic row; ignore until server returns real id
+    if (id.startsWith("temp-")) {
+      // Optimistic row not yet persisted — buffer the typed content so we
+      // can flush it as soon as the insert mutation returns the real id.
+      if (patch.content !== undefined) pendingTempContent.current.set(id, patch.content);
+      setSaveStatus("dirty");
+      return;
+    }
     markSaving();
     try {
       const update: any = {};
@@ -293,9 +316,13 @@ function Editor() {
       const { error } = await supabase.from("script_blocks").update(update).eq("id", id);
       if (error) throw error;
       if (patch.content !== undefined) clearDraft(id);
+      // Keep the React Query cache in sync with what we just saved so future
+      // renders, blur-flushes, and recovery checks compare against truth.
+      qc.setQueryData<any[]>(["blocks", projectId], (old) =>
+        (old ?? []).map((b) => (b.id === id ? { ...b, ...update } : b))
+      );
       markSaved();
       if (patch.metadata !== undefined) qc.invalidateQueries({ queryKey: ["blocks", projectId] });
-      // Silent refresh — don't refetch while user is typing
     } catch (e: any) {
       markError();
       toast.error("Couldn't save — your work is kept locally and will retry on next edit");

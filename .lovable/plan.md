@@ -1,109 +1,87 @@
-# Writer-First Screenplay Editor
+## Diagnosis
 
-Goal: the center panel should feel like a real page you type on — not a column of textareas. Guided logline step should swap the center for a Logline Builder instead of showing blocks.
+The editor is close visually, but several implementation details still make it feel or behave non-writable:
 
-## 1. New component: `ScreenplayDocumentEditor`
+1. **The first-run tour can physically block the page**
+   - The current walkthrough opens as a modal overlay and intercepts clicks before the writer can interact with the manuscript.
 
-Create `src/components/editor/ScreenplayDocumentEditor.tsx` that owns the entire writing surface and the writing flow. The route file delegates the canvas to it.
+2. **New optimistic lines can lose typed text**
+   - New lines render with temporary `temp-*` IDs, but `saveBlock()` ignores temp IDs.
+   - If the user starts typing before the database insert returns, that content can be dropped when the temp row is replaced by the real row.
 
-Responsibilities:
-- Renders blocks as one continuous paper page (current `BlockEditor` styling preserved).
-- Owns `activeBlockId`, `prevType`, `pendingFocusId`, and the textarea ref map.
-- Always maintains an "active editable line":
-  - If `blocks.length === 0` → render an inline empty `action` line that auto-focuses on mount and persists to DB on first keystroke (optimistic local row → insert on first change, not on mount).
-  - If user clicks anywhere on blank paper below the last block → focus the last block if empty, else create a new typed block after it and focus it.
-  - If a block is deleted and was active → focus previous; if none, fall back to the always-present trailing empty line.
-- Exposes imperative methods to parent for the command bar (`newLine`, `cycleType`, `aiContinue`).
+3. **Autosave status can get stuck on “Saving…”**
+   - `markDirty()` increments a pending counter on every keystroke, but one debounced save only decrements it once.
+   - Result: the status can stay in a saving state even after the backend accepted the save.
 
-## 2. Reliable focus across React Query refetches
+4. **Saved block content is not written back into the local query cache**
+   - The backend PATCH succeeds, but the `blocks` cache still contains old content.
+   - This causes repeated PATCH calls, stale block props, and unreliable blur/unmount saves.
 
-Today `insertBlockAfter.onSuccess` sets a `setFocusBlockId(data.id)`, but invalidation/refetch races the ref map. Fix:
+5. **The paper is still block-first**
+   - The trailing “Start typing…” row is still a `<button>`, not an editable line.
+   - Clicking below the last block creates a line, but clicking between existing lines only focuses the nearest textarea instead of inserting naturally.
 
-- Use optimistic cache update with `queryClient.setQueryData(["blocks", projectId], …)` to insert the new row immediately, so the DOM renders before the network round-trip.
-- After mutation success, reconcile by id.
-- A small `useLayoutEffect` watches `pendingFocusId` against the ref map; when the ref appears, call `focus()`, place caret at end, then clear `pendingFocusId`.
-- Same path used by Enter, click-below-paper, and empty-state-first-keystroke.
+6. **Logline and Write Mode are only partially implemented**
+   - Logline step hides the manuscript center, but side panels can still show screenplay context.
+   - Write Mode is a separate button instead of behaving like a true editor mode, and it still leaves extra writing-adjacent UI visible.
 
-## 3. Always-on trailing writing row
+## Fix plan
 
-Replace the current "Add line" ghost button with a real empty `<textarea>` rendered as the last child of the paper:
-- Looks identical to a normal block (typewriter font, correct left margin for its type).
-- Type defaults to `nextBlockTypeAfter(lastBlock?.block_type ?? "scene_heading")`.
-- Placeholder = "Start typing…" (or "INT. / EXT. — start your first scene" when blocks is empty).
-- On first keystroke, persists as a new block; trailing row regenerates below it.
-- Enter from any block focuses this row (or inserts before it and focuses the new block).
+### 1. Make autosave reliable
+- Replace the keystroke-based pending counter with a save-operation counter.
+- `markDirty()` will only set visual state to dirty.
+- `markSaving()` increments active saves.
+- `markSaved()`/`markError()` decrement active saves and settle the status correctly.
+- Update the React Query `blocks` cache inside `saveBlock()` for content, block type, and metadata so the UI always matches the saved local state.
 
-## 4. Click-anywhere-on-paper behavior
+### 2. Protect typing into newly-created lines
+- Track temp line content locally while the insert is still pending.
+- When the real row returns, migrate any typed temp content to the real row and save it.
+- Keep focus on the real row after replacement.
+- This prevents the “I typed and it disappeared” failure.
 
-Replace the current "find nearest textarea by Y" handler with:
-- Click on a block → focus that block (native).
-- Click on paper *below* the last block → focus trailing writing row.
-- Click on paper *between* two blocks → insert a new block at that gap, focus it.
-- Click on paper *above* first block → focus first block at start.
+### 3. Replace the trailing button with a real editable cursor row
+- Remove the fake “Start typing…” button.
+- Add a real trailing textarea styled like a screenplay line.
+- On first keystroke, create the next block type at the end and transfer the typed text into it.
+- Clicking empty paper below the script focuses this trailing textarea instead of feeling like a utility action.
 
-## 5. Enter behavior
+### 4. Make page clicking behave like a document
+- Clicking an existing line focuses that line normally.
+- Clicking below the final line focuses the trailing editable row.
+- Clicking between two lines inserts a new line at that position and focuses it.
+- Clicking above the first line focuses the first line.
 
-Already wired via `BlockEditor.onEnter → insertBlockAfter`. Combine with focus fix in §2 so the new block focuses synchronously on the next paint. Shift+Enter keeps soft-break behavior already in place.
+### 5. Fix logline mode as a real primary page
+- When `guidedStep` is logline, hide screenplay canvas, command bar, manuscript side panel, coach panel, and feature dock.
+- Make `LoglineComposer` the center page surface.
+- Rename the AI button copy to “Generate logline options”.
 
-## 6. Guided logline step swaps the canvas
+### 6. Make Write Mode a real mode
+- Fold Write Mode into the existing mode control visually as `Studio / Guided / Write`.
+- Keep Studio/Guided backed by onboarding preference, while Write remains local and temporary.
+- In Write Mode, hide side panes, mobile pane buttons, guided rails, feature dock, and non-essential writing chrome.
+- Keep only the manuscript page, canvas toolbar, save status, and essential writing controls.
 
-In `editor.$projectId.tsx`, when `isLoglineStep` is true:
-- Center column renders `<LoglineComposer />` as the primary surface (full width, centered, no opacity dimming).
-- `ScreenplayDocumentEditor` is hidden (not just dimmed) — guided logline is a different task.
-- A small "Open manuscript" link under the composer lets the user jump out.
-- `EditorCommandBar` is hidden during this step; the composer's own Save / Generate buttons are the primary CTAs.
+### 7. Fix the known nested-button warning while touching editor UX
+- In `StoryNavigatorPane`, replace the outer scene row `<button>` with a non-button clickable row so the status dropdown button is not nested inside another button.
+- This removes hydration/DOM warnings that can interfere with stable editor behavior.
 
-For other guided steps that *are* writing steps (`opening_scene`, `act1`, `rough_draft`, `first_scene`, `write_first_scene`), the manuscript stays primary and the step hint goes into the existing collapsible helper.
+## Files to change
 
-## 7. Hide the "blocks" vocabulary
+- `src/routes/_authenticated/editor.$projectId.tsx`
+- `src/components/editor/StudioModeToggle.tsx`
+- `src/components/editor/LoglineComposer.tsx`
+- `src/components/editor/StoryNavigatorPane.tsx`
+- Possibly `src/hooks/use-write-mode.ts` if the toggle API needs a setter instead of only `toggle()`
 
-User-visible strings change:
-- "Add line" → removed (trailing row replaces it).
-- "Change element type" stays — it's screenplay terminology.
-- Toolbar copy: "Element" instead of "Block type"; "New line" instead of "New block".
-- Analyzer toasts already say "scene" / "character" — leave as-is.
+## Validation
 
-DB column names and `script_blocks` table remain untouched.
-
-## 8. Write Mode
-
-Extend `StudioModeToggle` with a third value `write`:
-- `write` → hide left (Story Navigator) and right (Coach + Feature Dock + Progress) panes; center spans full width, capped at the current paper max-width.
-- `studio` (current default) → unchanged 3-column layout.
-- `coach` → unchanged.
-- Persist selection in localStorage (matches existing toggle pattern).
-- Mobile drawers still work in Write Mode (`Scenes` / `Coach` buttons stay accessible).
-
-## 9. Empty-project first-run
-
-When `blocks.length === 0` and we're not on logline step and not on a redirect step:
-- Don't auto-insert template blocks (current behavior).
-- Render trailing writing row with placeholder "INT. — Start your first scene" and focus it on mount.
-- User can begin typing immediately. Auto-format rules already promote `INT.` to `scene_heading`.
-
-## Files to add / change
-
-Add:
-- `src/components/editor/ScreenplayDocumentEditor.tsx` — owns canvas, focus, trailing row, click-on-paper, empty state.
-
-Edit:
-- `src/routes/_authenticated/editor.$projectId.tsx` — replace inline canvas JSX (~lines 770–910) with `<ScreenplayDocumentEditor … />`; swap center surface when `isLoglineStep`; route `EditorCommandBar` callbacks through it; hide side panes when mode === `write`. Remove the current "Add line" ghost button and the "find nearest textarea by Y" mouseDown handler.
-- `src/components/editor/StudioModeToggle.tsx` — add `write` mode option.
-- `src/components/editor/EditorCommandBar.tsx` — hidden during logline step; minor copy tweak ("Element" / "New line").
-
-No DB schema changes. No changes to `BlockEditor` internals, autoFormat, analyzer, or autosave.
-
-## Out of scope
-
-- Swapping textareas for ProseMirror/TipTap (would be a much bigger rewrite; current per-block textarea keeps autosave, autoformat, character autocomplete intact).
-- Touching Coach / Feature Dock / Progress card content.
-- Schema or server function changes beyond what's listed.
-
-## Build order
-
-1. `ScreenplayDocumentEditor` shell + trailing writing row + click-on-paper.
-2. Optimistic insert + `useLayoutEffect` focus reconciler (fixes flaky post-Enter focus).
-3. Empty-state auto-focus and first-keystroke persistence.
-4. Logline step swaps the center surface.
-5. Write Mode in `StudioModeToggle` + layout gating.
-6. Copy cleanup ("Add line" / "block" → screenplay terms).
+After implementation I’ll verify:
+- clicking blank paper creates/focuses a writable line;
+- typing immediately into a new line does not disappear;
+- Enter creates and focuses the next screenplay element;
+- autosave settles to saved instead of staying on saving;
+- logline step shows only the logline composer as primary content;
+- Write Mode hides distractions and keeps the writing surface usable;
+- the nested button console warning is gone.
