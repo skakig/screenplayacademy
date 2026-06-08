@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Check, Circle, Sparkles, ArrowRight, BookOpen, Loader2 } from "lucide-react";
 import { STEP_META } from "@/components/guided/stepMeta";
