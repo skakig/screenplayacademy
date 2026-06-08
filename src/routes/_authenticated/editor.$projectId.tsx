@@ -370,7 +370,7 @@ function Editor() {
       });
       // Parse simple [block_type] content lines if present; otherwise fall back to action lines
       const parsed: { block_type: string; content: string }[] = [];
-      const lines = res.text.split("\n").map((l) => l.trim()).filter(Boolean);
+      const lines = res.text.split("\n").map((l: string) => l.trim()).filter(Boolean);
       const tagRe = /^\[(scene_heading|action|character|dialogue|parenthetical|transition|shot|note)\]\s*(.*)$/i;
       for (const l of lines) {
         const m = l.match(tagRe);
@@ -567,7 +567,7 @@ function Editor() {
           context: `${projectCtx}\n\nSCRIPT SO FAR:\n${tail.slice(-4000)}`,
         },
       });
-      const lines = res.text.split("\n").map((l) => l.trim()).filter(Boolean);
+      const lines = res.text.split("\n").map((l: string) => l.trim()).filter(Boolean);
       const tagRe = /^\[(scene_heading|action|character|dialogue|parenthetical|transition|shot|note)\]\s*(.*)$/i;
       const parsed: { block_type: string; content: string }[] = [];
       for (const l of lines) {
