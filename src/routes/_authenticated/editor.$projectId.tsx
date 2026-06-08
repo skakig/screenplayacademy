@@ -413,6 +413,70 @@ function Editor() {
 
   const tour = useEditorTour();
 
+  // ===== Command-bar handlers (operate on the currently-focused block) =====
+  const activeBlock = blocks.find((b: any) => b.id === activeBlockId) ?? null;
+  const activeIndex = activeBlock ? blocks.findIndex((b: any) => b.id === activeBlock.id) : -1;
+  const prevType = activeIndex > 0 ? blocks[activeIndex - 1]?.block_type : undefined;
+
+  const cmdCycleType = useCallback(() => {
+    if (!activeBlock) return;
+    const next = cycleType(activeBlock.block_type);
+    void saveBlock(activeBlock.id, { block_type: next });
+    toast.success(`→ ${BLOCK_LABEL[next] ?? next}`, { duration: 1200 });
+  }, [activeBlock, saveBlock]);
+
+  const cmdNewLine = useCallback(() => {
+    if (activeBlock) {
+      const nextType = nextBlockTypeAfter(activeBlock.block_type, prevType);
+      insertBlockAfter.mutate({ block_type: nextType, afterOrder: activeBlock.order_index });
+    } else if (blocks.length === 0) {
+      addBlock.mutate("scene_heading");
+    } else {
+      const last = blocks[blocks.length - 1];
+      const nextType = nextBlockTypeAfter(last.block_type);
+      insertBlockAfter.mutate({ block_type: nextType, afterOrder: last.order_index });
+    }
+  }, [activeBlock, prevType, blocks, insertBlockAfter, addBlock]);
+
+  const [aiContinueBusy, setAiContinueBusy] = useState(false);
+  const cmdAiContinue = useCallback(async () => {
+    setAiContinueBusy(true);
+    try {
+      const tail = blocks
+        .slice(-20)
+        .filter((b: any) => b.block_type !== "note")
+        .map((b: any) => `[${b.block_type}] ${b.content}`)
+        .join("\n");
+      const res = await callAi({
+        data: {
+          projectId,
+          tool: "continueScene",
+          prompt:
+            "Continue the screenplay from where it stops. Reply with one or more lines, each prefixed with [scene_heading]/[action]/[character]/[dialogue]/[parenthetical]/[transition]. Keep it tight and visual.",
+          context: `${projectCtx}\n\nSCRIPT SO FAR:\n${tail.slice(-4000)}`,
+        },
+      });
+      const lines = res.text.split("\n").map((l) => l.trim()).filter(Boolean);
+      const tagRe = /^\[(scene_heading|action|character|dialogue|parenthetical|transition|shot|note)\]\s*(.*)$/i;
+      const parsed: { block_type: string; content: string }[] = [];
+      for (const l of lines) {
+        const m = l.match(tagRe);
+        if (m) parsed.push({ block_type: m[1].toLowerCase(), content: m[2] });
+        else parsed.push({ block_type: "action", content: l });
+      }
+      if (parsed.length > 0) {
+        await insertTemplate.mutateAsync(parsed);
+        toast.success(`Added ${parsed.length} line${parsed.length === 1 ? "" : "s"}`);
+      }
+    } catch (e: any) {
+      toast.error(e.message ?? "AI request failed");
+    } finally {
+      setAiContinueBusy(false);
+    }
+  }, [blocks, callAi, projectId, projectCtx, insertTemplate]);
+
+
+
 
   return (
     <AppShell>
