@@ -903,7 +903,7 @@ function Editor() {
                   <Plus className="h-3.5 w-3.5" />
                   <span>Add line</span>
                   <span className="opacity-50 ml-auto font-mono">
-                    Enter · Tab to change type · / for menu
+                    Enter · Shift+Enter soft break · Tab change type · / menu
                   </span>
                 </button>
               </>
