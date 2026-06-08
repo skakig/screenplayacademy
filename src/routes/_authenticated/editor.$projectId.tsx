@@ -280,8 +280,8 @@ function Editor() {
   return (
     <AppShell>
       <ProjectNav projectId={projectId} title={project?.title} />
-      {fromGuided && (
-        <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3">
+      <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3 flex items-center justify-between gap-3 flex-wrap">
+        {fromGuided ? (
           <Link
             to="/first-screenplay/$projectId"
             params={{ projectId }}
@@ -291,6 +291,19 @@ function Editor() {
             <ArrowLeft className="h-3 w-3" />
             Back to guided path{guidedStep ? ` · ${guidedStep.replace(/_/g, " ")}` : ""}
           </Link>
+        ) : <span />}
+        <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
+      </div>
+      {recovery && (
+        <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3">
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 flex items-center gap-3 flex-wrap">
+            <p className="text-sm flex-1">
+              We found <strong>{Object.keys(recovery).length}</strong> unsaved
+              {Object.keys(recovery).length === 1 ? " change" : " changes"} from your last session.
+            </p>
+            <Button size="sm" onClick={restoreRecovery}>Restore</Button>
+            <Button size="sm" variant="outline" onClick={discardRecovery}>Discard</Button>
+          </div>
         </div>
       )}
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_340px] max-w-[1600px] mx-auto">
