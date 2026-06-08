@@ -112,6 +112,7 @@ function Editor() {
   });
 
   const [focusBlockId, setFocusBlockId] = useState<string | null>(null);
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
 
   // Autosave status (editor-wide, aggregated across block edits)
   const draftKey = `editor-draft:${projectId}`;
