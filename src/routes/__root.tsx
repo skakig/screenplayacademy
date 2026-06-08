@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Screenplay Academy" },
+      { name: "description", content: "SceneSmith Studio is an AI-powered screenwriting app for creating, formatting, and visualizing screenplays." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Screenplay Academy" },
+      { property: "og:description", content: "SceneSmith Studio is an AI-powered screenwriting app for creating, formatting, and visualizing screenplays." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Screenplay Academy" },
+      { name: "twitter:description", content: "SceneSmith Studio is an AI-powered screenwriting app for creating, formatting, and visualizing screenplays." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7bb38f26-f7db-48b4-b1aa-2a52852fbf9a/id-preview-d3fbbb47--1487be5f-d610-4a3e-b318-265c0247991c.lovable.app-1780891751723.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7bb38f26-f7db-48b4-b1aa-2a52852fbf9a/id-preview-d3fbbb47--1487be5f-d610-4a3e-b318-265c0247991c.lovable.app-1780891751723.png" },
     ],
     links: [
       {
