@@ -825,7 +825,27 @@ function Editor() {
             <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">⌘↵</kbd> AI continue</span>
           </div>
 
-          <div className="screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16">
+          <div
+            className="screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 cursor-text"
+            onMouseDown={(e) => {
+              const target = e.target as HTMLElement;
+              if (target.closest("textarea, button, input, [role='menu'], [data-block-toolbar]")) return;
+              e.preventDefault();
+              const all = (e.currentTarget as HTMLElement).querySelectorAll<HTMLTextAreaElement>("textarea");
+              if (all.length === 0) { cmdNewLine(); return; }
+              const y = e.clientY;
+              let best: HTMLTextAreaElement = all[0];
+              let bestDist = Infinity;
+              all.forEach((t) => {
+                const r = t.getBoundingClientRect();
+                const d = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
+                if (d < bestDist) { bestDist = d; best = t; }
+              });
+              best.focus();
+              const len = best.value.length;
+              try { best.setSelectionRange(len, len); } catch {}
+            }}
+          >
             {blocksLoading ? (
               <div className="space-y-3 py-8 font-sans">
                 <div className="h-5 w-2/3 bg-muted/50 rounded animate-pulse" />
