@@ -544,29 +544,8 @@ function Editor() {
     existingCharacterNames: (characters as any[]).map((c) => c.name),
   });
 
-  // Auto-seed: an empty manuscript should not require a click to start. Whenever
-  // the editor opens with no blocks and we're not on the logline step (which has
-  // its own surface) or a redirect step, drop a scene_heading and focus it.
-  const autoSeededRef = useRef(false);
-  useEffect(() => {
-    if (autoSeededRef.current) return;
-    if (blocksLoading) return;
-    if (blocks.length > 0) return;
-    if (isLoglineStep || redirect) return;
-    autoSeededRef.current = true;
-    setTimeout(() => {
-      addBlock.mutate({ block_type: "scene_heading" });
-    }, 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocksLoading, blocks.length, isLoglineStep, redirect]);
 
-  // After auto-seed, focus the new (single) empty block.
-  useEffect(() => {
-    if (blocks.length === 1 && !blocks[0].content && focusBlockId !== blocks[0].id) {
-      setFocusBlockId(blocks[0].id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocks.length]);
+
 
   // Derived: outline + page count for the manuscript header.
   const outline = buildOutline(blocks as any);
