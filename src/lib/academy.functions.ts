@@ -416,6 +416,20 @@ export const aiGenerateRewriteExercise = createServerFn({ method: "POST" })
     `Create a focused rewriting exercise. Provide: (1) the principle being taught, (2) a "before" scene snippet (weak), (3) a guided 3-step rewrite plan, (4) a "after" example. Use the writer's context where possible.\n\nCONTEXT:\n${data.prompt}\n${data.context ?? ""}`,
   ));
 
+export const aiDraftOpeningScene = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => PromptInput.parse(d))
+  .handler(async ({ data }) => callAI(
+    `Draft an opening scene (1–2 pages) in proper screenplay format. Open mid-action. Promise the tone and stakes of the whole film in the first beat. Include scene heading (INT./EXT. LOCATION — TIME), action lines, character names in caps, dialogue. End on a hook or a small turn. Use the writer's story context.\n\nCONTEXT:\n${data.prompt}\n\n${data.context ?? ""}`,
+  ));
+
+export const aiOutlineAct1Beats = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => PromptInput.parse(d))
+  .handler(async ({ data }) => callAI(
+    `Outline Act 1 as a numbered list of 8–12 scene-level beats ending in the Act 1 turn (the point of no return around page 25–30). For each beat: (a) one-line scene heading, (b) one-line purpose, (c) one-line turn or change. The final beat must be a clear threshold the protagonist crosses.\n\nCONTEXT:\n${data.prompt}\n\n${data.context ?? ""}`,
+  ));
+
 // ----- Guided step version history -----
 
 const VersionInput = z.object({
