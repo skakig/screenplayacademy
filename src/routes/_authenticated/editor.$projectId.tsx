@@ -206,22 +206,24 @@ function Editor() {
     },
   });
 
-  const saveBlock = useCallback(async (id: string, patch: { content?: string; block_type?: string }) => {
+  const saveBlock = useCallback(async (id: string, patch: { content?: string; block_type?: string; metadata?: Record<string, any> }) => {
     markSaving();
     try {
       const update: any = {};
       if (patch.content !== undefined) update.content = patch.content;
       if (patch.block_type) update.block_type = patch.block_type;
+      if (patch.metadata !== undefined) update.metadata = patch.metadata;
       const { error } = await supabase.from("script_blocks").update(update).eq("id", id);
       if (error) throw error;
       if (patch.content !== undefined) clearDraft(id);
       markSaved();
+      if (patch.metadata !== undefined) qc.invalidateQueries({ queryKey: ["blocks", projectId] });
       // Silent refresh — don't refetch while user is typing
     } catch (e: any) {
       markError();
       toast.error("Couldn't save — your work is kept locally and will retry on next edit");
     }
-  }, [clearDraft, markError, markSaved, markSaving]);
+  }, [clearDraft, markError, markSaved, markSaving, qc, projectId]);
 
   const restoreRecovery = useCallback(async () => {
     if (!recovery) return;
