@@ -511,26 +511,21 @@ function Editor() {
     existingCharacterNames: (characters as any[]).map((c) => c.name),
   });
 
-  // Auto-seed: if the editor is opened on a writing step with no blocks and no
-  // step-specific composer in front of it, drop a single scene heading and
-  // park focus there so the writer can just start typing.
+  // Auto-seed: an empty manuscript should not require a click to start. Whenever
+  // the editor opens with no blocks and we're not on the logline step (which has
+  // its own surface) or a redirect step, drop a scene_heading and focus it.
   const autoSeededRef = useRef(false);
   useEffect(() => {
     if (autoSeededRef.current) return;
     if (blocksLoading) return;
     if (blocks.length > 0) return;
     if (isLoglineStep || redirect) return;
-    // Only auto-seed when arriving from the guided path on a writing step,
-    // or when the user has no logline-style work pending. Skip if step is set
-    // and not a writing step.
-    if (guidedStep && !["opening_scene", "act1", "act2", "act3", "rough_draft", "first_scene", "write_first_scene"].includes(guidedStep)) return;
     autoSeededRef.current = true;
-    // Wait one tick so the dialog/empty-state animations don't fight the focus.
     setTimeout(() => {
       addBlock.mutate("scene_heading");
     }, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocksLoading, blocks.length, isLoglineStep, redirect, guidedStep]);
+  }, [blocksLoading, blocks.length, isLoglineStep, redirect]);
 
   // After auto-seed, focus the new (single) empty block.
   useEffect(() => {
