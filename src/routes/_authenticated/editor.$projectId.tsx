@@ -246,11 +246,15 @@ function Editor() {
             <TabsContent value="arc" className="m-0">
               <ArcSidebar projectId={projectId} />
             </TabsContent>
-            <TabsContent value="ai" className="m-0 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <h3 className="font-semibold">AI Assistant</h3>
+            <TabsContent value="ai" className="m-0 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold">AI Assistant</h3>
+                </div>
+                <CoachModeToggle />
               </div>
+              <CoachPanel sceneText={blocks.filter((b) => b.block_type !== "note").map((b) => `[${b.block_type}] ${b.content}`).join("\n").slice(-6000)} />
               <Select value={aiTool} onValueChange={setAiTool}>
                 <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>{AI_TOOLS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
