@@ -94,7 +94,7 @@ export function CoachPanel({
     return "Strong start. Add the next scene heading to keep moving.";
   })();
 
-  if (!enabled || dismissed) return null;
+  const lesson = teachConcept ? lessonForConcept(teachConcept) : null;
 
   return (
     <Card className="p-3 border-primary/20 bg-primary/5">
@@ -103,6 +103,23 @@ export function CoachPanel({
         <span className="text-xs font-semibold uppercase tracking-wide text-primary">Coach</span>
         <span className="text-[10px] text-muted-foreground capitalize">· {level}</span>
         <div className="ml-auto flex items-center gap-1">
+          {/* Fix / Teach toggle */}
+          <div className="flex items-center rounded-md border border-border/60 bg-background/40 p-0.5 mr-1">
+            <button
+              className={`text-[10px] px-1.5 py-0.5 rounded-sm flex items-center gap-1 ${mode === "fix" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              onClick={() => { setMode("fix"); setOutput(null); }}
+              title="Get craft feedback on your scene"
+            >
+              <Wrench className="h-2.5 w-2.5" /> Fix
+            </button>
+            <button
+              className={`text-[10px] px-1.5 py-0.5 rounded-sm flex items-center gap-1 ${mode === "teach" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              onClick={() => { setMode("teach"); setOutput(null); }}
+              title="Ask Coach to explain a screenwriting concept"
+            >
+              <GraduationCap className="h-2.5 w-2.5" /> Teach
+            </button>
+          </div>
           <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setCollapsed(!collapsed)}>
             {collapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
           </Button>
@@ -111,7 +128,7 @@ export function CoachPanel({
           </Button>
         </div>
       </div>
-      {!collapsed && (
+      {!collapsed && mode === "fix" && (
         <div className="space-y-2">
           <div className="rounded-md bg-background/60 border border-border/40 p-2">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Suggested next step</p>
@@ -140,6 +157,60 @@ export function CoachPanel({
                 </div>
               )}
             </>
+          )}
+        </div>
+      )}
+      {!collapsed && mode === "teach" && (
+        <div className="space-y-2">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ask Coach to teach</p>
+          <div className="flex gap-1.5">
+            <Input
+              value={teachQuery}
+              onChange={(e) => setTeachQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && teachQuery.trim()) {
+                  setTeachConcept(teachQuery.trim());
+                  teach.mutate(teachQuery.trim());
+                }
+              }}
+              placeholder="e.g. subtext, midpoint, character arc"
+              className="h-7 text-xs"
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs whitespace-nowrap"
+              onClick={() => { if (teachQuery.trim()) { setTeachConcept(teachQuery.trim()); teach.mutate(teachQuery.trim()); } }}
+              disabled={teach.isPending || !teachQuery.trim()}
+            >
+              {teach.isPending ? "…" : "Explain"}
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {["Subtext", "Midpoint", "Character arc", "Want vs need", "Theme"].map((c) => (
+              <button
+                key={c}
+                onClick={() => { setTeachQuery(c); setTeachConcept(c); teach.mutate(c); }}
+                className="text-[10px] px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted"
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+          {output && (
+            <div className="rounded-md bg-background/60 border border-border/40 p-2 space-y-2">
+              <div className="text-xs whitespace-pre-wrap text-foreground/85">{output}</div>
+              {lesson && (
+                <Link
+                  to="/academy/$moduleSlug/$lessonSlug"
+                  params={{ moduleSlug: lesson.module, lessonSlug: lesson.lesson }}
+                  className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                >
+                  <BookOpen className="h-3 w-3" />
+                  Open lesson: {lesson.label}
+                </Link>
+              )}
+            </div>
           )}
         </div>
       )}
