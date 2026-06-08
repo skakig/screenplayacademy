@@ -74,39 +74,6 @@ function computeDiff(left: string, right: string) {
   return lines;
 }
 
-function wordDiffInline(oldStr: string, newStr: string): string {
-  const oldWords = oldStr.split(/(\s+)/);
-  const newWords = newStr.split(/(\s+)/);
-  const m = oldWords.length;
-  const n = newWords.length;
-  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-  for (let i = m - 1; i >= 0; i--) {
-    for (let j = n - 1; j >= 0; j--) {
-      if (oldWords[i] === newWords[j]) dp[i][j] = dp[i + 1][j + 1] + 1;
-      else dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
-    }
-  }
-  const oldMarked: string[] = [];
-  const newMarked: string[] = [];
-  let i = 0, j = 0;
-  while (i < m || j < n) {
-    if (i < m && j < n && oldWords[i] === newWords[j]) {
-      oldMarked.push(oldWords[i]);
-      newMarked.push(newWords[j]);
-      i++; j++;
-    } else if (j < n && (i >= m || dp[i][j + 1] >= dp[i + 1][j])) {
-      newMarked.push(`<mark class="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded px-0.5">${escapeHtml(newWords[j])}</mark>`);
-      j++;
-    } else if (i < m && (j >= n || dp[i][j + 1] < dp[i + 1][j])) {
-      oldMarked.push(`<mark class="bg-red-500/20 text-red-700 dark:text-red-300 rounded px-0.5 line-through">${escapeHtml(oldWords[i])}</mark>`);
-      i++;
-    } else {
-      break;
-    }
-  }
-  return `<span class="opacity-60">${oldMarked.join("")}</span> <span class="ml-2">${newMarked.join("")}</span>`;
-}
-
 function escapeHtml(s: string) {
   return s
     .replace(/&/g, "&amp;")
