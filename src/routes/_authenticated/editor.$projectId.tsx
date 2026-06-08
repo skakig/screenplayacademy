@@ -663,7 +663,7 @@ function BlockEditor({
             return (
               <button
                 key={t}
-                onMouseDown={(e) => { e.preventDefault(); onUpdate({ block_type: t }); }}
+                onMouseDown={(e) => { e.preventDefault(); void onSave({ block_type: t }); }}
                 className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
                   active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
