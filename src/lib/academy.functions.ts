@@ -55,7 +55,12 @@ export const updateGuidedStep = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => StepUpdateInput.parse(d))
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
+    const patch: {
+      status?: "locked" | "in_progress" | "complete";
+      user_output?: string;
+      output_reference_id?: string | null;
+      completed_at?: string;
+    } = {};
     if (data.status) patch.status = data.status;
     if (data.user_output !== undefined) patch.user_output = data.user_output;
     if (data.output_reference_id !== undefined) patch.output_reference_id = data.output_reference_id;
