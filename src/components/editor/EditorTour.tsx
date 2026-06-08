@@ -125,7 +125,14 @@ export function EditorTour({ isOpen, onClose }: { isOpen: boolean; onClose: () =
             )}
           </mask>
         </defs>
-        <rect width="100%" height="100%" fill="hsl(var(--background) / 0.78)" mask="url(#tour-mask)" />
+        <rect
+          width="100%"
+          height="100%"
+          fill="currentColor"
+          className="text-background"
+          opacity="0.82"
+          mask="url(#tour-mask)"
+        />
         {spotlight && (
           <rect
             x={spotlight.left}
@@ -135,9 +142,9 @@ export function EditorTour({ isOpen, onClose }: { isOpen: boolean; onClose: () =
             rx="10"
             ry="10"
             fill="none"
-            stroke="hsl(var(--primary))"
+            stroke="currentColor"
             strokeWidth="2"
-            className="pointer-events-none"
+            className="text-primary pointer-events-none"
           />
         )}
       </svg>
