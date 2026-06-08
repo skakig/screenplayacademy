@@ -71,10 +71,13 @@ function Dashboard() {
   });
 
   // Redirect to onboarding if user has no row
-  if (!onboardingLoading && !onboarding) {
-    navigate({ to: "/onboarding", replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (!onboardingLoading && !onboarding) {
+      navigate({ to: "/onboarding", replace: true });
+    }
+  }, [onboardingLoading, onboarding, navigate]);
+
+  if (!onboardingLoading && !onboarding) return null;
 
   if (onboarding?.preferred_mode === "guided") {
     return <AppShell><GuidedDashboard /></AppShell>;
