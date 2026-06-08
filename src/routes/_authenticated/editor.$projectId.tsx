@@ -132,6 +132,10 @@ function Editor() {
   // Content typed into a yet-to-be-persisted (temp-*) block. Flushed to the
   // real row once the optimistic insert returns the real id.
   const pendingTempContent = useRef<Map<string, string>>(new Map());
+  // Tracks block ids that currently have a save request in-flight, so
+  // BlockEditor's server-echo sync can drop stale cache patches.
+  const inFlightSaves = useRef<Set<string>>(new Set());
+  const isSaving = useCallback((id: string) => inFlightSaves.current.has(id), []);
 
   const markDirty = useCallback(() => {
     // Only update visual state — pending save count is incremented per
@@ -314,6 +318,7 @@ function Editor() {
       return;
     }
     markSaving();
+    inFlightSaves.current.add(id);
     try {
       const update: any = {};
       if (patch.content !== undefined) update.content = patch.content;
@@ -322,16 +327,17 @@ function Editor() {
       const { error } = await supabase.from("script_blocks").update(update).eq("id", id);
       if (error) throw error;
       if (patch.content !== undefined) clearDraft(id);
-      // Keep the React Query cache in sync with what we just saved so future
-      // renders, blur-flushes, and recovery checks compare against truth.
+      // Patch the React Query cache in place — never invalidate, that would
+      // remount the focused textarea and lose the caret.
       qc.setQueryData<any[]>(["blocks", projectId], (old) =>
         (old ?? []).map((b) => (b.id === id ? { ...b, ...update } : b))
       );
       markSaved();
-      if (patch.metadata !== undefined) qc.invalidateQueries({ queryKey: ["blocks", projectId] });
     } catch (e: any) {
       markError();
       toast.error("Couldn't save — your work is kept locally and will retry on next edit");
+    } finally {
+      inFlightSaves.current.delete(id);
     }
   }, [clearDraft, markError, markSaved, markSaving, qc, projectId]);
 
@@ -343,13 +349,15 @@ function Editor() {
       try {
         const { error } = await supabase.from("script_blocks").update({ content: draft.content }).eq("id", id);
         if (error) throw error;
+        qc.setQueryData<any[]>(["blocks", projectId], (old) =>
+          (old ?? []).map((b) => (b.id === id ? { ...b, content: draft.content } : b))
+        );
         clearDraft(id);
         markSaved();
       } catch {
         markError();
       }
     }
-    qc.invalidateQueries({ queryKey: ["blocks", projectId] });
     setRecovery(null);
     toast.success("Restored your unsaved changes");
   }, [recovery, clearDraft, markSaved, markError, qc, projectId]);
@@ -365,8 +373,13 @@ function Editor() {
       clearDraft(id);
       const { error } = await supabase.from("script_blocks").delete().eq("id", id);
       if (error) throw error;
+      return id;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["blocks", projectId] }),
+    onSuccess: (id) => {
+      qc.setQueryData<any[]>(["blocks", projectId], (old) =>
+        (old ?? []).filter((b) => b.id !== id)
+      );
+    },
   });
 
   // Bulk insert template / starter blocks
@@ -496,6 +509,20 @@ function Editor() {
   const startFromScratch = useCallback(async () => {
     await addBlock.mutateAsync({ block_type: "scene_heading" });
   }, [addBlock]);
+
+  // Auto-seed the very first scene heading so a brand-new project opens with
+  // a focused, editable line — no clicks, no ghost, instant typing.
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current) return;
+    if (blocksLoading) return;
+    if (blocks.length > 0) { seededRef.current = true; return; }
+    if (isLoglineStep) return;
+    if (addBlock.isPending) return;
+    seededRef.current = true;
+    addBlock.mutate({ block_type: "scene_heading" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocksLoading, blocks.length, isLoglineStep]);
 
   const tour = useEditorTour();
   const [storyBuilderOpen, setStoryBuilderOpen] = useState(false);
@@ -925,6 +952,7 @@ function Editor() {
             onDraftWithAi={draftOpeningWithAi}
             onInsertTemplate={() => void insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
             primaryBusy={primaryBusy || insertTemplate.isPending}
+            isSaving={isSaving}
           />
 
 

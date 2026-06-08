@@ -41,6 +41,7 @@ export function ScreenplayDocumentEditor({
   onDraftWithAi,
   onInsertTemplate,
   primaryBusy,
+  isSaving,
 }: {
   blocks: any[];
   blocksLoading: boolean;
@@ -59,43 +60,32 @@ export function ScreenplayDocumentEditor({
   onDraftWithAi?: () => void;
   onInsertTemplate?: () => void;
   primaryBusy?: boolean;
+  isSaving?: (id: string) => boolean;
 }) {
-  const ghostRef = useRef<HTMLTextAreaElement>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
   const isEmpty = !blocksLoading && blocks.length === 0;
+  const creatingRef = useRef(false);
 
-  // Focus the ghost line automatically when there are no blocks yet, so the
-  // writer can type immediately on page load.
-  useEffect(() => {
-    if (isEmpty && ghostRef.current) {
-      ghostRef.current.focus();
-    }
-  }, [isEmpty]);
-
-  // Ghost line: when the user types into it, seed a real block with that
-  // character. We use the beforeinput event so we can capture the typed text,
-  // cancel the input on the ghost, and forward it into the new block.
-  const handleGhostInsert = useCallback(
-    (initialContent: string) => {
+  // Create a real block on focus/click of the ghost line — never on first
+  // keystroke. The first character must always land in a real, focused
+  // textarea so it cannot be lost.
+  const handleGhostActivate = useCallback(
+    (initialContent: string = "") => {
+      if (creatingRef.current) return;
+      creatingRef.current = true;
+      // Release the guard on next tick — by then the new block's mount
+      // effect will have moved focus away from the ghost.
+      setTimeout(() => { creatingRef.current = false; }, 50);
       if (blocks.length === 0) {
-        onAddBlock("scene_heading", initialContent);
+        onAddBlock("scene_heading", initialContent || undefined);
       } else {
         const last = blocks[blocks.length - 1];
         const nextType = nextBlockTypeAfter(last.block_type);
-        onInsertAfter({ block_type: nextType, afterOrder: last.order_index, initialContent });
+        onInsertAfter({ block_type: nextType, afterOrder: last.order_index, initialContent: initialContent || undefined });
       }
     },
     [blocks, onAddBlock, onInsertAfter],
   );
-
-  const handleGhostBeforeInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
-    const ne = e.nativeEvent as InputEvent;
-    // Only consume real character / paste input — let arrow keys etc. pass through.
-    if (ne.inputType && ne.inputType.startsWith("insert")) {
-      e.preventDefault();
-      const data = ne.data ?? "";
-      handleGhostInsert(data || "");
-    }
-  };
 
   // Click on the paper: clicks below the last line focus the ghost line.
   const handlePaperMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -183,51 +173,44 @@ export function ScreenplayDocumentEditor({
                   }
                   characters={characters}
                   onCreateCharacter={onCreateCharacter}
+                  isSaving={isSaving}
                 />
               </div>
             );
           })}
 
-          {/* Editable ghost trailing line — a real textarea that creates a new
-              block on first keystroke. Not a button. */}
-          <div className="mt-2 flex items-center gap-2 group/ghost relative">
+          {/* Trailing ghost line — a quiet caret-shaped focus target. Focusing
+              or clicking it creates a real block; the new block then takes
+              focus and accepts typing. Not a button, no visible affordance. */}
+          <div
+            ref={ghostRef}
+            role="button"
+            tabIndex={0}
+            aria-label={isEmpty ? "Start your screenplay" : "Continue writing"}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              handleGhostActivate("");
+            }}
+            onFocus={() => handleGhostActivate("")}
+            onPaste={(e) => {
+              const text = e.clipboardData.getData("text");
+              if (text) {
+                e.preventDefault();
+                handleGhostActivate(text);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleGhostActivate("");
+              }
+            }}
+            className="mt-2 flex items-center gap-2 min-h-[1.5em] outline-none cursor-text select-none"
+          >
             <span
               className="inline-block w-px h-5 bg-primary/70 animate-pulse pointer-events-none"
               aria-hidden="true"
             />
-            <textarea
-              ref={ghostRef}
-              data-ghost-line
-              rows={1}
-              value=""
-              onBeforeInput={handleGhostBeforeInput}
-              onPaste={(e) => {
-                const text = e.clipboardData.getData("text");
-                if (text) {
-                  e.preventDefault();
-                  handleGhostInsert(text);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleGhostInsert("");
-                }
-              }}
-              onChange={() => {
-                /* intentionally no-op — input is consumed by onBeforeInput */
-              }}
-              placeholder={isEmpty ? "INT. LOCATION — DAY" : "Keep writing…"}
-              aria-label={isEmpty ? "Start your screenplay" : "Continue writing"}
-              className="flex-1 bg-transparent border-none outline-none resize-none caret-primary placeholder:text-muted-foreground/50 min-h-[1.5em] py-0"
-              style={{ fontFamily: "inherit", fontSize: "inherit", color: "inherit" }}
-            />
-            <span
-              className="opacity-40 ml-auto font-mono text-[10px] text-muted-foreground pointer-events-none hidden sm:inline"
-              aria-hidden="true"
-            >
-              Enter · Tab change type · / menu
-            </span>
           </div>
 
           {isEmpty && (onOpenStoryBuilder || onDraftWithAi || onInsertTemplate) && (
@@ -272,6 +255,7 @@ function BlockEditor({
   onActiveChange,
   characters,
   onCreateCharacter,
+  isSaving,
 }: {
   block: any;
   prevBlockType?: string;
@@ -284,6 +268,7 @@ function BlockEditor({
   onActiveChange?: (id: string, active: boolean) => void;
   characters: CharacterHit[];
   onCreateCharacter: (name: string) => Promise<any>;
+  isSaving?: (id: string) => boolean;
 }) {
   const [val, setVal] = useState<string>(block.content ?? "");
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -291,14 +276,15 @@ function BlockEditor({
   const dirtyRef = useRef(false);
   const focusedRef = useRef(false);
 
-  // Server echo handling: never overwrite the field while the writer is in it
-  // OR has pending unsaved text. Prevents autosave cache patches from blurring
-  // / moving the caret mid-keystroke.
+  // Server echo handling: never overwrite the field while the writer is in it,
+  // has pending unsaved text, or has a save in-flight. Prevents cache patches
+  // from blurring / moving the caret mid-keystroke.
   useEffect(() => {
     if (focusedRef.current) return;
     if (dirtyRef.current) return;
+    if (isSaving?.(block.id)) return;
     setVal(block.content ?? "");
-  }, [block.content]);
+  }, [block.content, block.id, isSaving]);
 
   const scheduleSave = useCallback(
     (next: string) => {
