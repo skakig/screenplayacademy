@@ -1,5 +1,6 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
@@ -14,6 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Film, Tv, Clapperboard, BookOpen, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { useOnboarding } from "@/hooks/use-onboarding";
+import { GuidedDashboard } from "@/components/dashboard/GuidedDashboard";
+import { seedGuidedSteps } from "@/lib/academy.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — SceneSmith AI" }] }),
