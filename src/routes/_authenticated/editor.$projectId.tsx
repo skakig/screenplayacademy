@@ -661,6 +661,50 @@ function Editor() {
             />
           )}
 
+          {/* Manuscript header — page/scene counter + outline button */}
+          {!isLoglineStep && !redirect && (
+            <div className="max-w-[680px] mx-auto mb-3 flex items-center justify-between gap-3 font-sans px-1">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <BookOpen className="h-3.5 w-3.5" />
+                <span className="font-mono tabular-nums">
+                  Page {Math.max(1, Math.min(pageCount, Math.ceil(((activeBlockId ? blocks.findIndex((b: any) => b.id === activeBlockId) + 1 : blocks.length) / Math.max(1, blocks.length)) * pageCount)))} of {pageCount}
+                </span>
+                {activeScene && (
+                  <>
+                    <span className="opacity-40">·</span>
+                    <span>Act {activeScene.act === 1 ? "I" : activeScene.act === 2 ? "II" : "III"} · Scene {activeScene.index + 1} of {outline.length}</span>
+                  </>
+                )}
+                {!activeScene && outline.length > 0 && (
+                  <>
+                    <span className="opacity-40">·</span>
+                    <span>{outline.length} scene{outline.length === 1 ? "" : "s"}</span>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setStoryBuilderOpen(true)}
+                  title="Generate logline, outline, and starter characters"
+                >
+                  <Sparkles className="h-3 w-3 mr-1" /> Story Builder
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={addSceneAtEnd}
+                  title="Add a new scene heading at the end"
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Scene
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className={`screenplay max-w-[680px] mx-auto bg-card/30 border border-border/40 rounded-lg p-8 lg:p-12 shadow-2xl ${isLoglineStep ? "opacity-60" : ""}`}>
             {blocksLoading ? (
               <div className="space-y-3 py-8 font-sans">
@@ -675,26 +719,41 @@ function Editor() {
                 onUseTemplate={() => insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
                 onDraftWithAi={draftOpeningWithAi}
                 onStartFromScratch={startFromScratch}
+                onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
               />
             ) : (
-              blocks.map((b, i) => (
-                <BlockEditor
-                  key={b.id}
-                  block={b}
-                  prevBlockType={i > 0 ? blocks[i - 1].block_type : undefined}
-                  onSave={(patch) => saveBlock(b.id, patch)}
-                  onDirty={(content) => { writeDraft(b.id, content); markDirty(); }}
-                  onDelete={() => deleteBlock.mutate(b.id)}
-                  onInsertAfter={(block_type) => insertBlockAfter.mutate({ block_type, afterOrder: b.order_index })}
-                  focusBlockId={focusBlockId}
-                  onFocusDone={() => setFocusBlockId(null)}
-                  onActiveChange={(id, active) => setActiveBlockId((prev) => (active ? id : prev === id ? null : prev))}
-                  characters={characters}
-                  onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
-                />
-              ))
+              blocks.map((b, i) => {
+                const isNewScene = b.block_type === "scene_heading" && i > 0;
+                return (
+                  <div key={b.id} data-block-id={b.id}>
+                    {isNewScene && (
+                      <div className="my-6 flex items-center gap-3 font-sans" aria-hidden="true">
+                        <div className="h-px flex-1 bg-border/60" />
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-mono">
+                          Scene
+                        </span>
+                        <div className="h-px flex-1 bg-border/60" />
+                      </div>
+                    )}
+                    <BlockEditor
+                      block={b}
+                      prevBlockType={i > 0 ? blocks[i - 1].block_type : undefined}
+                      onSave={(patch) => saveBlock(b.id, patch)}
+                      onDirty={(content) => { writeDraft(b.id, content); markDirty(); }}
+                      onDelete={() => deleteBlock.mutate(b.id)}
+                      onInsertAfter={(block_type) => insertBlockAfter.mutate({ block_type, afterOrder: b.order_index })}
+                      focusBlockId={focusBlockId}
+                      onFocusDone={() => setFocusBlockId(null)}
+                      onActiveChange={(id, active) => setActiveBlockId((prev) => (active ? id : prev === id ? null : prev))}
+                      characters={characters}
+                      onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
+                    />
+                  </div>
+                );
+              })
             )}
           </div>
+
           {blocks.length > 0 && (
             <EditorCommandBar
               currentBlockType={activeBlock?.block_type ?? null}
