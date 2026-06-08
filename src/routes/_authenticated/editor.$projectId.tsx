@@ -684,22 +684,21 @@ function Editor() {
               </div>
               <div className="flex items-center gap-2">
                 <Button
-                  variant="ghost"
                   size="sm"
-                  className="h-7 text-xs"
+                  className="h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90 shadow-md font-semibold"
                   onClick={() => setStoryBuilderOpen(true)}
                   title="Generate logline, outline, and starter characters"
                 >
-                  <Sparkles className="h-3 w-3 mr-1" /> Story Builder
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Story Builder
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="h-7 text-xs"
+                  className="h-8 text-xs"
                   onClick={addSceneAtEnd}
                   title="Add a new scene heading at the end"
                 >
-                  <Plus className="h-3 w-3 mr-1" /> Scene
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Scene
                 </Button>
               </div>
             </div>
