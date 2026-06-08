@@ -71,7 +71,7 @@ function EditorLab() {
           <div>
             <h1 className="text-sm font-semibold">Editor Lab</h1>
             <p className="text-[11px] text-muted-foreground">
-              {activeLabel}. Prove the writing engine here before touching production.
+              {activeLabel}. Verify Null mode first — switch to Supabase only after Null passes.
             </p>
           </div>
           <div className="flex items-center gap-3">
