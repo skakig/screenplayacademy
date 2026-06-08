@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import {
   updateGuidedStep,
   applyStepOutput,
+  saveStepVersion,
   aiGenerateLoglineOptions,
   aiGenerateThemeOptions,
   aiCreateProtagonistFromLesson,
@@ -20,6 +21,7 @@ import {
   aiGenerateRewriteExercise,
 } from "@/lib/academy.functions";
 import type { GuidedStepMeta } from "./stepMeta";
+import { StepVersionHistory } from "./StepVersionHistory";
 
 type Step = {
   id: string;
