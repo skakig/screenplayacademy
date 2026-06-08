@@ -608,7 +608,8 @@ function Editor() {
             Back to guided path{guidedStep ? ` · ${guidedStep.replace(/_/g, " ")}` : ""}
           </Link>
         ) : <span />}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <StudioModeToggle />
           {/* Mobile pane toggles */}
           <Sheet open={leftDrawerOpen} onOpenChange={setLeftDrawerOpen}>
             <SheetTrigger asChild>
