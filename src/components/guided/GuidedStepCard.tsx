@@ -281,6 +281,7 @@ export function GuidedStepCard({
                       "/tableread/$projectId"
                     }
                     params={{ projectId }}
+                    search={{ from: "guided", step: step.step_key } as any}
                   >
                     Open {meta.destination} <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
                   </Link>
