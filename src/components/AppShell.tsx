@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { GuidedReturnBanner } from "@/components/guided/GuidedReturnBanner";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -45,6 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="h-4 w-4 mr-1.5" />Sign out</Button>
         </div>
       </header>
+      <GuidedReturnBanner />
       <main className="flex-1">{children}</main>
     </div>
   );
