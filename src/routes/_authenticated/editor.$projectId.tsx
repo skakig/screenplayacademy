@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { aiAssist } from "@/lib/ai.functions";
 import { listProjectCharacters, upsertCharacter } from "@/lib/characters.functions";
+import { updateGuidedStep } from "@/lib/academy.functions";
 import { CoachPanel } from "@/components/editor/CoachPanel";
 import { CoachModeToggle } from "@/components/editor/CoachModeToggle";
 import { AutosaveIndicator } from "@/components/editor/AutosaveIndicator";
@@ -23,7 +24,12 @@ import type { AutosaveStatus } from "@/hooks/use-autosave";
 import { GuidedRail } from "@/components/guided/GuidedRail";
 import { CharacterAutocomplete, type CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import { SceneBeatPicker } from "@/components/editor/SceneBeatPicker";
-import { GraduationCap, BookOpen } from "lucide-react";
+import { StepCoach } from "@/components/editor/StepCoach";
+import { EmptyEditorTeacher } from "@/components/editor/EmptyEditorTeacher";
+import { LoglineComposer } from "@/components/editor/LoglineComposer";
+import { progressForStep, shouldUseLoglineComposer, shouldRedirectStep } from "@/lib/editor/stepCompletion";
+import { OPENING_SCENE_TEMPLATE } from "@/lib/editor/openingTemplate";
+import { GraduationCap, BookOpen, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
