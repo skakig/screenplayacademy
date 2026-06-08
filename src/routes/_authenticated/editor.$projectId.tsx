@@ -87,6 +87,92 @@ function Editor() {
 
   const [focusBlockId, setFocusBlockId] = useState<string | null>(null);
 
+  // Autosave status (editor-wide, aggregated across block edits)
+  const draftKey = `editor-draft:${projectId}`;
+  const [saveStatus, setSaveStatus] = useState<AutosaveStatus>("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const pendingCount = useRef(0);
+
+  const markDirty = useCallback(() => {
+    pendingCount.current += 1;
+    setSaveStatus("dirty");
+  }, []);
+  const markSaving = useCallback(() => setSaveStatus("saving"), []);
+  const markSaved = useCallback(() => {
+    pendingCount.current = Math.max(0, pendingCount.current - 1);
+    if (pendingCount.current === 0) {
+      setSaveStatus("saved");
+      setLastSavedAt(Date.now());
+    }
+  }, []);
+  const markError = useCallback(() => {
+    pendingCount.current = Math.max(0, pendingCount.current - 1);
+    setSaveStatus("error");
+  }, []);
+
+  // Per-block draft persistence in localStorage (cleared on successful save)
+  const writeDraft = useCallback((blockId: string, content: string) => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      const obj = raw ? JSON.parse(raw) : {};
+      obj[blockId] = { content, savedAt: Date.now() };
+      localStorage.setItem(draftKey, JSON.stringify(obj));
+    } catch { /* ignore */ }
+  }, [draftKey]);
+
+  const clearDraft = useCallback((blockId: string) => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const obj = JSON.parse(raw);
+      delete obj[blockId];
+      if (Object.keys(obj).length === 0) localStorage.removeItem(draftKey);
+      else localStorage.setItem(draftKey, JSON.stringify(obj));
+    } catch { /* ignore */ }
+  }, [draftKey]);
+
+  // Recovery banner state
+  const [recovery, setRecovery] = useState<Record<string, { content: string; savedAt: number }> | null>(null);
+  useEffect(() => {
+    if (blocksLoading || typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const obj = JSON.parse(raw) as Record<string, { content: string; savedAt: number }>;
+      const byId = new Map(blocks.map((b: any) => [b.id, b]));
+      const recoverable: Record<string, { content: string; savedAt: number }> = {};
+      for (const [id, draft] of Object.entries(obj)) {
+        const b = byId.get(id);
+        if (!b) continue;
+        if ((b.content ?? "") !== (draft.content ?? "") && draft.content?.trim() !== "") {
+          recoverable[id] = draft;
+        } else {
+          // Server already has this content — clean stale draft
+          delete obj[id];
+        }
+      }
+      if (Object.keys(recoverable).length > 0) setRecovery(recoverable);
+      // Persist cleaned drafts
+      if (Object.keys(obj).length === 0) localStorage.removeItem(draftKey);
+      else localStorage.setItem(draftKey, JSON.stringify(obj));
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocksLoading, projectId]);
+
+  // beforeunload warning while unsaved
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (saveStatus === "dirty" || saveStatus === "saving") {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [saveStatus]);
+
   const addBlock = useMutation({
     mutationFn: async (block_type: string) => {
       const order_index = blocks.length;
@@ -118,19 +204,51 @@ function Editor() {
     },
   });
 
-  const updateBlock = useMutation({
-    mutationFn: async ({ id, content, block_type }: { id: string; content?: string; block_type?: string }) => {
-      const patch: any = {};
-      if (content !== undefined) patch.content = content;
-      if (block_type) patch.block_type = block_type;
-      const { error } = await supabase.from("script_blocks").update(patch).eq("id", id);
+  const saveBlock = useCallback(async (id: string, patch: { content?: string; block_type?: string }) => {
+    markSaving();
+    try {
+      const update: any = {};
+      if (patch.content !== undefined) update.content = patch.content;
+      if (patch.block_type) update.block_type = patch.block_type;
+      const { error } = await supabase.from("script_blocks").update(update).eq("id", id);
       if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["blocks", projectId] }),
-  });
+      if (patch.content !== undefined) clearDraft(id);
+      markSaved();
+      // Silent refresh — don't refetch while user is typing
+    } catch (e: any) {
+      markError();
+      toast.error("Couldn't save — your work is kept locally and will retry on next edit");
+    }
+  }, [clearDraft, markError, markSaved, markSaving]);
+
+  const restoreRecovery = useCallback(async () => {
+    if (!recovery) return;
+    setSaveStatus("saving");
+    pendingCount.current = Object.keys(recovery).length;
+    for (const [id, draft] of Object.entries(recovery)) {
+      try {
+        const { error } = await supabase.from("script_blocks").update({ content: draft.content }).eq("id", id);
+        if (error) throw error;
+        clearDraft(id);
+        markSaved();
+      } catch {
+        markError();
+      }
+    }
+    qc.invalidateQueries({ queryKey: ["blocks", projectId] });
+    setRecovery(null);
+    toast.success("Restored your unsaved changes");
+  }, [recovery, clearDraft, markSaved, markError, qc, projectId]);
+
+  const discardRecovery = useCallback(() => {
+    if (!recovery) return;
+    for (const id of Object.keys(recovery)) clearDraft(id);
+    setRecovery(null);
+  }, [recovery, clearDraft]);
 
   const deleteBlock = useMutation({
     mutationFn: async (id: string) => {
+      clearDraft(id);
       const { error } = await supabase.from("script_blocks").delete().eq("id", id);
       if (error) throw error;
     },
