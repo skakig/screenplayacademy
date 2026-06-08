@@ -19,6 +19,10 @@ import { CoachModeToggle } from "@/components/editor/CoachModeToggle";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    from: typeof s.from === "string" ? s.from : undefined,
+    step: typeof s.step === "string" ? s.step : undefined,
+  }),
   component: Editor,
   errorComponent: ({ error, reset }) => (
     <div className="min-h-screen flex items-center justify-center p-6">
