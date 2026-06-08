@@ -33,9 +33,9 @@ export function GuidedDashboard() {
       }
       const done = steps.filter((s) => s.status === "complete").length;
       const total = steps.length;
-      const suggestedLessons = (await supabase.from("academy_lessons").select("title, slug, module_id").order("order_index").limit(20)).data ?? [];
+      const suggestedLessons = (await supabase.from("academy_lessons").select("id, title, slug, module_id").order("order_index").limit(20)).data ?? [];
       const completedSet = new Set((progress ?? []).filter((p: { status: string }) => p.status === "complete").map((p: { lesson_id: string }) => p.lesson_id));
-      const suggestedLesson = suggestedLessons.find((l) => !completedSet.has((l as { id?: string }).id ?? ""));
+      const suggestedLesson = suggestedLessons.find((l) => !completedSet.has(l.id));
       return { project: currentProject, steps, current, done, total, suggestedLesson };
     },
   });
