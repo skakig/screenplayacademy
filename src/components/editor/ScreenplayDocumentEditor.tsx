@@ -200,9 +200,23 @@ export function ScreenplayDocumentEditor({
               }
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
+              if (e.key === "Enter") {
                 e.preventDefault();
                 handleGhostActivate("");
+                return;
+              }
+              // Safety net: if a printable character lands on the ghost div
+              // before focus has transferred to the freshly-created block's
+              // textarea, capture it and pass it through initialContent so
+              // the first character is never lost.
+              if (
+                e.key.length === 1 &&
+                !e.ctrlKey &&
+                !e.metaKey &&
+                !e.altKey
+              ) {
+                e.preventDefault();
+                handleGhostActivate(e.key);
               }
             }}
             className="mt-2 flex items-center gap-2 min-h-[1.5em] outline-none cursor-text select-none"
