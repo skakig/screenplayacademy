@@ -583,29 +583,21 @@ function Editor() {
           </div>
         </div>
       )}
-      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_340px] max-w-[1600px] mx-auto">
-        {/* Left rail — Manuscript Index */}
-        <aside data-tour="block-toolbar" className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)] sticky top-0 self-start max-h-[calc(100vh-104px)] overflow-auto">
-          <ManuscriptIndex
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_340px] max-w-[1600px] mx-auto">
+        {/* Left rail — Story Navigator (desktop) */}
+        <aside data-tour="block-toolbar" className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)] sticky top-0 self-start max-h-[calc(100vh-104px)] overflow-auto bg-card/20">
+          <StoryNavigatorPane
+            projectId={projectId}
+            projectTitle={project?.title}
+            projectType={project?.project_type}
+            genre={project?.genre ?? undefined}
             blocks={blocks as any}
             activeBlockId={activeBlockId}
             onJumpToBlock={jumpToBlock}
             onAddScene={addSceneAtEnd}
           />
-          <div className="mt-6">
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Project</h3>
-            <p className="text-xs text-muted-foreground">{project?.project_type}</p>
-            {project?.genre && <p className="text-xs text-muted-foreground mt-1">{project.genre}</p>}
-          </div>
-          <div className="mt-6">
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Shortcuts</h3>
-            <div className="text-[10px] text-muted-foreground space-y-1 font-mono">
-              <p><span className="text-primary">/</span> — slash commands</p>
-              <p><span className="text-primary">Tab</span> — cycle block type</p>
-              <p><span className="text-primary">Enter</span> — new line</p>
-            </div>
-          </div>
         </aside>
+
 
 
         {/* Editor */}
