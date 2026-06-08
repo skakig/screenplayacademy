@@ -131,10 +131,11 @@
   caret-color: var(--paper-ink);
 }
 .screenplay-paper textarea { color: var(--paper-ink); caret-color: var(--paper-ink); }
-.screenplay-paper textarea::placeholder { color: oklch(0.45 0.03 80); opacity: 1; }
+.screenplay-paper textarea::placeholder { color: oklch(0.45 0.03 80) !important; opacity: 1 !important; }
+.screenplay-paper textarea::-webkit-input-placeholder { color: oklch(0.45 0.03 80) !important; opacity: 1 !important; }
 /* Make empty lines tappable on mobile — they otherwise collapse to a few px */
-.screenplay-paper textarea[data-block-editor] { min-height: 2.25em; }
-.screenplay-paper textarea[data-block-editor]:placeholder-shown { min-height: 2.5em; }
+.screenplay-paper textarea[data-block-editor] { min-height: 2.25em !important; }
+.screenplay-paper textarea[data-block-editor]:placeholder-shown { min-height: 2.75em !important; }
 .screenplay-paper .blk-scene_heading { text-transform: uppercase; font-weight: 700; color: var(--paper-ink); margin-top: 1.5em; letter-spacing: 0.02em; }
 .screenplay-paper .blk-action { margin: 0.6em 0; color: var(--paper-ink); }
 .screenplay-paper .blk-character { text-transform: uppercase; text-align: center; margin: 1em auto 0; max-width: 60%; font-weight: 600; color: var(--paper-ink); }
