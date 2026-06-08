@@ -17,6 +17,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { aiAssist } from "@/lib/ai.functions";
 import { CoachPanel } from "@/components/editor/CoachPanel";
 import { CoachModeToggle } from "@/components/editor/CoachModeToggle";
+import { AutosaveIndicator } from "@/components/editor/AutosaveIndicator";
+import type { AutosaveStatus } from "@/hooks/use-autosave";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
@@ -85,6 +87,92 @@ function Editor() {
 
   const [focusBlockId, setFocusBlockId] = useState<string | null>(null);
 
+  // Autosave status (editor-wide, aggregated across block edits)
+  const draftKey = `editor-draft:${projectId}`;
+  const [saveStatus, setSaveStatus] = useState<AutosaveStatus>("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const pendingCount = useRef(0);
+
+  const markDirty = useCallback(() => {
+    pendingCount.current += 1;
+    setSaveStatus("dirty");
+  }, []);
+  const markSaving = useCallback(() => setSaveStatus("saving"), []);
+  const markSaved = useCallback(() => {
+    pendingCount.current = Math.max(0, pendingCount.current - 1);
+    if (pendingCount.current === 0) {
+      setSaveStatus("saved");
+      setLastSavedAt(Date.now());
+    }
+  }, []);
+  const markError = useCallback(() => {
+    pendingCount.current = Math.max(0, pendingCount.current - 1);
+    setSaveStatus("error");
+  }, []);
+
+  // Per-block draft persistence in localStorage (cleared on successful save)
+  const writeDraft = useCallback((blockId: string, content: string) => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      const obj = raw ? JSON.parse(raw) : {};
+      obj[blockId] = { content, savedAt: Date.now() };
+      localStorage.setItem(draftKey, JSON.stringify(obj));
+    } catch { /* ignore */ }
+  }, [draftKey]);
+
+  const clearDraft = useCallback((blockId: string) => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const obj = JSON.parse(raw);
+      delete obj[blockId];
+      if (Object.keys(obj).length === 0) localStorage.removeItem(draftKey);
+      else localStorage.setItem(draftKey, JSON.stringify(obj));
+    } catch { /* ignore */ }
+  }, [draftKey]);
+
+  // Recovery banner state
+  const [recovery, setRecovery] = useState<Record<string, { content: string; savedAt: number }> | null>(null);
+  useEffect(() => {
+    if (blocksLoading || typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const obj = JSON.parse(raw) as Record<string, { content: string; savedAt: number }>;
+      const byId = new Map(blocks.map((b: any) => [b.id, b]));
+      const recoverable: Record<string, { content: string; savedAt: number }> = {};
+      for (const [id, draft] of Object.entries(obj)) {
+        const b = byId.get(id);
+        if (!b) continue;
+        if ((b.content ?? "") !== (draft.content ?? "") && draft.content?.trim() !== "") {
+          recoverable[id] = draft;
+        } else {
+          // Server already has this content — clean stale draft
+          delete obj[id];
+        }
+      }
+      if (Object.keys(recoverable).length > 0) setRecovery(recoverable);
+      // Persist cleaned drafts
+      if (Object.keys(obj).length === 0) localStorage.removeItem(draftKey);
+      else localStorage.setItem(draftKey, JSON.stringify(obj));
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocksLoading, projectId]);
+
+  // beforeunload warning while unsaved
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (saveStatus === "dirty" || saveStatus === "saving") {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [saveStatus]);
+
   const addBlock = useMutation({
     mutationFn: async (block_type: string) => {
       const order_index = blocks.length;
@@ -116,19 +204,51 @@ function Editor() {
     },
   });
 
-  const updateBlock = useMutation({
-    mutationFn: async ({ id, content, block_type }: { id: string; content?: string; block_type?: string }) => {
-      const patch: any = {};
-      if (content !== undefined) patch.content = content;
-      if (block_type) patch.block_type = block_type;
-      const { error } = await supabase.from("script_blocks").update(patch).eq("id", id);
+  const saveBlock = useCallback(async (id: string, patch: { content?: string; block_type?: string }) => {
+    markSaving();
+    try {
+      const update: any = {};
+      if (patch.content !== undefined) update.content = patch.content;
+      if (patch.block_type) update.block_type = patch.block_type;
+      const { error } = await supabase.from("script_blocks").update(update).eq("id", id);
       if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["blocks", projectId] }),
-  });
+      if (patch.content !== undefined) clearDraft(id);
+      markSaved();
+      // Silent refresh — don't refetch while user is typing
+    } catch (e: any) {
+      markError();
+      toast.error("Couldn't save — your work is kept locally and will retry on next edit");
+    }
+  }, [clearDraft, markError, markSaved, markSaving]);
+
+  const restoreRecovery = useCallback(async () => {
+    if (!recovery) return;
+    setSaveStatus("saving");
+    pendingCount.current = Object.keys(recovery).length;
+    for (const [id, draft] of Object.entries(recovery)) {
+      try {
+        const { error } = await supabase.from("script_blocks").update({ content: draft.content }).eq("id", id);
+        if (error) throw error;
+        clearDraft(id);
+        markSaved();
+      } catch {
+        markError();
+      }
+    }
+    qc.invalidateQueries({ queryKey: ["blocks", projectId] });
+    setRecovery(null);
+    toast.success("Restored your unsaved changes");
+  }, [recovery, clearDraft, markSaved, markError, qc, projectId]);
+
+  const discardRecovery = useCallback(() => {
+    if (!recovery) return;
+    for (const id of Object.keys(recovery)) clearDraft(id);
+    setRecovery(null);
+  }, [recovery, clearDraft]);
 
   const deleteBlock = useMutation({
     mutationFn: async (id: string) => {
+      clearDraft(id);
       const { error } = await supabase.from("script_blocks").delete().eq("id", id);
       if (error) throw error;
     },
@@ -160,8 +280,8 @@ function Editor() {
   return (
     <AppShell>
       <ProjectNav projectId={projectId} title={project?.title} />
-      {fromGuided && (
-        <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3">
+      <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3 flex items-center justify-between gap-3 flex-wrap">
+        {fromGuided ? (
           <Link
             to="/first-screenplay/$projectId"
             params={{ projectId }}
@@ -171,6 +291,19 @@ function Editor() {
             <ArrowLeft className="h-3 w-3" />
             Back to guided path{guidedStep ? ` · ${guidedStep.replace(/_/g, " ")}` : ""}
           </Link>
+        ) : <span />}
+        <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
+      </div>
+      {recovery && (
+        <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3">
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 flex items-center gap-3 flex-wrap">
+            <p className="text-sm flex-1">
+              We found <strong>{Object.keys(recovery).length}</strong> unsaved
+              {Object.keys(recovery).length === 1 ? " change" : " changes"} from your last session.
+            </p>
+            <Button size="sm" onClick={restoreRecovery}>Restore</Button>
+            <Button size="sm" variant="outline" onClick={discardRecovery}>Discard</Button>
+          </div>
         </div>
       )}
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_340px] max-w-[1600px] mx-auto">
@@ -234,7 +367,8 @@ function Editor() {
                 <BlockEditor
                   key={b.id}
                   block={b}
-                  onUpdate={(patch) => updateBlock.mutate({ id: b.id, ...patch })}
+                  onSave={(patch) => saveBlock(b.id, patch)}
+                  onDirty={(content) => { writeDraft(b.id, content); markDirty(); }}
                   onDelete={() => deleteBlock.mutate(b.id)}
                   onInsertAfter={(block_type) => insertBlockAfter.mutate({ block_type, afterOrder: b.order_index })}
                   focusBlockId={focusBlockId}
@@ -329,14 +463,16 @@ function Editor() {
 
 function BlockEditor({
   block,
-  onUpdate,
+  onSave,
+  onDirty,
   onDelete,
   onInsertAfter,
   focusBlockId,
   onFocusDone,
 }: {
   block: any;
-  onUpdate: (patch: { content?: string; block_type?: string }) => void;
+  onSave: (patch: { content?: string; block_type?: string }) => void | Promise<void>;
+  onDirty: (content: string) => void;
   onDelete: () => void;
   onInsertAfter: (block_type: string) => void;
   focusBlockId: string | null;
@@ -344,10 +480,35 @@ function BlockEditor({
 }) {
   const [val, setVal] = useState<string>(block.content ?? "");
   const ref = useRef<HTMLTextAreaElement>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dirtyRef = useRef(false);
 
-  useEffect(() => { setVal(block.content ?? ""); }, [block.content]);
+  useEffect(() => {
+    // Don't overwrite local typing with server echo
+    if (!dirtyRef.current) setVal(block.content ?? "");
+  }, [block.content]);
 
-  const flush = () => { if (val !== block.content) onUpdate({ content: val }); };
+  // Debounced autosave — 800ms after last keystroke
+  const scheduleSave = useCallback((next: string) => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      saveTimer.current = null;
+      if (next === (block.content ?? "")) { dirtyRef.current = false; return; }
+      await onSave({ content: next });
+      dirtyRef.current = false;
+    }, 800);
+  }, [block.content, onSave]);
+
+  const flush = useCallback(() => {
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+    if (val !== (block.content ?? "")) {
+      void onSave({ content: val });
+      dirtyRef.current = false;
+    }
+  }, [val, block.content, onSave]);
+
+  // Flush on unmount
+  useEffect(() => () => { flush(); }, [flush]);
 
   // auto-resize
   useEffect(() => {
@@ -404,10 +565,11 @@ function BlockEditor({
     const beforeSlash = val.slice(0, slashStart);
     const newVal = beforeSlash;
     setVal(newVal);
-    onUpdate({ content: newVal });
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+    void onSave({ content: newVal });
     closeSlash();
     onInsertAfter(blockType);
-  }, [val, slashStart, closeSlash, onUpdate, onInsertAfter]);
+  }, [val, slashStart, closeSlash, onSave, onInsertAfter]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (slashOpen) {
@@ -445,7 +607,7 @@ function BlockEditor({
         e.preventDefault();
         const idx = BLOCK_TYPES.findIndex((t) => t.value === block.block_type);
         const next = BLOCK_TYPES[(idx + 1) % BLOCK_TYPES.length];
-        onUpdate({ block_type: next.value });
+        void onSave({ block_type: next.value });
         return;
       }
       if (e.key === "Enter" && !e.shiftKey) {
@@ -466,6 +628,9 @@ function BlockEditor({
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newVal = e.target.value;
     setVal(newVal);
+    dirtyRef.current = true;
+    onDirty(newVal);
+    scheduleSave(newVal);
 
     if (slashOpen) {
       // If the slash was removed (backspace, etc.), close menu
@@ -514,7 +679,7 @@ function BlockEditor({
             return (
               <button
                 key={t}
-                onMouseDown={(e) => { e.preventDefault(); onUpdate({ block_type: t }); }}
+                onMouseDown={(e) => { e.preventDefault(); void onSave({ block_type: t }); }}
                 className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
                   active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
@@ -560,7 +725,7 @@ function BlockEditor({
 
       {/* Block controls */}
       <div className="absolute -left-12 top-0 opacity-0 group-hover:opacity-100 transition flex flex-col gap-0.5 font-sans">
-        <Select value={block.block_type} onValueChange={(v) => onUpdate({ block_type: v })}>
+        <Select value={block.block_type} onValueChange={(v) => void onSave({ block_type: v })}>
           <SelectTrigger className="h-6 w-10 text-[10px] px-1"><span>{(block.block_type || "a")[0].toUpperCase()}</span></SelectTrigger>
           <SelectContent>{BLOCK_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
         </Select>
