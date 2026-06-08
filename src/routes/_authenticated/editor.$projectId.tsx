@@ -21,7 +21,7 @@ import { GuidedRail } from "@/components/guided/GuidedRail";
 import { CharacterAutocomplete, type CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import { SceneBeatPicker } from "@/components/editor/SceneBeatPicker";
 import { StepCoach } from "@/components/editor/StepCoach";
-import { EmptyEditorTeacher } from "@/components/editor/EmptyEditorTeacher";
+import { ScreenplayDocumentEditor } from "@/components/editor/ScreenplayDocumentEditor";
 import { LoglineComposer } from "@/components/editor/LoglineComposer";
 import { progressForStep, shouldUseLoglineComposer, shouldRedirectStep } from "@/lib/editor/stepCompletion";
 import { OPENING_SCENE_TEMPLATE } from "@/lib/editor/openingTemplate";
