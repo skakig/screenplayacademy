@@ -39,7 +39,7 @@ import { ManuscriptIndex } from "@/components/editor/ManuscriptIndex";
 import { StoryBuilder } from "@/components/editor/StoryBuilder";
 import { useManuscriptAnalyzer } from "@/hooks/useManuscriptAnalyzer";
 import { buildOutline, estimatePages } from "@/lib/editor/manuscriptAnalyzer";
-import { FileText, BookOpen } from "lucide-react";
+import { BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
