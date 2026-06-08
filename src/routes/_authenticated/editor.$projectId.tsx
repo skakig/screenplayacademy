@@ -640,6 +640,7 @@ function Editor() {
               <CoachPane
                 projectId={projectId}
                 blocks={blocks as any}
+                activeBlockId={activeBlockId}
                 activeBlockType={activeBlock?.block_type ?? null}
                 defaultTab={coachDefaultTab}
                 onOpenStoryBuilder={() => { setStoryBuilderOpen(true); setRightDrawerOpen(false); }}
@@ -885,7 +886,8 @@ function Editor() {
           <CoachPane
             projectId={projectId}
             blocks={blocks as any}
-            activeBlockType={activeBlock?.block_type ?? null}
+            activeBlockId={activeBlockId}
+                activeBlockType={activeBlock?.block_type ?? null}
             defaultTab={coachDefaultTab}
             onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
             aiTools={AI_TOOLS}
