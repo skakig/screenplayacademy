@@ -35,6 +35,11 @@ import { useEditorTour } from "@/hooks/useEditorTour";
 import { EditorCommandBar } from "@/components/editor/EditorCommandBar";
 import { nextBlockTypeAfter, cycleType } from "@/lib/editor/nextBlockType";
 import { detectBlockType, BLOCK_LABEL } from "@/lib/editor/autoFormat";
+import { ManuscriptIndex } from "@/components/editor/ManuscriptIndex";
+import { StoryBuilder } from "@/components/editor/StoryBuilder";
+import { useManuscriptAnalyzer } from "@/hooks/useManuscriptAnalyzer";
+import { buildOutline, estimatePages } from "@/lib/editor/manuscriptAnalyzer";
+import { BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
@@ -412,8 +417,70 @@ function Editor() {
   }, [addBlock]);
 
   const tour = useEditorTour();
+  const [storyBuilderOpen, setStoryBuilderOpen] = useState(false);
 
-  // ===== Command-bar handlers (operate on the currently-focused block) =====
+  // Background auto-analyzer: detect new characters + sync scenes table.
+  useManuscriptAnalyzer({
+    projectId,
+    blocks: blocks as any,
+    existingCharacterNames: (characters as any[]).map((c) => c.name),
+  });
+
+  // Auto-seed: if the editor is opened on a writing step with no blocks and no
+  // step-specific composer in front of it, drop a single scene heading and
+  // park focus there so the writer can just start typing.
+  const autoSeededRef = useRef(false);
+  useEffect(() => {
+    if (autoSeededRef.current) return;
+    if (blocksLoading) return;
+    if (blocks.length > 0) return;
+    if (isLoglineStep || redirect) return;
+    // Only auto-seed when arriving from the guided path on a writing step,
+    // or when the user has no logline-style work pending. Skip if step is set
+    // and not a writing step.
+    if (guidedStep && !["opening_scene", "act1", "act2", "act3", "rough_draft", "first_scene", "write_first_scene"].includes(guidedStep)) return;
+    autoSeededRef.current = true;
+    // Wait one tick so the dialog/empty-state animations don't fight the focus.
+    setTimeout(() => {
+      addBlock.mutate("scene_heading");
+    }, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocksLoading, blocks.length, isLoglineStep, redirect, guidedStep]);
+
+  // After auto-seed, focus the new (single) empty block.
+  useEffect(() => {
+    if (blocks.length === 1 && !blocks[0].content && focusBlockId !== blocks[0].id) {
+      setFocusBlockId(blocks[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocks.length]);
+
+  // Derived: outline + page count for the manuscript header.
+  const outline = buildOutline(blocks as any);
+  const pageCount = estimatePages(blocks as any);
+  const activeSceneIdx = (() => {
+    if (!activeBlockId) return -1;
+    const b = blocks.find((x: any) => x.id === activeBlockId);
+    if (!b) return -1;
+    return outline.findIndex((s) => b.order_index >= s.startOrder && b.order_index <= s.endOrder);
+  })();
+  const activeScene = activeSceneIdx >= 0 ? outline[activeSceneIdx] : null;
+
+  const jumpToBlock = useCallback((blockId: string) => {
+    setFocusBlockId(blockId);
+    if (typeof document !== "undefined") {
+      // Scroll into view if rendered.
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`[data-block-id="${blockId}"]`) as HTMLElement | null;
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+  }, []);
+
+  const addSceneAtEnd = useCallback(() => {
+    addBlock.mutate("scene_heading");
+  }, [addBlock]);
+
   const activeBlock = blocks.find((b: any) => b.id === activeBlockId) ?? null;
   const activeIndex = activeBlock ? blocks.findIndex((b: any) => b.id === activeBlock.id) : -1;
   const prevType = activeIndex > 0 ? blocks[activeIndex - 1]?.block_type : undefined;
@@ -519,30 +586,29 @@ function Editor() {
         </div>
       )}
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_340px] max-w-[1600px] mx-auto">
-        {/* Left rail */}
-        <aside className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)]">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Add Block</h3>
-          <div data-tour="block-toolbar" className="grid grid-cols-2 gap-1.5">
-            {BLOCK_TYPES.map((t) => (
-              <Button key={t.value} variant="outline" size="sm" className="h-8 text-xs justify-start" onClick={() => addBlock.mutate(t.value)}>
-                <Plus className="h-3 w-3 mr-1" />{t.label}
-              </Button>
-            ))}
-          </div>
+        {/* Left rail — Manuscript Index */}
+        <aside data-tour="block-toolbar" className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)] sticky top-0 self-start max-h-[calc(100vh-104px)] overflow-auto">
+          <ManuscriptIndex
+            blocks={blocks as any}
+            activeBlockId={activeBlockId}
+            onJumpToBlock={jumpToBlock}
+            onAddScene={addSceneAtEnd}
+          />
           <div className="mt-6">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Project</h3>
+            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Project</h3>
             <p className="text-xs text-muted-foreground">{project?.project_type}</p>
             {project?.genre && <p className="text-xs text-muted-foreground mt-1">{project.genre}</p>}
           </div>
           <div className="mt-6">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Shortcuts</h3>
+            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Shortcuts</h3>
             <div className="text-[10px] text-muted-foreground space-y-1 font-mono">
               <p><span className="text-primary">/</span> — slash commands</p>
               <p><span className="text-primary">Tab</span> — cycle block type</p>
-              <p><span className="text-primary">Enter</span> — new block</p>
+              <p><span className="text-primary">Enter</span> — new line</p>
             </div>
           </div>
         </aside>
+
 
         {/* Editor */}
         <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10">
@@ -595,6 +661,50 @@ function Editor() {
             />
           )}
 
+          {/* Manuscript header — page/scene counter + outline button */}
+          {!isLoglineStep && !redirect && (
+            <div className="max-w-[680px] mx-auto mb-3 flex items-center justify-between gap-3 font-sans px-1">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <BookOpen className="h-3.5 w-3.5" />
+                <span className="font-mono tabular-nums">
+                  Page {Math.max(1, Math.min(pageCount, Math.ceil(((activeBlockId ? blocks.findIndex((b: any) => b.id === activeBlockId) + 1 : blocks.length) / Math.max(1, blocks.length)) * pageCount)))} of {pageCount}
+                </span>
+                {activeScene && (
+                  <>
+                    <span className="opacity-40">·</span>
+                    <span>Act {activeScene.act === 1 ? "I" : activeScene.act === 2 ? "II" : "III"} · Scene {activeScene.index + 1} of {outline.length}</span>
+                  </>
+                )}
+                {!activeScene && outline.length > 0 && (
+                  <>
+                    <span className="opacity-40">·</span>
+                    <span>{outline.length} scene{outline.length === 1 ? "" : "s"}</span>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setStoryBuilderOpen(true)}
+                  title="Generate logline, outline, and starter characters"
+                >
+                  <Sparkles className="h-3 w-3 mr-1" /> Story Builder
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={addSceneAtEnd}
+                  title="Add a new scene heading at the end"
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Scene
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className={`screenplay max-w-[680px] mx-auto bg-card/30 border border-border/40 rounded-lg p-8 lg:p-12 shadow-2xl ${isLoglineStep ? "opacity-60" : ""}`}>
             {blocksLoading ? (
               <div className="space-y-3 py-8 font-sans">
@@ -609,26 +719,41 @@ function Editor() {
                 onUseTemplate={() => insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
                 onDraftWithAi={draftOpeningWithAi}
                 onStartFromScratch={startFromScratch}
+                onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
               />
             ) : (
-              blocks.map((b, i) => (
-                <BlockEditor
-                  key={b.id}
-                  block={b}
-                  prevBlockType={i > 0 ? blocks[i - 1].block_type : undefined}
-                  onSave={(patch) => saveBlock(b.id, patch)}
-                  onDirty={(content) => { writeDraft(b.id, content); markDirty(); }}
-                  onDelete={() => deleteBlock.mutate(b.id)}
-                  onInsertAfter={(block_type) => insertBlockAfter.mutate({ block_type, afterOrder: b.order_index })}
-                  focusBlockId={focusBlockId}
-                  onFocusDone={() => setFocusBlockId(null)}
-                  onActiveChange={(id, active) => setActiveBlockId((prev) => (active ? id : prev === id ? null : prev))}
-                  characters={characters}
-                  onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
-                />
-              ))
+              blocks.map((b, i) => {
+                const isNewScene = b.block_type === "scene_heading" && i > 0;
+                return (
+                  <div key={b.id} data-block-id={b.id}>
+                    {isNewScene && (
+                      <div className="my-6 flex items-center gap-3 font-sans" aria-hidden="true">
+                        <div className="h-px flex-1 bg-border/60" />
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-mono">
+                          Scene
+                        </span>
+                        <div className="h-px flex-1 bg-border/60" />
+                      </div>
+                    )}
+                    <BlockEditor
+                      block={b}
+                      prevBlockType={i > 0 ? blocks[i - 1].block_type : undefined}
+                      onSave={(patch) => saveBlock(b.id, patch)}
+                      onDirty={(content) => { writeDraft(b.id, content); markDirty(); }}
+                      onDelete={() => deleteBlock.mutate(b.id)}
+                      onInsertAfter={(block_type) => insertBlockAfter.mutate({ block_type, afterOrder: b.order_index })}
+                      focusBlockId={focusBlockId}
+                      onFocusDone={() => setFocusBlockId(null)}
+                      onActiveChange={(id, active) => setActiveBlockId((prev) => (active ? id : prev === id ? null : prev))}
+                      characters={characters}
+                      onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
+                    />
+                  </div>
+                );
+              })
             )}
           </div>
+
           {blocks.length > 0 && (
             <EditorCommandBar
               currentBlockType={activeBlock?.block_type ?? null}
@@ -711,6 +836,11 @@ function Editor() {
         </aside>
       </div>
       <EditorTour isOpen={tour.isOpen} onClose={tour.stop} />
+      <StoryBuilder
+        projectId={projectId}
+        open={storyBuilderOpen}
+        onOpenChange={setStoryBuilderOpen}
+      />
     </AppShell>
   );
 }
