@@ -757,6 +757,31 @@ function Editor() {
 
         {/* Editor */}
         <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10 screenplay-canvas">
+          {isLoglineStep ? (
+            <div className="max-w-[760px] mx-auto pt-4">
+              <div className="mb-3 text-center">
+                <h1 className="text-2xl font-semibold">Write your logline</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  One sentence that captures your story. We'll come back to the screenplay once this is locked.
+                </p>
+              </div>
+              <LoglineComposer
+                projectId={projectId}
+                initialLogline={project?.logline}
+                projectContext={projectCtx}
+              />
+              <div className="text-center mt-4">
+                <Link
+                  to="/editor/$projectId"
+                  params={{ projectId }}
+                  className="text-xs text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+                >
+                  Skip to manuscript →
+                </Link>
+              </div>
+            </div>
+          ) : (
+          <>
           {/* Guided helpers — collapsible so they never block the canvas */}
           {(guidedStep || redirect || isLoglineStep) && (
             <details className="max-w-[760px] mx-auto mb-4 group font-sans" open>
