@@ -160,6 +160,19 @@ function Editor() {
   return (
     <AppShell>
       <ProjectNav projectId={projectId} title={project?.title} />
+      {fromGuided && (
+        <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3">
+          <Link
+            to="/first-screenplay/$projectId"
+            params={{ projectId }}
+            hash={guidedStep ? `step-${guidedStep}` : undefined}
+            className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Back to guided path{guidedStep ? ` · ${guidedStep.replace(/_/g, " ")}` : ""}
+          </Link>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_340px] max-w-[1600px] mx-auto">
         {/* Left rail */}
         <aside className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)]">
