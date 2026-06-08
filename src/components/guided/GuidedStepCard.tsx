@@ -5,10 +5,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Sparkles, Check, ArrowRight, Copy } from "lucide-react";
+import { Loader2, Sparkles, Check, ArrowRight, Copy, Save, FileInput } from "lucide-react";
 import { toast } from "sonner";
 import {
   updateGuidedStep,
+  applyStepOutput,
   aiGenerateLoglineOptions,
   aiGenerateThemeOptions,
   aiCreateProtagonistFromLesson,
@@ -40,6 +41,14 @@ const AI_HELPERS = {
   rewrite: aiGenerateRewriteExercise,
 } as const;
 
+// Steps that, when applied, write into editor-visible blocks
+const EDITOR_STEPS = new Set(["opening_scene", "act1", "rough_draft"]);
+// Steps where "Apply to project" makes sense
+const APPLIABLE_STEPS = new Set([
+  "logline", "protagonist", "antagonist", "theme", "story_arc",
+  "scene_cards", "opening_scene", "act1", "midpoint", "rough_draft",
+]);
+
 export function GuidedStepCard({
   step,
   meta,
@@ -57,31 +66,65 @@ export function GuidedStepCard({
   const [notes, setNotes] = useState(step.user_output ?? "");
   const [aiOutput, setAiOutput] = useState<string>("");
   const updateFn = useServerFn(updateGuidedStep);
+  const applyFn = useServerFn(applyStepOutput);
   const aiFn = useServerFn(meta.aiHelper ? AI_HELPERS[meta.aiHelper] : aiGenerateLoglineOptions);
 
+  const invalidateAll = () => {
+    qc.invalidateQueries({ queryKey: ["first-screenplay", projectId] });
+    qc.invalidateQueries({ queryKey: ["blocks", projectId] });
+    qc.invalidateQueries({ queryKey: ["scenes", projectId] });
+    qc.invalidateQueries({ queryKey: ["characters", projectId] });
+    qc.invalidateQueries({ queryKey: ["story-arc", projectId] });
+    qc.invalidateQueries({ queryKey: ["project", projectId] });
+  };
+
+  const draftToUse = () => (notes.trim() || aiOutput.trim());
+
+  const apply = useMutation({
+    mutationFn: (insertIntoEditor: boolean) => {
+      const text = draftToUse();
+      if (!text) throw new Error("Nothing to apply yet — write notes or run the AI helper first.");
+      return applyFn({ data: { projectId, stepKey: step.step_key, text, insertIntoEditor } });
+    },
+    onSuccess: (r: any) => {
+      toast.success(r.summary ?? "Applied");
+      invalidateAll();
+    },
+    onError: (e: any) => toast.error(e.message ?? "Could not apply"),
+  });
+
   const saveAndComplete = useMutation({
-    mutationFn: () =>
-      updateFn({
-        data: {
-          projectId,
-          stepKey: step.step_key,
-          status: "complete",
-          user_output: notes || aiOutput || null,
-        },
-      }),
+    mutationFn: async () => {
+      const text = draftToUse();
+      // If the step has a project destination, apply + insert as part of completion
+      if (text && APPLIABLE_STEPS.has(step.step_key)) {
+        await applyFn({
+          data: {
+            projectId,
+            stepKey: step.step_key,
+            text,
+            insertIntoEditor: EDITOR_STEPS.has(step.step_key),
+          },
+        });
+      }
+      await updateFn({
+        data: { projectId, stepKey: step.step_key, status: "complete", user_output: text || null },
+      });
+    },
     onSuccess: () => {
       toast.success("Step complete");
-      qc.invalidateQueries({ queryKey: ["first-screenplay", projectId] });
+      invalidateAll();
     },
     onError: (e: any) => toast.error(e.message ?? "Could not save"),
   });
 
   const saveDraft = useMutation({
     mutationFn: () =>
-      updateFn({
-        data: { projectId, stepKey: step.step_key, user_output: notes },
-      }),
-    onSuccess: () => toast.success("Draft saved"),
+      updateFn({ data: { projectId, stepKey: step.step_key, user_output: notes } }),
+    onSuccess: () => {
+      toast.success("Draft saved");
+      qc.invalidateQueries({ queryKey: ["first-screenplay", projectId] });
+    },
   });
 
   const runAi = useMutation({
@@ -96,6 +139,7 @@ export function GuidedStepCard({
 
   const isLocked = step.status === "locked";
   const isComplete = step.status === "complete";
+  const canApply = APPLIABLE_STEPS.has(step.step_key);
 
   return (
     <Card className={`p-5 ${isComplete ? "border-primary/30 bg-primary/5" : "border-border/60"}`}>
@@ -141,7 +185,7 @@ export function GuidedStepCard({
               </Button>
             )}
             {meta.destination && (
-              <Button asChild size="sm" variant="outline">
+              <Button asChild size="sm" variant="ghost">
                 <Link
                   to={
                     meta.destination === "editor" ? "/editor/$projectId" :
@@ -158,8 +202,14 @@ export function GuidedStepCard({
               </Button>
             )}
             <Button size="sm" variant="ghost" onClick={() => saveDraft.mutate()} disabled={saveDraft.isPending}>
-              Save draft
+              <Save className="h-3.5 w-3.5 mr-1.5" />Save draft
             </Button>
+            {canApply && (
+              <Button size="sm" variant="secondary" onClick={() => apply.mutate(false)} disabled={apply.isPending}>
+                {apply.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <FileInput className="h-3.5 w-3.5 mr-1.5" />}
+                Apply to project
+              </Button>
+            )}
             <Button
               size="sm"
               className="ml-auto"
@@ -175,9 +225,14 @@ export function GuidedStepCard({
             <div className="rounded-md border border-primary/30 bg-primary/5 p-3 mt-2">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[10px] uppercase tracking-wider text-primary font-semibold">AI suggestion</span>
-                <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => { navigator.clipboard.writeText(aiOutput); toast.success("Copied"); }}>
-                  <Copy className="h-3 w-3 mr-1" />Copy
-                </Button>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setNotes(aiOutput)}>
+                    Use as my answer
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => { navigator.clipboard.writeText(aiOutput); toast.success("Copied"); }}>
+                    <Copy className="h-3 w-3 mr-1" />Copy
+                  </Button>
+                </div>
               </div>
               <pre className="text-xs whitespace-pre-wrap font-sans text-foreground/85">{aiOutput}</pre>
             </div>
