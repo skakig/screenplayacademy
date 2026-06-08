@@ -775,7 +775,7 @@ function Editor() {
             </div>
           )}
 
-          <div className={`screenplay max-w-[680px] mx-auto bg-card/30 border border-border/40 rounded-lg p-8 lg:p-12 shadow-2xl ${isLoglineStep ? "opacity-60" : ""}`}>
+          <div className={`screenplay max-w-[680px] mx-auto bg-card border border-border/60 rounded-lg p-8 lg:p-12 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.5)] ${isLoglineStep ? "opacity-60" : ""}`}>
             {blocksLoading ? (
               <div className="space-y-3 py-8 font-sans">
                 <div className="h-5 w-2/3 bg-muted/50 rounded animate-pulse" />
