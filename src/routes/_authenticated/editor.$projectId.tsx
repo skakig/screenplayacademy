@@ -278,6 +278,36 @@ function Editor() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["blocks", projectId] }),
   });
 
+  // Bulk insert template / starter blocks
+  const insertTemplate = useMutation({
+    mutationFn: async (template: { block_type: string; content: string }[]) => {
+      const startOrder = blocks.length;
+      const rows = template.map((t, i) => ({
+        project_id: projectId,
+        block_type: t.block_type,
+        content: t.content,
+        order_index: startOrder + i,
+      }));
+      const { error } = await supabase.from("script_blocks").insert(rows);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["blocks", projectId] }),
+  });
+
+  // Guided step: mark complete + advance
+  const updateStep = useServerFn(updateGuidedStep);
+  const markStepComplete = useMutation({
+    mutationFn: async (stepKey: string) => {
+      await updateStep({ data: { projectId, stepKey, status: "complete" } });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["guided-rail", projectId] });
+      qc.invalidateQueries({ queryKey: ["first-screenplay", projectId] });
+      toast.success("Step complete — onward!");
+    },
+    onError: (e: any) => toast.error(e.message ?? "Couldn't update step"),
+  });
+
   const [aiTool, setAiTool] = useState(AI_TOOLS[0]);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiOutput, setAiOutput] = useState("");
