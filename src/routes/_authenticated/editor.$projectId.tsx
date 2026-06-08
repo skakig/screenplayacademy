@@ -991,6 +991,7 @@ function Editor() {
 
 
         {/* Right sidebar — Intelligent Coach */}
+        {!writeMode.on && (
         <aside data-tour="coach-panel" className="hidden lg:block border-l border-border/60 min-h-[calc(100vh-104px)] bg-card/20 max-h-[calc(100vh-104px)] overflow-auto sticky top-0 self-start">
           <CoachPane
             projectId={projectId}
@@ -1009,6 +1010,7 @@ function Editor() {
             onRunAi={runAi}
           />
         </aside>
+        )}
 
       </div>
       <FeatureDock projectId={projectId} />
