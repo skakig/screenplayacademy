@@ -132,6 +132,8 @@ function ArcTimelinePage() {
           </div>
         </div>
 
+        <StoryPulsePanel projectId={projectId} />
+
         {diag && (
           <Card className="p-4 border-amber-500/30 bg-amber-500/5">
             <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><AlertTriangle className="h-4 w-4 text-amber-400" /> Diagnosis</h3>
