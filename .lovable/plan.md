@@ -1,155 +1,142 @@
-# Rebuild SceneSmith Editor as a Real Writing Environment
 
-Transform `/editor/:projectId` from a single-column block list into a **three-pane writing workspace** with a true screenplay canvas, integrated Story Builder + Coach, and a learner-model (ITS/PfHU) telemetry layer.
+# SceneSmith Studio — Cinematic Editor Rebuild
 
-This is a large rebuild. I'll deliver it in **3 waves** so you can use each one as it lands. You can stop after any wave.
+Rebuild `/editor/:projectId` to match the attached concept: a premium dark-mode, three-pane screenplay studio where the **page itself is the product**, not a card surrounded by buttons.
+
+Most of the underlying systems already exist (Wave A + Wave B shipped: `StoryNavigatorPane`, `CoachPane`, `WriterInsightsPanel`, ITS event spine, writer profiles, recommendations, autosave, analyzer, slash menu logic in `nextBlockType.ts`). What's missing is the **visual rebuild** — cinematic shell, real screenplay page, integrated dock — plus a handful of polish behaviors. This plan focuses on the visible product transformation, not re-doing infrastructure.
 
 ---
 
-## Wave A — The Workspace (the thing you see)
+## Wave 1 — Visual Shell & Theme
 
-The visible win. After this, the editor feels like a real writing app.
+**1.1 Cinematic theme tokens** — extend `src/styles.css` with the exact palette:
+- `--bg-canvas: #070A0E`, `--bg-pane: #10161D`, `--bg-pane-2: #131A22`
+- `--gold: #F5B83D` (primary accent), `--purple-teach: #8B5CF6`, `--blue-insight: #3B82F6`
+- `--paper: #F4F1E8` (screenplay page color), `--ink: #1a1a1a` (page text)
+- Soft border `rgba(255,255,255,0.08)`, premium shadows
+- New semantic tokens: `--surface-canvas`, `--surface-pane`, `--surface-paper`, `--accent-gold`, `--accent-teach`, `--accent-insight`
 
-### A1. Three-pane shell (`EditorWorkspace.tsx`)
+**1.2 Top bar (`EditorTopBar.tsx`)** — replaces current header strip:
+- Logo · Project selector · Draft pill · Autosave dot · **Studio Mode / Guided Mode toggle (centered)** · AI Assistant · Table Read · Storyboard · Pitch Package · Avatar
+- Slim, full-width, sits above the three panes
 
-```text
-┌────────────┬───────────────────────────────────┬────────────┐
-│  Story     │      Screenplay Canvas            │  Coach /   │
-│  Navigator │   (centered page, dark surround)  │  Builder   │
-│  280px     │      max-w 680px, full height     │  340px     │
-└────────────┴───────────────────────────────────┴────────────┘
+**1.3 Three-pane resizable shell** — replace current single-column layout with `ResizablePanelGroup`:
 ```
+[ 300px Story Navigator | flex Canvas | 380px Coach ]
+```
+- Both side panes collapsible (chevron buttons)
+- <1024px: side panes become Sheet drawers triggered from top bar
 
-- Resizable panes via `components/ui/resizable`.
-- <1024px: left + right collapse into Sheet drawers triggered from a slim top bar.
-- Top bar: title · draft · autosave · page/scene counters · current block type · Story Builder · Coach mode selector.
+---
 
-### A2. Left pane — Story Navigator (`StoryNavigatorPane.tsx`)
+## Wave 2 — The Screenplay Canvas (the heart)
 
-Replaces today's `ManuscriptIndex`. Adds:
+**2.1 Cinematic surround** — center pane = dark `bg-canvas` workspace with the screenplay page floating on it (warm paper color, shadow, ~680px max width, full height with vertical scroll).
 
-- Project title + draft, Guided Path progress ring, Act I/II/III dividers.
-- Scene cards: number · heading · story beat · main characters (chips) · status badge (Idea/Outlined/Drafting/Needs Rewrite/Strong/Locked) · warning dot when missing purpose/turn/movement.
-- Click-to-jump, drag-to-reorder, search, "+ Scene" button.
+**2.2 Formatting toolbar** above the page:
+- Block-type dropdown · B / I / U · alignment · lists · zoom · more
+- Right side: page count · word count · scene count · undo/redo · copy · focus mode
 
-### A3. Center pane — Screenplay Canvas (`ScreenplayCanvas.tsx`)
+**2.3 Real screenplay block rendering** — refactor block list into `ScreenplayBlock.tsx` with true screenplay margins:
+- Scene Heading: UPPERCASE, left, bold
+- Action: full width
+- Character: UPPERCASE, centered above dialogue
+- Dialogue: narrower centered column
+- Parenthetical: narrower under character, italic
+- Transition: UPPERCASE, right-aligned
+- Shot: UPPERCASE left
+- Note: distinct (muted/boxed), excluded from export
+- Courier Prime, real page-feel margins
 
-The heart. Replace today's block list with a single scrolling page surface.
+**2.4 Page chrome** — page numbers in corner, optional scene numbers in margin, footer strip "Page 1 of N · words · scenes".
 
-- Dark workspace surround (`bg-muted/40`), centered 8.5″-feel page (`bg-card`, shadow, max-w 680px), Courier Prime, true screenplay margins per block type.
-- Inline-editable blocks with correct visual format (caps for headings/characters/transitions; centered character + narrower dialogue; right-aligned transitions; styled notes that don't export).
-- Enter-key next-block logic (already in `nextBlockType.ts`).
-- Keyboard: Tab cycle, Cmd/Ctrl+1–7 set block type, Cmd/Ctrl+/ palette.
-- Slash menu (`/scene /action /character /dialogue /parenthetical /transition /shot /note /askcoach /storyturn /addconflict /tableread /storyboard`).
-- Beautiful empty state inside the page: "Start your first scene" with Write from scratch · Story Builder · Generate from logline · Guided Path · Import.
-- Keeps existing autosave, analyzer, and the sticky `EditorCommandBar`.
+**2.5 Empty-state inside the page** (only when no blocks):
+"Start your first scene" + 5 options: Write from scratch · Story Builder · Generate from logline · Guided Path · Import.
 
-### A4. Right pane — Intelligent Coach (`CoachPane.tsx`)
+**2.6 Reuse existing**: `autoFormat.ts`, `nextBlockType.ts` (Enter logic), keyboard shortcuts (Cmd/Ctrl+1–7), slash menu, `useAutosave`, analyzer.
 
-Tabs: **Coach · Story Builder · Arc · Characters · Format · Notes · Table Read**.
+---
 
-- Coach mode selector (Off/Gentle/Active/Teaching) wired to existing `useCoachMode`.
-- Contextual cards (formatting, scene craft, visual writing, dialogue) — rule-fired from analyzer signals; each card has Apply / Dismiss / "Teach me" → academy lesson.
-- Story Builder tab = the full guided creation flow (Foundation, Characters, Arc, Scene Builder, Current Scene, Next Scene with 3 variants: safer/bolder/strange). Existing `StoryBuilder.tsx` dialog becomes the kickoff for the panel.
-- Arc/Characters/Format/Table Read tabs reuse existing components (`CharacterAutocomplete`, scene arc data, table-read flow).
+## Wave 3 — Story Navigator Polish (left pane)
 
-### A5. Empty states + redirects
+Refine existing `StoryNavigatorPane.tsx`:
+- Header: "Story Navigator" + search/filter/+ buttons (gold accent)
+- Group scenes by **ACT 1 — SETUP / ACT 2 — CONFRONTATION / ACT 3 — RESOLUTION** dividers (derive from `scene_arc_beats.act`)
+- Scene card: # · heading · beat · character chips · status icon (✓ green / ⚠ amber / • red / ○ empty)
+- Sticky bottom: Project Progress card with bar, %, "X of Y drafted", **View Arc** button, +Scene, import/export icons
 
-- Remove seeded "INT. AFRICAN DESERT / STEPHAN" dummy content.
-- New project opens with empty page + canvas empty-state, caret-ready.
+---
 
-**Deliverables (Wave A files):**
+## Wave 4 — Coach Pane Polish (right pane)
 
-- `src/components/editor/EditorWorkspace.tsx`
-- `src/components/editor/panes/StoryNavigatorPane.tsx`
-- `src/components/editor/panes/CoachPane.tsx`
+`CoachPane.tsx` already has all 7 tabs (Coach · Story Builder · Arc · Characters · Format · Notes · Table Read). Visual upgrade only:
+- Coach tab: redesign suggestion cards (icon · title · observation · Show Examples / Apply / Ignore)
+- Purple `Teaching Moment` card variant
+- Editable scene-data cards (Scene Purpose / Turn / Stakes / Moral Pressure / Theme / Character Movement) — already partly in `ArcSidebar`, surface inline
+- Sticky "Ask Coach…" input at bottom with gold send button
+- Story Builder tab: stop being just a button — show inline sections (Foundation / Characters / Arc / Scene Builder / Current Scene / Next Scene 3 variants) with completion status
+
+---
+
+## Wave 5 — Feature Dock
+
+New `FeatureDock.tsx` below the three-pane workspace (collapsible strip):
+6 cards in a row, each links to its route:
+Character Intelligence · StoryPulse · Storyboard · Table Read · Pitch Package · Academy.
+Each: small icon/visual preview · title · one-line description. Premium dark cards with subtle gold hover.
+
+---
+
+## Wave 6 — Mode Toggle Wiring
+
+- Studio/Guided toggle in top bar reads/writes `user_onboarding.preferred_mode`
+- **Guided Mode**: right pane defaults to Story Builder tab, Coach cards denser, shows current First Screenplay Path step strip under top bar with "Step X of 13 · Continue"
+- **Studio Mode**: right pane defaults to Coach tab, minimal teaching cards, clean
+
+---
+
+## Wave 7 — Polish
+
+- Remove any remaining seeded "INT. AFRICAN DESERT / STEPHAN" demo content from new-project flow
+- Slash commands `/storyturn`, `/addconflict`, `/tableread`, `/storyboard` wired to existing serverFns
+- Empty-state "Generate opening scene from my logline" → existing AI serverFn
+- Editor tour refresh for new layout
+
+---
+
+## Files
+
+**New:**
+- `src/components/editor/EditorTopBar.tsx`
+- `src/components/editor/EditorWorkspace.tsx` (three-pane shell)
 - `src/components/editor/canvas/ScreenplayCanvas.tsx`
 - `src/components/editor/canvas/ScreenplayBlock.tsx`
-- `src/components/editor/canvas/SlashMenu.tsx`
+- `src/components/editor/canvas/CanvasToolbar.tsx`
 - `src/components/editor/canvas/CanvasEmptyState.tsx`
-- `src/components/editor/coach/{CoachTab,StoryBuilderTab,ArcTab,CharactersTab,FormatTab,NotesTab,TableReadTab}.tsx`
-- Rewrite `src/routes/_authenticated/editor.$projectId.tsx` to mount `<EditorWorkspace />`.
+- `src/components/editor/FeatureDock.tsx`
+- `src/components/editor/coach/SuggestionCard.tsx`, `TeachingMomentCard.tsx`, `SceneDataCard.tsx`, `AskCoachInput.tsx`
+
+**Edited:**
+- `src/styles.css` — cinematic palette tokens
+- `src/routes/_authenticated/editor.$projectId.tsx` — mount `<EditorWorkspace />`, drop legacy layout
+- `src/components/editor/StoryNavigatorPane.tsx` — act dividers, polish
+- `src/components/editor/CoachPane.tsx` — Story Builder inline sections, card redesigns
+
+**Reused as-is:** `autoFormat.ts`, `nextBlockType.ts`, `EditorCommandBar`, `useManuscriptAnalyzer`, `useAutosave`, `WriterInsightsPanel`, all ITS infra, all serverFns.
 
 ---
 
-## Wave B — The Brain (ITS / PfHU learner model)
+## Out of scope (already done or separate)
 
-Makes the coach adaptive instead of generic.
-
-### B1. Migration — 4 new tables (RLS + GRANTs)
-
-```text
-writer_profiles         one row per user, skill scores 0–100
-writing_events          append-only event stream
-coach_recommendations   per-project tips with status
-editor_sessions         start/end + counters per session
-```
-
-All scoped by `auth.uid()` (or `owns_project()`). `service_role` granted for serverFn writes.
-
-### B2. Event spine (`src/lib/its/writerEvents.ts`)
-
-- `emitWriterEvent({ event_type, project_id, scene_id?, character_id?, context })` — fire-and-forget, debounced, no PII.
-- Hook into existing flows: block create/type-change, scene create, character create, Story Builder open, AI request/accept/reject, coach tip shown/applied, format error detected, guided step completed, export.
-
-### B3. Aggregator (`src/lib/its/writerProfile.functions.ts`)
-
-- Nightly-ish (on-session-end) serverFn folds events into `writer_profiles` skill scores:
-  - format errors per 100 blocks → `formatting_skill_score`
-  - scenes with turn+change → `scene_craft_score`
-  - dialogue accept-without-edit ratio → `ai_dependence_score`
-  - etc.
-- Stateless per event, stateful in aggregate (per `pfhu-runtime-orchestration` doctrine).
-
-### B4. Recommendation engine (`src/lib/its/coachRules.ts`)
-
-Deterministic rules → write `coach_recommendations` rows that the Coach tab renders. Examples already specified in the brief (format basics, scene turn, subtext, AI dependence, character arcs).
-
-### B5. PfHU adaptation
-
-Coach card density, tone, and depth read from `writer_profiles.coaching_level` × `confidence_score` × skill gaps:
-
-- Beginner / low confidence → more examples, smaller steps.
-- Pro → silent diagnostics only.
-- High AI dependence → "write first, then improve" nudge before AI buttons.
+- DB schema (writer_profiles, writing_events, coach_recommendations, editor_sessions exist)
+- ITS rules engine (Wave B shipped)
+- Auth/RLS (already enforced)
+- New AI edge functions (existing serverFns reused)
 
 ---
 
-## Wave C — Polish & Integration
+## Build order recommendation
 
-- `/storyturn`, `/addconflict` slash commands wired to AI rewrite.
-- "Generate opening scene from my logline" empty-state action.
-- Next-scene 3-variant generator (safer/bolder/strange).
-- Storyboard + Table Read launch from canvas.
-- Studio Mode vs Guided Mode toggle in top bar (drives whether right pane defaults to Builder or Coach).
-- Editor tour refresh for the new layout.
+Ship **Wave 1 + 2** first (theme + screenplay canvas) — that's the visual transformation the user is asking for. Then Wave 3–7 as a second pass.
 
----
-
-## Technical notes
-
-- **Stack-pure:** all data writes go through `createServerFn` with `requireSupabaseAuth`; no edge functions. Analyzer + events stay client-side; aggregation is a serverFn.
-- **Tokens only:** `bg-background/card/muted`, `text-foreground/muted-foreground`, `border-border`. No raw hex, no `text-white`/`bg-red-500`. Wrong-state cues use amber, not red.
-- **Reuse:** keep `autoFormat.ts`, `nextBlockType.ts`, `EditorCommandBar`, `useManuscriptAnalyzer`, `StoryBuilder` dialog, `EmptyEditorTeacher`, `useAutosave`, character/scene tables and serverFns.
-- **No secrets in client.** Lovable AI Gateway (`google/gemini-3-flash-preview`) via serverFn for all generation.
-- **Migration ordering:** CREATE TABLE → GRANT → ENABLE RLS → POLICY in one migration per table batch.
-
----
-
-## Open questions before I start
-
-1. **Scope confirmation** — ship all three waves, or do Wave A first and review before B/C? (My recommendation: do A in one pass so the editor is usable, then B as a second pass.) Let's do Wave A first then prompt me to continue to Wave B. 
-2. **Studio vs Guided default** — when a returning user opens the editor, should the right pane default to **Coach** (Studio) or **Story Builder** (Guided)? Or driven by their existing `user_onboarding.preferred_mode`? This should be their last prefrence. 
-3. **Scene status badges** — auto-derived (Idea = empty, Drafting = has blocks, Needs Rewrite = analyzer flags missing purpose/turn, Strong = all arc fields filled), or also user-settable from the scene card menu? Auto-derived and user-settable. 
-
-Once you answer these, I'll switch to build mode and start with Wave A.
----
-
-## Wave B status: shipped
-
-- Migration: `writer_profiles`, `writing_events`, `coach_recommendations`, `editor_sessions` (RLS + grants).
-- Event spine: `src/lib/its/writerEvents.functions.ts` + `src/hooks/useWriterEvents.ts` (debounced fire-and-forget).
-- Wired emits in `editor.$projectId.tsx`: `block_created`, `scene_created`, `ai_request`.
-- Aggregator: `src/lib/its/writerProfile.functions.ts` (`getWriterProfile`, `aggregateWriterProfile`).
-- Rule engine + recs API: `src/lib/its/coachRecommendations.functions.ts` (5 starter rules: format_basics, scene_turn, subtext_dialogue, ai_dependence, visual_writing).
-- UI: `WriterInsightsPanel` mounted inside the Coach tab — shows 5 skill bars + recommendations with Teach me / Got it / Dismiss.
+**Question before I switch to build:** Ship Wave 1 + 2 in one pass (the editor will look and feel rebuilt), or do all 7 waves before handing back?
