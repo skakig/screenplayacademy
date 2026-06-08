@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArcStatusBadge } from "@/components/arc/ArcStatusBadge";
 import { TMHBadge } from "@/components/characters/TMHBadge";
 import { diagnoseProject } from "@/lib/arc.functions";
+import { StoryPulsePanel } from "@/components/storypulse/StoryPulsePanel";
 import { AlertTriangle, ArrowRight, Loader2, Activity } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/arc-timeline/$projectId")({
@@ -130,6 +131,8 @@ function ArcTimelinePage() {
             </Button>
           </div>
         </div>
+
+        <StoryPulsePanel projectId={projectId} />
 
         {diag && (
           <Card className="p-4 border-amber-500/30 bg-amber-500/5">
