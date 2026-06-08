@@ -928,98 +928,26 @@ function Editor() {
             <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">⌘↵</kbd> AI continue</span>
           </div>
 
-          <div
-            className="screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 cursor-text"
-            onMouseDown={(e) => {
-              const target = e.target as HTMLElement;
-              if (target.closest("textarea, button, input, [role='menu'], [data-block-toolbar]")) return;
-              e.preventDefault();
-              const all = (e.currentTarget as HTMLElement).querySelectorAll<HTMLTextAreaElement>("textarea");
-              if (all.length === 0) { cmdNewLine(); return; }
-              const y = e.clientY;
-              // If click is below the last textarea, treat as "new line at end"
-              const last = all[all.length - 1];
-              const lastRect = last.getBoundingClientRect();
-              if (y > lastRect.bottom + 8) { cmdNewLine(); return; }
-              // Otherwise focus the nearest textarea
-              let best: HTMLTextAreaElement = all[0];
-              let bestDist = Infinity;
-              all.forEach((t) => {
-                const r = t.getBoundingClientRect();
-                const d = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
-                if (d < bestDist) { bestDist = d; best = t; }
-              });
-              best.focus();
-              const len = best.value.length;
-              try { best.setSelectionRange(len, len); } catch {}
-            }}
-          >
-            {blocksLoading ? (
-              <div className="space-y-3 py-8 font-sans">
-                <div className="h-5 w-2/3 bg-muted/50 rounded animate-pulse" />
-                <div className="h-4 w-full bg-muted/40 rounded animate-pulse" />
-                <div className="h-4 w-5/6 bg-muted/40 rounded animate-pulse" />
-                <div className="h-4 w-3/4 bg-muted/40 rounded animate-pulse" />
-              </div>
-            ) : blocks.length === 0 ? (
-              <EmptyEditorTeacher
-                hasLogline={!!project?.logline}
-                onUseTemplate={() => insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
-                onDraftWithAi={draftOpeningWithAi}
-                onStartFromScratch={startFromScratch}
-                onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
-              />
-            ) : (
-              <>
-                {blocks.map((b, i) => {
-                  const isNewScene = b.block_type === "scene_heading" && i > 0;
-                  return (
-                    <div key={b.id} data-block-id={b.id}>
-                      {isNewScene && (
-                        <div className="my-6 flex items-center gap-3 font-sans" aria-hidden="true">
-                          <div className="h-px flex-1 bg-border/60" />
-                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-mono">
-                            Scene
-                          </span>
-                          <div className="h-px flex-1 bg-border/60" />
-                        </div>
-                      )}
-                      <BlockEditor
-                        block={b}
-                        prevBlockType={i > 0 ? blocks[i - 1].block_type : undefined}
-                        onSave={(patch) => saveBlock(b.id, patch)}
-                        onDirty={(content) => { writeDraft(b.id, content); markDirty(); }}
-                        onDelete={() => deleteBlock.mutate(b.id)}
-                        onInsertAfter={(block_type) => insertBlockAfter.mutate({ block_type, afterOrder: b.order_index })}
-                        focusBlockId={focusBlockId}
-                        onFocusDone={() => setFocusBlockId(null)}
-                        onActiveChange={(id, active) => setActiveBlockId((prev) => (active ? id : prev === id ? null : prev))}
-                        characters={characters}
-                        onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
-                      />
-                    </div>
-                  );
-                })}
+          <ScreenplayDocumentEditor
+            blocks={blocks as any[]}
+            blocksLoading={blocksLoading}
+            characters={characters as CharacterHit[]}
+            focusBlockId={focusBlockId}
+            setFocusBlockId={setFocusBlockId}
+            activeBlockId={activeBlockId}
+            setActiveBlockId={setActiveBlockId}
+            onAddBlock={(block_type, initialContent) => addBlock.mutate({ block_type, initialContent })}
+            onInsertAfter={(args) => insertBlockAfter.mutate(args)}
+            onSaveBlock={saveBlock}
+            onDeleteBlock={(id) => deleteBlock.mutate(id)}
+            onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
+            onDirty={(blockId, content) => { writeDraft(blockId, content); markDirty(); }}
+            onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
+            onDraftWithAi={draftOpeningWithAi}
+            onInsertTemplate={() => void insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
+            primaryBusy={primaryBusy || insertTemplate.isPending}
+          />
 
-                {/* Trailing writing line — looks like a blinking caret invitation, not a utility button */}
-                <button
-                  type="button"
-                  onClick={cmdNewLine}
-                  className="mt-2 w-full text-left py-2 flex items-center gap-2 group/ghost"
-                  title="Click or press Enter to start a new line"
-                  aria-label="Start a new line"
-                >
-                  <span className="inline-block w-px h-5 bg-primary/70 animate-pulse" aria-hidden="true" />
-                  <span className="font-sans text-xs text-muted-foreground/70 group-hover/ghost:text-foreground transition-colors">
-                    Start typing…
-                  </span>
-                  <span className="opacity-40 ml-auto font-mono text-[10px] text-muted-foreground">
-                    Enter · Tab change type · / menu
-                  </span>
-                </button>
-              </>
-            )}
-          </div>
 
           <EditorCommandBar
             currentBlockType={activeBlock?.block_type ?? null}
