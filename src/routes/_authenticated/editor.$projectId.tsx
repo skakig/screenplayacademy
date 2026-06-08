@@ -480,19 +480,45 @@ function BlockEditor({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [slashOpen, closeSlash]);
 
+  const [isFocused, setIsFocused] = useState(false);
+  const QUICK_TYPES = ["scene_heading", "action", "character", "dialogue", "parenthetical"] as const;
+
   return (
     <div className={`group relative blk-${block.block_type}`}>
       <textarea
         ref={ref}
         value={val}
         onChange={handleChange}
-        onBlur={flush}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => { flush(); setTimeout(() => setIsFocused(false), 150); }}
         onKeyDown={handleKeyDown}
         placeholder={placeholder[block.block_type]}
         rows={1}
         className="w-full bg-transparent border-none outline-none resize-none focus:bg-primary/5 rounded px-1 -mx-1 placeholder:text-muted-foreground/40"
         style={{ fontFamily: "inherit", fontSize: "inherit", color: "inherit", textAlign: "inherit", textTransform: "inherit", fontWeight: "inherit", fontStyle: "inherit" } as any}
       />
+
+      {/* Beginner-friendly inline block-type toolbar (shows on focus) */}
+      {isFocused && !slashOpen && (
+        <div className="absolute right-0 -top-7 z-10 flex items-center gap-0.5 rounded-md border border-border/60 bg-popover/95 backdrop-blur shadow-sm px-1 py-0.5 font-sans">
+          {QUICK_TYPES.map((t) => {
+            const meta = BLOCK_TYPES.find((b) => b.value === t)!;
+            const active = block.block_type === t;
+            return (
+              <button
+                key={t}
+                onMouseDown={(e) => { e.preventDefault(); onUpdate({ block_type: t }); }}
+                className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+                title={meta.label}
+              >
+                {meta.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Slash command menu */}
       {slashOpen && filtered.length > 0 && (
