@@ -198,9 +198,13 @@ export function ScreenplayLine({
         onFocus={() => { setFocused(true); onFocus(); }}
         onBlur={() => setTimeout(() => setFocused(false), 120)}
         onKeyDown={handleKeyDown}
-        placeholder={PLACEHOLDERS[block.block_type]}
+        placeholder={
+          isFirstEmpty
+            ? "INT. LOCATION — DAY   ·   tap here and start your screenplay"
+            : PLACEHOLDERS[block.block_type]
+        }
         rows={1}
-        className="w-full bg-transparent border-none outline-none resize-none rounded px-1 -mx-1 placeholder:text-muted-foreground/60 caret-primary min-h-[1.5em]"
+        className="w-full bg-transparent border-none outline-none resize-none rounded px-1 -mx-1 placeholder:text-foreground/40 caret-primary min-h-[2em]"
         style={{
           fontFamily: "inherit",
           fontSize: "inherit",
