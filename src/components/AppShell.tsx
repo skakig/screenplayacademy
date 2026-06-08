@@ -43,6 +43,20 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
+          {/* Mobile compact nav: icon-only links */}
+          <nav className="flex md:hidden items-center gap-0.5">
+            {nav.map((n) => (
+              <Link
+                key={n.to}
+                to={n.to}
+                aria-label={n.label}
+                className="p-2 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground"
+                activeProps={{ className: "p-2 rounded-md bg-secondary text-foreground" }}
+              >
+                <n.icon className="h-4 w-4" />
+              </Link>
+            ))}
+          </nav>
           <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="h-4 w-4 mr-1.5" />Sign out</Button>
         </div>
       </header>
