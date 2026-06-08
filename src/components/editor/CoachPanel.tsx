@@ -96,6 +96,9 @@ export function CoachPanel({
 
   const lesson = teachConcept ? lessonForConcept(teachConcept) : null;
 
+  if (!enabled || dismissed) return null;
+
+
   return (
     <Card className="p-3 border-primary/20 bg-primary/5">
       <div className="flex items-center gap-2 mb-2">
