@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Plus, Trash2, Loader2, Copy, Command, ArrowLeft } from "lucide-react";
+import { Sparkles, Plus, Trash2, Loader2, Copy, Command, ArrowLeft, HelpCircle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArcSidebar } from "@/components/arc/ArcSidebar";
@@ -30,6 +30,8 @@ import { LoglineComposer } from "@/components/editor/LoglineComposer";
 import { progressForStep, shouldUseLoglineComposer, shouldRedirectStep } from "@/lib/editor/stepCompletion";
 import { OPENING_SCENE_TEMPLATE } from "@/lib/editor/openingTemplate";
 import { ArrowRight } from "lucide-react";
+import { EditorTour } from "@/components/editor/EditorTour";
+import { useEditorTour } from "@/hooks/useEditorTour";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
@@ -405,6 +407,8 @@ function Editor() {
     await addBlock.mutateAsync("scene_heading");
   }, [addBlock]);
 
+  const tour = useEditorTour();
+
 
   return (
     <AppShell>
@@ -422,7 +426,17 @@ function Editor() {
             Back to guided path{guidedStep ? ` · ${guidedStep.replace(/_/g, " ")}` : ""}
           </Link>
         ) : <span />}
-        <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={tour.start}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
+            title="Replay the editor tour"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+            Replay tour
+          </button>
+          <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
+        </div>
       </div>
       {recovery && (
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3">
@@ -440,7 +454,7 @@ function Editor() {
         {/* Left rail */}
         <aside className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)]">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Add Block</h3>
-          <div className="grid grid-cols-2 gap-1.5">
+          <div data-tour="block-toolbar" className="grid grid-cols-2 gap-1.5">
             {BLOCK_TYPES.map((t) => (
               <Button key={t.value} variant="outline" size="sm" className="h-8 text-xs justify-start" onClick={() => addBlock.mutate(t.value)}>
                 <Plus className="h-3 w-3 mr-1" />{t.label}
@@ -465,17 +479,19 @@ function Editor() {
         {/* Editor */}
         <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10">
           {/* Guided-step coach + step-specific modes */}
-          {guidedStep && (
-            <StepCoach
-              projectId={projectId}
-              stepKey={guidedStep}
-              progress={stepProgress}
-              onPrimary={handleCoachPrimary}
-              onMarkComplete={handleMarkComplete}
-              primaryBusy={primaryBusy || insertTemplate.isPending}
-              markBusy={markStepComplete.isPending}
-            />
-          )}
+          <div data-tour="step-coach">
+            {guidedStep && (
+              <StepCoach
+                projectId={projectId}
+                stepKey={guidedStep}
+                progress={stepProgress}
+                onPrimary={handleCoachPrimary}
+                onMarkComplete={handleMarkComplete}
+                primaryBusy={primaryBusy || insertTemplate.isPending}
+                markBusy={markStepComplete.isPending}
+              />
+            )}
+          </div>
 
           {/* Redirect prompt for steps whose work lives on another page */}
           {redirect && (
@@ -574,7 +590,7 @@ function Editor() {
         </section>
 
         {/* Right sidebar */}
-        <aside className="hidden lg:block border-l border-border/60 min-h-[calc(100vh-104px)] bg-card/20">
+        <aside data-tour="coach-panel" className="hidden lg:block border-l border-border/60 min-h-[calc(100vh-104px)] bg-card/20">
           <Tabs defaultValue="arc" className="w-full">
             <TabsList className="w-full rounded-none border-b border-border/40 bg-transparent h-10">
               <TabsTrigger value="arc" className="text-xs flex-1">Arc</TabsTrigger>
@@ -623,6 +639,7 @@ function Editor() {
           </Tabs>
         </aside>
       </div>
+      <EditorTour isOpen={tour.isOpen} onClose={tour.stop} />
     </AppShell>
   );
 }

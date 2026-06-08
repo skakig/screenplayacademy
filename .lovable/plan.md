@@ -1,102 +1,49 @@
-# Make the Editor Feel Like a Walkthrough
+## First-Time Editor Walkthrough Overlay
 
-## The problem (from your screenshot)
+Add a lightweight, dismissible coach-mark overlay that runs the first time a user opens the editor, then never auto-shows again (with a "Replay tour" option in the editor header).
 
-The top rail says **"Step 2 of 13: Write your logline"** — but the editor below it shows a blank scene with `INT. AFRICAN DESERT` / `STEPHAN` and a row of block buttons. The two halves don't talk to each other:
+### UX flow
 
-- The rail tells you *what* to do but not *how* or *where*.
-- The editor lets you type blocks but never says "this is what 'done' looks like" or "here's the next thing."
-- After you add a scene heading and a character, there's no obvious next click.
-- "Continue" in the rail is the only progression signal, and it lives far from where you're actually working.
+5 short steps, each a tooltip-style popover anchored to a real UI element, with a dimmed backdrop and a spotlight cutout around the target:
 
-We need the editor itself to behave like a teacher.
+1. **Welcome** (centered modal, no anchor) — "This is your screenplay editor. Let's take 30 seconds to show you around."  Buttons: *Start tour* / *Skip*.
+2. **Step Coach card** — "This card tells you what to do right now. It updates as you progress through the 13 guided steps."
+3. **Block toolbar (+ Scene / + Action / + Character / + Dialogue)** — "Add screenplay blocks here. Or use the empty-state buttons below to draft with AI."
+4. **Guided Rail (top step indicator)** — "Your progress through the walkthrough lives here. Click any step to jump."
+5. **Coach panel (right side)** — "Get AI feedback on your draft anytime."  Final button: *Got it — start writing*.
 
-## What I'd build
+Each step has: `Back`, `Next` (or `Finish`), and `Skip tour`. ESC also dismisses.
 
-### 1. Step-aware Editor Coach (replaces the silent block toolbar as the focal point)
+### Persistence
 
-A single, always-visible coach card pinned to the top of the editor canvas (under the rail) that knows which guided step you're on and shows:
+- Store completion in `localStorage` under `lovable.editor.tourCompleted.v1` (per-browser, no DB needed).
+- Also expose a "Replay tour" button in the editor header that clears the flag and restarts.
+- Tour only auto-opens when: user is on the editor route AND the flag is unset AND no modal is already open.
 
-- **What this step is** (1 sentence from `stepMeta.concept`).
-- **What "done" looks like** (a checklist of 1–3 concrete sub-tasks the editor can detect).
-- **The single best next action** as a primary button (e.g. *"Generate 5 logline options"*, *"Insert opening scene template"*, *"Add your protagonist"*).
-- **A secondary "Show me an example"** that drops a real example into the page (greyed, dismissable).
-- **"Mark step complete & continue"** button that lights up only when the checklist is satisfied.
+### Visual design
 
-The coach replaces the current row of `+ Scene Heading / + Action / + Character …` as the primary surface. Those block buttons stay, but move to a smaller secondary toolbar below the coach (they're for power use, not first-time learning).
+- Dimmed full-screen backdrop (`bg-background/70 backdrop-blur-sm`) with a `clip-path` or SVG mask cutout around the anchored element (8px padding, rounded corners).
+- Popover card: ~320px wide, uses existing `Card` + `Button` components, semantic tokens only.
+- Step counter ("2 of 5") and a thin progress bar at the top of the card.
+- Anchor positioning: lightweight — use `getBoundingClientRect()` of the target and place the popover with simple top/bottom/left/right logic; no Floating UI dependency.
 
-### 2. Step-specific editor modes
+### Technical changes
 
-The editor adapts to the current guided step instead of always showing a generic block surface:
+**New files:**
+- `src/components/editor/EditorTour.tsx` — overlay component. Owns step state, backdrop+spotlight rendering, popover positioning, keyboard handling.
+- `src/lib/editor/tourSteps.ts` — array of `{ id, title, body, targetSelector, placement }`.
+- `src/hooks/useEditorTour.ts` — reads/writes `localStorage` flag, exposes `{ isOpen, start, stop, hasSeen }`.
 
-| Step | Editor shows |
-|---|---|
-| `logline` | A single-line logline composer with word counter (25–40), AI "generate 5 options" picker, save-to-project |
-| `protagonist` / `antagonist` | Auto-routes to Characters page with the coach card carried over (no blank editor) |
-| `theme` | Theme statement composer with AI suggestions, saves to project metadata |
-| `story_arc` / `midpoint` | Auto-routes to Story Arc page |
-| `scene_cards` | Auto-routes to Scenes page |
-| `opening_scene` | Editor with a pre-seeded **opening scene template** (FADE IN → scene heading → action → dialogue placeholders) and a "Draft with AI" button |
-| `act1` | Editor with an Act 1 beat checklist down the side; clicking a beat scrolls/inserts a stub |
-| `rough_draft` | Free editor + Coach panel in "diagnose" mode |
-| `table_read` / `pitch` | Auto-routes to those pages |
+**Edited files:**
+- `src/routes/_authenticated/editor.$projectId.tsx` — mount `<EditorTour />`, add `data-tour="step-coach" | "block-toolbar" | "coach-panel"` attributes to the targets, add a small "Replay tour" button in the header.
+- `src/components/guided/GuidedRail.tsx` — add `data-tour="guided-rail"` to the rail container.
 
-Today the editor opens the same blank `INT. AFRICAN DESERT` / `STEPHAN` shell no matter which step you're on. That's the core source of the confusion.
+**No backend, no migrations, no new packages.**
 
-### 3. "What do I do next?" detector
+### Out of scope this turn
 
-The coach watches the script and, when sub-tasks are satisfied, swaps the primary button to **"Looks good — continue to Step N"**. This gives the page a forward gear it doesn't have today.
+- Per-step tours on other tabs (Characters, Story Arc, StoryPulse). The flag and component are structured to be reused later, but this turn only wires the editor tour.
+- Animated transitions between steps beyond a simple fade.
+- Analytics tracking of tour completion.
 
-### 4. Empty-state that teaches, not a blank scene
-
-When a project has zero blocks, instead of pre-seeding `INT. AFRICAN DESERT` / `STEPHAN`, show:
-
-- A short "Welcome to the editor" panel with 3 buttons:
-  - *Use the opening scene template* (inserts FADE IN + sluglines + placeholders).
-  - *Let AI draft an opening from my logline* (uses existing `openingScene` helper).
-  - *I'll start from scratch* (then inserts a single empty scene heading).
-
-Today the editor seeds a confusing placeholder scene before the user has done anything, which makes the "walkthrough" feel broken.
-
-### 5. Visible micro-progress inside the step
-
-Add a thin checklist under the coach card so the user always sees the 1–3 atoms that make the current step "done", with live checkmarks as they type/save. E.g. for `opening_scene`:
-
-- [x] Scene heading exists
-- [ ] At least one action line
-- [ ] At least one dialogue line
-
-This is the difference between "Step 2 of 13" (abstract) and "2 of 3 things done on this step" (actionable).
-
----
-
-## Scope (this turn)
-
-I propose shipping **the coach card + step-specific editor modes + empty-state teacher** in one pass, because those three together are what turn this into a walkthrough. The rest (per-step beat side-rails, animated transitions) can come after you feel the new flow.
-
-Concretely:
-
-**New files**
-- `src/components/editor/StepCoach.tsx` — the pinned coach card with concept, checklist, primary action, mark-complete.
-- `src/components/editor/EmptyEditorTeacher.tsx` — first-run welcome / template chooser.
-- `src/components/editor/LoglineComposer.tsx` — single-line composer used when step is `logline`.
-- `src/components/editor/ThemeComposer.tsx` — same idea for `theme`.
-- `src/lib/editor/stepCompletion.ts` — pure functions that take blocks + step and return `{ checks: [{label, done}], allDone }`.
-- `src/lib/editor/openingTemplate.ts` — block payloads for the opening-scene template.
-
-**Edited files**
-- `src/routes/_authenticated/editor.$projectId.tsx` — read `?step=` from URL (already linked from the rail), pick mode (logline / theme / opening / free), render `StepCoach` at top, render `EmptyEditorTeacher` when block count is 0, demote the `+ Scene Heading / + Action / …` row into a collapsible "Insert block" menu, and stop auto-seeding `INT. AFRICAN DESERT` / `STEPHAN`.
-- `src/components/guided/GuidedRail.tsx` — keep as-is but add the current step's `?step=<key>` query param to its links so the editor knows the context.
-- `src/routes/_authenticated/first-screenplay.$projectId.tsx` — each "Open" button on a step card already routes to its destination; add the `?step=<key>` query param so the editor / characters / story-arc pages can render the coach for that exact step.
-
-**Not in scope this turn** (next pass): Act 1 beat side-rail, animated "step complete" celebration, AI-driven proactive nudges, mobile-specific coach layout polish.
-
-## Technical notes
-
-- The coach reads the current step from `?step=<key>` first, falls back to the first non-complete row in `project_guided_steps`. This keeps deep-links from the rail and from the First Screenplay page consistent.
-- `stepCompletion.ts` is pure and gets unit-testable predicates (`hasSceneHeading`, `hasActionLine`, `hasDialogue`, `wordCount(loglineDraft) in [25,40]`, etc.).
-- "Mark step complete" calls the existing `project_guided_steps` update path used by the First Screenplay page — no new RPC needed.
-- Removing the auto-seeded `INT. AFRICAN DESERT` placeholder is a one-line change in the editor's initial-load effect; existing projects that already have those blocks are untouched.
-- No DB migration required.
-
-Approve and I'll build it.
+Ready to build when you approve.
