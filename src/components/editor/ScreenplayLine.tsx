@@ -61,11 +61,13 @@ export function ScreenplayLine({
   const ref = useRef<HTMLTextAreaElement>(null);
   const [focused, setFocused] = useState(false);
 
-  // auto-resize
+  // auto-resize. For empty content, clear the inline height so the CSS
+  // min-height (which keeps the line visible/tappable on mobile) can apply.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.style.height = "auto";
+    if (block.content.length === 0) return;
     el.style.height = el.scrollHeight + "px";
   }, [block.content]);
 
