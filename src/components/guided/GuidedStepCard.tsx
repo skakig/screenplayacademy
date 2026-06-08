@@ -219,6 +219,11 @@ export function GuidedStepCard({
             <Button size="sm" variant="ghost" onClick={() => saveDraft.mutate()} disabled={saveDraft.isPending}>
               <Save className="h-3.5 w-3.5 mr-1.5" />Save draft
             </Button>
+            <StepVersionHistory
+              projectId={projectId}
+              stepKey={step.step_key}
+              onRestore={(content) => setNotes(content)}
+            />
             {canApply && (
               <Button size="sm" variant="secondary" onClick={() => apply.mutate(false)} disabled={apply.isPending}>
                 {apply.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <FileInput className="h-3.5 w-3.5 mr-1.5" />}
