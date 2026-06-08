@@ -74,7 +74,7 @@ function Editor() {
     },
   });
 
-  const { data: blocks = [] } = useQuery({
+  const { data: blocks = [], isLoading: blocksLoading } = useQuery({
     queryKey: ["blocks", projectId],
     queryFn: async () => {
       const { data, error } = await supabase.from("script_blocks").select("*").eq("project_id", projectId).order("order_index");
