@@ -707,110 +707,125 @@ function Editor() {
 
         {/* Editor */}
         <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10 screenplay-canvas">
-          {/* Guided-step coach + step-specific modes */}
-          <div data-tour="step-coach">
-            {guidedStep && (
-              <StepCoach
-                projectId={projectId}
-                stepKey={guidedStep}
-                progress={stepProgress}
-                onPrimary={handleCoachPrimary}
-                onMarkComplete={handleMarkComplete}
-                primaryBusy={primaryBusy || insertTemplate.isPending}
-                markBusy={markStepComplete.isPending}
-              />
-            )}
-          </div>
-
-          {/* Redirect prompt for steps whose work lives on another page */}
-          {redirect && (
-            <div className="max-w-[680px] mx-auto mb-6 font-sans">
-              <div className="rounded-lg border border-border bg-card/50 p-4 flex items-center gap-3 flex-wrap">
-                <p className="text-sm flex-1">
-                  This step is best done on the <strong>{redirect.destination}</strong> page.
-                </p>
-                <Button asChild size="sm">
-                  <Link
-                    to={
-                      redirect.destination === "characters" ? "/characters/$projectId" :
-                      redirect.destination === "story-arc" ? "/story-arc/$projectId" :
-                      redirect.destination === "scenes" ? "/scenes/$projectId" :
-                      redirect.destination === "pitch" ? "/pitch/$projectId" :
-                      "/tableread/$projectId"
-                    }
-                    params={{ projectId }}
-                  >
-                    Open {redirect.destination} <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
-                  </Link>
-                </Button>
+          {/* Guided helpers — collapsible so they never block the canvas */}
+          {(guidedStep || redirect || isLoglineStep) && (
+            <details className="max-w-[760px] mx-auto mb-4 group font-sans" open>
+              <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-border/60 bg-card/40 text-xs text-muted-foreground hover:bg-card/60">
+                <span className="flex items-center gap-2">
+                  <BookOpen className="h-3.5 w-3.5" />
+                  <span>
+                    Guided step{guidedStep ? `: ${guidedStep.replace(/_/g, " ")}` : ""}
+                  </span>
+                </span>
+                <span className="text-[10px] uppercase tracking-wider opacity-60 group-open:opacity-100">
+                  Click to collapse
+                </span>
+              </summary>
+              <div className="mt-3 space-y-3">
+                <div data-tour="step-coach">
+                  {guidedStep && (
+                    <StepCoach
+                      projectId={projectId}
+                      stepKey={guidedStep}
+                      progress={stepProgress}
+                      onPrimary={handleCoachPrimary}
+                      onMarkComplete={handleMarkComplete}
+                      primaryBusy={primaryBusy || insertTemplate.isPending}
+                      markBusy={markStepComplete.isPending}
+                    />
+                  )}
+                </div>
+                {redirect && (
+                  <div className="rounded-lg border border-border bg-card/50 p-3 flex items-center gap-3 flex-wrap">
+                    <p className="text-xs flex-1">
+                      This step has a dedicated page: <strong>{redirect.destination}</strong>.
+                    </p>
+                    <Button asChild size="sm" variant="outline">
+                      <Link
+                        to={
+                          redirect.destination === "characters" ? "/characters/$projectId" :
+                          redirect.destination === "story-arc" ? "/story-arc/$projectId" :
+                          redirect.destination === "scenes" ? "/scenes/$projectId" :
+                          redirect.destination === "pitch" ? "/pitch/$projectId" :
+                          "/tableread/$projectId"
+                        }
+                        params={{ projectId }}
+                      >
+                        Open {redirect.destination} <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+                {isLoglineStep && (
+                  <LoglineComposer
+                    projectId={projectId}
+                    initialLogline={project?.logline}
+                    projectContext={projectCtx}
+                  />
+                )}
               </div>
-            </div>
-          )}
-
-          {/* Logline composer replaces the screenplay canvas for that step */}
-          {isLoglineStep && (
-            <LoglineComposer
-              projectId={projectId}
-              initialLogline={project?.logline}
-              projectContext={projectCtx}
-            />
+            </details>
           )}
 
           {/* Manuscript header — page/scene counter + outline button */}
-          {!isLoglineStep && !redirect && (
-            <div className="max-w-[680px] mx-auto mb-3 flex items-center justify-between gap-3 font-sans px-1">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <BookOpen className="h-3.5 w-3.5" />
-                <span className="font-mono tabular-nums">
-                  Page {Math.max(1, Math.min(pageCount, Math.ceil(((activeBlockId ? blocks.findIndex((b: any) => b.id === activeBlockId) + 1 : blocks.length) / Math.max(1, blocks.length)) * pageCount)))} of {pageCount}
-                </span>
-                {activeScene && (
-                  <>
-                    <span className="opacity-40">·</span>
-                    <span>Act {activeScene.act === 1 ? "I" : activeScene.act === 2 ? "II" : "III"} · Scene {activeScene.index + 1} of {outline.length}</span>
-                  </>
-                )}
-                {!activeScene && outline.length > 0 && (
-                  <>
-                    <span className="opacity-40">·</span>
-                    <span>{outline.length} scene{outline.length === 1 ? "" : "s"}</span>
-                  </>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  className="h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90 shadow-md font-semibold"
-                  onClick={() => setStoryBuilderOpen(true)}
-                  title="Generate logline, outline, and starter characters"
-                >
-                  <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Story Builder
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={addSceneAtEnd}
-                  title="Add a new scene heading at the end"
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Scene
-                </Button>
-              </div>
+          <div className="max-w-[680px] mx-auto mb-3 flex items-center justify-between gap-3 font-sans px-1">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <BookOpen className="h-3.5 w-3.5" />
+              <span className="font-mono tabular-nums">
+                Page {Math.max(1, Math.min(pageCount, Math.ceil(((activeBlockId ? blocks.findIndex((b: any) => b.id === activeBlockId) + 1 : blocks.length) / Math.max(1, blocks.length)) * pageCount)))} of {pageCount}
+              </span>
+              {activeScene && (
+                <>
+                  <span className="opacity-40">·</span>
+                  <span>Act {activeScene.act === 1 ? "I" : activeScene.act === 2 ? "II" : "III"} · Scene {activeScene.index + 1} of {outline.length}</span>
+                </>
+              )}
+              {!activeScene && outline.length > 0 && (
+                <>
+                  <span className="opacity-40">·</span>
+                  <span>{outline.length} scene{outline.length === 1 ? "" : "s"}</span>
+                </>
+              )}
             </div>
-          )}
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                className="h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90 shadow-md font-semibold"
+                onClick={() => setStoryBuilderOpen(true)}
+                title="Generate logline, outline, and starter characters"
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Story Builder
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={addSceneAtEnd}
+                title="Add a new scene heading at the end"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" /> Scene
+              </Button>
+            </div>
+          </div>
 
-          {!isLoglineStep && !redirect && (
-            <CanvasToolbar
-              blockType={activeBlock?.block_type ?? null}
-              onChangeType={(t) => activeBlock && void saveBlock(activeBlock.id, { block_type: t })}
-              pageCount={pageCount}
-              currentPage={Math.max(1, Math.min(pageCount, Math.ceil(((activeBlockId ? blocks.findIndex((b: any) => b.id === activeBlockId) + 1 : blocks.length) / Math.max(1, blocks.length)) * pageCount)))}
-              wordCount={blocks.reduce((n: number, b: any) => n + (b.content?.trim().split(/\s+/).filter(Boolean).length ?? 0), 0)}
-              sceneCount={outline.length}
-            />
-          )}
+          <CanvasToolbar
+            blockType={activeBlock?.block_type ?? null}
+            onChangeType={(t) => activeBlock && void saveBlock(activeBlock.id, { block_type: t })}
+            pageCount={pageCount}
+            currentPage={Math.max(1, Math.min(pageCount, Math.ceil(((activeBlockId ? blocks.findIndex((b: any) => b.id === activeBlockId) + 1 : blocks.length) / Math.max(1, blocks.length)) * pageCount)))}
+            wordCount={blocks.reduce((n: number, b: any) => n + (b.content?.trim().split(/\s+/).filter(Boolean).length ?? 0), 0)}
+            sceneCount={outline.length}
+          />
 
-          <div className={`screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 ${isLoglineStep ? "opacity-60" : ""}`}>
+          {/* Discoverable shortcut legend */}
+          <div className="max-w-[760px] mx-auto mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-mono text-muted-foreground/70 px-1">
+            <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">Enter</kbd> next block</span>
+            <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">Tab</kbd> change type</span>
+            <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">/</kbd> menu</span>
+            <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">⌘↵</kbd> AI continue</span>
+          </div>
+
+          <div className="screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16">
             {blocksLoading ? (
               <div className="space-y-3 py-8 font-sans">
                 <div className="h-5 w-2/3 bg-muted/50 rounded animate-pulse" />
@@ -827,48 +842,62 @@ function Editor() {
                 onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
               />
             ) : (
-              blocks.map((b, i) => {
-                const isNewScene = b.block_type === "scene_heading" && i > 0;
-                return (
-                  <div key={b.id} data-block-id={b.id}>
-                    {isNewScene && (
-                      <div className="my-6 flex items-center gap-3 font-sans" aria-hidden="true">
-                        <div className="h-px flex-1 bg-border/60" />
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-mono">
-                          Scene
-                        </span>
-                        <div className="h-px flex-1 bg-border/60" />
-                      </div>
-                    )}
-                    <BlockEditor
-                      block={b}
-                      prevBlockType={i > 0 ? blocks[i - 1].block_type : undefined}
-                      onSave={(patch) => saveBlock(b.id, patch)}
-                      onDirty={(content) => { writeDraft(b.id, content); markDirty(); }}
-                      onDelete={() => deleteBlock.mutate(b.id)}
-                      onInsertAfter={(block_type) => insertBlockAfter.mutate({ block_type, afterOrder: b.order_index })}
-                      focusBlockId={focusBlockId}
-                      onFocusDone={() => setFocusBlockId(null)}
-                      onActiveChange={(id, active) => setActiveBlockId((prev) => (active ? id : prev === id ? null : prev))}
-                      characters={characters}
-                      onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
-                    />
-                  </div>
-                );
-              })
+              <>
+                {blocks.map((b, i) => {
+                  const isNewScene = b.block_type === "scene_heading" && i > 0;
+                  return (
+                    <div key={b.id} data-block-id={b.id}>
+                      {isNewScene && (
+                        <div className="my-6 flex items-center gap-3 font-sans" aria-hidden="true">
+                          <div className="h-px flex-1 bg-border/60" />
+                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-mono">
+                            Scene
+                          </span>
+                          <div className="h-px flex-1 bg-border/60" />
+                        </div>
+                      )}
+                      <BlockEditor
+                        block={b}
+                        prevBlockType={i > 0 ? blocks[i - 1].block_type : undefined}
+                        onSave={(patch) => saveBlock(b.id, patch)}
+                        onDirty={(content) => { writeDraft(b.id, content); markDirty(); }}
+                        onDelete={() => deleteBlock.mutate(b.id)}
+                        onInsertAfter={(block_type) => insertBlockAfter.mutate({ block_type, afterOrder: b.order_index })}
+                        focusBlockId={focusBlockId}
+                        onFocusDone={() => setFocusBlockId(null)}
+                        onActiveChange={(id, active) => setActiveBlockId((prev) => (active ? id : prev === id ? null : prev))}
+                        characters={characters}
+                        onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
+                      />
+                    </div>
+                  );
+                })}
+
+                {/* Persistent "Add line" ghost row — always visible cursor invitation */}
+                <button
+                  type="button"
+                  onClick={cmdNewLine}
+                  className="mt-4 w-full text-left px-3 py-3 rounded-md border border-dashed border-border/50 hover:border-primary/60 hover:bg-primary/[0.03] transition-colors font-sans text-xs text-muted-foreground/80 hover:text-foreground flex items-center gap-2"
+                  title="Add a new line"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Add line</span>
+                  <span className="opacity-50 ml-auto font-mono">
+                    Enter · Tab to change type · / for menu
+                  </span>
+                </button>
+              </>
             )}
           </div>
 
-          {blocks.length > 0 && (
-            <EditorCommandBar
-              currentBlockType={activeBlock?.block_type ?? null}
-              hasFocus={!!activeBlock}
-              onCycleType={cmdCycleType}
-              onNewLine={cmdNewLine}
-              onAiContinue={cmdAiContinue}
-              aiBusy={aiContinueBusy}
-            />
-          )}
+          <EditorCommandBar
+            currentBlockType={activeBlock?.block_type ?? null}
+            hasFocus={!!activeBlock}
+            onCycleType={cmdCycleType}
+            onNewLine={cmdNewLine}
+            onAiContinue={cmdAiContinue}
+            aiBusy={aiContinueBusy}
+          />
           {blocks.length > 0 && (
             <div className="max-w-[680px] mx-auto mt-4 flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => {
@@ -889,6 +918,7 @@ function Editor() {
             </div>
           )}
         </section>
+
 
         {/* Right sidebar — Intelligent Coach */}
         <aside data-tour="coach-panel" className="hidden lg:block border-l border-border/60 min-h-[calc(100vh-104px)] bg-card/20 max-h-[calc(100vh-104px)] overflow-auto sticky top-0 self-start">
@@ -1167,7 +1197,7 @@ function BlockEditor({
         onKeyDown={handleKeyDown}
         placeholder={placeholder[block.block_type]}
         rows={1}
-        className="w-full bg-transparent border-none outline-none resize-none rounded px-1 -mx-1 placeholder:text-muted-foreground/60 caret-primary"
+        className="w-full bg-transparent border-none outline-none resize-none rounded px-1 -mx-1 placeholder:text-muted-foreground/60 caret-primary min-h-[1.5em]"
         style={{ fontFamily: "inherit", fontSize: "inherit", color: "inherit", textAlign: "inherit", textTransform: "inherit", fontWeight: "inherit", fontStyle: "inherit" } as any}
       />
 
