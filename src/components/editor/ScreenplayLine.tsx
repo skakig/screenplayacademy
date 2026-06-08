@@ -204,7 +204,7 @@ export function ScreenplayLine({
             : PLACEHOLDERS[block.block_type]
         }
         rows={1}
-        className="w-full bg-transparent border-none outline-none resize-none rounded px-1 -mx-1 placeholder:text-foreground/40 caret-primary min-h-[2em]"
+        className="w-full bg-transparent border-none outline-none resize-none rounded px-1 -mx-1 caret-primary min-h-[2em]"
         style={{
           fontFamily: "inherit",
           fontSize: "inherit",
