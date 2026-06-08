@@ -282,6 +282,7 @@ function Editor() {
   return (
     <AppShell>
       <ProjectNav projectId={projectId} title={project?.title} />
+      <GuidedRail projectId={projectId} />
       <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3 flex items-center justify-between gap-3 flex-wrap">
         {fromGuided ? (
           <Link
