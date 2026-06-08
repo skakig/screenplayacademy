@@ -24,10 +24,13 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/dashboard" });
+      if (!cancelled && data.user) navigate({ to: "/dashboard", replace: true });
     });
-  }, [navigate]);
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleEmail = async (e: React.FormEvent) => {
     e.preventDefault();
