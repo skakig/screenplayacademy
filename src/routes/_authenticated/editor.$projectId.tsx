@@ -221,24 +221,25 @@ function Editor() {
   const emitEvent = useWriterEvents();
 
   const addBlock = useMutation({
-    mutationFn: async (block_type: string) => {
+    mutationFn: async ({ block_type, initialContent }: { block_type: string; initialContent?: string }) => {
       const order_index = blocks.length;
       const { data, error } = await supabase.from("script_blocks")
-        .insert({ project_id: projectId, block_type, content: "", order_index })
+        .insert({ project_id: projectId, block_type, content: initialContent ?? "", order_index })
         .select().single();
       if (error) throw error;
       return data;
     },
-    onMutate: async (block_type: string) => {
+    onMutate: async ({ block_type, initialContent }) => {
       await qc.cancelQueries({ queryKey: ["blocks", projectId] });
       const prev = qc.getQueryData<any[]>(["blocks", projectId]) ?? [];
       const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const temp = { id: tempId, project_id: projectId, block_type, content: "", order_index: prev.length, metadata: null };
+      const temp = { id: tempId, project_id: projectId, block_type, content: initialContent ?? "", order_index: prev.length, metadata: null };
       qc.setQueryData<any[]>(["blocks", projectId], [...prev, temp]);
+      if (initialContent) pendingTempContent.current.set(tempId, initialContent);
       setFocusBlockId(tempId);
       return { tempId, prev };
     },
-    onSuccess: (data, block_type, ctx: any) => {
+    onSuccess: (data, vars, ctx: any) => {
       qc.setQueryData<any[]>(["blocks", projectId], (old) =>
         (old ?? []).map((b) => (b.id === ctx?.tempId ? data : b))
       );
@@ -246,9 +247,11 @@ function Editor() {
       // Flush any text the user already typed into the temp row.
       const buffered = ctx?.tempId ? pendingTempContent.current.get(ctx.tempId) : undefined;
       if (ctx?.tempId) pendingTempContent.current.delete(ctx.tempId);
-      if (buffered && data?.id) void saveBlock(data.id, { content: buffered });
-      emitEvent({ event_type: "block_created", project_id: projectId, context: { block_type } });
-      if (block_type === "scene_heading") {
+      if (buffered && data?.id && buffered !== (data.content ?? "")) {
+        void saveBlock(data.id, { content: buffered });
+      }
+      emitEvent({ event_type: "block_created", project_id: projectId, context: { block_type: vars.block_type } });
+      if (vars.block_type === "scene_heading") {
         emitEvent({ event_type: "scene_created", project_id: projectId, context: { has_turn: false } });
       }
     },
@@ -259,18 +262,18 @@ function Editor() {
   });
 
   const insertBlockAfter = useMutation({
-    mutationFn: async ({ block_type, afterOrder }: { block_type: string; afterOrder: number }) => {
+    mutationFn: async ({ block_type, afterOrder, initialContent }: { block_type: string; afterOrder: number; initialContent?: string }) => {
       const sorted = [...blocks].sort((a, b) => a.order_index - b.order_index);
       const idx = sorted.findIndex((b) => b.order_index === afterOrder);
       const nextOrder = idx >= 0 && sorted[idx + 1] ? sorted[idx + 1].order_index : afterOrder + 1;
       const newOrder = (afterOrder + nextOrder) / 2;
       const { data, error } = await supabase.from("script_blocks")
-        .insert({ project_id: projectId, block_type, content: "", order_index: newOrder })
+        .insert({ project_id: projectId, block_type, content: initialContent ?? "", order_index: newOrder })
         .select().single();
       if (error) throw error;
       return data;
     },
-    onMutate: async ({ block_type, afterOrder }) => {
+    onMutate: async ({ block_type, afterOrder, initialContent }) => {
       await qc.cancelQueries({ queryKey: ["blocks", projectId] });
       const prev = qc.getQueryData<any[]>(["blocks", projectId]) ?? [];
       const sorted = [...prev].sort((a, b) => a.order_index - b.order_index);
@@ -278,8 +281,9 @@ function Editor() {
       const nextOrder = idx >= 0 && sorted[idx + 1] ? sorted[idx + 1].order_index : afterOrder + 1;
       const newOrder = (afterOrder + nextOrder) / 2;
       const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const temp = { id: tempId, project_id: projectId, block_type, content: "", order_index: newOrder, metadata: null };
+      const temp = { id: tempId, project_id: projectId, block_type, content: initialContent ?? "", order_index: newOrder, metadata: null };
       qc.setQueryData<any[]>(["blocks", projectId], [...prev, temp].sort((a, b) => a.order_index - b.order_index));
+      if (initialContent) pendingTempContent.current.set(tempId, initialContent);
       setFocusBlockId(tempId);
       return { tempId, prev };
     },
@@ -290,7 +294,9 @@ function Editor() {
       if (data?.id) setFocusBlockId(data.id);
       const buffered = ctx?.tempId ? pendingTempContent.current.get(ctx.tempId) : undefined;
       if (ctx?.tempId) pendingTempContent.current.delete(ctx.tempId);
-      if (buffered && data?.id) void saveBlock(data.id, { content: buffered });
+      if (buffered && data?.id && buffered !== (data.content ?? "")) {
+        void saveBlock(data.id, { content: buffered });
+      }
     },
     onError: (_e, _v, ctx: any) => {
       if (ctx?.tempId) pendingTempContent.current.delete(ctx.tempId);
