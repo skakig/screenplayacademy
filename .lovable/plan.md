@@ -1,99 +1,83 @@
+# Phase 1.5 — Mobile Stabilization for /editor-lab
 
-# Pass 2 — Supabase Persistence Adapter
+Goal: make `/editor-lab` writable on iPhone Safari/Chrome with the Null adapter, without touching production `/editor/:projectId` or any other product surface. Stop after desktop + mobile Pass 1 both pass.
 
-Goal: implement `SupabasePersistenceAdapter` behind the existing `PersistenceAdapter` interface (from Pass 1) so the editor can persist to `script_blocks` without ever sitting on the typing path. Local typing remains synchronous; Supabase becomes a background target.
+## Scope
 
-Scope (per `docs/LOVABLE_PASS_SEQUENCE.md` Pass 2):
-- Background persistence only. Typing path unchanged.
-- Add localStorage draft recovery.
-- Patch the React Query cache in place — never `invalidateQueries(['blocks', projectId])` during typing.
-- Do NOT change `useScreenplayDocument` mutator semantics, `ScreenplayLine`, `ScreenplayDocumentEditor`, or production route behavior.
+Only these files change:
 
-## 1. Files created
+- `src/components/editor/ScreenplayDocumentEditor.tsx` — paper tap handler.
+- `src/components/editor/ScreenplayLine.tsx` — first-line visibility, slash menu + toolbar focus retention.
+- `src/routes/editor-lab.tsx` — small mobile-friendly hint, no behavioral change to adapter logic.
+- `src/styles.css` — one or two `.screenplay` mobile rules (min-height for empty first line, placeholder contrast).
 
-### `src/components/editor/persistence/SupabasePersistenceAdapter.ts`
-Factory `createSupabasePersistenceAdapter({ projectId, queryClient, onSaveStatus?, onLastSaved? }): PersistenceAdapter`.
+Out of scope (do NOT touch): `editor.$projectId.tsx`, `useScreenplayDocument.ts` logic, SupabaseAdapter, StoryPulse, storyboard, table read, Academy, pitch, character engine, AI.
 
-Owns:
-- **Insert queue**: per-`localId` single-flight. Reads the *latest* snapshot from a `getSnapshot` callback at flush time (so content typed during the round-trip is included via a follow-up update once `serverId` arrives).
-- **Update queue**: per-`localId` debounced (600ms). If `serverId` is missing at flush time, defer (re-schedule 400ms) until insert completes.
-- **Delete queue**: fire-and-forget per `serverId`; cancels any pending insert/update timers for that `localId`.
-- **In-flight tracking**: `savingIds: Set<localId>` so a second write coalesces instead of racing.
-- **Retry with backoff**: 3 attempts (300ms, 900ms, 2700ms). On final failure, status flips to `error` and the block is marked stuck until the next user edit re-queues it.
-- **Cache patch**: after each successful insert/update/delete, `queryClient.setQueryData(['blocks', projectId], …)` to keep side panes consistent. Never `invalidateQueries`.
-- **Aggregate save status**: `pendingCount` drives `onSaveStatus('dirty'|'saving'|'saved'|'error')` and `onLastSaved(Date.now())` callbacks.
+## Problems being fixed
 
-Adapter API (matches Pass 1 interface):
-- `queueInsert(row, onServerId)` — needs a way to read the latest local content at flush time. To avoid changing the existing `PersistenceAdapter` interface signature, the adapter stores `row` snapshot and refreshes from the next `scheduleUpdate` call. Sufficient because every content edit also calls `scheduleUpdate`.
-- `scheduleUpdate(localId, getSnapshot, delay?)`
-- `queueDelete(serverId)`
-- `cancelPending(localId)`
+1. On iPhone, the lab page shows a blank paper rectangle — the first empty `scene_heading` textarea has no visible height and no readable placeholder against the warm paper, so users can't see where to tap.
+2. The paper-level `onMouseDown` calls `e.preventDefault()` before programmatically focusing a textarea. On iOS Safari, preventing default in a synthetic mouse event during a touch sequence frequently blocks the soft keyboard from opening.
+3. The slash menu uses `onClick` with `e.stopPropagation()` — on mobile this blurs the textarea before the command executes, closing the keyboard.
+4. The block-type toolbar buttons use `onMouseDown(e.preventDefault())` (good on desktop) but the textarea is not explicitly refocused after the type change, which on mobile can leave the keyboard closed.
+5. Lab currently encourages testing Supabase mode before Null mode is confirmed.
 
-### `src/components/editor/persistence/LocalDraftStore.ts`
-Tiny localStorage wrapper, **opt-in only** (we'll only enable in the lab in this pass; production hydration already comes from server). Keyed `scenesmith.draft.<projectId>`:
-- `read(projectId): LocalBlock[] | null`
-- `write(projectId, blocks): void` (throttled 1s)
-- `clear(projectId): void`
+## Changes
 
-Used in Pass 2 only by `/editor-lab` toggle to prove draft recovery works. Production hydration is unchanged — Pass 3 will wire it into `/editor/:projectId` if needed.
+### 1. First line is visibly writable (ScreenplayLine.tsx + styles.css)
 
-## 2. Files edited
+- Add a mobile-safe minimum tap height to empty textareas: `min-h-[2.25em]` (or via a `.screenplay textarea[data-block-editor]:placeholder-shown { min-height: 2.5rem; }` rule in `styles.css`). Applies to all empty lines, not just the first.
+- Raise placeholder contrast inside `.screenplay`: `placeholder:text-foreground/40` (currently `muted-foreground/60` which disappears on the warm paper). Verified visually on mobile.
+- For the very first empty `scene_heading` (no content, only block in doc), use a friendlier placeholder via prop or by detecting `isFirstEmpty` in `ScreenplayLine`: `"INT. LOCATION - DAY  ·  tap to start"`. Falls back to the existing per-type placeholder for every other case.
 
-### `src/routes/editor-lab.tsx`
-Add a small header toolbar:
-- Toggle: **Null adapter** (default) ↔ **Supabase adapter** (uses a stable `projectId = "editor-lab-scratch"` — note: editor-lab is a public route, so a real Supabase write would 401 under RLS).
-- Because `/editor-lab` is unauthenticated, the Supabase toggle is **gated behind a sign-in check** using `supabase.auth.getSession()`. If no session, render a "Sign in at /auth to test Supabase persistence" hint and keep the toggle disabled. This keeps the lab honest without forcing auth.
-- Pass `queryClient` from `useQueryClient()` into the adapter factory.
-- Show a tiny save-status pill driven by `onSaveStatus`.
+No DOM structure change. Still a real `<textarea>`. No ghost div. No button.
 
-### `src/components/editor/useScreenplayDocument.ts`
-No behavioral changes; just keep the hook adapter-agnostic. The existing branch that uses the built-in Supabase path remains for the production editor in Pass 2 (Pass 3 will switch production to the new adapter).
+### 2. Mobile tap-to-focus (ScreenplayDocumentEditor.tsx)
 
-## 3. Files explicitly NOT touched
+Rewrite `handlePaperMouseDown` as a `pointerdown` (or `click`) handler with these rules:
 
-- `src/routes/_authenticated/editor.$projectId.tsx` — production wiring waits for Pass 3.
-- `ScreenplayDocumentEditor.tsx`, `ScreenplayLine.tsx`, `screenplayKeymap.ts` — already correct.
-- Any side pane, AI, Coach, Builder, or Academy file.
+- If `e.target` is already inside a textarea/button/input/menu/toolbar → do nothing, let native focus run.
+- Else: do NOT call `preventDefault()` on the synthetic event. Find the nearest textarea by Y (existing logic) OR, if the tap is below the last line, call `insertBlockAfter(last, nextBlockTypeAfter(last.block_type))` and then `requestAnimationFrame(() => textarea.focus())`.
+- The new block + focus must happen synchronously inside the user gesture so iOS allows the keyboard to open.
 
-## 4. Local ID vs server ID contract
+Switch the event from `onMouseDown` to `onClick` (or `onPointerUp`) on the paper container — clicks fire after touch on iOS and reliably allow programmatic focus inside the same gesture. Keep desktop behavior intact.
 
-- React keys never change. `localId` stays for the lifetime of the block.
-- Adapter receives `localId` only. On insert success it returns `serverId` via `onServerId` callback; hook patches the block in place.
-- Updates require `serverId`. If a content edit fires before insert resolves, `scheduleUpdate` defers until insert completes (re-schedule 400ms).
+### 3. Slash menu retains focus (ScreenplayLine.tsx)
 
-## 5. Server echo guard reaffirmed
+- Replace slash menu item `onClick` with `onMouseDown={(e) => { e.preventDefault(); executeSlash(t.value); }}` — `preventDefault` on mousedown prevents blur, keeps keyboard open on mobile, and the textarea stays focused after the type change.
+- After `executeSlash`, explicitly refocus the textarea (`ref.current?.focus()`).
 
-The hook's existing merge effect already skips blocks that are `active | dirty | saving | error`. Adapter never invalidates the query — it only patches via `setQueryData`. Therefore the merge effect won't fire from adapter activity; it only fires when external code (e.g. AI template insert in Pass 3) invalidates the query. Pass 3 will replace those invalidations with `editorRef.insertBlocksAtEnd`.
+### 4. Toolbar retains focus (ScreenplayLine.tsx)
 
-## 6. Acceptance test plan
+- Quick-type toolbar buttons already use `onMouseDown(e.preventDefault())`. Add an explicit `ref.current?.focus()` after `onChangeType(t)` so the keyboard does not close on mobile.
 
-In `/editor-lab` with the **Supabase adapter** toggled on (signed in):
+### 5. Lab adapter default + copy (editor-lab.tsx)
 
-1. Re-run the full Pass 1 manual script. No regression: first character, Enter, Tab, Character↔Dialogue, click-below-last-line, slash menu, 30s sustained typing.
-2. Type a few blocks, wait 1s, refresh — content restored from `script_blocks`.
-3. DevTools → Offline. Type 5 more blocks. Save indicator flips to `error`. Typing remains synchronous.
-4. DevTools → Online. Queue drains, indicator returns to `saved`. Query `script_blocks` directly: no duplicate rows, `order_index` correct.
-5. Delete a saved block via Backspace-on-empty: row removed from DB after delete settles.
-6. Toggle adapter to **Null**: refresh shows blocks gone (no draft); typing still works locally.
+- Default remains `null` (already correct). Add a one-line hint: "Verify Null mode first. Switch to Supabase only after Null passes."
+- No logic change to the toggle, status pill, or adapter factory.
 
-If any test fails, Pass 2 is not done.
+## Technical notes
 
-## 7. Risk analysis (incremental)
+- `useScreenplayDocument` already seeds an initial empty `scene_heading` block and sets it active. That call path is unchanged. The fix is purely making that block *visible and tappable* on mobile.
+- Programmatic `.focus()` opens the iOS keyboard only when called synchronously inside a user gesture (touchend/click). We must not break that chain with `preventDefault` on the originating event, async timers, or microtask deferrals between the gesture and `.focus()`.
+- All styling tokens stay semantic (`text-foreground/40`, etc.) — no hard-coded colors.
 
-| Risk | Mitigation |
-|---|---|
-| Duplicate inserts on rapid Enter | `savingIds` set; `queueInsert` no-ops if `serverId` already set or insert in flight. |
-| Update fires before insert completes | `scheduleUpdate` checks `serverId`; defers with re-schedule until insert resolves. |
-| Race between offline retry and user editing | `getSnapshot` is called at every flush, so retries always send latest content. |
-| Cache patch overwriting newer local edit | `setQueryData` patches the row by `serverId`, but the hook's merge guard still skips active/dirty blocks, so cache patches can't clobber the textarea. |
-| `editor-lab` writing to wrong project's `script_blocks` | Use a sentinel `projectId = "editor-lab-scratch"` and warn in the UI; require sign-in for the Supabase toggle. |
-| Build-time import of `client.server` | Adapter uses only the browser `supabase` client (`@/integrations/supabase/client`). No service-role import. |
+## Acceptance — must pass before stop
 
-## 8. Stop condition
+Desktop (existing Pass 1 from `docs/EDITOR_ACCEPTANCE_TESTS.md`):
 
-Pass 2 is done — and we do NOT begin Pass 3 — until:
-- Acceptance tests above pass.
-- No duplicate rows after a 30s typing session.
-- Offline typing remains synchronous; reconnect drains without loss.
+- Type the full Stephan/Commander script for 30s, no first-character loss, no blur, no caret jump, no duplicates.
 
-On approval I will implement only the files listed in §1 and §2.
+Mobile (new — iPhone Safari at 430×777, Null adapter):
+
+1. Open `/editor-lab` → first writing line is visibly present with a readable placeholder.
+2. Tap the first line → keyboard opens, caret appears.
+3. Type `int african desert day` → Return → new Action line appears focused, keyboard stays open.
+4. Type the sand-sea line → Return → use inline toolbar to set Character → keyboard stays open.
+5. Type `STEPHAN` → Return → Dialogue line appears focused.
+6. Type for 30s straight, no blur, no duplicates, no swallowed first character.
+
+Verified via the browser tool at 430×777 viewport after the edits.
+
+## Stop condition
+
+Stop after both desktop and mobile Pass 1 pass with the Null adapter. Do NOT proceed to Phase 3 (production `/editor/:projectId` integration) in this pass.

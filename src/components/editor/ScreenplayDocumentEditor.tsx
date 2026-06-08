@@ -107,7 +107,10 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       [doc],
     );
 
-    const handlePaperMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Use click (not mousedown) so iOS Safari completes the tap gesture before
+    // we programmatically focus a textarea. Avoid preventDefault — it breaks
+    // the soft-keyboard opening on mobile.
+    const handlePaperClick = (e: React.MouseEvent<HTMLDivElement>) => {
       const target = e.target as HTMLElement;
       if (target.closest("textarea, button, input, [role='menu'], [data-block-toolbar]")) return;
       const all = e.currentTarget.querySelectorAll<HTMLTextAreaElement>("textarea[data-block-editor]");
@@ -116,16 +119,22 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       const last = all[all.length - 1];
       const lastRect = last.getBoundingClientRect();
       if (y > lastRect.bottom + 8) {
-        e.preventDefault();
         const cur = doc.localBlocks;
-        if (cur.length === 0) doc.insertAtEnd("scene_heading");
-        else {
+        if (cur.length === 0) {
+          doc.insertAtEnd("scene_heading");
+        } else {
           const lb = cur[cur.length - 1];
           doc.insertBlockAfter(lb.id, nextBlockTypeAfter(lb.block_type));
         }
+        // Focus on next frame — the new textarea mounts then.
+        requestAnimationFrame(() => {
+          const fresh = e.currentTarget?.querySelectorAll<HTMLTextAreaElement>(
+            "textarea[data-block-editor]",
+          );
+          fresh?.[fresh.length - 1]?.focus();
+        });
         return;
       }
-      e.preventDefault();
       let best: HTMLTextAreaElement = all[0];
       let bestDist = Infinity;
       all.forEach((t) => {
@@ -149,7 +158,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
     return (
       <div
         className="screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 cursor-text"
-        onMouseDown={handlePaperMouseDown}
+        onClick={handlePaperClick}
       >
         {blocksLoading && doc.localBlocks.length === 0 ? (
           <div className="space-y-3 py-8 font-sans">
@@ -176,6 +185,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                   <ScreenplayLine
                     block={b}
                     isActive={b.id === doc.activeBlockId}
+                    isFirstEmpty={i === 0 && doc.localBlocks.length === 1 && b.content === "" && b.block_type === "scene_heading"}
                     characters={characters}
                     onCreateCharacter={
                       onCreateCharacter ?? (async () => undefined)

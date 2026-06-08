@@ -34,6 +34,7 @@ const QUICK_TYPES = ["scene_heading", "action", "character", "dialogue", "parent
 export function ScreenplayLine({
   block,
   isActive,
+  isFirstEmpty,
   characters,
   onContentChange,
   onChangeType,
@@ -46,6 +47,7 @@ export function ScreenplayLine({
 }: {
   block: LocalBlock;
   isActive: boolean;
+  isFirstEmpty?: boolean;
   characters: CharacterHit[];
   onContentChange: (c: string) => void;
   onChangeType: (t: string) => void;
@@ -59,11 +61,13 @@ export function ScreenplayLine({
   const ref = useRef<HTMLTextAreaElement>(null);
   const [focused, setFocused] = useState(false);
 
-  // auto-resize
+  // auto-resize. For empty content, clear the inline height so the CSS
+  // min-height (which keeps the line visible/tappable on mobile) can apply.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.style.height = "auto";
+    if (block.content.length === 0) return;
     el.style.height = el.scrollHeight + "px";
   }, [block.content]);
 
@@ -196,9 +200,13 @@ export function ScreenplayLine({
         onFocus={() => { setFocused(true); onFocus(); }}
         onBlur={() => setTimeout(() => setFocused(false), 120)}
         onKeyDown={handleKeyDown}
-        placeholder={PLACEHOLDERS[block.block_type]}
+        placeholder={
+          isFirstEmpty
+            ? "INT. LOCATION — DAY   ·   tap here and start your screenplay"
+            : PLACEHOLDERS[block.block_type]
+        }
         rows={1}
-        className="w-full bg-transparent border-none outline-none resize-none rounded px-1 -mx-1 placeholder:text-muted-foreground/60 caret-primary min-h-[1.5em]"
+        className="w-full bg-transparent border-none outline-none resize-none rounded px-1 -mx-1 caret-primary"
         style={{
           fontFamily: "inherit",
           fontSize: "inherit",
@@ -207,6 +215,9 @@ export function ScreenplayLine({
           textTransform: "inherit",
           fontWeight: "inherit",
           fontStyle: "inherit",
+          minHeight: "2.5em",
+          height: block.content.length === 0 ? "2.5em" : undefined,
+          display: "block",
         } as any}
       />
 
@@ -253,7 +264,13 @@ export function ScreenplayLine({
             return (
               <button
                 key={t}
-                onMouseDown={(e) => { e.preventDefault(); onChangeType(t); }}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onChangeType(t);
+                  // Keep mobile keyboard open and caret in the textarea.
+                  requestAnimationFrame(() => ref.current?.focus());
+                }}
                 className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
                   active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
@@ -277,11 +294,17 @@ export function ScreenplayLine({
           {filtered.map((t, i) => (
             <button
               key={t.value}
+              type="button"
               className={`w-full text-left flex items-center justify-between px-2 py-1.5 text-xs rounded-sm transition-colors ${
                 i === selectedIndex ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
               }`}
               onMouseEnter={() => setSelectedIndex(i)}
-              onClick={(e) => { e.stopPropagation(); executeSlash(t.value); }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                executeSlash(t.value);
+                requestAnimationFrame(() => ref.current?.focus());
+              }}
             >
               <div className="flex flex-col">
                 <span>{t.label}</span>
