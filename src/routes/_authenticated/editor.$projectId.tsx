@@ -89,6 +89,16 @@ function Editor() {
       return data;
     },
   });
+  const listChars = useServerFn(listProjectCharacters);
+  const createChar = useServerFn(upsertCharacter);
+  const { data: characters = [] } = useQuery({
+    queryKey: ["characters", projectId],
+    queryFn: () => listChars({ data: { projectId } }) as Promise<CharacterHit[]>,
+  });
+  const createCharacter = useMutation({
+    mutationFn: (name: string) => createChar({ data: { project_id: projectId, patch: { name } } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["characters", projectId] }),
+  });
 
   const [focusBlockId, setFocusBlockId] = useState<string | null>(null);
 
