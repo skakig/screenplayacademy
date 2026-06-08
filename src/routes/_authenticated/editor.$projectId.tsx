@@ -283,6 +283,7 @@ function Editor() {
   });
 
   const saveBlock = useCallback(async (id: string, patch: { content?: string; block_type?: string; metadata?: Record<string, any> }) => {
+    if (id.startsWith("temp-")) return; // optimistic row; ignore until server returns real id
     markSaving();
     try {
       const update: any = {};
