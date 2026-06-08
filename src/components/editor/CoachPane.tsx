@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "@tanstack/react-router";
 import { CoachPanel } from "@/components/editor/CoachPanel";
+import { WriterInsightsPanel } from "@/components/editor/WriterInsightsPanel";
 import { CoachModeToggle } from "@/components/editor/CoachModeToggle";
 import { ArcSidebar } from "@/components/arc/ArcSidebar";
 import { BLOCK_LABEL } from "@/lib/editor/autoFormat";
