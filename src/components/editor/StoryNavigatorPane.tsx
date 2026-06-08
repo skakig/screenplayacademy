@@ -211,9 +211,17 @@ export function StoryNavigatorPane({
                               : "hover:bg-muted/60 border-transparent"
                           }`}
                         >
-                          <button
+                          <div
+                            role="button"
+                            tabIndex={0}
                             onClick={() => scene.headingBlockId && onJumpToBlock(scene.headingBlockId)}
-                            className="w-full text-left px-2 py-1.5"
+                            onKeyDown={(e) => {
+                              if ((e.key === "Enter" || e.key === " ") && scene.headingBlockId) {
+                                e.preventDefault();
+                                onJumpToBlock(scene.headingBlockId);
+                              }
+                            }}
+                            className="w-full text-left px-2 py-1.5 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-primary rounded-md"
                             title={scene.title}
                           >
                             <div className="flex items-center gap-1.5">
@@ -268,7 +276,7 @@ export function StoryNavigatorPane({
                                 </span>
                               )}
                             </div>
-                          </button>
+                          </div>
                         </div>
                       </li>
                     );

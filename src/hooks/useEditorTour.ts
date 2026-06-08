@@ -10,11 +10,9 @@ export function useEditorTour() {
     if (typeof window === "undefined") return;
     const seen = window.localStorage.getItem(KEY) === "1";
     setHasSeen(seen);
-    if (!seen) {
-      // small delay so layout settles before measuring anchors
-      const t = setTimeout(() => setIsOpen(true), 400);
-      return () => clearTimeout(t);
-    }
+    // Do NOT auto-open the tour. It used to pop up on first visit and
+    // covered the page, blocking the user from actually writing. Users can
+    // start the tour from the "Replay tour" button in the editor header.
   }, []);
 
   const stop = useCallback(() => {
