@@ -695,6 +695,11 @@ function BlockEditor({
   const [isFocused, setIsFocused] = useState(false);
   const QUICK_TYPES = ["scene_heading", "action", "character", "dialogue", "parenthetical"] as const;
 
+  const isCharBlock = block.block_type === "character";
+  const isSceneHeading = block.block_type === "scene_heading";
+  const showAutocomplete = isCharBlock && isFocused && !slashOpen;
+  const beat = (block.metadata as any)?.beat ?? null;
+
   return (
     <div className={`group relative blk-${block.block_type}`}>
       <textarea
@@ -709,6 +714,46 @@ function BlockEditor({
         className="w-full bg-transparent border-none outline-none resize-none focus:bg-primary/5 rounded px-1 -mx-1 placeholder:text-muted-foreground/40"
         style={{ fontFamily: "inherit", fontSize: "inherit", color: "inherit", textAlign: "inherit", textTransform: "inherit", fontWeight: "inherit", fontStyle: "inherit" } as any}
       />
+
+      {/* Character autocomplete */}
+      {showAutocomplete && (
+        <CharacterAutocomplete
+          query={val}
+          characters={characters}
+          anchorRef={ref as any}
+          onPick={(c) => {
+            setVal(c.name.toUpperCase());
+            void onSave({ content: c.name.toUpperCase() });
+            // Move focus out so the popover closes naturally
+            ref.current?.blur();
+          }}
+          onCreate={async (name) => {
+            try {
+              const created = await onCreateCharacter(name);
+              const finalName = (created?.name ?? name).toUpperCase();
+              setVal(finalName);
+              void onSave({ content: finalName });
+              ref.current?.blur();
+            } catch {
+              // swallow — keep typed text
+            }
+          }}
+        />
+      )}
+
+      {/* Scene beat picker (right-anchored) */}
+      {isSceneHeading && (
+        <div className="absolute right-0 -bottom-7 z-10 font-sans">
+          <SceneBeatPicker
+            value={beat}
+            onChange={(b) => {
+              const next = { ...(block.metadata || {}), beat: b ?? undefined };
+              if (b === null) delete (next as any).beat;
+              void onSave({ metadata: next });
+            }}
+          />
+        </div>
+      )}
 
       {/* Beginner-friendly inline block-type toolbar (shows on focus) */}
       {isFocused && !slashOpen && (
