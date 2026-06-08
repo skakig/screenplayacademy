@@ -32,6 +32,9 @@ import { OPENING_SCENE_TEMPLATE } from "@/lib/editor/openingTemplate";
 import { ArrowRight } from "lucide-react";
 import { EditorTour } from "@/components/editor/EditorTour";
 import { useEditorTour } from "@/hooks/useEditorTour";
+import { EditorCommandBar } from "@/components/editor/EditorCommandBar";
+import { nextBlockTypeAfter, cycleType } from "@/lib/editor/nextBlockType";
+import { detectBlockType, BLOCK_LABEL } from "@/lib/editor/autoFormat";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
