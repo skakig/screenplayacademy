@@ -1,103 +1,66 @@
-## Goal
+## Audit of the previous plan against your 8 corrections
 
-Make the center page feel like a continuous screenplay document, not a list of database textareas. The user opens the editor and types — no buttons, no "Start typing…" affordances, no focus loss.
+| # | Correction | Status in current code |
+|---|---|---|
+| 1 | Ghost line creates block on **focus/click**, not on first keystroke | NOT met. `ScreenplayDocumentEditor` still uses `onBeforeInput` to stash the first character and forward it. |
+| 2 | Single owner of temp-id + pending content | Partially met. Route owns `pendingTempContent` + temp-id swap. But the ghost line also routes typed characters through `initialContent`, which is a second buffering path. |
+| 3 | Never invalidate `["blocks", projectId]` after ordinary insert/save | NOT met. `saveBlock` invalidates when `patch.metadata` is set, `deleteBlock.onSuccess` invalidates, `restoreRecovery` invalidates. |
+| 4 | Local focused text always wins | Mostly met (focusedRef + dirtyRef guards in BlockEditor). Save-in-flight guard not explicit. |
+| 5 | Brand-new project: auto-create scene heading, focus immediately | NOT met. Empty state focuses the ghost line; first block is created only when the user types/clicks. |
+| 6 | Trailing line must not look/feel like a button | Partially met (it's a textarea), but it still shows "Enter · Tab change type · / menu" as a visible affordance next to the caret. |
+| 7 | Slim route, preserve all features | Met. |
+| 8 | Manual acceptance test | Not verified against current code; gaps above will cause regressions. |
 
-## What changes
+## Fix plan
 
-### 1. New component: `src/components/editor/ScreenplayDocumentEditor.tsx`
+### A. Editor corrections (corrections 1, 2, 5, 6, plus 3 & 4 cleanup)
 
-Owns the entire writing surface. Receives `projectId`, `blocks`, `characters`, `activeSceneId`, and mutation callbacks (`onAddBlock`, `onInsertAfter`, `onSaveBlock`, `onDeleteBlock`, `onCreateCharacter`). Internally manages:
+**1. `src/routes/_authenticated/editor.$projectId.tsx`**
 
-- `activeBlockId`, `focusBlockId`, `pendingTempContent` map
-- Auto-seeded first line (scene_heading) when `blocks.length === 0`
-- A real editable **ghost trailing line** (textarea, not a button) that:
-  - Renders after the last block with a blinking caret style
-  - On first keystroke: optimistically creates a `temp-*` block via `onInsertAfter` (or `onAddBlock` if empty), stashes the typed character in `pendingTempContent`, focuses the new real block when it mounts, and lets typing continue without losing the character
-  - On click / focus: same path — becomes a real line
-- Click-on-paper handler: clicks below last block focus the ghost line (no `cmdNewLine` button-press feel)
-- Enter / Tab / `/` / smart-format behaviors moved out of the route and into one internal `BlockEditor` (lifted from the route file, unchanged behavior aside from focus and save wiring)
-- Smart formatting for scene headings ("int african desert day" → "INT. AFRICAN DESERT - DAY") via `autoFormat.ts` on blur and on Enter
+- **Auto-seed first block (correction 5).** Add a one-shot effect: when `!blocksLoading && blocks.length === 0`, call `addBlock.mutate({ block_type: "scene_heading" })` and set `focusBlockId` to its temp id. Guard with a ref so it runs at most once per project mount.
+- **Stop invalidating on writes (correction 3).**
+  - Remove `qc.invalidateQueries({ queryKey: ["blocks", projectId] })` from `saveBlock` (the metadata branch) — patch the cache in place for metadata too.
+  - Replace `deleteBlock.onSuccess` invalidation with a `qc.setQueryData` filter that removes the deleted row.
+  - In `restoreRecovery`, replace the trailing `invalidateQueries` with `qc.setQueryData` patches per restored row.
+- **Save-in-flight guard (correction 4).** Track `inFlightSaves: Set<string>` in `saveBlock`; skip cache-driven prop updates for those ids by exposing the set down to `BlockEditor` via a prop (`isSaving(blockId)`), and have `BlockEditor`'s sync effect early-return when `isSaving(block.id)` is true (in addition to `focusedRef`/`dirtyRef`).
 
-### 2. Focus + temp-id handling (fixes "focus stolen by cache invalidation")
+**2. `src/components/editor/ScreenplayDocumentEditor.tsx`**
 
-- `addBlock` / `insertBlockAfter` keep their existing `onMutate` optimistic insert + `temp-*` id
-- After server returns the real id, in `onSuccess`:
-  - If `focusBlockId === tempId`, swap it to the real id atomically inside `setFocusBlockId` AND `setActiveBlockId`
-  - Flush `pendingTempContent[tempId]` → `pendingTempContent[realId]` then issue a single `saveBlock(realId, { content })`
-  - Do NOT call `qc.invalidateQueries(["blocks"])` on success — instead patch the cache in place (replace the temp row with the real row). Invalidation is what currently blurs the textarea.
-- `BlockEditor` keeps `dirtyRef`: server echoes are ignored while the field is focused or has a pending save, so cache patches never overwrite local text.
+- **Ghost line creates on focus, not first keystroke (correction 1).**
+  - Replace the `<textarea data-ghost-line>` with a focusable element (a zero-width `<button type="button">` styled as a caret line, OR a `<div tabIndex={0}>`) that, on `focus` or `mousedown`, calls `handleGhostInsert("")` and immediately blurs itself. No `onBeforeInput`, no character stashing, no `initialContent` from the ghost.
+  - `handleGhostInsert` keeps its current signature for paste support but is no longer called with typed characters during normal typing — only `""` on focus/click, or pasted text on paste.
+  - Result: focus → insert mutation → optimistic temp block → `setFocusBlockId(tempId)` → `BlockEditor`'s `focusBlockId` effect focuses the real textarea before the user's first keystroke lands. Single buffering path (the existing `pendingTempContent` in the route, used only for paste).
+- **Tone down trailing affordance (correction 6).** Remove the "Enter · Tab change type · / menu" hint from the ghost row. Keep only the blinking caret. The keyboard legend already exists elsewhere (toolbar / shortcut sheet) — that's where hints belong.
+- **Empty-state copy.** With correction 5 above, the empty state will rarely show; keep the "Start your screenplay" header only for the brief skeleton window. Optional: move it into the route and gate on `addBlock.isPending && blocks.length === 0`.
 
-### 3. Autosave reliability
+**3. Manual acceptance test (correction 8).** After the changes above:
+- New project → caret already blinking on a real scene-heading line (no ghost involved).
+- Typing `int african desert day` flows into that real line directly → no first-character risk.
+- Enter creates Action line via `insertBlockAfter`; `setFocusBlockId(tempId)` + sync save-in-flight guard keep focus and value stable across the temp→real swap.
+- 30s typing test: no cache invalidations fire on insert/save, so no remount/blur.
 
-- Keep the operation-count `pendingCount` (already in place)
-- Add a per-block "in-flight save" guard so a server echo arriving during typing is dropped on the floor
-- Status pill shows Saving / Saved / Error quietly in the toolbar; never re-renders the textarea content or moves the caret
+### B. Google OAuth redirect fix
 
-### 4. Route refactor: `src/routes/_authenticated/editor.$projectId.tsx`
+Root cause: `handleGoogle` passes `redirect_uri: window.location.origin`. After Google returns, the user lands on `/` (Landing page), which has no auth check, so it looks like a reload that "did nothing." The session is set, but no navigation happens.
 
-Trim to ~400 lines. The route owns data fetching, mutations, guided-step routing, and layout only:
+Fix in `src/routes/auth.tsx`:
+- Change `redirect_uri` to `` `${window.location.origin}/dashboard` ``. That sends the OAuth completion straight into the authenticated subtree, whose `_authenticated/route.tsx` gate now sees the user and renders the dashboard.
+- Keep the existing `getUser()` mount check so the auth page itself still redirects already-signed-in users.
 
-```
-<AppShell>
-  <StoryNavigatorPane … />
-  <main>
-    {isLoglineStep
-      ? <LoglineComposer … />
-      : <ScreenplayDocumentEditor
-           projectId={projectId}
-           blocks={blocks}
-           characters={characters}
-           activeSceneId={activeSceneId}
-           onAddBlock={addBlock.mutateAsync}
-           onInsertAfter={insertBlockAfter.mutateAsync}
-           onSaveBlock={saveBlock}
-           onDeleteBlock={deleteBlock.mutate}
-           onCreateCharacter={createCharacter.mutateAsync}
-        />}
-    <EditorCommandBar … />
-  </main>
-  <CoachPane … />
-  <FeatureDock … />
-</AppShell>
-```
+No changes to `lovable.auth` integration, providers, or env. No backend changes.
 
-`BlockEditor`, `cmdNewLine`, the slash menu, the click-on-paper handler, and the trailing row move out of the route into `ScreenplayDocumentEditor`. `EditorCommandBar`, `CanvasToolbar`, and the keyboard-shortcut legend stay in the route shell.
+### Files touched
 
-### 5. Empty state
+- `src/routes/_authenticated/editor.$projectId.tsx` — auto-seed first block; drop invalidations on insert/save/delete/restore; add `inFlightSaves` set + `isSaving` prop.
+- `src/components/editor/ScreenplayDocumentEditor.tsx` — replace ghost textarea with focus-trigger element; remove visible keyboard hint on ghost row; thread `isSaving` into `BlockEditor` sync guard.
+- `src/routes/auth.tsx` — `redirect_uri` → `/dashboard`.
 
-Replace `EmptyEditorTeacher`'s primary surface with:
+No DB / RLS / dependency changes.
 
-- Title "Start your screenplay"
-- One auto-focused editable scene-heading line (the same ghost-line component)
-- Secondary buttons under the page: Use Story Builder · Generate opening scene · Insert opening template · Import text
+### Acceptance
 
-Typing is always the primary action.
-
-### 6. Guided-step conflict
-
-In the route, when `guidedStep === "logline"`, render `LoglineComposer` as the main surface and hide the screenplay canvas + the manuscript-only side context. On any manuscript step (or no step), render `ScreenplayDocumentEditor`.
-
-### 7. Preserved
-
-- Cinematic paper look (`.screenplay-paper`, 760px max width, py-12/16 padding) — unchanged
-- All existing `script_blocks` persistence and the block-type system — unchanged
-- AI continue, voice check, story builder, manuscript index — unchanged
-
-## Files touched
-
-- **Create** `src/components/editor/ScreenplayDocumentEditor.tsx` (~500 lines: lifts `BlockEditor`, ghost line, slash menu, click handler, focus + temp-id logic)
-- **Edit** `src/routes/_authenticated/editor.$projectId.tsx` (slim to route + data + layout)
-- **Edit** `src/components/editor/EmptyEditorTeacher.tsx` (or inline new empty surface into the new component and stop using `EmptyEditorTeacher` as primary)
-- No DB / schema / RLS changes
-- No new dependencies
-
-## Acceptance check (manual, in preview)
-
-1. Open a brand-new project editor → caret blinks on an empty scene-heading line, type immediately works
-2. Type `int desert day`, blur → reformats to `INT. DESERT - DAY`
-3. Press Enter → focus jumps to a new Action line without dropping the first typed character
-4. Press Tab → block type cycles, focus stays
-5. Press `/` → slash menu opens
-6. Click empty paper below last line → caret lands on a new editable line (no button press)
-7. Type continuously for 30s → no blur, no caret jump, save status flips Saving → Saved quietly
-8. Switch to guided "Write your logline" step → screenplay canvas hidden, LoglineComposer is primary
+1. Brand-new project loads → caret blinks on a scene-heading line with **no** ghost click required. Type immediately; no character is lost.
+2. Enter / Tab / `/` behavior unchanged.
+3. Continuous 30s typing: no blur, no caret reset, save indicator flips quietly.
+4. Click below last line → focus jumps onto a freshly created real block (focus event creates the block, not the keystroke).
+5. Google sign-in → after Google's redirect, user lands on `/dashboard` without manual reload.
