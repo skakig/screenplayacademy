@@ -131,8 +131,10 @@ export function GuidedStepCard({
   });
 
   const saveDraft = useMutation({
-    mutationFn: () =>
-      updateFn({ data: { projectId, stepKey: step.step_key, user_output: notes } }),
+    mutationFn: async () => {
+      await updateFn({ data: { projectId, stepKey: step.step_key, user_output: notes } });
+      recordVersion(notes, "manual", "Manual draft");
+    },
     onSuccess: () => {
       toast.success("Draft saved");
       qc.invalidateQueries({ queryKey: ["first-screenplay", projectId] });
@@ -144,6 +146,7 @@ export function GuidedStepCard({
       aiFn({ data: { prompt: notes || meta.task, context: projectContext } }),
     onSuccess: (res: any) => {
       setAiOutput(res.text);
+      recordVersion(res.text, "ai", meta.aiLabel);
       if (res.demo) toast.message("Demo output — connect AI for live results.");
     },
     onError: (e: any) => toast.error(e.message ?? "AI failed"),
