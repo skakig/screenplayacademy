@@ -454,7 +454,7 @@ function Editor() {
         {/* Left rail */}
         <aside className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)]">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Add Block</h3>
-          <div className="grid grid-cols-2 gap-1.5">
+          <div data-tour="block-toolbar" className="grid grid-cols-2 gap-1.5">
             {BLOCK_TYPES.map((t) => (
               <Button key={t.value} variant="outline" size="sm" className="h-8 text-xs justify-start" onClick={() => addBlock.mutate(t.value)}>
                 <Plus className="h-3 w-3 mr-1" />{t.label}
