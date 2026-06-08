@@ -717,22 +717,26 @@ function Editor() {
 
 function BlockEditor({
   block,
+  prevBlockType,
   onSave,
   onDirty,
   onDelete,
   onInsertAfter,
   focusBlockId,
   onFocusDone,
+  onActiveChange,
   characters,
   onCreateCharacter,
 }: {
   block: any;
+  prevBlockType?: string;
   onSave: (patch: { content?: string; block_type?: string; metadata?: Record<string, any> }) => void | Promise<void>;
   onDirty: (content: string) => void;
   onDelete: () => void;
   onInsertAfter: (block_type: string) => void;
   focusBlockId: string | null;
   onFocusDone: () => void;
+  onActiveChange?: (id: string, active: boolean) => void;
   characters: CharacterHit[];
   onCreateCharacter: (name: string) => Promise<any>;
 }) {
