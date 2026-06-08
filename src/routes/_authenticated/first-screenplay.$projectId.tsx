@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { GuidedStepCard } from "@/components/guided/GuidedStepCard";
 import { STEP_META } from "@/components/guided/stepMeta";
-import { updateGuidedStep } from "@/lib/academy.functions";
+import { updateGuidedStep, seedGuidedSteps } from "@/lib/academy.functions";
 
 export const Route = createFileRoute("/_authenticated/first-screenplay/$projectId")({
   head: () => ({ meta: [{ title: "First Screenplay Path — SceneSmith AI" }] }),
@@ -26,7 +26,9 @@ function FirstScreenplayPage() {
   const { projectId } = Route.useParams();
   const qc = useQueryClient();
   const updateFn = useServerFn(updateGuidedStep);
+  const seedFn = useServerFn(seedGuidedSteps);
   const autoCompletedRef = useRef<Set<string>>(new Set());
+  const seedAttemptedRef = useRef(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["first-screenplay", projectId],
@@ -40,6 +42,17 @@ function FirstScreenplayPage() {
       return { project, steps: steps ?? [], blocks: blocks ?? [], scenes: scenes ?? [] };
     },
   });
+
+  // Auto-seed guided steps if the project has none yet (safety net for projects
+  // created outside guided mode or before seeding existed).
+  useEffect(() => {
+    if (!data || seedAttemptedRef.current) return;
+    if (data.steps.length > 0) return;
+    seedAttemptedRef.current = true;
+    seedFn({ data: { projectId } })
+      .then(() => qc.invalidateQueries({ queryKey: ["first-screenplay", projectId] }))
+      .catch(() => { seedAttemptedRef.current = false; });
+  }, [data, projectId, seedFn, qc]);
 
   // Auto-complete create_project (Step 1) since the project exists
   useEffect(() => {

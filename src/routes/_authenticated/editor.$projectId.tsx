@@ -19,6 +19,8 @@ import { CoachPanel } from "@/components/editor/CoachPanel";
 import { CoachModeToggle } from "@/components/editor/CoachModeToggle";
 import { AutosaveIndicator } from "@/components/editor/AutosaveIndicator";
 import type { AutosaveStatus } from "@/hooks/use-autosave";
+import { GuidedRail } from "@/components/guided/GuidedRail";
+import { GraduationCap, BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
@@ -280,6 +282,7 @@ function Editor() {
   return (
     <AppShell>
       <ProjectNav projectId={projectId} title={project?.title} />
+      <GuidedRail projectId={projectId} />
       <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3 flex items-center justify-between gap-3 flex-wrap">
         {fromGuided ? (
           <Link
@@ -360,6 +363,22 @@ function Editor() {
                   <Button variant="outline" onClick={() => addBlock.mutate("scene_heading")}>
                     Just a heading
                   </Button>
+                  <Button variant="ghost" asChild>
+                    <Link to="/first-screenplay/$projectId" params={{ projectId }}>
+                      <BookOpen className="h-4 w-4 mr-2" />Use the guided path
+                    </Link>
+                  </Button>
+                </div>
+                <div className="mt-6 text-xs text-muted-foreground">
+                  New to screenwriting?{" "}
+                  <Link
+                    to="/academy/$moduleSlug/$lessonSlug"
+                    params={{ moduleSlug: "foundations", lessonSlug: "slugline" }}
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    <GraduationCap className="h-3 w-3" />
+                    60-sec primer on scene headings
+                  </Link>
                 </div>
               </div>
             ) : (
