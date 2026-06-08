@@ -74,13 +74,6 @@ function computeDiff(left: string, right: string) {
   return lines;
 }
 
-function escapeHtml(s: string) {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function DiffView({ base, compare }: { base: Version; compare: Version }) {
   const lines = useMemo(() => computeDiff(base.content, compare.content), [base.content, compare.content]);
