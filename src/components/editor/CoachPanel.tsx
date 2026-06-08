@@ -1,11 +1,27 @@
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Sparkles, X, ChevronDown, ChevronUp, Compass } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Sparkles, X, ChevronDown, ChevronUp, Compass, GraduationCap, Wrench, BookOpen } from "lucide-react";
 import { useCoachMode } from "@/hooks/use-coach-mode";
-import { aiCoachCurrentScene, aiNextStepHint } from "@/lib/academy.functions";
+import { aiCoachCurrentScene, aiNextStepHint, aiExplainScreenplayConcept } from "@/lib/academy.functions";
+
+// Lightweight concept → academy lesson router (best-effort)
+const CONCEPT_LESSONS: { match: RegExp; module: string; lesson: string; label: string }[] = [
+  { match: /scene heading|slug|int\.|ext\./i, module: "foundations", lesson: "scene-heading-format", label: "Scene heading format" },
+  { match: /subtext|on[- ]the[- ]nose/i, module: "dialogue", lesson: "subtext", label: "Subtext in dialogue" },
+  { match: /character arc|change|transformation/i, module: "character", lesson: "character-arc", label: "Character arc" },
+  { match: /three act|3 act|structure|midpoint|climax/i, module: "story-architecture", lesson: "three-act-structure", label: "Three-act structure" },
+  { match: /protagonist|antagonist|villain/i, module: "character", lesson: "protagonist-antagonist", label: "Protagonist vs antagonist" },
+  { match: /theme|moral argument/i, module: "story-architecture", lesson: "theme", label: "Theme" },
+  { match: /goal|want|need/i, module: "character", lesson: "want-vs-need", label: "Want vs need" },
+];
+function lessonForConcept(concept: string) {
+  return CONCEPT_LESSONS.find((c) => c.match.test(concept)) ?? null;
+}
 
 export function CoachPanel({
   sceneText,
