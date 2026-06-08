@@ -494,7 +494,7 @@ function Editor() {
   }, [guidedStep, markStepComplete]);
 
   const startFromScratch = useCallback(async () => {
-    await addBlock.mutateAsync("scene_heading");
+    await addBlock.mutateAsync({ block_type: "scene_heading" });
   }, [addBlock]);
 
   const tour = useEditorTour();
@@ -555,7 +555,7 @@ function Editor() {
     if (isLoglineStep || redirect) return;
     autoSeededRef.current = true;
     setTimeout(() => {
-      addBlock.mutate("scene_heading");
+      addBlock.mutate({ block_type: "scene_heading" });
     }, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blocksLoading, blocks.length, isLoglineStep, redirect]);
@@ -591,7 +591,7 @@ function Editor() {
   }, []);
 
   const addSceneAtEnd = useCallback(() => {
-    addBlock.mutate("scene_heading");
+    addBlock.mutate({ block_type: "scene_heading" });
   }, [addBlock]);
 
   const activeBlock = blocks.find((b: any) => b.id === activeBlockId) ?? null;
@@ -610,7 +610,7 @@ function Editor() {
       const nextType = nextBlockTypeAfter(activeBlock.block_type, prevType);
       insertBlockAfter.mutate({ block_type: nextType, afterOrder: activeBlock.order_index });
     } else if (blocks.length === 0) {
-      addBlock.mutate("scene_heading");
+      addBlock.mutate({ block_type: "scene_heading" });
     } else {
       const last = blocks[blocks.length - 1];
       const nextType = nextBlockTypeAfter(last.block_type);
