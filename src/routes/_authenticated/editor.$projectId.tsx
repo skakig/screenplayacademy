@@ -968,17 +968,20 @@ function Editor() {
                   );
                 })}
 
-                {/* Persistent "Add line" ghost row — always visible cursor invitation */}
+                {/* Trailing writing line — looks like a blinking caret invitation, not a utility button */}
                 <button
                   type="button"
                   onClick={cmdNewLine}
-                  className="mt-4 w-full text-left px-3 py-3 rounded-md border border-dashed border-border/50 hover:border-primary/60 hover:bg-primary/[0.03] transition-colors font-sans text-xs text-muted-foreground/80 hover:text-foreground flex items-center gap-2"
-                  title="Add a new line"
+                  className="mt-2 w-full text-left py-2 flex items-center gap-2 group/ghost"
+                  title="Click or press Enter to start a new line"
+                  aria-label="Start a new line"
                 >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>Add line</span>
-                  <span className="opacity-50 ml-auto font-mono">
-                    Enter · Shift+Enter soft break · Tab change type · / menu
+                  <span className="inline-block w-px h-5 bg-primary/70 animate-pulse" aria-hidden="true" />
+                  <span className="font-sans text-xs text-muted-foreground/70 group-hover/ghost:text-foreground transition-colors">
+                    Start typing…
+                  </span>
+                  <span className="opacity-40 ml-auto font-mono text-[10px] text-muted-foreground">
+                    Enter · Tab change type · / menu
                   </span>
                 </button>
               </>
