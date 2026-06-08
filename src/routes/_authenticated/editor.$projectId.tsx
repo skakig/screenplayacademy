@@ -38,6 +38,7 @@ import { useManuscriptAnalyzer } from "@/hooks/useManuscriptAnalyzer";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { buildOutline, estimatePages } from "@/lib/editor/manuscriptAnalyzer";
 import { BookOpen } from "lucide-react";
+import { useWriterEvents } from "@/hooks/useWriterEvents";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
@@ -203,6 +204,8 @@ function Editor() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [saveStatus]);
 
+  const emitEvent = useWriterEvents();
+
   const addBlock = useMutation({
     mutationFn: async (block_type: string) => {
       const order_index = blocks.length;
@@ -212,7 +215,13 @@ function Editor() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["blocks", projectId] }),
+    onSuccess: (data, block_type) => {
+      qc.invalidateQueries({ queryKey: ["blocks", projectId] });
+      emitEvent({ event_type: "block_created", project_id: projectId, context: { block_type } });
+      if (block_type === "scene_heading") {
+        emitEvent({ event_type: "scene_created", project_id: projectId, context: { has_turn: false } });
+      }
+    },
   });
 
   const insertBlockAfter = useMutation({
@@ -325,6 +334,7 @@ function Editor() {
   const runAi = async () => {
     setAiLoading(true);
     setAiOutput("");
+    emitEvent({ event_type: "ai_request", project_id: projectId, context: { tool: aiTool } });
     try {
       const screenplay = blocks
         .filter((b) => b.block_type !== "note")

@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "@tanstack/react-router";
 import { CoachPanel } from "@/components/editor/CoachPanel";
+import { WriterInsightsPanel } from "@/components/editor/WriterInsightsPanel";
 import { CoachModeToggle } from "@/components/editor/CoachModeToggle";
 import { ArcSidebar } from "@/components/arc/ArcSidebar";
 import { BLOCK_LABEL } from "@/lib/editor/autoFormat";
@@ -94,6 +95,7 @@ export function CoachPane({
           <CoachModeToggle />
         </div>
         <CoachPanel sceneText={sceneText} blockCount={blocks.length} />
+        <WriterInsightsPanel projectId={projectId} />
         <div className="border-t border-border/40 pt-3 mt-3 space-y-2">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">AI Assistant</p>
           <Select value={aiTool} onValueChange={setAiTool}>

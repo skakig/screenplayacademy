@@ -785,6 +785,108 @@ export type Database = {
           },
         ]
       }
+      coach_recommendations: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          lesson_slug: string | null
+          project_id: string
+          resolved_at: string | null
+          rule_key: string
+          scene_id: string | null
+          severity: string
+          shown_at: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          lesson_slug?: string | null
+          project_id: string
+          resolved_at?: string | null
+          rule_key: string
+          scene_id?: string | null
+          severity?: string
+          shown_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          lesson_slug?: string | null
+          project_id?: string
+          resolved_at?: string | null
+          rule_key?: string
+          scene_id?: string | null
+          severity?: string
+          shown_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      editor_sessions: {
+        Row: {
+          ai_accepts: number
+          ai_calls: number
+          ai_rejects: number
+          blocks_added: number
+          created_at: string
+          ended_at: string | null
+          format_errors: number
+          id: string
+          project_id: string
+          scenes_added: number
+          started_at: string
+          updated_at: string
+          user_id: string
+          words_added: number
+        }
+        Insert: {
+          ai_accepts?: number
+          ai_calls?: number
+          ai_rejects?: number
+          blocks_added?: number
+          created_at?: string
+          ended_at?: string | null
+          format_errors?: number
+          id?: string
+          project_id: string
+          scenes_added?: number
+          started_at?: string
+          updated_at?: string
+          user_id: string
+          words_added?: number
+        }
+        Update: {
+          ai_accepts?: number
+          ai_calls?: number
+          ai_rejects?: number
+          blocks_added?: number
+          created_at?: string
+          ended_at?: string | null
+          format_errors?: number
+          id?: string
+          project_id?: string
+          scenes_added?: number
+          started_at?: string
+          updated_at?: string
+          user_id?: string
+          words_added?: number
+        }
+        Relationships: []
+      }
       guided_step_versions: {
         Row: {
           content: string
@@ -1408,6 +1510,96 @@ export type Database = {
           updated_at?: string
           user_id?: string
           writer_experience_level?: string | null
+        }
+        Relationships: []
+      }
+      writer_profiles: {
+        Row: {
+          ai_dependence_score: number
+          character_voice_score: number
+          coaching_level: string
+          confidence_score: number
+          created_at: string
+          dialogue_score: number
+          formatting_skill_score: number
+          id: string
+          last_aggregated_at: string | null
+          scene_craft_score: number
+          total_scenes_written: number
+          total_sessions: number
+          total_words_written: number
+          updated_at: string
+          user_id: string
+          visual_writing_score: number
+        }
+        Insert: {
+          ai_dependence_score?: number
+          character_voice_score?: number
+          coaching_level?: string
+          confidence_score?: number
+          created_at?: string
+          dialogue_score?: number
+          formatting_skill_score?: number
+          id?: string
+          last_aggregated_at?: string | null
+          scene_craft_score?: number
+          total_scenes_written?: number
+          total_sessions?: number
+          total_words_written?: number
+          updated_at?: string
+          user_id: string
+          visual_writing_score?: number
+        }
+        Update: {
+          ai_dependence_score?: number
+          character_voice_score?: number
+          coaching_level?: string
+          confidence_score?: number
+          created_at?: string
+          dialogue_score?: number
+          formatting_skill_score?: number
+          id?: string
+          last_aggregated_at?: string | null
+          scene_craft_score?: number
+          total_scenes_written?: number
+          total_sessions?: number
+          total_words_written?: number
+          updated_at?: string
+          user_id?: string
+          visual_writing_score?: number
+        }
+        Relationships: []
+      }
+      writing_events: {
+        Row: {
+          character_id: string | null
+          context: Json
+          created_at: string
+          event_type: string
+          id: string
+          project_id: string | null
+          scene_id: string | null
+          user_id: string
+        }
+        Insert: {
+          character_id?: string | null
+          context?: Json
+          created_at?: string
+          event_type: string
+          id?: string
+          project_id?: string | null
+          scene_id?: string | null
+          user_id: string
+        }
+        Update: {
+          character_id?: string | null
+          context?: Json
+          created_at?: string
+          event_type?: string
+          id?: string
+          project_id?: string | null
+          scene_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
