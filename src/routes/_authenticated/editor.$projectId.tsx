@@ -682,7 +682,7 @@ function Editor() {
 
 
         {/* Editor */}
-        <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10">
+        <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10 bg-muted/30">
           {/* Guided-step coach + step-specific modes */}
           <div data-tour="step-coach">
             {guidedStep && (
