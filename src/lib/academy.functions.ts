@@ -104,7 +104,13 @@ export const upsertLessonProgress = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => LessonProgressInput.parse(d))
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {
+    const patch: {
+      user_id: string;
+      lesson_id: string;
+      status?: "not_started" | "in_progress" | "complete";
+      user_output?: string;
+      completed_at?: string;
+    } = {
       user_id: context.userId,
       lesson_id: data.lessonId,
     };
