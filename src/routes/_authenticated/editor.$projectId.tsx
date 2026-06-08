@@ -595,10 +595,54 @@ function Editor() {
             Back to guided path{guidedStep ? ` · ${guidedStep.replace(/_/g, " ")}` : ""}
           </Link>
         ) : <span />}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* Mobile pane toggles */}
+          <Sheet open={leftDrawerOpen} onOpenChange={setLeftDrawerOpen}>
+            <SheetTrigger asChild>
+              <button className="lg:hidden inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition rounded-md border border-border/60 px-2 py-1" title="Story Navigator">
+                <PanelLeft className="h-3.5 w-3.5" /> Scenes
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[300px] p-4 overflow-auto">
+              <StoryNavigatorPane
+                projectId={projectId}
+                projectTitle={project?.title}
+                projectType={project?.project_type}
+                genre={project?.genre ?? undefined}
+                blocks={blocks as any}
+                activeBlockId={activeBlockId}
+                onJumpToBlock={(id) => { jumpToBlock(id); setLeftDrawerOpen(false); }}
+                onAddScene={() => { addSceneAtEnd(); setLeftDrawerOpen(false); }}
+              />
+            </SheetContent>
+          </Sheet>
+          <Sheet open={rightDrawerOpen} onOpenChange={setRightDrawerOpen}>
+            <SheetTrigger asChild>
+              <button className="lg:hidden inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition rounded-md border border-border/60 px-2 py-1" title="Coach">
+                <PanelRight className="h-3.5 w-3.5" /> Coach
+              </button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[360px] p-0 overflow-auto">
+              <CoachPane
+                projectId={projectId}
+                blocks={blocks as any}
+                activeBlockType={activeBlock?.block_type ?? null}
+                defaultTab={coachDefaultTab}
+                onOpenStoryBuilder={() => { setStoryBuilderOpen(true); setRightDrawerOpen(false); }}
+                aiTools={AI_TOOLS}
+                aiTool={aiTool}
+                setAiTool={setAiTool}
+                aiPrompt={aiPrompt}
+                setAiPrompt={setAiPrompt}
+                aiOutput={aiOutput}
+                aiLoading={aiLoading}
+                onRunAi={runAi}
+              />
+            </SheetContent>
+          </Sheet>
           <button
             onClick={tour.start}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
+            className="hidden md:inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
             title="Replay the editor tour"
           >
             <HelpCircle className="h-3.5 w-3.5" />
@@ -606,6 +650,7 @@ function Editor() {
           </button>
           <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
         </div>
+
       </div>
       {recovery && (
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3">
