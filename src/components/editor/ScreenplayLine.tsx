@@ -259,7 +259,13 @@ export function ScreenplayLine({
             return (
               <button
                 key={t}
-                onMouseDown={(e) => { e.preventDefault(); onChangeType(t); }}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onChangeType(t);
+                  // Keep mobile keyboard open and caret in the textarea.
+                  requestAnimationFrame(() => ref.current?.focus());
+                }}
                 className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
                   active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
