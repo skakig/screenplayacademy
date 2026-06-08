@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { aiAssist } from "@/lib/ai.functions";
 import { listProjectCharacters, upsertCharacter } from "@/lib/characters.functions";
+import { updateGuidedStep } from "@/lib/academy.functions";
 import { CoachPanel } from "@/components/editor/CoachPanel";
 import { CoachModeToggle } from "@/components/editor/CoachModeToggle";
 import { AutosaveIndicator } from "@/components/editor/AutosaveIndicator";
@@ -23,7 +24,12 @@ import type { AutosaveStatus } from "@/hooks/use-autosave";
 import { GuidedRail } from "@/components/guided/GuidedRail";
 import { CharacterAutocomplete, type CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import { SceneBeatPicker } from "@/components/editor/SceneBeatPicker";
-import { GraduationCap, BookOpen } from "lucide-react";
+import { StepCoach } from "@/components/editor/StepCoach";
+import { EmptyEditorTeacher } from "@/components/editor/EmptyEditorTeacher";
+import { LoglineComposer } from "@/components/editor/LoglineComposer";
+import { progressForStep, shouldUseLoglineComposer, shouldRedirectStep } from "@/lib/editor/stepCompletion";
+import { OPENING_SCENE_TEMPLATE } from "@/lib/editor/openingTemplate";
+import { ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
@@ -272,6 +278,36 @@ function Editor() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["blocks", projectId] }),
   });
 
+  // Bulk insert template / starter blocks
+  const insertTemplate = useMutation({
+    mutationFn: async (template: { block_type: string; content: string }[]) => {
+      const startOrder = blocks.length;
+      const rows = template.map((t, i) => ({
+        project_id: projectId,
+        block_type: t.block_type,
+        content: t.content,
+        order_index: startOrder + i,
+      }));
+      const { error } = await supabase.from("script_blocks").insert(rows);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["blocks", projectId] }),
+  });
+
+  // Guided step: mark complete + advance
+  const updateStep = useServerFn(updateGuidedStep);
+  const markStepComplete = useMutation({
+    mutationFn: async (stepKey: string) => {
+      await updateStep({ data: { projectId, stepKey, status: "complete" } });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["guided-rail", projectId] });
+      qc.invalidateQueries({ queryKey: ["first-screenplay", projectId] });
+      toast.success("Step complete — onward!");
+    },
+    onError: (e: any) => toast.error(e.message ?? "Couldn't update step"),
+  });
+
   const [aiTool, setAiTool] = useState(AI_TOOLS[0]);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiOutput, setAiOutput] = useState("");
@@ -293,6 +329,82 @@ function Editor() {
       setAiLoading(false);
     }
   };
+
+  // ====== Guided-step coach wiring ======
+  const projectCtx = `Title: ${project?.title ?? ""}\nType: ${project?.project_type ?? ""}\nGenre: ${project?.genre ?? ""}\nTone: ${project?.tone ?? ""}\nLogline: ${project?.logline ?? ""}`;
+  const stepProgress = progressForStep(guidedStep, blocks as any, project as any);
+  const redirect = shouldRedirectStep(guidedStep);
+  const isLoglineStep = shouldUseLoglineComposer(guidedStep);
+
+  const [primaryBusy, setPrimaryBusy] = useState(false);
+
+  const draftOpeningWithAi = useCallback(async () => {
+    setPrimaryBusy(true);
+    try {
+      const res = await callAi({
+        data: {
+          projectId,
+          tool: "openingScene",
+          prompt: "Draft a 1-2 page opening scene as screenplay blocks. Use FADE IN, scene heading (INT./EXT.), action, character, dialogue. Keep it tight and visual.",
+          context: projectCtx,
+        },
+      });
+      // Parse simple [block_type] content lines if present; otherwise fall back to action lines
+      const parsed: { block_type: string; content: string }[] = [];
+      const lines = res.text.split("\n").map((l) => l.trim()).filter(Boolean);
+      const tagRe = /^\[(scene_heading|action|character|dialogue|parenthetical|transition|shot|note)\]\s*(.*)$/i;
+      for (const l of lines) {
+        const m = l.match(tagRe);
+        if (m) parsed.push({ block_type: m[1].toLowerCase(), content: m[2] });
+        else if (/^(INT\.|EXT\.)/i.test(l)) parsed.push({ block_type: "scene_heading", content: l });
+        else if (/^FADE (IN|OUT)/i.test(l) || /^CUT TO:/i.test(l)) parsed.push({ block_type: "transition", content: l });
+        else if (/^[A-Z][A-Z\s\-\.']{2,}$/.test(l) && l.length < 40) parsed.push({ block_type: "character", content: l });
+        else parsed.push({ block_type: "action", content: l });
+      }
+      await insertTemplate.mutateAsync(parsed.length > 0 ? parsed : OPENING_SCENE_TEMPLATE);
+      toast.success("Drafted an opening — refine it from here");
+    } catch (e: any) {
+      toast.error(e.message ?? "Couldn't draft scene");
+    } finally {
+      setPrimaryBusy(false);
+    }
+  }, [callAi, projectId, projectCtx, insertTemplate]);
+
+  const handleCoachPrimary = useCallback(async () => {
+    if (!stepProgress.primaryAction) return;
+    const kind = stepProgress.primaryAction.kind;
+    if (kind === "insert") {
+      await insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE);
+      toast.success("Opening template inserted");
+      return;
+    }
+    if (kind === "ai") {
+      if (guidedStep === "opening_scene") return draftOpeningWithAi();
+      const tool = guidedStep === "rough_draft" ? "Find plot holes" : guidedStep === "act1" ? "Build outline" : "Build outline";
+      setPrimaryBusy(true);
+      try {
+        const res = await callAi({ data: { projectId, tool, prompt: stepProgress.primaryAction.label, context: projectCtx } });
+        setAiOutput(res.text);
+        setAiTool(tool);
+        toast.success("AI response ready in the right panel");
+      } catch (e: any) {
+        toast.error(e.message ?? "AI request failed");
+      } finally {
+        setPrimaryBusy(false);
+      }
+      return;
+    }
+  }, [stepProgress, guidedStep, insertTemplate, draftOpeningWithAi, callAi, projectId, projectCtx]);
+
+  const handleMarkComplete = useCallback(async () => {
+    if (!guidedStep) return;
+    await markStepComplete.mutateAsync(guidedStep);
+  }, [guidedStep, markStepComplete]);
+
+  const startFromScratch = useCallback(async () => {
+    await addBlock.mutateAsync("scene_heading");
+  }, [addBlock]);
+
 
   return (
     <AppShell>
@@ -352,7 +464,54 @@ function Editor() {
 
         {/* Editor */}
         <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10">
-          <div className="screenplay max-w-[680px] mx-auto bg-card/30 border border-border/40 rounded-lg p-8 lg:p-12 shadow-2xl">
+          {/* Guided-step coach + step-specific modes */}
+          {guidedStep && (
+            <StepCoach
+              projectId={projectId}
+              stepKey={guidedStep}
+              progress={stepProgress}
+              onPrimary={handleCoachPrimary}
+              onMarkComplete={handleMarkComplete}
+              primaryBusy={primaryBusy || insertTemplate.isPending}
+              markBusy={markStepComplete.isPending}
+            />
+          )}
+
+          {/* Redirect prompt for steps whose work lives on another page */}
+          {redirect && (
+            <div className="max-w-[680px] mx-auto mb-6 font-sans">
+              <div className="rounded-lg border border-border bg-card/50 p-4 flex items-center gap-3 flex-wrap">
+                <p className="text-sm flex-1">
+                  This step is best done on the <strong>{redirect.destination}</strong> page.
+                </p>
+                <Button asChild size="sm">
+                  <Link
+                    to={
+                      redirect.destination === "characters" ? "/characters/$projectId" :
+                      redirect.destination === "story-arc" ? "/story-arc/$projectId" :
+                      redirect.destination === "scenes" ? "/scenes/$projectId" :
+                      redirect.destination === "pitch" ? "/pitch/$projectId" :
+                      "/tableread/$projectId"
+                    }
+                    params={{ projectId }}
+                  >
+                    Open {redirect.destination} <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Logline composer replaces the screenplay canvas for that step */}
+          {isLoglineStep && (
+            <LoglineComposer
+              projectId={projectId}
+              initialLogline={project?.logline}
+              projectContext={projectCtx}
+            />
+          )}
+
+          <div className={`screenplay max-w-[680px] mx-auto bg-card/30 border border-border/40 rounded-lg p-8 lg:p-12 shadow-2xl ${isLoglineStep ? "opacity-60" : ""}`}>
             {blocksLoading ? (
               <div className="space-y-3 py-8 font-sans">
                 <div className="h-5 w-2/3 bg-muted/50 rounded animate-pulse" />
@@ -361,41 +520,12 @@ function Editor() {
                 <div className="h-4 w-3/4 bg-muted/40 rounded animate-pulse" />
               </div>
             ) : blocks.length === 0 ? (
-              <div className="text-center py-16 font-sans">
-                <p className="text-lg font-semibold mb-1">
-                  {fromGuided ? "Let's write your opening scene." : "Your blank page awaits."}
-                </p>
-                <p className="text-sm text-muted-foreground mb-5 max-w-sm mx-auto">
-                  Start with a scene heading — it tells the reader where and when we are. The rest follows.
-                </p>
-                <div className="flex gap-2 justify-center flex-wrap">
-                  <Button onClick={async () => {
-                    await addBlock.mutateAsync("scene_heading");
-                    await addBlock.mutateAsync("action");
-                  }}>
-                    <Plus className="h-4 w-4 mr-2" />Start my scene
-                  </Button>
-                  <Button variant="outline" onClick={() => addBlock.mutate("scene_heading")}>
-                    Just a heading
-                  </Button>
-                  <Button variant="ghost" asChild>
-                    <Link to="/first-screenplay/$projectId" params={{ projectId }}>
-                      <BookOpen className="h-4 w-4 mr-2" />Use the guided path
-                    </Link>
-                  </Button>
-                </div>
-                <div className="mt-6 text-xs text-muted-foreground">
-                  New to screenwriting?{" "}
-                  <Link
-                    to="/academy/$moduleSlug/$lessonSlug"
-                    params={{ moduleSlug: "foundations", lessonSlug: "slugline" }}
-                    className="text-primary hover:underline inline-flex items-center gap-1"
-                  >
-                    <GraduationCap className="h-3 w-3" />
-                    60-sec primer on scene headings
-                  </Link>
-                </div>
-              </div>
+              <EmptyEditorTeacher
+                hasLogline={!!project?.logline}
+                onUseTemplate={() => insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
+                onDraftWithAi={draftOpeningWithAi}
+                onStartFromScratch={startFromScratch}
+              />
             ) : (
               blocks.map((b) => (
                 <BlockEditor
