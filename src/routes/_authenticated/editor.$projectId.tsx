@@ -34,6 +34,9 @@ import { detectBlockType, BLOCK_LABEL } from "@/lib/editor/autoFormat";
 import { StoryNavigatorPane } from "@/components/editor/StoryNavigatorPane";
 import { CoachPane } from "@/components/editor/CoachPane";
 import { StoryBuilder } from "@/components/editor/StoryBuilder";
+import { StudioModeToggle } from "@/components/editor/StudioModeToggle";
+import { FeatureDock } from "@/components/editor/FeatureDock";
+import { CanvasToolbar } from "@/components/editor/CanvasToolbar";
 import { useManuscriptAnalyzer } from "@/hooks/useManuscriptAnalyzer";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { buildOutline, estimatePages } from "@/lib/editor/manuscriptAnalyzer";
@@ -605,7 +608,8 @@ function Editor() {
             Back to guided path{guidedStep ? ` · ${guidedStep.replace(/_/g, " ")}` : ""}
           </Link>
         ) : <span />}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <StudioModeToggle />
           {/* Mobile pane toggles */}
           <Sheet open={leftDrawerOpen} onOpenChange={setLeftDrawerOpen}>
             <SheetTrigger asChild>
@@ -692,7 +696,7 @@ function Editor() {
 
 
         {/* Editor */}
-        <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10 bg-muted/30">
+        <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10 screenplay-canvas">
           {/* Guided-step coach + step-specific modes */}
           <div data-tour="step-coach">
             {guidedStep && (
@@ -785,7 +789,18 @@ function Editor() {
             </div>
           )}
 
-          <div className={`screenplay max-w-[680px] mx-auto bg-card border border-border/60 rounded-lg p-8 lg:p-12 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.5)] ${isLoglineStep ? "opacity-60" : ""}`}>
+          {!isLoglineStep && !redirect && (
+            <CanvasToolbar
+              blockType={activeBlock?.block_type ?? null}
+              onChangeType={(t) => activeBlock && void saveBlock(activeBlock.id, { block_type: t })}
+              pageCount={pageCount}
+              currentPage={Math.max(1, Math.min(pageCount, Math.ceil(((activeBlockId ? blocks.findIndex((b: any) => b.id === activeBlockId) + 1 : blocks.length) / Math.max(1, blocks.length)) * pageCount)))}
+              wordCount={blocks.reduce((n: number, b: any) => n + (b.content?.trim().split(/\s+/).filter(Boolean).length ?? 0), 0)}
+              sceneCount={outline.length}
+            />
+          )}
+
+          <div className={`screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 ${isLoglineStep ? "opacity-60" : ""}`}>
             {blocksLoading ? (
               <div className="space-y-3 py-8 font-sans">
                 <div className="h-5 w-2/3 bg-muted/50 rounded animate-pulse" />
@@ -885,6 +900,7 @@ function Editor() {
         </aside>
 
       </div>
+      <FeatureDock projectId={projectId} />
       <EditorTour isOpen={tour.isOpen} onClose={tour.stop} />
       <StoryBuilder
         projectId={projectId}

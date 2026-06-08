@@ -86,7 +86,17 @@
   h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; }
 }
 
-/* Screenplay typography */
+/* Cinematic editor surfaces */
+:root {
+  --surface-canvas: oklch(0.10 0.012 260);   /* deep desk under the page */
+  --surface-pane: oklch(0.16 0.012 260);     /* side panes */
+  --paper: oklch(0.96 0.012 90);             /* warm off-white screenplay paper */
+  --paper-ink: oklch(0.18 0.01 90);          /* deep ink */
+  --paper-ink-muted: oklch(0.45 0.01 90);
+  --paper-rule: oklch(0.85 0.01 90);
+}
+
+/* Screenplay typography (dark-card variant — legacy) */
 .screenplay {
   font-family: var(--font-script);
   font-size: 12pt;
@@ -101,6 +111,58 @@
 .screenplay .blk-transition { text-transform: uppercase; text-align: right; font-weight: 600; color: var(--color-accent); margin: 1em 0; }
 .screenplay .blk-shot { text-transform: uppercase; font-weight: 600; color: var(--color-accent); }
 .screenplay .blk-note { background: oklch(0.65 0.18 245 / 0.08); border-left: 3px solid var(--color-accent); padding: 0.4em 0.8em; font-style: italic; color: var(--color-muted-foreground); }
+
+/* Cinematic paper page — real screenplay sheet sitting on a dark desk */
+.screenplay-paper {
+  font-family: var(--font-script);
+  font-size: 12pt;
+  line-height: 1.5;
+  color: var(--paper-ink);
+  background: var(--paper);
+  background-image:
+    linear-gradient(180deg, oklch(0.98 0.01 90) 0%, oklch(0.95 0.012 88) 100%);
+  border: 1px solid oklch(0.80 0.015 85);
+  box-shadow:
+    0 40px 80px -30px oklch(0 0 0 / 0.65),
+    0 20px 40px -20px oklch(0 0 0 / 0.45),
+    0 0 0 1px oklch(0.78 0.015 85 / 0.5),
+    inset 0 1px 0 oklch(1 0 0 / 0.6);
+  border-radius: 2px;
+  caret-color: var(--paper-ink);
+}
+.screenplay-paper textarea { color: var(--paper-ink); caret-color: var(--paper-ink); }
+.screenplay-paper textarea::placeholder { color: oklch(0.65 0.01 90); }
+.screenplay-paper .blk-scene_heading { text-transform: uppercase; font-weight: 700; color: var(--paper-ink); margin-top: 1.5em; letter-spacing: 0.02em; }
+.screenplay-paper .blk-action { margin: 0.6em 0; color: var(--paper-ink); }
+.screenplay-paper .blk-character { text-transform: uppercase; text-align: center; margin: 1em auto 0; max-width: 60%; font-weight: 600; color: var(--paper-ink); }
+.screenplay-paper .blk-dialogue { max-width: 65%; margin: 0.2em auto; color: var(--paper-ink); }
+.screenplay-paper .blk-parenthetical { max-width: 50%; margin: 0.1em auto; font-style: italic; color: var(--paper-ink-muted); }
+.screenplay-paper .blk-transition { text-transform: uppercase; text-align: right; font-weight: 600; color: var(--paper-ink); margin: 1em 0; }
+.screenplay-paper .blk-shot { text-transform: uppercase; font-weight: 600; color: var(--paper-ink); }
+.screenplay-paper .blk-note {
+  background: oklch(0.96 0.06 95);
+  border-left: 3px solid oklch(0.75 0.14 82);
+  padding: 0.4em 0.8em;
+  font-style: italic;
+  color: oklch(0.40 0.04 80);
+}
+.screenplay-paper .blk-scene_heading + * { margin-top: 0.4em; }
+
+/* Subtle paper grain */
+.screenplay-canvas {
+  background:
+    radial-gradient(circle at 50% 0%, oklch(0.14 0.012 260) 0%, oklch(0.08 0.01 260) 70%),
+    var(--surface-canvas);
+}
+
+/* Force readable ink on the paper page even inside Tailwind utility children */
+.screenplay-paper .text-muted-foreground,
+.screenplay-paper .text-muted-foreground\/70 { color: var(--paper-ink-muted) !important; }
+.screenplay-paper .bg-border\/60 { background-color: var(--paper-rule) !important; }
+.screenplay-paper .blk-character ~ .text-xs,
+.screenplay-paper [class*="bg-primary"] { /* keep accents but legible */ }
+.screenplay-paper .border-primary { border-color: oklch(0.55 0.14 70) !important; }
+.screenplay-paper .bg-primary\/\[0\.04\] { background-color: oklch(0.85 0.10 82 / 0.10) !important; }
 
 /* TMH level palette — moral behavior under pressure, NOT a moral judgment. */
 :root {
