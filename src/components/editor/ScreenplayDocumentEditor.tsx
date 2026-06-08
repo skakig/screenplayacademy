@@ -173,6 +173,7 @@ export function ScreenplayDocumentEditor({
                   }
                   characters={characters}
                   onCreateCharacter={onCreateCharacter}
+                  isSaving={isSaving}
                 />
               </div>
             );
