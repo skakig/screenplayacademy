@@ -158,7 +158,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
     return (
       <div
         className="screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 cursor-text"
-        onMouseDown={handlePaperMouseDown}
+        onClick={handlePaperClick}
       >
         {blocksLoading && doc.localBlocks.length === 0 ? (
           <div className="space-y-3 py-8 font-sans">
