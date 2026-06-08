@@ -69,7 +69,15 @@ export function GuidedStepCard({
   const [aiOutput, setAiOutput] = useState<string>("");
   const updateFn = useServerFn(updateGuidedStep);
   const applyFn = useServerFn(applyStepOutput);
+  const versionFn = useServerFn(saveStepVersion);
   const aiFn = useServerFn(meta.aiHelper ? AI_HELPERS[meta.aiHelper] : aiGenerateLoglineOptions);
+
+  const recordVersion = (content: string, source: "manual" | "ai" | "applied", label?: string) => {
+    if (!content?.trim()) return;
+    versionFn({ data: { projectId, stepKey: step.step_key, content, source, label } })
+      .then(() => qc.invalidateQueries({ queryKey: ["step-versions", projectId, step.step_key] }))
+      .catch(() => { /* non-blocking */ });
+  };
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["first-screenplay", projectId] });
