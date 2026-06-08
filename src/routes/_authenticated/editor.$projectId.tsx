@@ -952,6 +952,7 @@ function Editor() {
             onDraftWithAi={draftOpeningWithAi}
             onInsertTemplate={() => void insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
             primaryBusy={primaryBusy || insertTemplate.isPending}
+            isSaving={isSaving}
           />
 
 
