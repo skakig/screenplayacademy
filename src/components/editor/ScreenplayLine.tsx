@@ -216,6 +216,7 @@ export function ScreenplayLine({
           fontWeight: "inherit",
           fontStyle: "inherit",
           minHeight: "2.5em",
+          height: block.content.length === 0 ? "2.5em" : undefined,
           display: "block",
         } as any}
       />
