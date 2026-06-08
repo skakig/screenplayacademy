@@ -334,6 +334,7 @@ function Editor() {
   const runAi = async () => {
     setAiLoading(true);
     setAiOutput("");
+    emitEvent({ event_type: "ai_request", project_id: projectId, context: { tool: aiTool } });
     try {
       const screenplay = blocks
         .filter((b) => b.block_type !== "note")
