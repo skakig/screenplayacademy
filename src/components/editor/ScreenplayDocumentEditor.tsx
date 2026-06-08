@@ -178,46 +178,38 @@ export function ScreenplayDocumentEditor({
             );
           })}
 
-          {/* Editable ghost trailing line — a real textarea that creates a new
-              block on first keystroke. Not a button. */}
-          <div className="mt-2 flex items-center gap-2 group/ghost relative">
+          {/* Trailing ghost line — a quiet caret-shaped focus target. Focusing
+              or clicking it creates a real block; the new block then takes
+              focus and accepts typing. Not a button, no visible affordance. */}
+          <div
+            ref={ghostRef}
+            role="button"
+            tabIndex={0}
+            aria-label={isEmpty ? "Start your screenplay" : "Continue writing"}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              handleGhostActivate("");
+            }}
+            onFocus={() => handleGhostActivate("")}
+            onPaste={(e) => {
+              const text = e.clipboardData.getData("text");
+              if (text) {
+                e.preventDefault();
+                handleGhostActivate(text);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleGhostActivate("");
+              }
+            }}
+            className="mt-2 flex items-center gap-2 min-h-[1.5em] outline-none cursor-text select-none"
+          >
             <span
               className="inline-block w-px h-5 bg-primary/70 animate-pulse pointer-events-none"
               aria-hidden="true"
             />
-            <textarea
-              ref={ghostRef}
-              data-ghost-line
-              rows={1}
-              value=""
-              onBeforeInput={handleGhostBeforeInput}
-              onPaste={(e) => {
-                const text = e.clipboardData.getData("text");
-                if (text) {
-                  e.preventDefault();
-                  handleGhostInsert(text);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleGhostInsert("");
-                }
-              }}
-              onChange={() => {
-                /* intentionally no-op — input is consumed by onBeforeInput */
-              }}
-              placeholder={isEmpty ? "INT. LOCATION — DAY" : "Keep writing…"}
-              aria-label={isEmpty ? "Start your screenplay" : "Continue writing"}
-              className="flex-1 bg-transparent border-none outline-none resize-none caret-primary placeholder:text-muted-foreground/50 min-h-[1.5em] py-0"
-              style={{ fontFamily: "inherit", fontSize: "inherit", color: "inherit" }}
-            />
-            <span
-              className="opacity-40 ml-auto font-mono text-[10px] text-muted-foreground pointer-events-none hidden sm:inline"
-              aria-hidden="true"
-            >
-              Enter · Tab change type · / menu
-            </span>
           </div>
 
           {isEmpty && (onOpenStoryBuilder || onDraftWithAi || onInsertTemplate) && (
