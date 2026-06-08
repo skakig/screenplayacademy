@@ -1197,7 +1197,7 @@ function BlockEditor({
         onKeyDown={handleKeyDown}
         placeholder={placeholder[block.block_type]}
         rows={1}
-        className="w-full bg-transparent border-none outline-none resize-none rounded px-1 -mx-1 placeholder:text-muted-foreground/60 caret-primary"
+        className="w-full bg-transparent border-none outline-none resize-none rounded px-1 -mx-1 placeholder:text-muted-foreground/60 caret-primary min-h-[1.5em]"
         style={{ fontFamily: "inherit", fontSize: "inherit", color: "inherit", textAlign: "inherit", textTransform: "inherit", fontWeight: "inherit", fontStyle: "inherit" } as any}
       />
 
