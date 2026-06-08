@@ -7,18 +7,14 @@ import { ProjectNav } from "@/components/ProjectNav";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Plus, Trash2, Loader2, Copy, Command, ArrowLeft, HelpCircle } from "lucide-react";
+import { Sparkles, Plus, Trash2, Loader2, Copy, Command, ArrowLeft, HelpCircle, PanelLeft, PanelRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArcSidebar } from "@/components/arc/ArcSidebar";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { aiAssist } from "@/lib/ai.functions";
 import { listProjectCharacters, upsertCharacter } from "@/lib/characters.functions";
 import { updateGuidedStep } from "@/lib/academy.functions";
-import { CoachPanel } from "@/components/editor/CoachPanel";
-import { CoachModeToggle } from "@/components/editor/CoachModeToggle";
 import { AutosaveIndicator } from "@/components/editor/AutosaveIndicator";
 import type { AutosaveStatus } from "@/hooks/use-autosave";
 import { GuidedRail } from "@/components/guided/GuidedRail";
@@ -35,9 +31,11 @@ import { useEditorTour } from "@/hooks/useEditorTour";
 import { EditorCommandBar } from "@/components/editor/EditorCommandBar";
 import { nextBlockTypeAfter, cycleType } from "@/lib/editor/nextBlockType";
 import { detectBlockType, BLOCK_LABEL } from "@/lib/editor/autoFormat";
-import { ManuscriptIndex } from "@/components/editor/ManuscriptIndex";
+import { StoryNavigatorPane } from "@/components/editor/StoryNavigatorPane";
+import { CoachPane } from "@/components/editor/CoachPane";
 import { StoryBuilder } from "@/components/editor/StoryBuilder";
 import { useManuscriptAnalyzer } from "@/hooks/useManuscriptAnalyzer";
+import { useOnboarding } from "@/hooks/use-onboarding";
 import { buildOutline, estimatePages } from "@/lib/editor/manuscriptAnalyzer";
 import { BookOpen } from "lucide-react";
 
@@ -418,6 +416,42 @@ function Editor() {
 
   const tour = useEditorTour();
   const [storyBuilderOpen, setStoryBuilderOpen] = useState(false);
+  const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
+  const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
+
+  // Default right pane tab follows the user's preferred mode (Guided → Builder, Studio → Coach).
+  const { data: onboarding } = useOnboarding();
+  const coachDefaultTab = onboarding?.preferred_mode === "guided" ? "builder" : "coach";
+
+  // Global Cmd/Ctrl+1–7 → set active block's type
+  const setActiveBlockType = useCallback((type: string) => {
+    const activeId = activeBlockId;
+    if (!activeId) return;
+    void saveBlock(activeId, { block_type: type });
+    toast.success(`→ ${BLOCK_LABEL[type] ?? type}`, { duration: 1000 });
+  }, [activeBlockId, saveBlock]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const map: Record<string, string> = {
+        "1": "scene_heading",
+        "2": "action",
+        "3": "character",
+        "4": "dialogue",
+        "5": "parenthetical",
+        "6": "transition",
+        "7": "shot",
+      };
+      const t = map[e.key];
+      if (t) {
+        e.preventDefault();
+        setActiveBlockType(t);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [setActiveBlockType]);
 
   // Background auto-analyzer: detect new characters + sync scenes table.
   useManuscriptAnalyzer({
@@ -561,10 +595,54 @@ function Editor() {
             Back to guided path{guidedStep ? ` · ${guidedStep.replace(/_/g, " ")}` : ""}
           </Link>
         ) : <span />}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* Mobile pane toggles */}
+          <Sheet open={leftDrawerOpen} onOpenChange={setLeftDrawerOpen}>
+            <SheetTrigger asChild>
+              <button className="lg:hidden inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition rounded-md border border-border/60 px-2 py-1" title="Story Navigator">
+                <PanelLeft className="h-3.5 w-3.5" /> Scenes
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[300px] p-4 overflow-auto">
+              <StoryNavigatorPane
+                projectId={projectId}
+                projectTitle={project?.title}
+                projectType={project?.project_type}
+                genre={project?.genre ?? undefined}
+                blocks={blocks as any}
+                activeBlockId={activeBlockId}
+                onJumpToBlock={(id) => { jumpToBlock(id); setLeftDrawerOpen(false); }}
+                onAddScene={() => { addSceneAtEnd(); setLeftDrawerOpen(false); }}
+              />
+            </SheetContent>
+          </Sheet>
+          <Sheet open={rightDrawerOpen} onOpenChange={setRightDrawerOpen}>
+            <SheetTrigger asChild>
+              <button className="lg:hidden inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition rounded-md border border-border/60 px-2 py-1" title="Coach">
+                <PanelRight className="h-3.5 w-3.5" /> Coach
+              </button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[360px] p-0 overflow-auto">
+              <CoachPane
+                projectId={projectId}
+                blocks={blocks as any}
+                activeBlockType={activeBlock?.block_type ?? null}
+                defaultTab={coachDefaultTab}
+                onOpenStoryBuilder={() => { setStoryBuilderOpen(true); setRightDrawerOpen(false); }}
+                aiTools={AI_TOOLS}
+                aiTool={aiTool}
+                setAiTool={setAiTool}
+                aiPrompt={aiPrompt}
+                setAiPrompt={setAiPrompt}
+                aiOutput={aiOutput}
+                aiLoading={aiLoading}
+                onRunAi={runAi}
+              />
+            </SheetContent>
+          </Sheet>
           <button
             onClick={tour.start}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
+            className="hidden md:inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
             title="Replay the editor tour"
           >
             <HelpCircle className="h-3.5 w-3.5" />
@@ -572,6 +650,7 @@ function Editor() {
           </button>
           <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
         </div>
+
       </div>
       {recovery && (
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3">
@@ -585,33 +664,25 @@ function Editor() {
           </div>
         </div>
       )}
-      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_340px] max-w-[1600px] mx-auto">
-        {/* Left rail — Manuscript Index */}
-        <aside data-tour="block-toolbar" className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)] sticky top-0 self-start max-h-[calc(100vh-104px)] overflow-auto">
-          <ManuscriptIndex
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_340px] max-w-[1600px] mx-auto">
+        {/* Left rail — Story Navigator (desktop) */}
+        <aside data-tour="block-toolbar" className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)] sticky top-0 self-start max-h-[calc(100vh-104px)] overflow-auto bg-card/20">
+          <StoryNavigatorPane
+            projectId={projectId}
+            projectTitle={project?.title}
+            projectType={project?.project_type}
+            genre={project?.genre ?? undefined}
             blocks={blocks as any}
             activeBlockId={activeBlockId}
             onJumpToBlock={jumpToBlock}
             onAddScene={addSceneAtEnd}
           />
-          <div className="mt-6">
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Project</h3>
-            <p className="text-xs text-muted-foreground">{project?.project_type}</p>
-            {project?.genre && <p className="text-xs text-muted-foreground mt-1">{project.genre}</p>}
-          </div>
-          <div className="mt-6">
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Shortcuts</h3>
-            <div className="text-[10px] text-muted-foreground space-y-1 font-mono">
-              <p><span className="text-primary">/</span> — slash commands</p>
-              <p><span className="text-primary">Tab</span> — cycle block type</p>
-              <p><span className="text-primary">Enter</span> — new line</p>
-            </div>
-          </div>
         </aside>
 
 
+
         {/* Editor */}
-        <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10">
+        <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10 bg-muted/30">
           {/* Guided-step coach + step-specific modes */}
           <div data-tour="step-coach">
             {guidedStep && (
@@ -704,7 +775,7 @@ function Editor() {
             </div>
           )}
 
-          <div className={`screenplay max-w-[680px] mx-auto bg-card/30 border border-border/40 rounded-lg p-8 lg:p-12 shadow-2xl ${isLoglineStep ? "opacity-60" : ""}`}>
+          <div className={`screenplay max-w-[680px] mx-auto bg-card border border-border/60 rounded-lg p-8 lg:p-12 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.5)] ${isLoglineStep ? "opacity-60" : ""}`}>
             {blocksLoading ? (
               <div className="space-y-3 py-8 font-sans">
                 <div className="h-5 w-2/3 bg-muted/50 rounded animate-pulse" />
@@ -784,55 +855,25 @@ function Editor() {
           )}
         </section>
 
-        {/* Right sidebar */}
-        <aside data-tour="coach-panel" className="hidden lg:block border-l border-border/60 min-h-[calc(100vh-104px)] bg-card/20">
-          <Tabs defaultValue="arc" className="w-full">
-            <TabsList className="w-full rounded-none border-b border-border/40 bg-transparent h-10">
-              <TabsTrigger value="arc" className="text-xs flex-1">Arc</TabsTrigger>
-              <TabsTrigger value="ai" className="text-xs flex-1">AI</TabsTrigger>
-            </TabsList>
-            <TabsContent value="arc" className="m-0">
-              <ArcSidebar projectId={projectId} />
-            </TabsContent>
-            <TabsContent value="ai" className="m-0 p-4 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <h3 className="font-semibold">AI Assistant</h3>
-                </div>
-                <CoachModeToggle />
-              </div>
-              <CoachPanel
-                sceneText={blocks.filter((b) => b.block_type !== "note").map((b) => `[${b.block_type}] ${b.content}`).join("\n").slice(-6000)}
-                blockCount={blocks.length}
-                activeStep={guidedStep}
-              />
-              <Select value={aiTool} onValueChange={setAiTool}>
-                <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>{AI_TOOLS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-              </Select>
-              <Textarea
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="Add specific instructions (optional)..."
-                className="mt-2 text-xs min-h-[80px]"
-              />
-              <Button className="w-full mt-2" size="sm" onClick={runAi} disabled={aiLoading}>
-                {aiLoading ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Thinking...</> : <><Sparkles className="h-3.5 w-3.5 mr-1.5" />Run</>}
-              </Button>
-              {aiOutput && (
-                <ScrollArea className="mt-4 h-[400px] rounded-md border border-border/60 bg-background/50 p-3">
-                  <p className="text-xs whitespace-pre-wrap text-foreground/90 font-mono">{aiOutput}</p>
-                </ScrollArea>
-              )}
-              {aiOutput && (
-                <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => { navigator.clipboard.writeText(aiOutput); toast.success("Copied"); }}>
-                  <Copy className="h-3.5 w-3.5 mr-1.5" />Copy
-                </Button>
-              )}
-            </TabsContent>
-          </Tabs>
+        {/* Right sidebar — Intelligent Coach */}
+        <aside data-tour="coach-panel" className="hidden lg:block border-l border-border/60 min-h-[calc(100vh-104px)] bg-card/20 max-h-[calc(100vh-104px)] overflow-auto sticky top-0 self-start">
+          <CoachPane
+            projectId={projectId}
+            blocks={blocks as any}
+            activeBlockType={activeBlock?.block_type ?? null}
+            defaultTab={coachDefaultTab}
+            onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
+            aiTools={AI_TOOLS}
+            aiTool={aiTool}
+            setAiTool={setAiTool}
+            aiPrompt={aiPrompt}
+            setAiPrompt={setAiPrompt}
+            aiOutput={aiOutput}
+            aiLoading={aiLoading}
+            onRunAi={runAi}
+          />
         </aside>
+
       </div>
       <EditorTour isOpen={tour.isOpen} onClose={tour.stop} />
       <StoryBuilder
