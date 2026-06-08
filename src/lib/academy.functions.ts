@@ -430,6 +430,20 @@ export const aiOutlineAct1Beats = createServerFn({ method: "POST" })
     `Outline Act 1 as a numbered list of 8–12 scene-level beats ending in the Act 1 turn (the point of no return around page 25–30). For each beat: (a) one-line scene heading, (b) one-line purpose, (c) one-line turn or change. The final beat must be a clear threshold the protagonist crosses.\n\nCONTEXT:\n${data.prompt}\n\n${data.context ?? ""}`,
   ));
 
+export const aiNextStepHint = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({
+    sceneText: z.string().max(16000),
+    activeStep: z.string().max(64).optional(),
+    blockCount: z.number().int().nonnegative(),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    const stepHint = data.activeStep ? `The writer is currently on the guided step "${data.activeStep}".` : "";
+    return callAI(
+      `You are a screenwriting coach for an absolute beginner. In 1–2 sentences, tell them the single next concrete action to take in their script right now. Be friendly, specific, and actionable (e.g., "Add a scene heading like INT. KITCHEN — NIGHT" or "Your hero just entered — describe what they see in 2 lines of action"). ${stepHint}\n\nCurrent block count: ${data.blockCount}\n\nSCRIPT SO FAR (may be empty):\n${data.sceneText || "(empty)"}`,
+    );
+  });
+
 // ----- Guided step version history -----
 
 const VersionInput = z.object({

@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Plus, Trash2, Loader2, Copy, Command } from "lucide-react";
+import { Sparkles, Plus, Trash2, Loader2, Copy, Command, ArrowLeft } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArcSidebar } from "@/components/arc/ArcSidebar";
 import { toast } from "sonner";
@@ -19,6 +20,10 @@ import { CoachModeToggle } from "@/components/editor/CoachModeToggle";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    from: typeof s.from === "string" ? s.from : undefined,
+    step: typeof s.step === "string" ? s.step : undefined,
+  }),
   component: Editor,
   errorComponent: ({ error, reset }) => (
     <div className="min-h-screen flex items-center justify-center p-6">
@@ -54,6 +59,9 @@ const AI_TOOLS = [
 
 function Editor() {
   const { projectId } = Route.useParams();
+  const search = Route.useSearch();
+  const fromGuided = search.from === "guided";
+  const guidedStep = search.step;
   const qc = useQueryClient();
   const callAi = useServerFn(aiAssist);
 
@@ -91,21 +99,15 @@ function Editor() {
 
   const insertBlockAfter = useMutation({
     mutationFn: async ({ block_type, afterOrder }: { block_type: string; afterOrder: number }) => {
-      // Insert with fractional order to place it right after
+      // Find the next block's order_index to compute midpoint (fractional ordering — no bulk renumber)
+      const sorted = [...blocks].sort((a, b) => a.order_index - b.order_index);
+      const idx = sorted.findIndex((b) => b.order_index === afterOrder);
+      const nextOrder = idx >= 0 && sorted[idx + 1] ? sorted[idx + 1].order_index : afterOrder + 1;
+      const newOrder = (afterOrder + nextOrder) / 2;
       const { data, error } = await supabase.from("script_blocks")
-        .insert({ project_id: projectId, block_type, content: "", order_index: afterOrder + 0.5 })
+        .insert({ project_id: projectId, block_type, content: "", order_index: newOrder })
         .select().single();
       if (error) throw error;
-      // Re-normalize order indices
-      const { data: all } = await supabase.from("script_blocks")
-        .select("id, order_index")
-        .eq("project_id", projectId)
-        .order("order_index");
-      if (all) {
-        for (let i = 0; i < all.length; i++) {
-          await supabase.from("script_blocks").update({ order_index: i }).eq("id", all[i].id);
-        }
-      }
       return data;
     },
     onSuccess: (data) => {
@@ -158,6 +160,19 @@ function Editor() {
   return (
     <AppShell>
       <ProjectNav projectId={projectId} title={project?.title} />
+      {fromGuided && (
+        <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3">
+          <Link
+            to="/first-screenplay/$projectId"
+            params={{ projectId }}
+            hash={guidedStep ? `step-${guidedStep}` : undefined}
+            className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Back to guided path{guidedStep ? ` · ${guidedStep.replace(/_/g, " ")}` : ""}
+          </Link>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_340px] max-w-[1600px] mx-auto">
         {/* Left rail */}
         <aside className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)]">
@@ -188,9 +203,24 @@ function Editor() {
         <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10">
           <div className="screenplay max-w-[680px] mx-auto bg-card/30 border border-border/40 rounded-lg p-8 lg:p-12 shadow-2xl">
             {blocks.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-muted-foreground mb-4 font-sans">Your blank page awaits.</p>
-                <Button onClick={() => addBlock.mutate("scene_heading")}><Plus className="h-4 w-4 mr-2" />Add Scene Heading</Button>
+              <div className="text-center py-16 font-sans">
+                <p className="text-lg font-semibold mb-1">
+                  {fromGuided ? "Let's write your opening scene." : "Your blank page awaits."}
+                </p>
+                <p className="text-sm text-muted-foreground mb-5 max-w-sm mx-auto">
+                  Start with a scene heading — it tells the reader where and when we are. The rest follows.
+                </p>
+                <div className="flex gap-2 justify-center flex-wrap">
+                  <Button onClick={async () => {
+                    await addBlock.mutateAsync("scene_heading");
+                    await addBlock.mutateAsync("action");
+                  }}>
+                    <Plus className="h-4 w-4 mr-2" />Start my scene
+                  </Button>
+                  <Button variant="outline" onClick={() => addBlock.mutate("scene_heading")}>
+                    Just a heading
+                  </Button>
+                </div>
               </div>
             ) : (
               blocks.map((b) => (
@@ -254,7 +284,11 @@ function Editor() {
                 </div>
                 <CoachModeToggle />
               </div>
-              <CoachPanel sceneText={blocks.filter((b) => b.block_type !== "note").map((b) => `[${b.block_type}] ${b.content}`).join("\n").slice(-6000)} />
+              <CoachPanel
+                sceneText={blocks.filter((b) => b.block_type !== "note").map((b) => `[${b.block_type}] ${b.content}`).join("\n").slice(-6000)}
+                blockCount={blocks.length}
+                activeStep={guidedStep}
+              />
               <Select value={aiTool} onValueChange={setAiTool}>
                 <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>{AI_TOOLS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
@@ -446,19 +480,45 @@ function BlockEditor({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [slashOpen, closeSlash]);
 
+  const [isFocused, setIsFocused] = useState(false);
+  const QUICK_TYPES = ["scene_heading", "action", "character", "dialogue", "parenthetical"] as const;
+
   return (
     <div className={`group relative blk-${block.block_type}`}>
       <textarea
         ref={ref}
         value={val}
         onChange={handleChange}
-        onBlur={flush}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => { flush(); setTimeout(() => setIsFocused(false), 150); }}
         onKeyDown={handleKeyDown}
         placeholder={placeholder[block.block_type]}
         rows={1}
         className="w-full bg-transparent border-none outline-none resize-none focus:bg-primary/5 rounded px-1 -mx-1 placeholder:text-muted-foreground/40"
         style={{ fontFamily: "inherit", fontSize: "inherit", color: "inherit", textAlign: "inherit", textTransform: "inherit", fontWeight: "inherit", fontStyle: "inherit" } as any}
       />
+
+      {/* Beginner-friendly inline block-type toolbar (shows on focus) */}
+      {isFocused && !slashOpen && (
+        <div className="absolute right-0 -top-7 z-10 flex items-center gap-0.5 rounded-md border border-border/60 bg-popover/95 backdrop-blur shadow-sm px-1 py-0.5 font-sans">
+          {QUICK_TYPES.map((t) => {
+            const meta = BLOCK_TYPES.find((b) => b.value === t)!;
+            const active = block.block_type === t;
+            return (
+              <button
+                key={t}
+                onMouseDown={(e) => { e.preventDefault(); onUpdate({ block_type: t }); }}
+                className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+                title={meta.label}
+              >
+                {meta.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Slash command menu */}
       {slashOpen && filtered.length > 0 && (

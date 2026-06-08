@@ -3,16 +3,26 @@ import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Sparkles, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Sparkles, X, ChevronDown, ChevronUp, Compass } from "lucide-react";
 import { useCoachMode } from "@/hooks/use-coach-mode";
-import { aiCoachCurrentScene } from "@/lib/academy.functions";
+import { aiCoachCurrentScene, aiNextStepHint } from "@/lib/academy.functions";
 
-export function CoachPanel({ sceneText }: { sceneText: string }) {
+export function CoachPanel({
+  sceneText,
+  blockCount = 0,
+  activeStep,
+}: {
+  sceneText: string;
+  blockCount?: number;
+  activeStep?: string;
+}) {
   const { level, enabled } = useCoachMode();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(level === "gentle");
   const [dismissed, setDismissed] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
   const coachFn = useServerFn(aiCoachCurrentScene);
+  const hintFn = useServerFn(aiNextStepHint);
 
   const run = useMutation({
     mutationFn: () =>
@@ -25,7 +35,19 @@ export function CoachPanel({ sceneText }: { sceneText: string }) {
     onSuccess: (r) => setOutput(r.text),
   });
 
-  // Auto-coach on level=active or teaching when scene changes (debounced via effect)
+  const nextStep = useMutation({
+    mutationFn: () =>
+      hintFn({
+        data: {
+          sceneText: sceneText.slice(-6000),
+          activeStep,
+          blockCount,
+        },
+      }),
+    onSuccess: (r) => setHint(r.text),
+  });
+
+  // Auto-coach on active/teaching when scene changes (debounced)
   useEffect(() => {
     if (!enabled || level === "gentle") return;
     if (!sceneText || sceneText.length < 200) return;
@@ -33,6 +55,18 @@ export function CoachPanel({ sceneText }: { sceneText: string }) {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sceneText, level]);
+
+  // Suggestion heuristic for gentle mode (no AI call required)
+  const localHint = (() => {
+    if (blockCount === 0) return "Add a scene heading to start (try INT. KITCHEN — NIGHT).";
+    const hasHeading = /\[scene_heading\]/.test(sceneText);
+    const hasAction = /\[action\]/.test(sceneText);
+    const hasDialogue = /\[dialogue\]/.test(sceneText);
+    if (!hasHeading) return "Add a scene heading so we know where we are.";
+    if (!hasAction) return "Describe what we see — add a line of action.";
+    if (!hasDialogue) return "Who's in this scene? Add a character and a line of dialogue.";
+    return "Strong start. Add the next scene heading to keep moving.";
+  })();
 
   if (!enabled || dismissed) return null;
 
@@ -52,18 +86,36 @@ export function CoachPanel({ sceneText }: { sceneText: string }) {
         </div>
       </div>
       {!collapsed && (
-        <>
-          {output ? (
-            <div className="text-xs whitespace-pre-wrap text-foreground/85">{output}</div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground">{run.isPending ? "Thinking…" : "Get a take on this scene."}</p>
-              <Button size="sm" variant="outline" className="ml-auto h-7 text-xs" onClick={() => run.mutate()} disabled={run.isPending || !sceneText}>
-                Coach this scene
-              </Button>
-            </div>
+        <div className="space-y-2">
+          <div className="rounded-md bg-background/60 border border-border/40 p-2">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Suggested next step</p>
+            <p className="text-xs text-foreground/90">{hint ?? localHint}</p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-2 h-7 text-xs w-full"
+              onClick={() => nextStep.mutate()}
+              disabled={nextStep.isPending}
+            >
+              <Compass className="h-3.5 w-3.5 mr-1.5" />
+              {nextStep.isPending ? "Thinking…" : "What should I do next?"}
+            </Button>
+          </div>
+          {level !== "gentle" && (
+            <>
+              {output ? (
+                <div className="text-xs whitespace-pre-wrap text-foreground/85">{output}</div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground">{run.isPending ? "Reading…" : "Get a take on this scene."}</p>
+                  <Button size="sm" variant="outline" className="ml-auto h-7 text-xs" onClick={() => run.mutate()} disabled={run.isPending || !sceneText}>
+                    Coach this scene
+                  </Button>
+                </div>
+              )}
+            </>
           )}
-        </>
+        </div>
       )}
     </Card>
   );
