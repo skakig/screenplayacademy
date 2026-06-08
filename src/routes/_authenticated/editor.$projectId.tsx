@@ -615,6 +615,9 @@ function BlockEditor({
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newVal = e.target.value;
     setVal(newVal);
+    dirtyRef.current = true;
+    onDirty(newVal);
+    scheduleSave(newVal);
 
     if (slashOpen) {
       // If the slash was removed (backspace, etc.), close menu
