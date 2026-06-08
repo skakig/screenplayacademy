@@ -363,6 +363,22 @@ function Editor() {
                   <Button variant="outline" onClick={() => addBlock.mutate("scene_heading")}>
                     Just a heading
                   </Button>
+                  <Button variant="ghost" asChild>
+                    <Link to="/first-screenplay/$projectId" params={{ projectId }}>
+                      <BookOpen className="h-4 w-4 mr-2" />Use the guided path
+                    </Link>
+                  </Button>
+                </div>
+                <div className="mt-6 text-xs text-muted-foreground">
+                  New to screenwriting?{" "}
+                  <Link
+                    to="/academy/$moduleSlug/$lessonSlug"
+                    params={{ moduleSlug: "foundations", lessonSlug: "slugline" }}
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    <GraduationCap className="h-3 w-3" />
+                    60-sec primer on scene headings
+                  </Link>
                 </div>
               </div>
             ) : (
