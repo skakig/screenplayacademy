@@ -243,6 +243,42 @@ export type Database = {
         }
         Relationships: []
       }
+      character_evidence_events: {
+        Row: {
+          block_id: string | null
+          character_id: string
+          content: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          project_id: string
+          scene_id: string | null
+        }
+        Insert: {
+          block_id?: string | null
+          character_id: string
+          content?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          project_id: string
+          scene_id?: string | null
+        }
+        Update: {
+          block_id?: string | null
+          character_id?: string
+          content?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          project_id?: string
+          scene_id?: string | null
+        }
+        Relationships: []
+      }
       character_relationships: {
         Row: {
           character_id: string
@@ -414,6 +450,54 @@ export type Database = {
           tactic?: string | null
           tmh_level?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      character_snapshots: {
+        Row: {
+          character_id: string
+          computed_at: string
+          created_at: string
+          emotional_baseline: Json
+          goals: Json
+          id: string
+          known_languages: Json
+          line_count: number
+          project_id: string
+          register: string | null
+          updated_at: string
+          verbosity: string | null
+          vocabulary_signature: Json
+        }
+        Insert: {
+          character_id: string
+          computed_at?: string
+          created_at?: string
+          emotional_baseline?: Json
+          goals?: Json
+          id?: string
+          known_languages?: Json
+          line_count?: number
+          project_id: string
+          register?: string | null
+          updated_at?: string
+          verbosity?: string | null
+          vocabulary_signature?: Json
+        }
+        Update: {
+          character_id?: string
+          computed_at?: string
+          created_at?: string
+          emotional_baseline?: Json
+          goals?: Json
+          id?: string
+          known_languages?: Json
+          line_count?: number
+          project_id?: string
+          register?: string | null
+          updated_at?: string
+          verbosity?: string | null
+          vocabulary_signature?: Json
         }
         Relationships: []
       }
@@ -991,6 +1075,51 @@ export type Database = {
           stakes_change?: string | null
           story_beat?: string | null
           theme_connection?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      scene_patterns: {
+        Row: {
+          capability_type: string | null
+          communicative_intent: string | null
+          constraint_level: number | null
+          created_at: string
+          environmental_stakes: string | null
+          failure_branches: Json
+          id: string
+          pattern_key: string | null
+          project_id: string
+          scene_id: string
+          success_condition: string | null
+          updated_at: string
+        }
+        Insert: {
+          capability_type?: string | null
+          communicative_intent?: string | null
+          constraint_level?: number | null
+          created_at?: string
+          environmental_stakes?: string | null
+          failure_branches?: Json
+          id?: string
+          pattern_key?: string | null
+          project_id: string
+          scene_id: string
+          success_condition?: string | null
+          updated_at?: string
+        }
+        Update: {
+          capability_type?: string | null
+          communicative_intent?: string | null
+          constraint_level?: number | null
+          created_at?: string
+          environmental_stakes?: string | null
+          failure_branches?: Json
+          id?: string
+          pattern_key?: string | null
+          project_id?: string
+          scene_id?: string
+          success_condition?: string | null
           updated_at?: string
         }
         Relationships: []
