@@ -92,6 +92,192 @@ export const updateGuidedStep = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ----- Apply step output to project tables -----
+
+function tryParseJson(text: string): any | null {
+  try {
+    const m = text.match(/\{[\s\S]*\}/);
+    if (m) return JSON.parse(m[0]);
+  } catch { /* noop */ }
+  return null;
+}
+
+const ApplyInput = z.object({
+  projectId: z.string().uuid(),
+  stepKey: z.string().min(1).max(64),
+  text: z.string().min(1).max(40000),
+  insertIntoEditor: z.boolean().optional(),
+});
+
+export const applyStepOutput = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => ApplyInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase;
+    const { projectId, stepKey, text, insertIntoEditor } = data;
+    let referenceId: string | null = null;
+    let summary = "Saved";
+
+    const appendEditorBlocks = async (blocks: Array<{ block_type: string; content: string }>) => {
+      const { data: existing } = await sb
+        .from("script_blocks")
+        .select("order_index")
+        .eq("project_id", projectId)
+        .order("order_index", { ascending: false })
+        .limit(1);
+      let start = (existing?.[0]?.order_index ?? -1) + 1;
+      const rows = blocks.map((b) => ({
+        project_id: projectId,
+        block_type: b.block_type,
+        content: b.content,
+        order_index: start++,
+      }));
+      if (rows.length) await sb.from("script_blocks").insert(rows);
+    };
+
+    switch (stepKey) {
+      case "logline": {
+        // Use first non-empty line, strip numbering
+        const first = text.split("\n").map((l) => l.replace(/^\s*\d+[\.\)]\s*/, "").trim()).find(Boolean) ?? text.trim();
+        await sb.from("projects").update({ logline: first }).eq("id", projectId);
+        summary = "Logline saved to project";
+        if (insertIntoEditor) {
+          await appendEditorBlocks([{ block_type: "note", content: `LOGLINE: ${first}` }]);
+        }
+        break;
+      }
+      case "protagonist":
+      case "antagonist": {
+        const json = tryParseJson(text);
+        const role = stepKey === "protagonist" ? "Protagonist" : "Antagonist";
+        const payload: any = {
+          project_id: projectId,
+          name: json?.name?.toString().slice(0, 120) || role,
+          role,
+          age: json?.age?.toString().slice(0, 60) ?? null,
+          archetype: json?.archetype?.toString().slice(0, 120) ?? null,
+          external_goal: json?.external_goal ?? null,
+          internal_need: json?.internal_need ?? null,
+          wound: json?.wound ?? null,
+          fear: json?.fear ?? null,
+          contradiction: json?.contradiction ?? null,
+          core_lie: json?.core_lie ?? null,
+          voice_style: json?.voice_style ?? null,
+          group_name: role === "Protagonist" ? "Main Cast" : "Antagonists",
+        };
+        const { data: inserted } = await sb.from("characters").insert(payload).select("id, name").single();
+        referenceId = inserted?.id ?? null;
+        summary = `${role} "${inserted?.name}" added to Characters`;
+        if (insertIntoEditor) {
+          await appendEditorBlocks([{ block_type: "note", content: `${role.toUpperCase()}: ${inserted?.name}\n${text.slice(0, 600)}` }]);
+        }
+        break;
+      }
+      case "theme":
+      case "story_arc":
+      case "midpoint": {
+        const json = tryParseJson(text);
+        const { data: existing } = await sb.from("story_arcs").select("id").eq("project_id", projectId).maybeSingle();
+        const patch: any = { project_id: projectId };
+        if (stepKey === "theme") {
+          const first = text.split("\n").map((l) => l.replace(/^\s*\d+[\.\)]\s*/, "").trim()).find(Boolean) ?? text.trim();
+          patch.theme = first;
+          summary = "Theme saved to story arc";
+        } else if (stepKey === "midpoint") {
+          patch.midpoint_shift = text.trim().slice(0, 4000);
+          summary = "Midpoint saved to story arc";
+        } else if (json) {
+          for (const k of ["arc_type","structure_model","central_question","opening_state","midpoint_shift","darkest_moment","climax_choice","final_state","theme"]) {
+            if (json[k]) patch[k] = String(json[k]);
+          }
+          summary = "Story arc saved";
+        } else {
+          patch.central_question = text.trim().slice(0, 4000);
+          summary = "Story arc saved (notes)";
+        }
+        if (existing?.id) {
+          await sb.from("story_arcs").update(patch).eq("id", existing.id);
+          referenceId = existing.id;
+        } else {
+          const { data: created } = await sb.from("story_arcs").insert(patch).select("id").single();
+          referenceId = created?.id ?? null;
+        }
+        break;
+      }
+      case "scene_cards": {
+        // Parse "1. INT. LOCATION - DAY — purpose" type lines
+        const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+        const cards = lines
+          .filter((l) => /^\d+[\.\)]/.test(l) || /^(INT|EXT|INT\/EXT)\b/i.test(l))
+          .slice(0, 40)
+          .map((l, i) => {
+            const cleaned = l.replace(/^\s*\d+[\.\)]\s*/, "");
+            const heading = (cleaned.match(/(INT|EXT|INT\/EXT)[^—\-\n]+/i)?.[0] ?? cleaned).trim().slice(0, 240);
+            const purpose = cleaned.replace(heading, "").replace(/^[\s—\-:]+/, "").trim().slice(0, 1000);
+            return { heading, purpose, idx: i };
+          });
+        if (cards.length === 0) {
+          summary = "Could not parse scene cards — try regenerating.";
+          break;
+        }
+        const sceneRows = cards.map((c) => ({
+          project_id: projectId,
+          scene_heading: c.heading,
+          title: c.heading,
+          plot_purpose: c.purpose || null,
+          status: "idea" as const,
+          order_index: c.idx,
+        }));
+        await sb.from("scenes").insert(sceneRows);
+        summary = `${cards.length} scene cards added`;
+        if (insertIntoEditor) {
+          const blocks: Array<{ block_type: string; content: string }> = [];
+          for (const c of cards) {
+            blocks.push({ block_type: "scene_heading", content: c.heading });
+            if (c.purpose) blocks.push({ block_type: "note", content: c.purpose });
+          }
+          await appendEditorBlocks(blocks);
+        }
+        break;
+      }
+      case "opening_scene":
+      case "act1":
+      case "rough_draft": {
+        // Turn text into action/dialogue blocks if no slugline; otherwise treat as raw scene
+        const lines = text.split("\n").map((l) => l.trim());
+        const blocks: Array<{ block_type: string; content: string }> = [];
+        for (const l of lines) {
+          if (!l) continue;
+          if (/^(INT|EXT|INT\/EXT)\b/i.test(l)) blocks.push({ block_type: "scene_heading", content: l });
+          else if (/^[A-Z][A-Z0-9 \.\-']{2,40}$/.test(l)) blocks.push({ block_type: "character", content: l });
+          else if (/^\(.+\)$/.test(l)) blocks.push({ block_type: "parenthetical", content: l });
+          else if (/^(CUT TO|FADE (IN|OUT)|DISSOLVE TO)\:?$/i.test(l)) blocks.push({ block_type: "transition", content: l });
+          else blocks.push({ block_type: "action", content: l });
+        }
+        if (blocks.length === 0) blocks.push({ block_type: "action", content: text.trim() });
+        await appendEditorBlocks(blocks);
+        summary = `${blocks.length} blocks inserted into editor`;
+        break;
+      }
+      default: {
+        // Just attach as note block for visibility
+        if (insertIntoEditor) {
+          await appendEditorBlocks([{ block_type: "note", content: `[${stepKey}] ${text.slice(0, 2000)}` }]);
+          summary = "Saved as editor note";
+        } else {
+          summary = "Saved to step";
+        }
+      }
+    }
+
+    // Persist user_output + reference on the step
+    const patch: any = { user_output: text.slice(0, 20000) };
+    if (referenceId) patch.output_reference_id = referenceId;
+    await sb.from("project_guided_steps").update(patch).eq("project_id", projectId).eq("step_key", stepKey);
+
+    return { ok: true, summary, referenceId };
+  });
+
 // ----- Lesson progress -----
 
 const LessonProgressInput = z.object({
