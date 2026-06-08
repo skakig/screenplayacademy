@@ -36,6 +36,7 @@ import { CoachPane } from "@/components/editor/CoachPane";
 import { StoryBuilder } from "@/components/editor/StoryBuilder";
 import { StudioModeToggle } from "@/components/editor/StudioModeToggle";
 import { FeatureDock } from "@/components/editor/FeatureDock";
+import { GuidedStepStrip } from "@/components/editor/GuidedStepStrip";
 import { CanvasToolbar } from "@/components/editor/CanvasToolbar";
 import { useManuscriptAnalyzer } from "@/hooks/useManuscriptAnalyzer";
 import { useOnboarding } from "@/hooks/use-onboarding";
