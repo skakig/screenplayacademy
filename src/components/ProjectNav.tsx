@@ -1,17 +1,22 @@
 import { Link } from "@tanstack/react-router";
-import { FileText, Users, LayoutGrid, Image as ImageIcon, Mic, Sparkles, Activity, GitBranch } from "lucide-react";
+import { FileText, Users, LayoutGrid, Image as ImageIcon, Mic, Sparkles, Activity, GitBranch, BookOpen } from "lucide-react";
+import { useOnboarding } from "@/hooks/use-onboarding";
 
 export function ProjectNav({ projectId, title }: { projectId: string; title?: string }) {
+  const { data: onboarding } = useOnboarding();
+  const isGuided = onboarding?.preferred_mode === "guided";
+
   const items = [
-    { to: "/editor/$projectId", label: "Editor", icon: FileText },
-    { to: "/scenes/$projectId", label: "Scenes", icon: LayoutGrid },
-    { to: "/characters/$projectId", label: "Characters", icon: Users },
-    { to: "/story-arc/$projectId", label: "Story Arc", icon: GitBranch },
-    { to: "/arc-timeline/$projectId", label: "StoryPulse", icon: Activity },
-    { to: "/storyboard/$projectId", label: "Storyboard", icon: ImageIcon },
-    { to: "/tableread/$projectId", label: "Table Read", icon: Mic },
-    { to: "/pitch/$projectId", label: "Pitch", icon: Sparkles },
-  ] as const;
+    ...(isGuided ? [{ to: "/first-screenplay/$projectId" as const, label: "Guided Path", icon: BookOpen }] : []),
+    { to: "/editor/$projectId" as const, label: "Editor", icon: FileText },
+    { to: "/scenes/$projectId" as const, label: "Scenes", icon: LayoutGrid },
+    { to: "/characters/$projectId" as const, label: "Characters", icon: Users },
+    { to: "/story-arc/$projectId" as const, label: "Story Arc", icon: GitBranch },
+    { to: "/arc-timeline/$projectId" as const, label: "StoryPulse", icon: Activity },
+    { to: "/storyboard/$projectId" as const, label: "Storyboard", icon: ImageIcon },
+    { to: "/tableread/$projectId" as const, label: "Table Read", icon: Mic },
+    { to: "/pitch/$projectId" as const, label: "Pitch", icon: Sparkles },
+  ];
   return (
     <div className="border-b border-border/60 bg-card/30 backdrop-blur">
       <div className="max-w-[1600px] mx-auto px-4 h-12 flex items-center gap-3 overflow-x-auto">

@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
@@ -11,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { useOnboarding } from "@/hooks/use-onboarding";
+import { seedGuidedSteps } from "@/lib/academy.functions";
 
 export const Route = createFileRoute("/_authenticated/projects/new")({
   head: () => ({ meta: [{ title: "New Project — SceneSmith AI" }] }),
@@ -21,6 +24,8 @@ const PROJECT_TYPES = ["Feature Film", "TV Pilot", "Short Film", "Comic Script",
 
 function NewProject() {
   const navigate = useNavigate();
+  const { data: onboarding } = useOnboarding();
+  const seedFn = useServerFn(seedGuidedSteps);
   const [form, setForm] = useState({
     title: "", project_type: "Feature Film", genre: "", tone: "",
     target_length: "", logline: "", ai_help_level: "Balanced",
@@ -32,7 +37,15 @@ function NewProject() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (p) => { toast.success("Project created"); navigate({ to: "/editor/$projectId", params: { projectId: p.id } }); },
+    onSuccess: async (p) => {
+      toast.success("Project created");
+      if (onboarding?.preferred_mode === "guided") {
+        try { await seedFn({ data: { projectId: p.id } }); } catch { /* ignore */ }
+        navigate({ to: "/first-screenplay/$projectId", params: { projectId: p.id } });
+      } else {
+        navigate({ to: "/editor/$projectId", params: { projectId: p.id } });
+      }
+    },
     onError: (e: any) => toast.error(e.message),
   });
 

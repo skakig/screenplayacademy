@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Save, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
+import { ModeSettings } from "@/components/settings/ModeSettings";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Settings — SceneSmith AI" }] }),
@@ -63,6 +64,8 @@ function Settings() {
           </div>
           <Button onClick={save} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving ? "Saving..." : "Save"}</Button>
         </Card>
+        <ModeSettings />
+
 
         <Card className="p-6 space-y-3">
           <h2 className="font-semibold">Plan</h2>

@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
@@ -14,6 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Film, Tv, Clapperboard, BookOpen, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { useOnboarding } from "@/hooks/use-onboarding";
+import { GuidedDashboard } from "@/components/dashboard/GuidedDashboard";
+import { seedGuidedSteps } from "@/lib/academy.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — SceneSmith AI" }] }),
@@ -33,6 +37,8 @@ function Dashboard() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const { data: onboarding, isLoading: onboardingLoading } = useOnboarding();
+  const seedFn = useServerFn(seedGuidedSteps);
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["projects"],
@@ -50,14 +56,30 @@ function Dashboard() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (p) => {
+    onSuccess: async (p) => {
       qc.invalidateQueries({ queryKey: ["projects"] });
       setOpen(false);
       toast.success("Project created");
-      navigate({ to: "/editor/$projectId", params: { projectId: p.id } });
+      if (onboarding?.preferred_mode === "guided") {
+        try { await seedFn({ data: { projectId: p.id } }); } catch { /* ignore */ }
+        navigate({ to: "/first-screenplay/$projectId", params: { projectId: p.id } });
+      } else {
+        navigate({ to: "/editor/$projectId", params: { projectId: p.id } });
+      }
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  // Redirect to onboarding if user has no row
+  if (!onboardingLoading && !onboarding) {
+    navigate({ to: "/onboarding", replace: true });
+    return null;
+  }
+
+  if (onboarding?.preferred_mode === "guided") {
+    return <AppShell><GuidedDashboard /></AppShell>;
+  }
+
 
   return (
     <AppShell>

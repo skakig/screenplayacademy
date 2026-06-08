@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Film, LogOut, LayoutDashboard, FolderKanban, Settings, Sparkles } from "lucide-react";
+import { Film, LogOut, LayoutDashboard, FolderKanban, Settings, Sparkles, GraduationCap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const nav = [
     { to: "/dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
     { to: "/projects" as const, label: "Projects", icon: FolderKanban },
+    { to: "/academy" as const, label: "Academy", icon: GraduationCap },
     { to: "/pricing" as const, label: "Pricing", icon: Sparkles },
     { to: "/settings" as const, label: "Settings", icon: Settings },
   ];

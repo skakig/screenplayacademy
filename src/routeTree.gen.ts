@@ -15,16 +15,21 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAcademyIndexRouteImport } from './routes/_authenticated/academy.index'
 import { Route as AuthenticatedTablereadProjectIdRouteImport } from './routes/_authenticated/tableread.$projectId'
 import { Route as AuthenticatedStoryboardProjectIdRouteImport } from './routes/_authenticated/storyboard.$projectId'
 import { Route as AuthenticatedStoryArcProjectIdRouteImport } from './routes/_authenticated/story-arc.$projectId'
 import { Route as AuthenticatedScenesProjectIdRouteImport } from './routes/_authenticated/scenes.$projectId'
 import { Route as AuthenticatedProjectsNewRouteImport } from './routes/_authenticated/projects.new'
 import { Route as AuthenticatedPitchProjectIdRouteImport } from './routes/_authenticated/pitch.$projectId'
+import { Route as AuthenticatedFirstScreenplayProjectIdRouteImport } from './routes/_authenticated/first-screenplay.$projectId'
 import { Route as AuthenticatedEditorProjectIdRouteImport } from './routes/_authenticated/editor.$projectId'
 import { Route as AuthenticatedCharactersProjectIdRouteImport } from './routes/_authenticated/characters.$projectId'
 import { Route as AuthenticatedArcTimelineProjectIdRouteImport } from './routes/_authenticated/arc-timeline.$projectId'
+import { Route as AuthenticatedAcademyModuleSlugRouteImport } from './routes/_authenticated/academy.$moduleSlug'
+import { Route as AuthenticatedAcademyModuleSlugLessonSlugRouteImport } from './routes/_authenticated/academy.$moduleSlug.$lessonSlug'
 
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
@@ -55,11 +60,22 @@ const AuthenticatedProjectsRoute = AuthenticatedProjectsRouteImport.update({
   path: '/projects',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAcademyIndexRoute =
+  AuthenticatedAcademyIndexRouteImport.update({
+    id: '/academy/',
+    path: '/academy/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedTablereadProjectIdRoute =
   AuthenticatedTablereadProjectIdRouteImport.update({
     id: '/tableread/$projectId',
@@ -96,6 +112,12 @@ const AuthenticatedPitchProjectIdRoute =
     path: '/pitch/$projectId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedFirstScreenplayProjectIdRoute =
+  AuthenticatedFirstScreenplayProjectIdRouteImport.update({
+    id: '/first-screenplay/$projectId',
+    path: '/first-screenplay/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedEditorProjectIdRoute =
   AuthenticatedEditorProjectIdRouteImport.update({
     id: '/editor/$projectId',
@@ -114,40 +136,62 @@ const AuthenticatedArcTimelineProjectIdRoute =
     path: '/arc-timeline/$projectId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAcademyModuleSlugRoute =
+  AuthenticatedAcademyModuleSlugRouteImport.update({
+    id: '/academy/$moduleSlug',
+    path: '/academy/$moduleSlug',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAcademyModuleSlugLessonSlugRoute =
+  AuthenticatedAcademyModuleSlugLessonSlugRouteImport.update({
+    id: '/$lessonSlug',
+    path: '/$lessonSlug',
+    getParentRoute: () => AuthenticatedAcademyModuleSlugRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/pricing': typeof PricingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
+  '/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
+  '/first-screenplay/$projectId': typeof AuthenticatedFirstScreenplayProjectIdRoute
   '/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
   '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
   '/story-arc/$projectId': typeof AuthenticatedStoryArcProjectIdRoute
   '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
   '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
+  '/academy/': typeof AuthenticatedAcademyIndexRoute
+  '/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/pricing': typeof PricingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
+  '/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
+  '/first-screenplay/$projectId': typeof AuthenticatedFirstScreenplayProjectIdRoute
   '/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
   '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
   '/story-arc/$projectId': typeof AuthenticatedStoryArcProjectIdRoute
   '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
   '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
+  '/academy': typeof AuthenticatedAcademyIndexRoute
+  '/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -156,17 +200,22 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/pricing': typeof PricingRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   '/_authenticated/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/_authenticated/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/_authenticated/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
+  '/_authenticated/first-screenplay/$projectId': typeof AuthenticatedFirstScreenplayProjectIdRoute
   '/_authenticated/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
   '/_authenticated/projects/new': typeof AuthenticatedProjectsNewRoute
   '/_authenticated/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
   '/_authenticated/story-arc/$projectId': typeof AuthenticatedStoryArcProjectIdRoute
   '/_authenticated/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
   '/_authenticated/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
+  '/_authenticated/academy/': typeof AuthenticatedAcademyIndexRoute
+  '/_authenticated/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -175,34 +224,44 @@ export interface FileRouteTypes {
     | '/auth'
     | '/pricing'
     | '/dashboard'
+    | '/onboarding'
     | '/projects'
     | '/settings'
+    | '/academy/$moduleSlug'
     | '/arc-timeline/$projectId'
     | '/characters/$projectId'
     | '/editor/$projectId'
+    | '/first-screenplay/$projectId'
     | '/pitch/$projectId'
     | '/projects/new'
     | '/scenes/$projectId'
     | '/story-arc/$projectId'
     | '/storyboard/$projectId'
     | '/tableread/$projectId'
+    | '/academy/'
+    | '/academy/$moduleSlug/$lessonSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/pricing'
     | '/dashboard'
+    | '/onboarding'
     | '/projects'
     | '/settings'
+    | '/academy/$moduleSlug'
     | '/arc-timeline/$projectId'
     | '/characters/$projectId'
     | '/editor/$projectId'
+    | '/first-screenplay/$projectId'
     | '/pitch/$projectId'
     | '/projects/new'
     | '/scenes/$projectId'
     | '/story-arc/$projectId'
     | '/storyboard/$projectId'
     | '/tableread/$projectId'
+    | '/academy'
+    | '/academy/$moduleSlug/$lessonSlug'
   id:
     | '__root__'
     | '/'
@@ -210,17 +269,22 @@ export interface FileRouteTypes {
     | '/auth'
     | '/pricing'
     | '/_authenticated/dashboard'
+    | '/_authenticated/onboarding'
     | '/_authenticated/projects'
     | '/_authenticated/settings'
+    | '/_authenticated/academy/$moduleSlug'
     | '/_authenticated/arc-timeline/$projectId'
     | '/_authenticated/characters/$projectId'
     | '/_authenticated/editor/$projectId'
+    | '/_authenticated/first-screenplay/$projectId'
     | '/_authenticated/pitch/$projectId'
     | '/_authenticated/projects/new'
     | '/_authenticated/scenes/$projectId'
     | '/_authenticated/story-arc/$projectId'
     | '/_authenticated/storyboard/$projectId'
     | '/_authenticated/tableread/$projectId'
+    | '/_authenticated/academy/'
+    | '/_authenticated/academy/$moduleSlug/$lessonSlug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -274,11 +338,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/academy/': {
+      id: '/_authenticated/academy/'
+      path: '/academy'
+      fullPath: '/academy/'
+      preLoaderRoute: typeof AuthenticatedAcademyIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/tableread/$projectId': {
@@ -323,6 +401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPitchProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/first-screenplay/$projectId': {
+      id: '/_authenticated/first-screenplay/$projectId'
+      path: '/first-screenplay/$projectId'
+      fullPath: '/first-screenplay/$projectId'
+      preLoaderRoute: typeof AuthenticatedFirstScreenplayProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/editor/$projectId': {
       id: '/_authenticated/editor/$projectId'
       path: '/editor/$projectId'
@@ -344,6 +429,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedArcTimelineProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/academy/$moduleSlug': {
+      id: '/_authenticated/academy/$moduleSlug'
+      path: '/academy/$moduleSlug'
+      fullPath: '/academy/$moduleSlug'
+      preLoaderRoute: typeof AuthenticatedAcademyModuleSlugRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/academy/$moduleSlug/$lessonSlug': {
+      id: '/_authenticated/academy/$moduleSlug/$lessonSlug'
+      path: '/$lessonSlug'
+      fullPath: '/academy/$moduleSlug/$lessonSlug'
+      preLoaderRoute: typeof AuthenticatedAcademyModuleSlugLessonSlugRouteImport
+      parentRoute: typeof AuthenticatedAcademyModuleSlugRoute
+    }
   }
 }
 
@@ -360,33 +459,58 @@ const AuthenticatedProjectsRouteWithChildren =
     AuthenticatedProjectsRouteChildren,
   )
 
+interface AuthenticatedAcademyModuleSlugRouteChildren {
+  AuthenticatedAcademyModuleSlugLessonSlugRoute: typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
+}
+
+const AuthenticatedAcademyModuleSlugRouteChildren: AuthenticatedAcademyModuleSlugRouteChildren =
+  {
+    AuthenticatedAcademyModuleSlugLessonSlugRoute:
+      AuthenticatedAcademyModuleSlugLessonSlugRoute,
+  }
+
+const AuthenticatedAcademyModuleSlugRouteWithChildren =
+  AuthenticatedAcademyModuleSlugRoute._addFileChildren(
+    AuthenticatedAcademyModuleSlugRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRouteWithChildren
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedAcademyModuleSlugRoute: typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   AuthenticatedArcTimelineProjectIdRoute: typeof AuthenticatedArcTimelineProjectIdRoute
   AuthenticatedCharactersProjectIdRoute: typeof AuthenticatedCharactersProjectIdRoute
   AuthenticatedEditorProjectIdRoute: typeof AuthenticatedEditorProjectIdRoute
+  AuthenticatedFirstScreenplayProjectIdRoute: typeof AuthenticatedFirstScreenplayProjectIdRoute
   AuthenticatedPitchProjectIdRoute: typeof AuthenticatedPitchProjectIdRoute
   AuthenticatedScenesProjectIdRoute: typeof AuthenticatedScenesProjectIdRoute
   AuthenticatedStoryArcProjectIdRoute: typeof AuthenticatedStoryArcProjectIdRoute
   AuthenticatedStoryboardProjectIdRoute: typeof AuthenticatedStoryboardProjectIdRoute
   AuthenticatedTablereadProjectIdRoute: typeof AuthenticatedTablereadProjectIdRoute
+  AuthenticatedAcademyIndexRoute: typeof AuthenticatedAcademyIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRouteWithChildren,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedAcademyModuleSlugRoute:
+    AuthenticatedAcademyModuleSlugRouteWithChildren,
   AuthenticatedArcTimelineProjectIdRoute:
     AuthenticatedArcTimelineProjectIdRoute,
   AuthenticatedCharactersProjectIdRoute: AuthenticatedCharactersProjectIdRoute,
   AuthenticatedEditorProjectIdRoute: AuthenticatedEditorProjectIdRoute,
+  AuthenticatedFirstScreenplayProjectIdRoute:
+    AuthenticatedFirstScreenplayProjectIdRoute,
   AuthenticatedPitchProjectIdRoute: AuthenticatedPitchProjectIdRoute,
   AuthenticatedScenesProjectIdRoute: AuthenticatedScenesProjectIdRoute,
   AuthenticatedStoryArcProjectIdRoute: AuthenticatedStoryArcProjectIdRoute,
   AuthenticatedStoryboardProjectIdRoute: AuthenticatedStoryboardProjectIdRoute,
   AuthenticatedTablereadProjectIdRoute: AuthenticatedTablereadProjectIdRoute,
+  AuthenticatedAcademyIndexRoute: AuthenticatedAcademyIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
