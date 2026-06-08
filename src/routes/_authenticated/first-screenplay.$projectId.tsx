@@ -26,7 +26,9 @@ function FirstScreenplayPage() {
   const { projectId } = Route.useParams();
   const qc = useQueryClient();
   const updateFn = useServerFn(updateGuidedStep);
+  const seedFn = useServerFn(seedGuidedSteps);
   const autoCompletedRef = useRef<Set<string>>(new Set());
+  const seedAttemptedRef = useRef(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["first-screenplay", projectId],
