@@ -867,14 +867,20 @@ function BlockEditor({
     } else {
       if (e.key === "Tab") {
         e.preventDefault();
-        const idx = BLOCK_TYPES.findIndex((t) => t.value === block.block_type);
-        const next = BLOCK_TYPES[(idx + 1) % BLOCK_TYPES.length];
-        void onSave({ block_type: next.value });
+        const next = cycleType(block.block_type, e.shiftKey ? -1 : 1);
+        void onSave({ block_type: next });
+        toast.success(`→ ${BLOCK_LABEL[next] ?? next}`, { duration: 1000 });
         return;
       }
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        onInsertAfter("action");
+        // Flush current value before computing next line
+        if (val !== (block.content ?? "")) {
+          if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+          void onSave({ content: val });
+        }
+        const nextType = nextBlockTypeAfter(block.block_type, prevBlockType);
+        onInsertAfter(nextType);
         return;
       }
     }
@@ -887,12 +893,25 @@ function BlockEditor({
     }
   };
 
+  const autoFormattedRef = useRef(false);
+
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newVal = e.target.value;
     setVal(newVal);
     dirtyRef.current = true;
     onDirty(newVal);
     scheduleSave(newVal);
+
+    // Auto-format: only fire once per block, and only when content is short
+    // enough that the writer is clearly still typing the first line.
+    if (!autoFormattedRef.current && newVal.length <= 40) {
+      const detected = detectBlockType(newVal);
+      if (detected && detected !== block.block_type) {
+        autoFormattedRef.current = true;
+        void onSave({ block_type: detected });
+        toast.success(`Auto-formatted as ${BLOCK_LABEL[detected]}`, { duration: 1400 });
+      }
+    }
 
     if (slashOpen) {
       // If the slash was removed (backspace, etc.), close menu
