@@ -1,219 +1,99 @@
 
-# Screenplay Editor Rescue — Local-First Plan
+# Pass 2 — Supabase Persistence Adapter
 
-The screenplay page is sacred. Everything else is secondary. This plan implements the editor in four small, verifiable passes. Each pass has a hard stop; we do not advance until its acceptance check passes.
+Goal: implement `SupabasePersistenceAdapter` behind the existing `PersistenceAdapter` interface (from Pass 1) so the editor can persist to `script_blocks` without ever sitting on the typing path. Local typing remains synchronous; Supabase becomes a background target.
 
----
+Scope (per `docs/LOVABLE_PASS_SEQUENCE.md` Pass 2):
+- Background persistence only. Typing path unchanged.
+- Add localStorage draft recovery.
+- Patch the React Query cache in place — never `invalidateQueries(['blocks', projectId])` during typing.
+- Do NOT change `useScreenplayDocument` mutator semantics, `ScreenplayLine`, `ScreenplayDocumentEditor`, or production route behavior.
 
-## 1. Current editor diagnosis
+## 1. Files created
 
-Files inspected:
-- `src/components/editor/useScreenplayDocument.ts`
-- `src/components/editor/ScreenplayDocumentEditor.tsx`
-- `src/components/editor/ScreenplayLine.tsx`
-- `src/routes/_authenticated/editor.$projectId.tsx`
-- `src/lib/editor/nextBlockType.ts`, `autoFormat.ts`
-- `docs/SCREENPLAY_EDITOR_CONTRACT.md`, `EDITOR_LAB_SPEC.md`, `EDITOR_ACCEPTANCE_TESTS.md`, `LOVABLE_PASS_SEQUENCE.md`
+### `src/components/editor/persistence/SupabasePersistenceAdapter.ts`
+Factory `createSupabasePersistenceAdapter({ projectId, queryClient, onSaveStatus?, onLastSaved? }): PersistenceAdapter`.
 
-What's actually working:
-- `useScreenplayDocument` already uses stable `local-…` IDs as React keys; `serverId` is stored separately. Server-echo guard exists (skip merge when active/dirty/saving).
-- `ScreenplayLine` is a single `<textarea>` with autosize, Tab cycling, Enter transitions, slash menu, and auto-format detection.
+Owns:
+- **Insert queue**: per-`localId` single-flight. Reads the *latest* snapshot from a `getSnapshot` callback at flush time (so content typed during the round-trip is included via a follow-up update once `serverId` arrives).
+- **Update queue**: per-`localId` debounced (600ms). If `serverId` is missing at flush time, defer (re-schedule 400ms) until insert completes.
+- **Delete queue**: fire-and-forget per `serverId`; cancels any pending insert/update timers for that `localId`.
+- **In-flight tracking**: `savingIds: Set<localId>` so a second write coalesces instead of racing.
+- **Retry with backoff**: 3 attempts (300ms, 900ms, 2700ms). On final failure, status flips to `error` and the block is marked stuck until the next user edit re-queues it.
+- **Cache patch**: after each successful insert/update/delete, `queryClient.setQueryData(['blocks', projectId], …)` to keep side panes consistent. Never `invalidateQueries`.
+- **Aggregate save status**: `pendingCount` drives `onSaveStatus('dirty'|'saving'|'saved'|'error')` and `onLastSaved(Date.now())` callbacks.
 
-What is still broken / fragile:
-1. **Supabase is still on the typing path.** `useScreenplayDocument` imports `supabase` directly and calls `runInsert`/`runUpdate` from inside the same hook that owns local state. Any Supabase hiccup mutates the same hook that owns focus/active state, so a failure ripples into the writing surface. Persistence is not isolated behind an adapter, and there is no localStorage draft fallback — the contract requires both.
-2. **Server-echo merge runs on every `initialBlocks` reference change.** Because the route passes the React Query array directly, any cache invalidation (template insert, `invalidateQueries(['blocks', projectId])`, AI continue) triggers the merge effect mid-typing. The guard protects the active block, but it still rewrites neighbors and can race with in-flight inserts (duplicate rows when the new local block hasn't received its `serverId` yet before the next refetch lands).
-3. **Route still owns block-mutation paths.** `editor.$projectId.tsx` runs `insertTemplate` (bulk Supabase insert) + `qc.invalidateQueries(['blocks', projectId])` for AI Continue, opening template, Story Builder — exactly the "invalidate during typing" pattern the contract forbids. It also reads `blocks` (server cache) for outline, page count, AI context, and current-page math, mixing server truth with local truth.
-4. **Click-below-last-line path is in the editor component, but it inserts via `insertBlockAfter` which calls `queueInsert` immediately.** Good for local focus, but ties the click path to network optimism. Acceptable for Pass 3, must be local-only in Pass 1.
-5. **Toolbar focus risk.** The per-line floating toolbar (`QUICK_TYPES` buttons) uses `onMouseDown preventDefault`, which is correct, but the global `Cmd+1–7` handler lives on the route and is wired to `editorRef`, meaning route remounts (StudioMode toggle, drawer toggles) re-bind listeners and can drop keystrokes during the React commit.
-6. **Tab key swallowed globally only inside `ScreenplayLine`.** Outside the textarea (e.g. the moment after Enter creates a new block before the new textarea is focused via `useEffect`), Tab can escape to the browser. Symptom: occasional focus jump to toolbar/sidebar.
-7. **No `screenplayKeymap.ts` and no `screenplayPersistence.ts` modules** as the contract names them. Keymap logic is inlined in `ScreenplayLine.handleKeyDown`; persistence is inlined in the hook. Splitting these is a prerequisite for swapping in a mock adapter for `/editor-lab`.
-8. **No `/editor-lab` route exists.** All testing happens in the production route, where AI/Coach/Builder/Guided side-effects make it impossible to attribute regressions to the editor itself.
-9. **Auto-format `onChangeType` during typing** schedules an update at 200ms. If the user is still typing the first word, the resulting `setLocalBlocks` re-render is harmless for focus but does fire a save mid-keystroke. Not a bug, but a credit/network cost we can defer.
-10. **Ghost line / temp-ID juggling is mostly gone**, but the route still passes `onOpenStoryBuilder`/`onDraftWithAi`/`onInsertTemplate` handlers that render helper buttons on top of the seed block. These compete for the writer's attention on first load and partially recreate the "click before typing" anti-pattern. Pass 3 will hide these by default.
+Adapter API (matches Pass 1 interface):
+- `queueInsert(row, onServerId)` — needs a way to read the latest local content at flush time. To avoid changing the existing `PersistenceAdapter` interface signature, the adapter stores `row` snapshot and refreshes from the next `scheduleUpdate` call. Sufficient because every content edit also calls `scheduleUpdate`.
+- `scheduleUpdate(localId, getSnapshot, delay?)`
+- `queueDelete(serverId)`
+- `cancelPending(localId)`
 
----
+### `src/components/editor/persistence/LocalDraftStore.ts`
+Tiny localStorage wrapper, **opt-in only** (we'll only enable in the lab in this pass; production hydration already comes from server). Keyed `scenesmith.draft.<projectId>`:
+- `read(projectId): LocalBlock[] | null`
+- `write(projectId, blocks): void` (throttled 1s)
+- `clear(projectId): void`
 
-## 2. Target architecture
+Used in Pass 2 only by `/editor-lab` toggle to prove draft recovery works. Production hydration is unchanged — Pass 3 will wire it into `/editor/:projectId` if needed.
 
-```text
-src/components/editor/
-  useScreenplayDocument.ts     local state + mutators only, no Supabase
-  ScreenplayDocumentEditor.tsx renders lines, owns click-below-last-line
-  ScreenplayLine.tsx           single textarea, autosize, smart format
-  screenplayKeymap.ts          pure functions: Enter/Tab/Shift+Tab/Backspace
-  screenplayPersistence.ts     adapter: insert/update/delete queue, draft I/O
-src/routes/editor-lab.tsx      local-only proving ground (Pass 1)
-src/routes/_authenticated/editor.$projectId.tsx
-                               composes layout + side panes only (Pass 3)
-```
+## 2. Files edited
 
-Ownership:
+### `src/routes/editor-lab.tsx`
+Add a small header toolbar:
+- Toggle: **Null adapter** (default) ↔ **Supabase adapter** (uses a stable `projectId = "editor-lab-scratch"` — note: editor-lab is a public route, so a real Supabase write would 401 under RLS).
+- Because `/editor-lab` is unauthenticated, the Supabase toggle is **gated behind a sign-in check** using `supabase.auth.getSession()`. If no session, render a "Sign in at /auth to test Supabase persistence" hint and keep the toggle disabled. This keeps the lab honest without forcing auth.
+- Pass `queryClient` from `useQueryClient()` into the adapter factory.
+- Show a tiny save-status pill driven by `onSaveStatus`.
 
-| File | Owns | Must not own |
-|---|---|---|
-| `useScreenplayDocument` | `localBlocks`, `activeBlockId`, `dirtyIds`, mutators, hydration from initial snapshot, server-echo merge | Supabase, fetch, React Query, focus DOM calls |
-| `ScreenplayDocumentEditor` | rendering, click-below-last-line, `editorRef` imperative API | block transitions, persistence, route data |
-| `ScreenplayLine` | textarea, autosize, smart-format detect, slash UI | block transition logic (delegates to keymap) |
-| `screenplayKeymap` | pure `nextBlockTypeAfter`, `cycleType`, `keymapForLine` | React, DOM |
-| `screenplayPersistence` | insert/update/delete queues, debounce, retry, localStorage draft, optional Supabase adapter (Pass 2) | UI, focus, React state |
-| `/editor-lab` | renders engine with a mock adapter (or none) | network, auth, side panes |
-| `/editor/:projectId` | data fetch, layout, side panes, AI, Coach, Builder | typing, Enter/Tab, block CRUD |
+### `src/components/editor/useScreenplayDocument.ts`
+No behavioral changes; just keep the hook adapter-agnostic. The existing branch that uses the built-in Supabase path remains for the production editor in Pass 2 (Pass 3 will switch production to the new adapter).
 
----
+## 3. Files explicitly NOT touched
 
-## 3. Pass 1 plan — local-only `/editor-lab`
+- `src/routes/_authenticated/editor.$projectId.tsx` — production wiring waits for Pass 3.
+- `ScreenplayDocumentEditor.tsx`, `ScreenplayLine.tsx`, `screenplayKeymap.ts` — already correct.
+- Any side pane, AI, Coach, Builder, or Academy file.
 
-Goal: prove the writing engine works with zero network.
+## 4. Local ID vs server ID contract
 
-Files created:
-- `src/routes/editor-lab.tsx` — new public route, minimal header, centered paper, mounts the editor with a local-only adapter.
-- `src/components/editor/screenplayKeymap.ts` — extract pure functions (`nextBlockTypeAfter`, `cycleType`, `enterTransition`, `tabCycle`) currently scattered in `nextBlockType.ts` + `ScreenplayLine`.
-- `src/components/editor/screenplayPersistence.ts` — Pass 1 ships a `NullPersistenceAdapter` (no-op insert/update/delete). Interface is defined here so Pass 2 swaps in `SupabasePersistenceAdapter` without touching the hook.
+- React keys never change. `localId` stays for the lifetime of the block.
+- Adapter receives `localId` only. On insert success it returns `serverId` via `onServerId` callback; hook patches the block in place.
+- Updates require `serverId`. If a content edit fires before insert resolves, `scheduleUpdate` defers until insert completes (re-schedule 400ms).
 
-Files edited:
-- `src/components/editor/useScreenplayDocument.ts` — remove direct `supabase` import; accept a `persistence` adapter via props. Keep all local-state logic. Strip the React Query `patchCache` calls into the adapter.
-- `src/components/editor/ScreenplayDocumentEditor.tsx` — make `initialBlocks`, `characters`, helper-button props optional so the lab can render with `[]` and `null`.
-- `src/components/editor/ScreenplayLine.tsx` — route Enter/Tab through `screenplayKeymap` (no behavior change, just relocation).
+## 5. Server echo guard reaffirmed
 
-Acceptance for Pass 1 (run in `/editor-lab` only):
-1. Route opens → one focused `scene_heading` line, caret visible, no buttons clicked.
-2. Type `int african desert day` → first character `i` appears, auto-formats to `INT. AFRICAN DESERT - DAY`.
-3. Enter → new Action block, focused.
-4. Tab cycles forward; Shift+Tab cycles backward; focus stays.
-5. Character → Enter → Dialogue → Enter → Character pattern works.
-6. Click below last line → new editable block.
-7. Slash menu opens, selecting a command preserves focus and typed text.
-8. 30 seconds sustained typing: no remount, no caret jump, no duplicate, no delete.
+The hook's existing merge effect already skips blocks that are `active | dirty | saving | error`. Adapter never invalidates the query — it only patches via `setQueryData`. Therefore the merge effect won't fire from adapter activity; it only fires when external code (e.g. AI template insert in Pass 3) invalidates the query. Pass 3 will replace those invalidations with `editorRef.insertBlocksAtEnd`.
 
-Stop condition: every item above passes manually before Pass 2 begins.
+## 6. Acceptance test plan
 
----
+In `/editor-lab` with the **Supabase adapter** toggled on (signed in):
 
-## 4. Pass 2 plan — background persistence
+1. Re-run the full Pass 1 manual script. No regression: first character, Enter, Tab, Character↔Dialogue, click-below-last-line, slash menu, 30s sustained typing.
+2. Type a few blocks, wait 1s, refresh — content restored from `script_blocks`.
+3. DevTools → Offline. Type 5 more blocks. Save indicator flips to `error`. Typing remains synchronous.
+4. DevTools → Online. Queue drains, indicator returns to `saved`. Query `script_blocks` directly: no duplicate rows, `order_index` correct.
+5. Delete a saved block via Backspace-on-empty: row removed from DB after delete settles.
+6. Toggle adapter to **Null**: refresh shows blocks gone (no draft); typing still works locally.
 
-Goal: add Supabase + draft recovery without changing typing.
+If any test fails, Pass 2 is not done.
 
-Files created:
-- `src/components/editor/persistence/SupabasePersistenceAdapter.ts` — implements the adapter interface using `supabase.from('script_blocks')`. Owns insert/update/delete queues, debounce (500–800ms), retry-with-backoff (cap 3, then mark `error`), in-flight tracking, and React Query cache patching (`qc.setQueryData(['blocks', projectId], …)` — never `invalidateQueries`).
-- `src/components/editor/persistence/LocalDraftStore.ts` — `localStorage` snapshot keyed by `projectId`. Writes on every dirty mutation (throttled 1s). Reads on hydration when server returns empty or unreachable.
-
-Files edited:
-- `src/components/editor/useScreenplayDocument.ts` — call `persistence.queueInsert/update/delete` instead of running mutations inline. Hydration: prefer server data; if server unreachable, fall back to local draft.
-- `src/routes/editor-lab.tsx` — add a toggle to swap `NullPersistenceAdapter` for `SupabasePersistenceAdapter` against a scratch project, so we can prove persistence without touching the production editor.
-
-Local-ID vs server-ID contract:
-- React keys always use `localId`. The adapter receives `localId` and returns `{ serverId }` via callback. The hook patches the matching block in place — never replaces the key.
-
-Queues:
-- **Insert queue**: FIFO, one in-flight per block. If content changes during insert, schedule a follow-up update once `serverId` arrives.
-- **Update queue**: debounced per-block (600ms). If a block's `serverId` is missing when update fires, defer until insert resolves.
-- **Delete queue**: fire-and-forget if `serverId` exists; clear pending timers for that block.
-
-Server-echo guard (already present): on any cache patch / refetch, merge a row into local state only if the local block is not active, not dirty, not saving, not in error. Otherwise keep `order_index` only.
-
-Why never `invalidateQueries(['blocks', projectId])` during typing: invalidation triggers a refetch, which replaces the array reference in props, which re-runs the merge effect, which can drop in-flight inserts as "stale server rows" while the user is still typing.
-
-Stop condition: editor-lab still passes Pass 1 tests with the Supabase adapter on; refresh restores content; network-off (devtools) does not stop typing; reconnect drains the queue without duplicates.
-
----
-
-## 5. Pass 3 plan — production integration
-
-Goal: drop the proven engine into `/editor/:projectId` without disturbing side panes.
-
-Files edited:
-- `src/routes/_authenticated/editor.$projectId.tsx`:
-  - Keep: `useQuery(['project'])`, `useQuery(['blocks'])`, `useQuery(['characters'])`, AppShell, ProjectNav, GuidedRail, CoachPane, StoryNavigatorPane, StoryBuilder, FeatureDock, CanvasToolbar, AutosaveIndicator, EditorTour, StudioModeToggle.
-  - Pass server `blocks` as `initialBlocks` (hydration only; the hook's merge logic already handles subsequent updates).
-  - Remove: route-owned `insertTemplate` mutation path that bulk-inserts via raw Supabase + `invalidateQueries`. Replace with `editorRef.current?.insertBlocksAtEnd(parsedBlocks)` so template/AI Continue go through the local-first engine and persistence adapter.
-  - Remove: global `Cmd+1–7` handler from route; move into `ScreenplayDocumentEditor` so it doesn't rebind on route renders.
-  - Hide helper buttons (`onOpenStoryBuilder`/`onDraftWithAi`/`onInsertTemplate`) behind a "Need a starting point?" link instead of rendering them under the seed line.
-- `src/components/editor/ScreenplayDocumentEditor.tsx`:
-  - Add imperative `insertBlocksAtEnd(blocks)` and own `Cmd+1–7`.
-  - Wire `onBlockCreated` → emits `block_created` / `scene_created` writer events (already happens; keep).
-
-Side panes (CoachPane, StoryNavigator, StoryBuilder, FeatureDock, CanvasToolbar):
-- Continue to read from React Query (`['blocks', projectId]`). Persistence adapter patches that cache on success, so panes update without invalidation.
-- Story Builder's "insert beats" path calls `editorRef.insertBlocksAtEnd` instead of raw Supabase insert.
-- Copy / download utilities read from `editorRef.getBlocksSnapshot()` (new imperative method) or from the React Query cache — both reflect the same content.
-
-What is intentionally NOT changed in Pass 3:
-- Visual design.
-- CoachPane behavior, StoryPulse, Academy, Storyboard, Table Read, Pitch, Pricing.
-- Auth flow.
-
-Stop condition: every acceptance test from `/editor-lab` passes in `/editor/:projectId` with side panes mounted.
-
----
-
-## 6. Pass 4 plan — cleanup
-
-Files edited / lines removed:
-- `src/routes/_authenticated/editor.$projectId.tsx`:
-  - Delete `insertTemplate` raw mutation, `pendingTempContent`-style state, route-level Enter/Tab handling, `invalidateQueries(['blocks', projectId])` calls during writing.
-  - Delete global Cmd+1–7 keymap (moved to editor component in Pass 3).
-- Remove any remaining ghost `div role="button"` writing line if found in legacy files (`EmptyEditorTeacher.tsx`, older editor scaffolding — to be audited).
-- Consolidate duplicated block type constants between `ScreenplayLine.BLOCK_TYPES`, `nextBlockType.ts`, and `autoFormat.BLOCK_LABEL` into a single `src/lib/editor/blockTypes.ts`.
-- Delete `runDelete` references in the hook that bypass the adapter.
-
-Stop condition: route is slimmer, no editor logic outside `src/components/editor/`, acceptance tests still pass.
-
----
-
-## 7. Acceptance test plan
-
-Run from `docs/EDITOR_ACCEPTANCE_TESTS.md`. Manual script, executed first in `/editor-lab`, then `/editor/:projectId`:
-
-```text
-int african desert day  → Enter
-The sun burns across an endless sea of sand.  → Enter
-A lone soldier stumbles over a dune.  → Tab until Character
-STEPHAN  → Enter
-Just a few more clicks.  → Enter
-COMMANDER  → Enter
-You are lost, soldier.
-[continue typing for 30s]
-```
-
-Verify:
-- First character never lost.
-- No blur, no caret jump, no duplicate or accidental delete.
-- Block transitions correct per the contract table.
-- Pass 2+: refresh preserves content; throttle to offline keeps typing alive; reconnect drains queue with zero duplicates.
-
-I'll execute manually each pass and report results before moving forward.
-
----
-
-## 8. Risk analysis
+## 7. Risk analysis (incremental)
 
 | Risk | Mitigation |
 |---|---|
-| React remount of active line | Stable `localId` React key, never substituted. Verified in `useScreenplayDocument` already. |
-| Textarea focus loss on rerender | Focus is owned by `ScreenplayLine` `useEffect([isActive])`, not by parent re-renders. Avoid changing `key` or unmounting. |
-| Slash menu steals focus | Menu uses `onMouseDown preventDefault` on items; verified pattern. Add `tabIndex={-1}` on menu container. |
-| Toolbar steals focus | Quick-type buttons already `onMouseDown preventDefault`. Add same to any new toolbar element. |
-| Server echo overwrites local text | Guard: skip merge when block is active/dirty/saving/error. Already in hook; covered by tests in Pass 2. |
-| Duplicate server rows | Single in-flight insert per `localId` (savingIds set). Updates wait for `serverId` before firing. No invalidation during typing. |
-| `order_index` conflicts | Use fractional midpoints (`(a+b)/2`) for inserts between blocks; periodic background re-normalization (Pass 4 if needed, not Pass 2). |
-| Stale React Query cache | Persistence adapter patches cache in place (`setQueryData`); never `invalidateQueries` during typing. |
-| localStorage draft conflicts | Drafts keyed by `projectId`; clear on successful full hydration. On conflict, prefer the version with later `mtime`. |
-| Route-level side effects (StudioMode toggle, drawer opens) re-bind keyboard handlers and drop keystrokes | Move global shortcuts into the editor component (Pass 3), keep route side panes pure render. |
-| `Tab` escaping the textarea | `ScreenplayLine` already `preventDefault`s Tab; ensure new lines get `autoFocus` synchronously via `useEffect`. |
+| Duplicate inserts on rapid Enter | `savingIds` set; `queueInsert` no-ops if `serverId` already set or insert in flight. |
+| Update fires before insert completes | `scheduleUpdate` checks `serverId`; defers with re-schedule until insert resolves. |
+| Race between offline retry and user editing | `getSnapshot` is called at every flush, so retries always send latest content. |
+| Cache patch overwriting newer local edit | `setQueryData` patches the row by `serverId`, but the hook's merge guard still skips active/dirty blocks, so cache patches can't clobber the textarea. |
+| `editor-lab` writing to wrong project's `script_blocks` | Use a sentinel `projectId = "editor-lab-scratch"` and warn in the UI; require sign-in for the Supabase toggle. |
+| Build-time import of `client.server` | Adapter uses only the browser `supabase` client (`@/integrations/supabase/client`). No service-role import. |
 
----
+## 8. Stop condition
 
-## 9. Stop conditions
+Pass 2 is done — and we do NOT begin Pass 3 — until:
+- Acceptance tests above pass.
+- No duplicate rows after a 30s typing session.
+- Offline typing remains synchronous; reconnect drains without loss.
 
-- **Pass 1 → Pass 2**: do not proceed until every `/editor-lab` acceptance test passes manually with the null adapter.
-- **Pass 2 → Pass 3**: do not proceed until `/editor-lab` (with Supabase adapter) passes refresh-recovery and offline-tolerance tests AND no duplicate rows appear in `script_blocks` after a 30s typing session.
-- **Pass 3 → Pass 4**: do not proceed until `/editor/:projectId` passes the full acceptance script identical to `/editor-lab`.
-- **Pass 4 done**: route is slimmer, no editor logic outside `src/components/editor/`, all tests still pass.
-
-Hard rule: no new product features (StoryPulse, storyboard, table read, Academy polish, AI tools, pitch, pricing) until Pass 4 closes.
-
----
-
-## Approval checkpoint
-
-Approve this plan and I'll execute Pass 1 only: create `screenplayKeymap.ts`, `screenplayPersistence.ts` (null adapter), `/editor-lab` route, and refactor `useScreenplayDocument.ts` to take a persistence adapter. I'll stop there and ask you to run the acceptance test before touching anything else.
+On approval I will implement only the files listed in §1 and §2.
