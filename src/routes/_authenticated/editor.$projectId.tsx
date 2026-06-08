@@ -510,6 +510,20 @@ function Editor() {
     await addBlock.mutateAsync({ block_type: "scene_heading" });
   }, [addBlock]);
 
+  // Auto-seed the very first scene heading so a brand-new project opens with
+  // a focused, editable line — no clicks, no ghost, instant typing.
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current) return;
+    if (blocksLoading) return;
+    if (blocks.length > 0) { seededRef.current = true; return; }
+    if (isLoglineStep) return;
+    if (addBlock.isPending) return;
+    seededRef.current = true;
+    addBlock.mutate({ block_type: "scene_heading" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocksLoading, blocks.length, isLoglineStep]);
+
   const tour = useEditorTour();
   const [storyBuilderOpen, setStoryBuilderOpen] = useState(false);
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
