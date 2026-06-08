@@ -942,17 +942,25 @@ function BlockEditor({
   const beat = (block.metadata as any)?.beat ?? null;
 
   return (
-    <div className={`group relative blk-${block.block_type}`}>
+    <div
+      className={`group relative blk-${block.block_type} border-l-2 pl-3 -ml-3 transition-colors ${
+        isFocused ? "border-primary bg-primary/[0.04]" : "border-transparent hover:border-border"
+      }`}
+    >
       <textarea
         ref={ref}
         value={val}
         onChange={handleChange}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => { flush(); setTimeout(() => setIsFocused(false), 150); }}
+        onFocus={() => { setIsFocused(true); onActiveChange?.(block.id, true); }}
+        onBlur={() => {
+          flush();
+          onActiveChange?.(block.id, false);
+          setTimeout(() => setIsFocused(false), 150);
+        }}
         onKeyDown={handleKeyDown}
         placeholder={placeholder[block.block_type]}
         rows={1}
-        className="w-full bg-transparent border-none outline-none resize-none focus:bg-primary/5 rounded px-1 -mx-1 placeholder:text-muted-foreground/40"
+        className="w-full bg-transparent border-none outline-none resize-none rounded px-1 -mx-1 placeholder:text-muted-foreground/60 caret-primary"
         style={{ fontFamily: "inherit", fontSize: "inherit", color: "inherit", textAlign: "inherit", textTransform: "inherit", fontWeight: "inherit", fontStyle: "inherit" } as any}
       />
 
