@@ -34,6 +34,7 @@ const QUICK_TYPES = ["scene_heading", "action", "character", "dialogue", "parent
 export function ScreenplayLine({
   block,
   isActive,
+  isFirstEmpty,
   characters,
   onContentChange,
   onChangeType,
@@ -46,6 +47,7 @@ export function ScreenplayLine({
 }: {
   block: LocalBlock;
   isActive: boolean;
+  isFirstEmpty?: boolean;
   characters: CharacterHit[];
   onContentChange: (c: string) => void;
   onChangeType: (t: string) => void;
