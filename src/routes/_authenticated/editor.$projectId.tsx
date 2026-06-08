@@ -468,6 +468,7 @@ function Editor() {
   const [storyBuilderOpen, setStoryBuilderOpen] = useState(false);
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
+  const writeMode = useWriteMode();
 
   // Default right pane tab follows the user's preferred mode (Guided → Builder, Studio → Coach).
   const { data: onboarding } = useOnboarding();
