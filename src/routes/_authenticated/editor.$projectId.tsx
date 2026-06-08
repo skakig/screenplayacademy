@@ -35,6 +35,11 @@ import { useEditorTour } from "@/hooks/useEditorTour";
 import { EditorCommandBar } from "@/components/editor/EditorCommandBar";
 import { nextBlockTypeAfter, cycleType } from "@/lib/editor/nextBlockType";
 import { detectBlockType, BLOCK_LABEL } from "@/lib/editor/autoFormat";
+import { ManuscriptIndex } from "@/components/editor/ManuscriptIndex";
+import { StoryBuilder } from "@/components/editor/StoryBuilder";
+import { useManuscriptAnalyzer } from "@/hooks/useManuscriptAnalyzer";
+import { buildOutline, estimatePages } from "@/lib/editor/manuscriptAnalyzer";
+import { FileText, BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
