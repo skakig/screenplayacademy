@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import {
   updateGuidedStep,
   applyStepOutput,
+  saveStepVersion,
   aiGenerateLoglineOptions,
   aiGenerateThemeOptions,
   aiCreateProtagonistFromLesson,
@@ -20,6 +21,7 @@ import {
   aiGenerateRewriteExercise,
 } from "@/lib/academy.functions";
 import type { GuidedStepMeta } from "./stepMeta";
+import { StepVersionHistory } from "./StepVersionHistory";
 
 type Step = {
   id: string;
@@ -67,7 +69,15 @@ export function GuidedStepCard({
   const [aiOutput, setAiOutput] = useState<string>("");
   const updateFn = useServerFn(updateGuidedStep);
   const applyFn = useServerFn(applyStepOutput);
+  const versionFn = useServerFn(saveStepVersion);
   const aiFn = useServerFn(meta.aiHelper ? AI_HELPERS[meta.aiHelper] : aiGenerateLoglineOptions);
+
+  const recordVersion = (content: string, source: "manual" | "ai" | "applied", label?: string) => {
+    if (!content?.trim()) return;
+    versionFn({ data: { projectId, stepKey: step.step_key, content, source, label } })
+      .then(() => qc.invalidateQueries({ queryKey: ["step-versions", projectId, step.step_key] }))
+      .catch(() => { /* non-blocking */ });
+  };
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["first-screenplay", projectId] });
@@ -81,10 +91,12 @@ export function GuidedStepCard({
   const draftToUse = () => (notes.trim() || aiOutput.trim());
 
   const apply = useMutation({
-    mutationFn: (insertIntoEditor: boolean) => {
+    mutationFn: async (insertIntoEditor: boolean) => {
       const text = draftToUse();
       if (!text) throw new Error("Nothing to apply yet — write notes or run the AI helper first.");
-      return applyFn({ data: { projectId, stepKey: step.step_key, text, insertIntoEditor } });
+      const res = await applyFn({ data: { projectId, stepKey: step.step_key, text, insertIntoEditor } });
+      recordVersion(text, "applied", insertIntoEditor ? "Applied + editor" : "Applied to project");
+      return res;
     },
     onSuccess: (r: any) => {
       toast.success(r.summary ?? "Applied");
@@ -119,8 +131,10 @@ export function GuidedStepCard({
   });
 
   const saveDraft = useMutation({
-    mutationFn: () =>
-      updateFn({ data: { projectId, stepKey: step.step_key, user_output: notes } }),
+    mutationFn: async () => {
+      await updateFn({ data: { projectId, stepKey: step.step_key, user_output: notes } });
+      recordVersion(notes, "manual", "Manual draft");
+    },
     onSuccess: () => {
       toast.success("Draft saved");
       qc.invalidateQueries({ queryKey: ["first-screenplay", projectId] });
@@ -132,6 +146,7 @@ export function GuidedStepCard({
       aiFn({ data: { prompt: notes || meta.task, context: projectContext } }),
     onSuccess: (res: any) => {
       setAiOutput(res.text);
+      recordVersion(res.text, "ai", meta.aiLabel);
       if (res.demo) toast.message("Demo output — connect AI for live results.");
     },
     onError: (e: any) => toast.error(e.message ?? "AI failed"),
@@ -204,6 +219,11 @@ export function GuidedStepCard({
             <Button size="sm" variant="ghost" onClick={() => saveDraft.mutate()} disabled={saveDraft.isPending}>
               <Save className="h-3.5 w-3.5 mr-1.5" />Save draft
             </Button>
+            <StepVersionHistory
+              projectId={projectId}
+              stepKey={step.step_key}
+              onRestore={(content) => setNotes(content)}
+            />
             {canApply && (
               <Button size="sm" variant="secondary" onClick={() => apply.mutate(false)} disabled={apply.isPending}>
                 {apply.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <FileInput className="h-3.5 w-3.5 mr-1.5" />}
