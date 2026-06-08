@@ -586,30 +586,29 @@ function Editor() {
         </div>
       )}
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_340px] max-w-[1600px] mx-auto">
-        {/* Left rail */}
-        <aside className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)]">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Add Block</h3>
-          <div data-tour="block-toolbar" className="grid grid-cols-2 gap-1.5">
-            {BLOCK_TYPES.map((t) => (
-              <Button key={t.value} variant="outline" size="sm" className="h-8 text-xs justify-start" onClick={() => addBlock.mutate(t.value)}>
-                <Plus className="h-3 w-3 mr-1" />{t.label}
-              </Button>
-            ))}
-          </div>
+        {/* Left rail — Manuscript Index */}
+        <aside data-tour="block-toolbar" className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)] sticky top-0 self-start max-h-[calc(100vh-104px)] overflow-auto">
+          <ManuscriptIndex
+            blocks={blocks as any}
+            activeBlockId={activeBlockId}
+            onJumpToBlock={jumpToBlock}
+            onAddScene={addSceneAtEnd}
+          />
           <div className="mt-6">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Project</h3>
+            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Project</h3>
             <p className="text-xs text-muted-foreground">{project?.project_type}</p>
             {project?.genre && <p className="text-xs text-muted-foreground mt-1">{project.genre}</p>}
           </div>
           <div className="mt-6">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Shortcuts</h3>
+            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Shortcuts</h3>
             <div className="text-[10px] text-muted-foreground space-y-1 font-mono">
               <p><span className="text-primary">/</span> — slash commands</p>
               <p><span className="text-primary">Tab</span> — cycle block type</p>
-              <p><span className="text-primary">Enter</span> — new block</p>
+              <p><span className="text-primary">Enter</span> — new line</p>
             </div>
           </div>
         </aside>
+
 
         {/* Editor */}
         <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10">
