@@ -22,6 +22,7 @@ import { StoryBuilderPanel } from "@/components/editor/story-builder/StoryBuilde
 type Props = {
   projectId: string;
   blocks: Block[];
+  activeBlockId?: string | null;
   activeBlockType: string | null;
   defaultTab?: string;
   onOpenStoryBuilder: () => void;
@@ -36,6 +37,8 @@ type Props = {
   onRunAi: () => void;
 };
 
+
+
 const FORMAT_TIPS: { type: string; tip: string }[] = [
   { type: "scene_heading", tip: "Always start with INT. or EXT. Add — DAY/NIGHT to clarify time." },
   { type: "action", tip: "Write in present tense. Describe what we can see and hear, not what characters feel." },
@@ -48,6 +51,7 @@ const FORMAT_TIPS: { type: string; tip: string }[] = [
 export function CoachPane({
   projectId,
   blocks,
+  activeBlockId,
   activeBlockType,
   defaultTab = "coach",
   onOpenStoryBuilder,
@@ -64,6 +68,15 @@ export function CoachPane({
     () => blocks.filter((b) => b.block_type !== "note").map((b) => `[${b.block_type}] ${b.content}`).join("\n").slice(-6000),
     [blocks]
   );
+  const outlineForScene = useMemo(() => buildOutline(blocks), [blocks]);
+  const activeSceneIndex = useMemo(() => {
+    if (!activeBlockId) return -1;
+    const block = blocks.find((b) => b.id === activeBlockId);
+    if (!block) return -1;
+    return outlineForScene.findIndex(
+      (s) => block.order_index >= s.startOrder && block.order_index <= s.endOrder,
+    );
+  }, [activeBlockId, blocks, outlineForScene]);
 
   const characters = useMemo(() => tallyCharacters(blocks), [blocks]);
   const outline = useMemo(() => buildOutline(blocks), [blocks]);
