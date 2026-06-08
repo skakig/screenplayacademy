@@ -24,6 +24,7 @@ import { Route as AuthenticatedStoryArcProjectIdRouteImport } from './routes/_au
 import { Route as AuthenticatedScenesProjectIdRouteImport } from './routes/_authenticated/scenes.$projectId'
 import { Route as AuthenticatedProjectsNewRouteImport } from './routes/_authenticated/projects.new'
 import { Route as AuthenticatedPitchProjectIdRouteImport } from './routes/_authenticated/pitch.$projectId'
+import { Route as AuthenticatedFirstScreenplayProjectIdRouteImport } from './routes/_authenticated/first-screenplay.$projectId'
 import { Route as AuthenticatedEditorProjectIdRouteImport } from './routes/_authenticated/editor.$projectId'
 import { Route as AuthenticatedCharactersProjectIdRouteImport } from './routes/_authenticated/characters.$projectId'
 import { Route as AuthenticatedArcTimelineProjectIdRouteImport } from './routes/_authenticated/arc-timeline.$projectId'
@@ -111,6 +112,12 @@ const AuthenticatedPitchProjectIdRoute =
     path: '/pitch/$projectId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedFirstScreenplayProjectIdRoute =
+  AuthenticatedFirstScreenplayProjectIdRouteImport.update({
+    id: '/first-screenplay/$projectId',
+    path: '/first-screenplay/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedEditorProjectIdRoute =
   AuthenticatedEditorProjectIdRouteImport.update({
     id: '/editor/$projectId',
@@ -154,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
+  '/first-screenplay/$projectId': typeof AuthenticatedFirstScreenplayProjectIdRoute
   '/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
   '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
@@ -175,6 +183,7 @@ export interface FileRoutesByTo {
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
+  '/first-screenplay/$projectId': typeof AuthenticatedFirstScreenplayProjectIdRoute
   '/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
   '/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
@@ -198,6 +207,7 @@ export interface FileRoutesById {
   '/_authenticated/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/_authenticated/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/_authenticated/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
+  '/_authenticated/first-screenplay/$projectId': typeof AuthenticatedFirstScreenplayProjectIdRoute
   '/_authenticated/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
   '/_authenticated/projects/new': typeof AuthenticatedProjectsNewRoute
   '/_authenticated/scenes/$projectId': typeof AuthenticatedScenesProjectIdRoute
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
     | '/arc-timeline/$projectId'
     | '/characters/$projectId'
     | '/editor/$projectId'
+    | '/first-screenplay/$projectId'
     | '/pitch/$projectId'
     | '/projects/new'
     | '/scenes/$projectId'
@@ -242,6 +253,7 @@ export interface FileRouteTypes {
     | '/arc-timeline/$projectId'
     | '/characters/$projectId'
     | '/editor/$projectId'
+    | '/first-screenplay/$projectId'
     | '/pitch/$projectId'
     | '/projects/new'
     | '/scenes/$projectId'
@@ -264,6 +276,7 @@ export interface FileRouteTypes {
     | '/_authenticated/arc-timeline/$projectId'
     | '/_authenticated/characters/$projectId'
     | '/_authenticated/editor/$projectId'
+    | '/_authenticated/first-screenplay/$projectId'
     | '/_authenticated/pitch/$projectId'
     | '/_authenticated/projects/new'
     | '/_authenticated/scenes/$projectId'
@@ -388,6 +401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPitchProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/first-screenplay/$projectId': {
+      id: '/_authenticated/first-screenplay/$projectId'
+      path: '/first-screenplay/$projectId'
+      fullPath: '/first-screenplay/$projectId'
+      preLoaderRoute: typeof AuthenticatedFirstScreenplayProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/editor/$projectId': {
       id: '/_authenticated/editor/$projectId'
       path: '/editor/$projectId'
@@ -463,6 +483,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedArcTimelineProjectIdRoute: typeof AuthenticatedArcTimelineProjectIdRoute
   AuthenticatedCharactersProjectIdRoute: typeof AuthenticatedCharactersProjectIdRoute
   AuthenticatedEditorProjectIdRoute: typeof AuthenticatedEditorProjectIdRoute
+  AuthenticatedFirstScreenplayProjectIdRoute: typeof AuthenticatedFirstScreenplayProjectIdRoute
   AuthenticatedPitchProjectIdRoute: typeof AuthenticatedPitchProjectIdRoute
   AuthenticatedScenesProjectIdRoute: typeof AuthenticatedScenesProjectIdRoute
   AuthenticatedStoryArcProjectIdRoute: typeof AuthenticatedStoryArcProjectIdRoute
@@ -482,6 +503,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedArcTimelineProjectIdRoute,
   AuthenticatedCharactersProjectIdRoute: AuthenticatedCharactersProjectIdRoute,
   AuthenticatedEditorProjectIdRoute: AuthenticatedEditorProjectIdRoute,
+  AuthenticatedFirstScreenplayProjectIdRoute:
+    AuthenticatedFirstScreenplayProjectIdRoute,
   AuthenticatedPitchProjectIdRoute: AuthenticatedPitchProjectIdRoute,
   AuthenticatedScenesProjectIdRoute: AuthenticatedScenesProjectIdRoute,
   AuthenticatedStoryArcProjectIdRoute: AuthenticatedStoryArcProjectIdRoute,
@@ -502,3 +525,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
