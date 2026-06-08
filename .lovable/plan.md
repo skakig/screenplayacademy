@@ -1,90 +1,149 @@
-## Make the editor feel like a real screenplay writing surface
+# SceneSmith → Best-in-class screenplay app
 
-The root cause: blocks render as styled text without input affordances, and the primary action ("write the next line") is buried behind "+ Block" buttons. We'll fix the writing surface itself before anything else.
+## The disconnect (what you're seeing)
 
-### 1. Make every block obviously editable
+Right now the "Editor" shows two seeded labels (`INT. AFRICAN DESERT`, `STEPHAN`) and a row of `+ Block` buttons. There is no visible page, no cursor parked in a line you can type into, no manuscript sidebar, no save indicator near where you'd be typing, and no way to see what scene you're on relative to the whole script. That's why it feels like "scene/character and that's it."
 
-In `BlockEditor` (`src/routes/_authenticated/editor.$projectId.tsx`):
-- Always render a visible `placeholder` (currently set but invisible because text colour matches background).
-- On focus: thin left-border accent (`border-l-2 border-primary`) + subtle `bg-primary/[0.03]` highlight on the active line. Writers always know "I am here."
-- Empty block: show the placeholder text in muted color + a blinking caret affordance, so a tap-target is obvious.
-- Remove the pre-seeded `INT. AFRICAN DESERT` / `STEPHAN` content. New projects open with a single empty `scene_heading` block, focused, with placeholder `INT. LOCATION - DAY` and the cursor blinking inside it.
+The fix is not another tweak to block buttons. The fix is to rebuild the Editor as a **manuscript** — a single, scrollable script page with a navigator on the left, a writing surface in the middle, and a coach on the right — and to wire your existing AI to do the structural thinking *for* the writer.
 
-### 2. Smart Enter / Tab (the core writing flow)
+---
 
-Already half-wired in `handleKeyDown` — finish it:
-- **Enter** on a non-empty line → insert next block with type derived from current:
-  - `scene_heading` → `action`
-  - `action` → `action` (writer can Tab to character)
-  - `character` → `dialogue`
-  - `dialogue` → `character` (most common next beat) or `action` if previous was action
-  - `parenthetical` → `dialogue`
-  - `transition` → `scene_heading`
-- **Enter** on an empty line → cycle to a more useful type (e.g. empty `dialogue` → `action`) instead of creating yet another empty line.
-- **Tab** → cycle element type of the *current* line (already implemented, surface it visibly).
-- **Shift+Enter** → soft line break inside the same block.
+## 1. The manuscript surface (the actual "where I write")
 
-### 3. Auto-format on type
+Replace the centered "blocks panel" with a Final-Draft–style page:
 
-In `handleChange`, when content matches a pattern AND block type doesn't match, auto-switch:
-- `^(INT\.|EXT\.|INT\/EXT\.|EST\.)` → `scene_heading`
-- `^FADE (IN|OUT)|^CUT TO:|^DISSOLVE TO:` → `transition`
-- All caps single short line (< 40 chars, no period) → `character`
-- Starts with `(` → `parenthetical`
-Toast a tiny "→ Scene Heading" badge once per auto-format so the user learns the system.
+```text
+┌──────────────────────────────────────────────────────────────┐
+│  ░ Manuscript ░       │   PAGE 3 of 12   ▎Act I · Scene 4   │
+│                       │                                      │
+│  ▸ Act I              │   INT. AFRICAN DESERT — DAY          │
+│    • Sc 1 Cold open   │                                      │
+│    • Sc 2 Meet Stephan│   Wind. A figure crests the dune.    │
+│    • Sc 3 The call ●  │                                      │
+│  ▸ Act II             │              STEPHAN                 │
+│    • Sc 4 ...         │        (squinting at the sun)        │
+│                       │   I told them I'd come back.         │
+│  Characters (auto)    │                                      │
+│   ● Stephan  42 lines │   ▍                                  │  ← live caret
+│   ● Amira     8 lines │                                      │
+│                       │                                      │
+│  + New scene          │   ─── Scene 5 ─────────────────────  │
+└──────────────────────────────────────────────────────────────┘
+                                  [ NOW: Action  · Tab to change · ⏎ new line · ✨ AI ]
+```
 
-### 4. Bottom command bar (mobile + always-visible affordance)
+Key changes:
 
-New component `src/components/editor/EditorCommandBar.tsx`:
-- Sticky bar at bottom of the editor section.
-- Shows: **current line element type** (chip), **← Prev / Next →** element buttons (Tab equivalents), **+ Newline (Enter)**, **AI ✨ Continue**.
-- On mobile this floats above the keyboard. On desktop it sits under the screenplay canvas.
-- Replaces the "+ Scene Heading / + Action / ..." row as the *primary* action surface. The old buttons stay in the left rail as power-user shortcuts.
+- **One continuous editable page**, not a panel of buttons. Click anywhere → caret appears → type. Empty doc opens with the caret already inside an empty Scene Heading line and a placeholder hint ("INT./EXT. LOCATION — TIME").
+- **Persistent left navigator (Manuscript Index)**: Acts → Scenes → beats. Click jumps to that scene; current scene is highlighted; drag to reorder scenes.
+- **Page + scene counter** in the top bar of the page ("Page 3 of 12 · Act I · Scene 4 of 7").
+- **Always-visible Save state** anchored to the page header, not the corner of the app.
+- **Scene dividers** rendered between scenes so the writer can see the shape of the script while scrolling.
 
-### 5. Inline AI continue (ghost text)
+## 2. Auto-detect characters and scenes (your "scene review" idea)
 
-New file `src/lib/editor/inlineSuggest.functions.ts` — server function `suggestNextLine` that takes recent blocks + project context and returns one suggested next-line completion.
+A background analyzer runs on idle (debounced ~1.5s after typing stops) and on scene break:
 
-In `BlockEditor`:
-- When the block is empty and focused for > 800ms, fetch a suggestion and render it as ghost text inside the textarea (overlaid via an absolutely-positioned `<span>` matching font/size).
-- **Tab** accepts the suggestion, **Esc** dismisses, any keystroke discards.
-- Throttle to one in-flight request per block; cancel on blur.
+- **Character extraction** — any new ALL-CAPS speaker becomes a Character draft. Toast: *"New character detected: AMIRA. Add to cast?"* → one click adds them to Characters with auto-filled first-appearance scene and line count.
+- **Scene extraction** — every `INT./EXT.` line creates/updates a Scene record (slug, location, time-of-day, page #, characters present).
+- **Continuity hints** — if STEPHAN appears in scene 7 but was last seen wounded in scene 5, surface: *"Stephan was injured in Scene 5 — is that resolved?"*
+- **Beat detection** — map scenes to the active Story Arc beats so the Guided Path progress updates automatically as the writer writes (no manual "mark complete" needed).
 
-### 6. Empty state that doesn't seed fake content
+## 3. ITS / PfHU integration for characters — the real moat
 
-Update `EmptyEditorTeacher` (`src/components/editor/EmptyEditorTeacher.tsx`):
-- No more `INT. AFRICAN DESERT` placeholder.
-- Three clear paths: **Start writing** (creates one empty scene_heading, focused) / **Use template** (FADE IN + INT. scaffold) / **Draft with AI** (existing).
-- "Start writing" is the primary, biggest button.
+This is where SceneSmith becomes genuinely unique. Treat every character as an **ITS learner-profile-shaped entity** and every scene as a **scenario instance** evaluated by PfHU.
 
-### 7. Onboarding nudges (small, in-context)
+### Each character gets a CharacterModel snapshot
 
-- First time a user focuses a block: tiny toast "Press Tab to change element type · Enter for next line".
-- First time they type `INT.`: toast "Auto-formatted as Scene Heading".
-- Stored once-per-user in `localStorage` (`lovable.editor.hints.v1`).
+Same shape as your `LearnerIdentitySnapshot`, but the "competence" dimensions become **voice dimensions**:
 
-### Technical changes
 
-**New files**
-- `src/components/editor/EditorCommandBar.tsx`
-- `src/lib/editor/inlineSuggest.functions.ts` (server function)
-- `src/lib/editor/nextBlockType.ts` (pure helper for the Enter routing table)
-- `src/lib/editor/autoFormat.ts` (pure regex helpers)
-- `src/hooks/useInlineSuggestion.ts`
+| Dimension              | What it captures                                        |
+| ---------------------- | ------------------------------------------------------- |
+| `register`             | formal ↔ casual ↔ vulgar                                |
+| `verbosity`            | terse ↔ verbose                                         |
+| `vocabulary_signature` | top-N distinctive lemmas                                |
+| `emotional_baseline`   | confidence / engagement defaults                        |
+| `goals[]`              | per-act objectives (drives arc)                         |
+| `known_languages[]`    | leverages your transfer engine for bilingual characters |
 
-**Edited files**
-- `src/routes/_authenticated/editor.$projectId.tsx` — wire command bar, remove seeded placeholder content, refine `BlockEditor` (focus styling, Enter/Tab routing via `nextBlockType.ts`, auto-format via `autoFormat.ts`, inline suggestion overlay).
-- `src/components/editor/EmptyEditorTeacher.tsx` — new copy + "Start writing" primary.
 
-**Not in scope this turn**
-- Real Final-Draft style page breaks / pagination math (already roughly handled in StoryPulse).
-- Drag-to-reorder blocks.
+The snapshot is **append-only at the event layer** (same PfHU doctrine): every line of dialogue is an evidence event; the character voice profile is a derived view.
+
+### Each scene is a ScenarioPattern instance
+
+Re-use the 16 canonical scenario patterns. A scene declares:
+
+- `capability_type` (initiate / respond / clarify / repair / refuse / politeness_shift)
+- `constraint_level` (1–5: a coffee chat vs. a hostage negotiation)
+- `communicative_intent`, `environmental_stakes`, `success_condition`, `failure_branches[]`
+
+### What the writer actually gets from this
+
+- **Voice-drift detector**: PfHU compares each new Stephan line to his snapshot. If it drifts (suddenly verbose + formal), inline hint: *"This line reads 8% off Stephan's voice — closer to Amira's register. Rewrite in voice?"*
+- **Arc coherence checker**: if Stephan's `goals[]` says Act II = "earn forgiveness" but his scenes show no repair attempts, the StoryPulse panel flags it.
+- **Dialogue plausibility**: a scene tagged `constraint_level: 4 (hostage)` with `politeness_shift` capability flags lines that are too casual for the stakes.
+- **Replayable critique**: because the event spine is append-only, the writer can scrub the timeline ("show me Stephan's voice at Act I Scene 3 vs. Act III Scene 12") — same replay property PfHU gives ITS.
+- **Multilingual characters**: a Polish-accented English speaker can be modeled with the transfer engine so the AI suggests realistic L1-interference phrasing instead of generic "broken English."
+- **Table-read mode**: feed each character's snapshot to a TTS voice; PfHU scores the read for pacing/clarity the same way it scores a learner.
+
+### Why this is a unique benefit
+
+No screenplay app today has a per-character behavioral runtime. Final Draft has formatting. WriterDuet has collaboration. Highland has minimalism. **SceneSmith would have a learner-state OS for fictional characters** — which is exactly the moat your VerbBros stack already builds.
+
+## 4. Guided creative scaffolding (so the writer isn't expected to "know everything")
+
+Add a **Story Builder** layer on top of the Editor for blank-page moments:
+
+- **"I have an idea"** → 3-question wizard (genre, protagonist want, antagonist force) → AI generates logline + 8-beat outline + 3 character seeds → drops them into Guided Path and Manuscript Index.
+- **"I have a scene in my head"** → write it freeform → AI back-fills: which act, which beat, what scene heading, who's in it, what the goal is — and inserts placeholders before/after.
+- **"I'm stuck"** button on every scene → AI proposes 3 next-scene options based on the outline + character goals + last-scene state.
+- **Inline ghost-text** (already planned) stays, but is now grounded in the character snapshot, not a generic LLM completion.
+
+## 5. UX correctness pass (small but critical)
+
+- Rename the Editor tab subtitle: **"Editor — write your screenplay"**.
+- Empty editor opens with **one empty Scene Heading line, caret blinking, hint visible** — not seeded `INT. AFRICAN DESERT / STEPHAN`.
+- Add **Save / Next scene / Outline** buttons to the page header (Cmd+S, Cmd+↵, Cmd+/).
+- Redirect non-writing guided steps (logline, characters, story arc, pitch, table read) away from the Editor to their proper tab — never strand the user.
+- Bottom command bar: keep `Change / New line / AI continue`, add `+ New scene` and `Voice-check`.
+
+---
+
+## What gets built (technical, in order)
+
+1. **ManuscriptSurface** (`src/components/editor/ManuscriptSurface.tsx`) — single contenteditable page with virtualized scenes, caret-first focus, page counter.
+2. **ManuscriptIndex** (`src/components/editor/ManuscriptIndex.tsx`) — left rail: acts/scenes/characters, drag-reorder, jump-to.
+3. **Auto-analyzer** (`src/lib/editor/manuscriptAnalyzer.ts` + `analyzeManuscript.functions.ts` serverFn) — debounced extraction of characters, scenes, beats; writes to existing Scenes/Characters tables.
+4. **CharacterModel runtime** (`src/lib/its/characterModel/**`) — mirrors `LearnerIdentitySnapshot` shape; append-only events table `character_evidence_events` (new migration with RLS + GRANTs).
+5. **Scene-as-ScenarioPattern adapter** (`src/lib/its/scenarioPatternEngine/sceneAdapter.ts`) — maps a screenplay scene to one of the 16 canonical patterns.
+6. **VoiceCheck serverFn** (`src/lib/editor/voiceCheck.functions.ts`) — compares a dialogue block to a character snapshot via Lovable AI (`google/gemini-3-flash-preview`), returns drift score + rewrite suggestions.
+7. **StoryBuilder wizard** (`src/components/editor/StoryBuilder.tsx`) — 3-question kickoff that seeds outline/characters.
+8. **Stuck/Continue/Ghost-text** — grounded in CharacterModel + outline, not a raw prompt.
+9. **Empty-state + redirects** — remove seeded text; redirect non-writing guided steps to correct tab.
+10. **Save/Next/Outline header + Cmd shortcuts**.
+
+### Data (new tables, all with RLS + GRANTs to authenticated + service_role)
+
+- `character_snapshots` — derived view of voice dimensions per character per project.
+- `character_evidence_events` — append-only line-level evidence.
+- `scene_patterns` — per-scene capability_type, constraint_level, success/failure metadata.
+
+### AI usage
+
+All Lovable AI Gateway via `createServerFn` + `requireSupabaseAuth`. Default model `google/gemini-3-flash-preview`; escalate to `google/gemini-2.5-pro` for full-manuscript arc analysis.
+
+---
+
+## Explicitly NOT in this plan
+
+- Real-time multi-writer collaboration.
+- PDF export pagination engine (use existing Download .txt for now; PDF is a follow-up).
 - Voice-to-text dictation.
-- Collaborative cursors.
-- Touching the right-side AI panel — it stays as-is; inline AI is additive.
+- Mobile-native editor (web responsive only).
 
-### Why this order
+## Open questions before I build
 
-Steps 1–3 are the minimum that fix the screenshot: writers immediately see *where* and *how* to type. Step 4 makes the primary controls thumb-reachable on mobile and gives a clear "what am I editing" indicator everywhere. Steps 5–7 are the polish that makes it feel modern.
-
-Approve and I'll build it in this order, stopping after step 4 for you to try it before I add inline AI.
+1. **Scope of v1** — do you want all 10 steps in one pass, or ship in two waves: (A) Manuscript surface + Index + auto-detect + empty-state fix, then (B) CharacterModel/PfHU integration + VoiceCheck + StoryBuilder? Yes.
+2. **Character model storage** — OK to add the three new tables now, or keep the CharacterModel in-memory until wave B? Ok to add the three new tables now.
+3. **VerbBros code reuse** — should I copy the ScenarioPattern + LearnerIdentitySnapshot shapes into SceneSmith (clean fork), or wire SceneSmith to call into a shared package later? Whatever is cleanest and most effective with fewer problems.
