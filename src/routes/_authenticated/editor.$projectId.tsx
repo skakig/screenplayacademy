@@ -479,17 +479,19 @@ function Editor() {
         {/* Editor */}
         <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10">
           {/* Guided-step coach + step-specific modes */}
-          {guidedStep && (
-            <StepCoach
-              projectId={projectId}
-              stepKey={guidedStep}
-              progress={stepProgress}
-              onPrimary={handleCoachPrimary}
-              onMarkComplete={handleMarkComplete}
-              primaryBusy={primaryBusy || insertTemplate.isPending}
-              markBusy={markStepComplete.isPending}
-            />
-          )}
+          <div data-tour="step-coach">
+            {guidedStep && (
+              <StepCoach
+                projectId={projectId}
+                stepKey={guidedStep}
+                progress={stepProgress}
+                onPrimary={handleCoachPrimary}
+                onMarkComplete={handleMarkComplete}
+                primaryBusy={primaryBusy || insertTemplate.isPending}
+                markBusy={markStepComplete.isPending}
+              />
+            )}
+          </div>
 
           {/* Redirect prompt for steps whose work lives on another page */}
           {redirect && (
