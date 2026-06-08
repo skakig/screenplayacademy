@@ -552,10 +552,11 @@ function BlockEditor({
     const beforeSlash = val.slice(0, slashStart);
     const newVal = beforeSlash;
     setVal(newVal);
-    onUpdate({ content: newVal });
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+    void onSave({ content: newVal });
     closeSlash();
     onInsertAfter(blockType);
-  }, [val, slashStart, closeSlash, onUpdate, onInsertAfter]);
+  }, [val, slashStart, closeSlash, onSave, onInsertAfter]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (slashOpen) {
