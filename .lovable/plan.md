@@ -1,93 +1,87 @@
+# Full Sweep — Beginner-Proof End-to-End Path + App Polish
 
-# SceneSmith Academy + Guided/Studio Mode Build
+## Goal
 
-Multi-turn build. This plan locks the architecture so every turn lands cleanly. Each phase ends in a working, navigable surface.
+Guarantee that a 0% beginner can land in the app and be carried from "I have nothing" → finished rough draft → pitch package, without ever hitting a dead-end, broken AI button, locked step, or confusing screen. Then fix bugs and polish UX across the rest of the app.
 
-## Architecture overview
+This is a multi-turn build. Each phase ships a working, navigable surface.
 
-- **Persistence:** 5 new tables in Lovable Cloud (Supabase), all RLS-scoped.
-- **AI:** 10 helpers via `createServerFn` in `src/lib/academy.functions.ts`, calling Lovable AI Gateway (`google/gemini-3-flash-preview`). Demo fallback when key missing.
-- **Mode switching:** `user_onboarding.preferred_mode` ∈ `guided | studio` drives Dashboard layout, Settings toggle, and walkthrough behavior.
-- **Coach Mode:** `coaching_level` ∈ `off | gentle | active | teaching` stored on `user_onboarding`; editor reads it from a `useCoachMode()` hook.
-- **Lesson engine:** one reusable `<Lesson>` component renders any row from `academy_lessons`. Same component is reused inside `/first-screenplay/:projectId` steps.
-- **Guided steps:** `project_guided_steps` is seeded on project creation for guided-mode users via a server fn.
+---
 
-## Phase 1 — Foundation (DB + onboarding + mode switch)
+## Phase 1 — Beginner Pathway Continuity (biggest user value)
 
-**Migration 1 (single migration, all 5 tables + grants + RLS + seed):**
+Make sure the guided path actually flows. Today there are gaps: the editor steps don't auto-complete when the user writes, completion is manual, and several "destination → return" loops don't exist.
 
-- `user_onboarding` (1 row per user): `writer_experience_level`, `preferred_mode`, `coaching_level`, `app_walkthrough_completed bool`, `first_project_created bool`.
-- `academy_modules`: `title, slug unique, description, order_index, estimated_minutes`.
-- `academy_lessons`: FK `module_id`, `title, slug, concept, why_it_matters, example, task_prompt, ai_button_label, order_index, estimated_minutes`.
-- `user_lesson_progress`: FK `lesson_id`, `status (not_started|in_progress|complete)`, `completed_at`, `saved_output_id uuid null`. Unique `(user_id, lesson_id)`.
-- `project_guided_steps`: FK `project_id`, `step_key, title, status, output_type, output_reference_id uuid null, order_index, completed_at`. Unique `(project_id, step_key)`.
+1. **Guarantee Step 1 (create_project) auto-completes.** When entering `first-screenplay/$projectId`, auto-mark `create_project` as `complete` and unlock Step 2 (the project already exists). User shouldn't have to click "Mark complete" on a step that's literally done.
+2. **Editor-driven step completion.** For `opening_scene`, `act1`, `rough_draft` steps, detect progress automatically:
+   - `opening_scene` → complete when ≥1 `scene_heading` block + ≥5 action/dialogue blocks exist.
+   - `act1` → complete when ≥3 scenes exist and total block count ≥40 (rough heuristic).
+   - `rough_draft` → complete when total block count ≥150 OR user explicitly marks complete.
+   Add a small "Auto-detected progress" hint in the step card so the user understands.
+3. **"Back to guided path" breadcrumb everywhere.** When the user clicks `Open editor` / `Open characters` / `Open story-arc` / `Open scenes` / `Open pitch` / `Open tableread` from a guided step, add a sticky banner at the top of those pages: "Step N of First Screenplay Path — Return to guided path →". Only visible when `?from=guided` query param is set, or when an in-progress guided project exists.
+4. **Resume on reload.** Persist current step focus in URL hash (`#step-protagonist`) so reloading the guided page scrolls to where the user was.
+5. **Onboarding → first-project handoff.** After onboarding for guided users, route to `/projects/new` (not `/dashboard`) when the user has zero projects. Today both branches go to `/dashboard`, forcing an extra click. For studio users with zero projects, also push to `/projects/new`.
+6. **Empty-state Guided Dashboard CTA.** When the user has no project yet, the "Create your first project" button should be bigger, with an explanation of what the path will do (13 steps, ~ time estimate, what they'll end with).
 
-RLS: owner-scoped via `auth.uid()` (or `owns_project()` for `project_guided_steps`). Modules/lessons readable by all authenticated. GRANTs for `authenticated` + `service_role`. `update_updated_at_column` triggers on mutable tables. Seed 8 modules + ~3 starter lessons in "Start Here" + "Screenplay Foundations" (rest seeded in Phase 2).
+## Phase 2 — Guided Step Card Reliability
 
-**Code:**
-- `src/lib/onboarding.functions.ts`: `getOnboarding`, `upsertOnboarding`, `markWalkthroughComplete`.
-- `src/lib/academy.functions.ts` (stub for Phase 1): `seedGuidedSteps(projectId)` invoked on project create when mode = guided.
-- `src/routes/_authenticated/onboarding.tsx`: 2-step flow ("What kind of writer?" → "How should SceneSmith help?"). Maps answers to `preferred_mode` + `coaching_level`. Redirects to Dashboard (studio) or `/first-screenplay/new` (guided).
-- `src/routes/_authenticated/_layout.tsx` (or existing root gate): redirect to `/onboarding` if no `user_onboarding` row.
-- `src/components/onboarding/AppWalkthrough.tsx`: 12-step overlay (Dashboard → Export) using shadcn `Popover` anchored to nav items; `Next / Skip / Show me later` buttons; writes `app_walkthrough_completed`.
-- `src/components/settings/ModeSettings.tsx`: toggle Guided/Studio + Coach Mode select; mounted in existing Settings route.
-- `src/routes/_authenticated/dashboard.tsx` (or existing): split into `<GuidedDashboard>` and `<StudioDashboard>` based on mode.
-- `src/components/ProjectNav.tsx`: add Academy link; show "First Screenplay Path" link when mode = guided and an active project exists.
+The card has several rough edges that break trust for a beginner.
 
-## Phase 2 — Academy + lesson engine
+1. **AI button enabled for ALL steps that have an `aiHelper`.** Currently `create_project`, `opening_scene`, `act1`, `table_read`, `pitch` have no helper — give them one or remove the visual void:
+   - `opening_scene` → reuse `aiGenerateRewriteExercise` as "Draft an opening scene" with a tuned prompt.
+   - `act1` → "Outline Act 1 beats" (new helper variant of arc).
+   - `table_read` → keep no AI, but show a friendly "Open Table Read to hear it" CTA instead of empty toolbar.
+   - `pitch` → already has destination; surface "Generate pitch" via existing pitch route.
+2. **Lock state is too punitive.** If a user wants to jump ahead and look at the brief for Step 5, today it just says "Complete the previous step." Render the concept/why/example **read-only** even when locked, with a soft "Unlock by finishing Step N" footer.
+3. **AI output panel: clear, copy, regenerate, accept-and-apply.** Add a `Regenerate` button next to `Use as my answer` and `Copy`. Add `Accept & Apply to project` as a one-click combo so a beginner doesn't have to understand the 3-button workflow (Use → Apply → Mark complete).
+4. **"Mark complete" disabled when there is nothing.** Today you can mark complete with empty draft+AI and the step just saves null. Disable when both are empty for `APPLIABLE_STEPS`, with hover text "Write something or run the AI helper first."
+5. **Error toasts include actionable next step**, not raw server messages. Map common failures (no AI credits, rate limit, parse error) to friendly copy.
 
-**Migration 2:** Insert remaining lessons across all 8 modules (Start Here, Screenplay Foundations, Story Architecture, Character Creation, Scene Craft, Dialogue, Rewriting, Pitching). ~4–6 lessons per module.
+## Phase 3 — Editor + Coach Mode Fine-Tuning
 
-**Code:**
-- `src/routes/_authenticated/academy.index.tsx`: module grid with progress (completed/total lessons), estimated minutes, CTA.
-- `src/routes/_authenticated/academy.$moduleSlug.tsx`: lesson list with completion checkmarks.
-- `src/routes/_authenticated/academy.$moduleSlug.$lessonSlug.tsx`: renders `<Lesson>`.
-- `src/components/academy/Lesson.tsx`: reusable card with Title / Concept / Why it matters / Example / Try it now (textarea) / AI assist button / Save to project / Mark complete. Wired to `user_lesson_progress`.
-- `src/components/academy/ContextualHelp.tsx`: `<WhyThisMatters term="logline" />` tooltip component; static dictionary of ~18 terms (logline, theme, want, need, wound, lie, scene purpose, scene turn, stakes, midpoint, climax choice, character arc, TMH baseline, TMH stress, voice, subtext, treatment, pitch). Mount in Editor/Characters/StoryPulse for the listed fields.
-- `src/lib/academy.functions.ts` — first 4 AI helpers implemented: `aiGenerateLoglineOptions`, `aiGenerateThemeOptions`, `aiExplainScreenplayConcept`, `aiCoachCurrentScene`. Shared `callLovableAI()` helper with demo fallback when `LOVABLE_API_KEY` absent.
+1. **Coach Panel visibility tied to mode + level.** If `coaching_level === "off"`, hide the panel entirely (not just collapsed). If user is in guided mode, default-open the panel.
+2. **Coach panel "What should I do next?" CTA** — for guided-mode users, the panel shows the active First Screenplay step title + a "Continue path" link. This is the single most important beginner safety-net.
+3. **`/scene` slash-shortcut UX.** Confirm shortcuts still trigger; add a hint chip on first empty block: `Tip: type /scene, /char, /dialogue to switch block types.`
+4. **Insert-block scaling bug.** `insertBlockAfter` re-normalizes the whole project on each insert with N round-trips — this stalls in large scripts. Replace with a single bulk update: select all blocks ordered, recompute indexes, send one `upsert` array. (Bug fix.)
+5. **Empty-editor friendly state.** When the project has 0 blocks, render a starter prompt: "Start with `/scene INT. LOCATION — TIME`" + one-click "Insert your first scene heading" button.
 
-## Phase 3 — First Screenplay Path + remaining AI
+## Phase 4 — Onboarding + Auth + Cross-App Polish
 
-- `src/routes/_authenticated/first-screenplay.$projectId.tsx`: vertical stepper of 13 steps from `project_guided_steps`. Active step renders a step view; locked steps disabled; completed steps collapsed with summary.
-- `src/routes/_authenticated/first-screenplay.new.tsx`: project-creation step (Step 1) that creates the project then redirects to `/first-screenplay/:projectId`.
-- `src/components/first-screenplay/GuidedStep.tsx`: per-step container with embedded `<Lesson>`, AI helper, "Save to project" (writes to `projects`, `characters`, `story_arcs`, `scenes`, etc. depending on `output_type`), completion checkbox, Next.
-- Step → table mapping:
+1. **Auth → onboarding → dashboard chain.** Confirm the `_authenticated` gate redirects un-onboarded users to `/onboarding` (today the redirect lives in `dashboard.tsx`, so other routes skip it). Move the redirect into `_authenticated/route.tsx` so every authenticated page enforces it.
+2. **`AppShell` mobile nav.** Ensure the nav collapses cleanly at ≤803 px (user's current viewport). Verify ProjectNav doesn't overflow.
+3. **Design tokens audit.** Sweep `src/components/guided/*`, `src/components/dashboard/GuidedDashboard.tsx`, `onboarding.tsx`, `projects.new.tsx` for raw color literals like `bg-secondary`, `border-border/60` consistency. Replace one-off opacities (`/30`, `/40`, `/60`) with consistent tokens (`/40` standard for subtle borders).
+4. **Typography consistency.** Standardize on `font-display` for h1/h2 across guided/dashboard/onboarding/settings (some pages mix `font-bold` w/o `font-display`).
+5. **Loading states.** Replace `"Loading…"` text-only with a small `Skeleton` component on dashboard, first-screenplay, characters, scenes pages.
 
-```text
-Step 1  create_project         → projects
-Step 2  logline                → projects.logline
-Step 3  protagonist            → characters
-Step 4  antagonist             → characters
-Step 5  theme                  → story_arcs.theme
-Step 6  story_arc              → story_arcs
-Step 7  scene_cards            → scenes (bulk)
-Step 8  opening_scene          → script_blocks
-Step 9  act1                   → scenes.status updates
-Step 10 midpoint               → story_arcs.midpoint_shift
-Step 11 rough_draft            → derived from scenes/script_blocks
-Step 12 table_read             → audio_assets
-Step 13 pitch                  → pitch_packages
-```
+## Phase 5 — Verification
 
-- `src/lib/academy.functions.ts` — remaining 6 AI helpers: `aiCreateProtagonistFromLesson`, `aiCreateAntagonistFromLesson`, `aiBuildStoryArcFromLesson`, `aiCreateSceneListFromLesson`, `aiDiagnoseBeginnerScript`, `aiGenerateRewriteExercise`.
+For each phase: smoke-test the end-to-end happy path in the preview:
+- New user signs up → onboarding → guided dashboard → create project → 13 steps → editor → pitch.
+- AI helper runs on at least 4 distinct steps and the output is applied to the right table.
+- Re-opening project resumes at the right step.
+- Coach Mode toggles work in editor.
 
-## Phase 4 — Coach Mode in editor
-
-- `src/hooks/use-coach-mode.ts`: reads `coaching_level` from `user_onboarding`.
-- `src/components/editor/CoachPanel.tsx`: collapsible right-side card; behavior gated by level (off renders nothing, gentle only on weak-scene heuristic, active offers craft tips, teaching adds principles). Calls `aiCoachCurrentScene`. Suggestions in collapsible cards, never modal popups.
-- `src/components/editor/CoachModeToggle.tsx`: dropdown in editor toolbar mirroring Settings.
-- Wire `<WhyThisMatters>` tooltips into editor scene/character side panels.
-
-## Acceptance verification
-
-Each phase ends with a checklist mapping to the spec's 10 acceptance criteria. Phase 4 closes all 10.
+Run lint/build between phases.
 
 ## Out of scope (this build)
 
-- Email notifications, certifications, social sharing of lessons, video lesson content, multi-user collaboration on guided path, mobile-specific layouts beyond responsive defaults.
+- Real export to PDF/Fountain.
+- Multi-user collaboration.
+- New AI models or providers.
+- New pages beyond what's listed.
+- Major DB schema changes (only small column additions if strictly needed; none planned today).
 
-## Notes
+## Technical notes
 
-- Every `createServerFn` that touches user data uses `requireSupabaseAuth` (`attachSupabaseAuth` already wired in `src/start.ts`).
-- No edge functions, no new secrets — `LOVABLE_API_KEY` already provisioned.
-- All AI helpers return `{ ok: true, data, demo: boolean }` so UI can label demo output.
+- All AI helpers stay on `createServerFn` with `requireSupabaseAuth` + Lovable AI Gateway, `google/gemini-3-flash-preview`. No new secrets.
+- Auto-step-completion logic runs client-side in `first-screenplay.$projectId.tsx` using existing `blocks` and `scenes` queries; it calls `updateGuidedStep` once per detection to avoid re-triggering.
+- Breadcrumb banner is a new `<GuidedReturnBanner>` mounted in `AppShell` when route matches editor/characters/scenes/story-arc/pitch/tableread AND the active project has an in-progress guided step.
+- No migration is required for the planned work; if Phase 3 #2 needs a "current step" field, we'll derive it from `project_guided_steps.status === 'in_progress'` rather than add a column.
+
+## Phase order & turns
+
+- **Turn 1:** Phase 1 (pathway continuity) + Phase 2 (step card reliability).
+- **Turn 2:** Phase 3 (editor + coach).
+- **Turn 3:** Phase 4 (onboarding gate + design polish) + Phase 5 (verification).
+
+Approve to start Turn 1.

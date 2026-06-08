@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { upsertOnboarding } from "@/lib/onboarding.functions";
 import { useOnboarding } from "@/hooks/use-onboarding";
+import { supabase } from "@/integrations/supabase/client";
 import { Pencil, BookOpen, Clapperboard, Library, FileText, Wand2, MessageCircle, ShieldCheck, Sparkles, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,19 +47,21 @@ function OnboardingPage() {
     mutationFn: async () => {
       if (!experience || !coaching) throw new Error("Pick both options");
       const mode = EXPERIENCE_OPTIONS.find((o) => o.value === experience)?.mode ?? "studio";
-      return upsertFn({
+      await upsertFn({
         data: {
           writer_experience_level: experience,
           preferred_mode: mode,
           coaching_level: coaching,
         },
       });
+      // Check if user has any projects yet — if not, send them straight to project creation
+      const { count } = await supabase.from("projects").select("id", { count: "exact", head: true });
+      return { mode, hasProjects: (count ?? 0) > 0 };
     },
-    onSuccess: () => {
+    onSuccess: ({ hasProjects }) => {
       qc.invalidateQueries({ queryKey: ["onboarding"] });
-      const mode = EXPERIENCE_OPTIONS.find((o) => o.value === experience)?.mode ?? "studio";
       toast.success("Welcome to SceneSmith.");
-      if (mode === "guided") navigate({ to: "/dashboard" });
+      if (!hasProjects) navigate({ to: "/projects/new" });
       else navigate({ to: "/dashboard" });
     },
     onError: (e: Error) => toast.error(e.message),

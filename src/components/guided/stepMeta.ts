@@ -4,7 +4,7 @@ export type GuidedStepMeta = {
   why: string;
   example: string;
   task: string;
-  aiHelper?: "logline" | "protagonist" | "antagonist" | "theme" | "arc" | "scenes" | "diagnose" | "rewrite";
+  aiHelper?: "logline" | "protagonist" | "antagonist" | "theme" | "arc" | "scenes" | "diagnose" | "rewrite" | "openingScene" | "act1Beats";
   aiLabel?: string;
   destination?: "editor" | "characters" | "story-arc" | "scenes" | "pitch" | "tableread";
 };
@@ -81,7 +81,9 @@ export const STEP_META: Record<string, GuidedStepMeta> = {
     concept: "Your opening scene promises the reader the kind of story this will be.",
     why: "Tone, pace, and stakes are set in the first 3 pages. Get the promise right.",
     example: "Cold open: a 90-second crisis that ends with the protagonist choosing wrong.",
-    task: "Open the editor and write your first scene. Coach Mode will help.",
+    task: "Draft a 1–2 page opening. Use AI to spark a draft, then refine in the editor.",
+    aiHelper: "openingScene",
+    aiLabel: "Draft an opening scene",
     destination: "editor",
   },
   act1: {
@@ -89,7 +91,9 @@ export const STEP_META: Record<string, GuidedStepMeta> = {
     concept: "Act 1 ends when the protagonist crosses a threshold they can't easily come back from.",
     why: "If your hero can still walk away after page 25–30, the story hasn't started.",
     example: "She takes the case off the books — and crosses the line that defines the rest of the film.",
-    task: "Finish Act 1 in the editor. Aim for the page-25 turn.",
+    task: "Outline Act 1 beats, then write them in the editor.",
+    aiHelper: "act1Beats",
+    aiLabel: "Outline Act 1 beats",
     destination: "editor",
   },
   midpoint: {

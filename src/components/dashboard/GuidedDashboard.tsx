@@ -50,13 +50,18 @@ export function GuidedDashboard() {
       </div>
 
       {!data?.project ? (
-        <Card className="p-8 text-center border-dashed">
-          <BookOpen className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-          <h3 className="font-semibold mb-1">Start your first screenplay</h3>
-          <p className="text-sm text-muted-foreground mb-4">We'll guide you step by step from logline to pitch.</p>
-          <Button onClick={() => navigate({ to: "/projects/new" })}>
-            <Plus className="h-4 w-4 mr-1.5" />Create your first project
-          </Button>
+        <Card className="p-8 border-dashed">
+          <div className="flex flex-col items-center text-center">
+            <BookOpen className="h-12 w-12 mx-auto text-primary mb-3" />
+            <h3 className="font-display text-2xl font-semibold mb-2">Start your first screenplay</h3>
+            <p className="text-sm text-muted-foreground max-w-md mb-5">
+              We'll walk you through 13 focused steps — logline, characters, story arc, scenes, opening pages, draft, table read, and pitch package. Most beginners finish a complete rough draft in 2–4 weeks.
+            </p>
+            <Button size="lg" onClick={() => navigate({ to: "/projects/new" })} className="shadow-lg shadow-primary/20">
+              <Plus className="h-4 w-4 mr-1.5" />Create your first project
+            </Button>
+            <p className="text-xs text-muted-foreground mt-3">No experience needed. You can change anything later.</p>
+          </div>
         </Card>
       ) : (
         <Card className="p-6">
