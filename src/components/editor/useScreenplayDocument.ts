@@ -422,6 +422,19 @@ export function useScreenplayDocument({
     const cur = blocksRef.current;
     const idx = cur.findIndex((b) => b.id === localId);
     if (idx < 0) return;
+    // Never delete the final remaining block — clear it instead so the editor
+    // never becomes an empty non-editable surface (Acceptance Test 14).
+    if (cur.length <= 1) {
+      setLocalBlocks((prev) =>
+        prev.map((b) =>
+          b.id === localId ? { ...b, content: "", block_type: "scene_heading", status: "dirty" } : b,
+        ),
+      );
+      dirtyIds.current.add(localId);
+      markDirty();
+      scheduleUpdate(localId, 200);
+      return;
+    }
     const prevBlock = cur[idx - 1] ?? cur[idx + 1];
     const target = cur[idx];
     setLocalBlocks((prev) => prev.filter((b) => b.id !== localId));
@@ -432,8 +445,14 @@ export function useScreenplayDocument({
       clearTimeout(t);
       saveTimers.current.delete(localId);
     }
-    if (target?.serverId) void runDelete(target.serverId);
-  }, []);
+    persistence?.cancelPending?.(localId);
+    if (target?.serverId) {
+      if (persistence) persistence.queueDelete(target.serverId);
+      else void runDelete(target.serverId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persistence, markDirty, scheduleUpdate]);
+
 
   const jumpToServer = useCallback((serverId: string) => {
     const b = blocksRef.current.find((x) => x.serverId === serverId);
