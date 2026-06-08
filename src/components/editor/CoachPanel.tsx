@@ -11,13 +11,15 @@ import { aiCoachCurrentScene, aiNextStepHint, aiExplainScreenplayConcept } from 
 
 // Lightweight concept → academy lesson router (best-effort)
 const CONCEPT_LESSONS: { match: RegExp; module: string; lesson: string; label: string }[] = [
-  { match: /scene heading|slug|int\.|ext\./i, module: "foundations", lesson: "scene-heading-format", label: "Scene heading format" },
-  { match: /subtext|on[- ]the[- ]nose/i, module: "dialogue", lesson: "subtext", label: "Subtext in dialogue" },
-  { match: /character arc|change|transformation/i, module: "character", lesson: "character-arc", label: "Character arc" },
-  { match: /three act|3 act|structure|midpoint|climax/i, module: "story-architecture", lesson: "three-act-structure", label: "Three-act structure" },
-  { match: /protagonist|antagonist|villain/i, module: "character", lesson: "protagonist-antagonist", label: "Protagonist vs antagonist" },
-  { match: /theme|moral argument/i, module: "story-architecture", lesson: "theme", label: "Theme" },
-  { match: /goal|want|need/i, module: "character", lesson: "want-vs-need", label: "Want vs need" },
+  { match: /scene heading|slug|int\.|ext\./i, module: "foundations", lesson: "slugline", label: "Sluglines (scene headings)" },
+  { match: /subtext|on[- ]the[- ]nose/i, module: "scene-craft", lesson: "subtext", label: "Subtext in dialogue" },
+  { match: /character arc|change|transformation/i, module: "character-creation", lesson: "character-arcs", label: "Character arcs" },
+  { match: /three act|3 act|act structure/i, module: "story-architecture", lesson: "three-act", label: "Three-act structure" },
+  { match: /midpoint/i, module: "story-architecture", lesson: "midpoint", label: "The midpoint" },
+  { match: /inciting/i, module: "story-architecture", lesson: "inciting-incident", label: "Inciting incident" },
+  { match: /want|need|goal/i, module: "character-creation", lesson: "want-vs-need", label: "Want vs need" },
+  { match: /logline/i, module: "foundations", lesson: "logline", label: "Logline" },
+  { match: /scene goal|conflict|turn/i, module: "scene-craft", lesson: "scene-goal-conflict-turn", label: "Scene: goal, conflict, turn" },
 ];
 function lessonForConcept(concept: string) {
   return CONCEPT_LESSONS.find((c) => c.match.test(concept)) ?? null;
