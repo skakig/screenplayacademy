@@ -904,6 +904,11 @@ function Editor() {
               const all = (e.currentTarget as HTMLElement).querySelectorAll<HTMLTextAreaElement>("textarea");
               if (all.length === 0) { cmdNewLine(); return; }
               const y = e.clientY;
+              // If click is below the last textarea, treat as "new line at end"
+              const last = all[all.length - 1];
+              const lastRect = last.getBoundingClientRect();
+              if (y > lastRect.bottom + 8) { cmdNewLine(); return; }
+              // Otherwise focus the nearest textarea
               let best: HTMLTextAreaElement = all[0];
               let bestDist = Infinity;
               all.forEach((t) => {
