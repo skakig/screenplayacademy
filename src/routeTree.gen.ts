@@ -17,6 +17,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAcademyIndexRouteImport } from './routes/_authenticated/academy.index'
 import { Route as AuthenticatedTablereadProjectIdRouteImport } from './routes/_authenticated/tableread.$projectId'
 import { Route as AuthenticatedStoryboardProjectIdRouteImport } from './routes/_authenticated/storyboard.$projectId'
 import { Route as AuthenticatedStoryArcProjectIdRouteImport } from './routes/_authenticated/story-arc.$projectId'
@@ -26,6 +27,8 @@ import { Route as AuthenticatedPitchProjectIdRouteImport } from './routes/_authe
 import { Route as AuthenticatedEditorProjectIdRouteImport } from './routes/_authenticated/editor.$projectId'
 import { Route as AuthenticatedCharactersProjectIdRouteImport } from './routes/_authenticated/characters.$projectId'
 import { Route as AuthenticatedArcTimelineProjectIdRouteImport } from './routes/_authenticated/arc-timeline.$projectId'
+import { Route as AuthenticatedAcademyModuleSlugRouteImport } from './routes/_authenticated/academy.$moduleSlug'
+import { Route as AuthenticatedAcademyModuleSlugLessonSlugRouteImport } from './routes/_authenticated/academy.$moduleSlug.$lessonSlug'
 
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
@@ -66,6 +69,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAcademyIndexRoute =
+  AuthenticatedAcademyIndexRouteImport.update({
+    id: '/academy/',
+    path: '/academy/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedTablereadProjectIdRoute =
   AuthenticatedTablereadProjectIdRouteImport.update({
     id: '/tableread/$projectId',
@@ -120,6 +129,18 @@ const AuthenticatedArcTimelineProjectIdRoute =
     path: '/arc-timeline/$projectId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAcademyModuleSlugRoute =
+  AuthenticatedAcademyModuleSlugRouteImport.update({
+    id: '/academy/$moduleSlug',
+    path: '/academy/$moduleSlug',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAcademyModuleSlugLessonSlugRoute =
+  AuthenticatedAcademyModuleSlugLessonSlugRouteImport.update({
+    id: '/$lessonSlug',
+    path: '/$lessonSlug',
+    getParentRoute: () => AuthenticatedAcademyModuleSlugRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -129,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
+  '/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
@@ -138,6 +160,8 @@ export interface FileRoutesByFullPath {
   '/story-arc/$projectId': typeof AuthenticatedStoryArcProjectIdRoute
   '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
   '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
+  '/academy/': typeof AuthenticatedAcademyIndexRoute
+  '/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -147,6 +171,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
+  '/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
@@ -156,6 +181,8 @@ export interface FileRoutesByTo {
   '/story-arc/$projectId': typeof AuthenticatedStoryArcProjectIdRoute
   '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
   '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
+  '/academy': typeof AuthenticatedAcademyIndexRoute
+  '/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -167,6 +194,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   '/_authenticated/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/_authenticated/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
   '/_authenticated/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
@@ -176,6 +204,8 @@ export interface FileRoutesById {
   '/_authenticated/story-arc/$projectId': typeof AuthenticatedStoryArcProjectIdRoute
   '/_authenticated/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
   '/_authenticated/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
+  '/_authenticated/academy/': typeof AuthenticatedAcademyIndexRoute
+  '/_authenticated/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -187,6 +217,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/projects'
     | '/settings'
+    | '/academy/$moduleSlug'
     | '/arc-timeline/$projectId'
     | '/characters/$projectId'
     | '/editor/$projectId'
@@ -196,6 +227,8 @@ export interface FileRouteTypes {
     | '/story-arc/$projectId'
     | '/storyboard/$projectId'
     | '/tableread/$projectId'
+    | '/academy/'
+    | '/academy/$moduleSlug/$lessonSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -205,6 +238,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/projects'
     | '/settings'
+    | '/academy/$moduleSlug'
     | '/arc-timeline/$projectId'
     | '/characters/$projectId'
     | '/editor/$projectId'
@@ -214,6 +248,8 @@ export interface FileRouteTypes {
     | '/story-arc/$projectId'
     | '/storyboard/$projectId'
     | '/tableread/$projectId'
+    | '/academy'
+    | '/academy/$moduleSlug/$lessonSlug'
   id:
     | '__root__'
     | '/'
@@ -224,6 +260,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/_authenticated/projects'
     | '/_authenticated/settings'
+    | '/_authenticated/academy/$moduleSlug'
     | '/_authenticated/arc-timeline/$projectId'
     | '/_authenticated/characters/$projectId'
     | '/_authenticated/editor/$projectId'
@@ -233,6 +270,8 @@ export interface FileRouteTypes {
     | '/_authenticated/story-arc/$projectId'
     | '/_authenticated/storyboard/$projectId'
     | '/_authenticated/tableread/$projectId'
+    | '/_authenticated/academy/'
+    | '/_authenticated/academy/$moduleSlug/$lessonSlug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -300,6 +339,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/academy/': {
+      id: '/_authenticated/academy/'
+      path: '/academy'
+      fullPath: '/academy/'
+      preLoaderRoute: typeof AuthenticatedAcademyIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/tableread/$projectId': {
       id: '/_authenticated/tableread/$projectId'
       path: '/tableread/$projectId'
@@ -363,6 +409,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedArcTimelineProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/academy/$moduleSlug': {
+      id: '/_authenticated/academy/$moduleSlug'
+      path: '/academy/$moduleSlug'
+      fullPath: '/academy/$moduleSlug'
+      preLoaderRoute: typeof AuthenticatedAcademyModuleSlugRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/academy/$moduleSlug/$lessonSlug': {
+      id: '/_authenticated/academy/$moduleSlug/$lessonSlug'
+      path: '/$lessonSlug'
+      fullPath: '/academy/$moduleSlug/$lessonSlug'
+      preLoaderRoute: typeof AuthenticatedAcademyModuleSlugLessonSlugRouteImport
+      parentRoute: typeof AuthenticatedAcademyModuleSlugRoute
+    }
   }
 }
 
@@ -379,11 +439,27 @@ const AuthenticatedProjectsRouteWithChildren =
     AuthenticatedProjectsRouteChildren,
   )
 
+interface AuthenticatedAcademyModuleSlugRouteChildren {
+  AuthenticatedAcademyModuleSlugLessonSlugRoute: typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
+}
+
+const AuthenticatedAcademyModuleSlugRouteChildren: AuthenticatedAcademyModuleSlugRouteChildren =
+  {
+    AuthenticatedAcademyModuleSlugLessonSlugRoute:
+      AuthenticatedAcademyModuleSlugLessonSlugRoute,
+  }
+
+const AuthenticatedAcademyModuleSlugRouteWithChildren =
+  AuthenticatedAcademyModuleSlugRoute._addFileChildren(
+    AuthenticatedAcademyModuleSlugRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRouteWithChildren
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedAcademyModuleSlugRoute: typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   AuthenticatedArcTimelineProjectIdRoute: typeof AuthenticatedArcTimelineProjectIdRoute
   AuthenticatedCharactersProjectIdRoute: typeof AuthenticatedCharactersProjectIdRoute
   AuthenticatedEditorProjectIdRoute: typeof AuthenticatedEditorProjectIdRoute
@@ -392,6 +468,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStoryArcProjectIdRoute: typeof AuthenticatedStoryArcProjectIdRoute
   AuthenticatedStoryboardProjectIdRoute: typeof AuthenticatedStoryboardProjectIdRoute
   AuthenticatedTablereadProjectIdRoute: typeof AuthenticatedTablereadProjectIdRoute
+  AuthenticatedAcademyIndexRoute: typeof AuthenticatedAcademyIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -399,6 +476,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRouteWithChildren,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedAcademyModuleSlugRoute:
+    AuthenticatedAcademyModuleSlugRouteWithChildren,
   AuthenticatedArcTimelineProjectIdRoute:
     AuthenticatedArcTimelineProjectIdRoute,
   AuthenticatedCharactersProjectIdRoute: AuthenticatedCharactersProjectIdRoute,
@@ -408,6 +487,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedStoryArcProjectIdRoute: AuthenticatedStoryArcProjectIdRoute,
   AuthenticatedStoryboardProjectIdRoute: AuthenticatedStoryboardProjectIdRoute,
   AuthenticatedTablereadProjectIdRoute: AuthenticatedTablereadProjectIdRoute,
+  AuthenticatedAcademyIndexRoute: AuthenticatedAcademyIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
