@@ -37,8 +37,12 @@ export function CoachPanel({
   const [dismissed, setDismissed] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
+  const [mode, setMode] = useState<"fix" | "teach">("fix");
+  const [teachQuery, setTeachQuery] = useState("");
+  const [teachConcept, setTeachConcept] = useState<string | null>(null);
   const coachFn = useServerFn(aiCoachCurrentScene);
   const hintFn = useServerFn(aiNextStepHint);
+  const teachFn = useServerFn(aiExplainScreenplayConcept);
 
   const run = useMutation({
     mutationFn: () =>
@@ -48,6 +52,11 @@ export function CoachPanel({
           level: level === "off" ? "gentle" : level,
         },
       }),
+    onSuccess: (r) => setOutput(r.text),
+  });
+
+  const teach = useMutation({
+    mutationFn: (concept: string) => teachFn({ data: { concept } }),
     onSuccess: (r) => setOutput(r.text),
   });
 
@@ -63,14 +72,15 @@ export function CoachPanel({
     onSuccess: (r) => setHint(r.text),
   });
 
-  // Auto-coach on active/teaching when scene changes (debounced)
+  // Auto-coach on active/teaching when scene changes (debounced) — only in Fix mode
   useEffect(() => {
+    if (mode !== "fix") return;
     if (!enabled || level === "gentle") return;
     if (!sceneText || sceneText.length < 200) return;
     const t = setTimeout(() => run.mutate(), 1500);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sceneText, level]);
+  }, [sceneText, level, mode]);
 
   // Suggestion heuristic for gentle mode (no AI call required)
   const localHint = (() => {
