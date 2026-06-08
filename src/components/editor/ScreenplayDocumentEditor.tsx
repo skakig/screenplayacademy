@@ -254,6 +254,7 @@ function BlockEditor({
   onActiveChange,
   characters,
   onCreateCharacter,
+  isSaving,
 }: {
   block: any;
   prevBlockType?: string;
@@ -266,6 +267,7 @@ function BlockEditor({
   onActiveChange?: (id: string, active: boolean) => void;
   characters: CharacterHit[];
   onCreateCharacter: (name: string) => Promise<any>;
+  isSaving?: (id: string) => boolean;
 }) {
   const [val, setVal] = useState<string>(block.content ?? "");
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -273,14 +275,15 @@ function BlockEditor({
   const dirtyRef = useRef(false);
   const focusedRef = useRef(false);
 
-  // Server echo handling: never overwrite the field while the writer is in it
-  // OR has pending unsaved text. Prevents autosave cache patches from blurring
-  // / moving the caret mid-keystroke.
+  // Server echo handling: never overwrite the field while the writer is in it,
+  // has pending unsaved text, or has a save in-flight. Prevents cache patches
+  // from blurring / moving the caret mid-keystroke.
   useEffect(() => {
     if (focusedRef.current) return;
     if (dirtyRef.current) return;
+    if (isSaving?.(block.id)) return;
     setVal(block.content ?? "");
-  }, [block.content]);
+  }, [block.content, block.id, isSaving]);
 
   const scheduleSave = useCallback(
     (next: string) => {
