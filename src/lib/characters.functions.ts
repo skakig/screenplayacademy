@@ -438,3 +438,18 @@ export const generatePortrait = createServerFn({ method: "POST" })
       throw new Error(e?.message ?? "Portrait generation failed");
     }
   });
+
+// ============= List characters for a project (for autocomplete) =============
+const ListInput = z.object({ projectId: z.string().uuid() });
+export const listProjectCharacters = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => ListInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("characters")
+      .select("id, name, role, archetype, summary")
+      .eq("project_id", data.projectId)
+      .order("name");
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });

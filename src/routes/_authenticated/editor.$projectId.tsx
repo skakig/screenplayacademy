@@ -15,11 +15,14 @@ import { ArcSidebar } from "@/components/arc/ArcSidebar";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { aiAssist } from "@/lib/ai.functions";
+import { listProjectCharacters, upsertCharacter } from "@/lib/characters.functions";
 import { CoachPanel } from "@/components/editor/CoachPanel";
 import { CoachModeToggle } from "@/components/editor/CoachModeToggle";
 import { AutosaveIndicator } from "@/components/editor/AutosaveIndicator";
 import type { AutosaveStatus } from "@/hooks/use-autosave";
 import { GuidedRail } from "@/components/guided/GuidedRail";
+import { CharacterAutocomplete, type CharacterHit } from "@/components/editor/CharacterAutocomplete";
+import { SceneBeatPicker } from "@/components/editor/SceneBeatPicker";
 import { GraduationCap, BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
@@ -85,6 +88,16 @@ function Editor() {
       if (error) throw error;
       return data;
     },
+  });
+  const listChars = useServerFn(listProjectCharacters);
+  const createChar = useServerFn(upsertCharacter);
+  const { data: characters = [] } = useQuery({
+    queryKey: ["characters", projectId],
+    queryFn: () => listChars({ data: { projectId } }) as Promise<CharacterHit[]>,
+  });
+  const createCharacter = useMutation({
+    mutationFn: (name: string) => createChar({ data: { project_id: projectId, patch: { name } } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["characters", projectId] }),
   });
 
   const [focusBlockId, setFocusBlockId] = useState<string | null>(null);
@@ -206,22 +219,24 @@ function Editor() {
     },
   });
 
-  const saveBlock = useCallback(async (id: string, patch: { content?: string; block_type?: string }) => {
+  const saveBlock = useCallback(async (id: string, patch: { content?: string; block_type?: string; metadata?: Record<string, any> }) => {
     markSaving();
     try {
       const update: any = {};
       if (patch.content !== undefined) update.content = patch.content;
       if (patch.block_type) update.block_type = patch.block_type;
+      if (patch.metadata !== undefined) update.metadata = patch.metadata;
       const { error } = await supabase.from("script_blocks").update(update).eq("id", id);
       if (error) throw error;
       if (patch.content !== undefined) clearDraft(id);
       markSaved();
+      if (patch.metadata !== undefined) qc.invalidateQueries({ queryKey: ["blocks", projectId] });
       // Silent refresh — don't refetch while user is typing
     } catch (e: any) {
       markError();
       toast.error("Couldn't save — your work is kept locally and will retry on next edit");
     }
-  }, [clearDraft, markError, markSaved, markSaving]);
+  }, [clearDraft, markError, markSaved, markSaving, qc, projectId]);
 
   const restoreRecovery = useCallback(async () => {
     if (!recovery) return;
@@ -392,6 +407,8 @@ function Editor() {
                   onInsertAfter={(block_type) => insertBlockAfter.mutate({ block_type, afterOrder: b.order_index })}
                   focusBlockId={focusBlockId}
                   onFocusDone={() => setFocusBlockId(null)}
+                  characters={characters}
+                  onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
                 />
               ))
             )}
@@ -488,14 +505,18 @@ function BlockEditor({
   onInsertAfter,
   focusBlockId,
   onFocusDone,
+  characters,
+  onCreateCharacter,
 }: {
   block: any;
-  onSave: (patch: { content?: string; block_type?: string }) => void | Promise<void>;
+  onSave: (patch: { content?: string; block_type?: string; metadata?: Record<string, any> }) => void | Promise<void>;
   onDirty: (content: string) => void;
   onDelete: () => void;
   onInsertAfter: (block_type: string) => void;
   focusBlockId: string | null;
   onFocusDone: () => void;
+  characters: CharacterHit[];
+  onCreateCharacter: (name: string) => Promise<any>;
 }) {
   const [val, setVal] = useState<string>(block.content ?? "");
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -674,6 +695,11 @@ function BlockEditor({
   const [isFocused, setIsFocused] = useState(false);
   const QUICK_TYPES = ["scene_heading", "action", "character", "dialogue", "parenthetical"] as const;
 
+  const isCharBlock = block.block_type === "character";
+  const isSceneHeading = block.block_type === "scene_heading";
+  const showAutocomplete = isCharBlock && isFocused && !slashOpen;
+  const beat = (block.metadata as any)?.beat ?? null;
+
   return (
     <div className={`group relative blk-${block.block_type}`}>
       <textarea
@@ -688,6 +714,46 @@ function BlockEditor({
         className="w-full bg-transparent border-none outline-none resize-none focus:bg-primary/5 rounded px-1 -mx-1 placeholder:text-muted-foreground/40"
         style={{ fontFamily: "inherit", fontSize: "inherit", color: "inherit", textAlign: "inherit", textTransform: "inherit", fontWeight: "inherit", fontStyle: "inherit" } as any}
       />
+
+      {/* Character autocomplete */}
+      {showAutocomplete && (
+        <CharacterAutocomplete
+          query={val}
+          characters={characters}
+          anchorRef={ref as any}
+          onPick={(c) => {
+            setVal(c.name.toUpperCase());
+            void onSave({ content: c.name.toUpperCase() });
+            // Move focus out so the popover closes naturally
+            ref.current?.blur();
+          }}
+          onCreate={async (name) => {
+            try {
+              const created = await onCreateCharacter(name);
+              const finalName = (created?.name ?? name).toUpperCase();
+              setVal(finalName);
+              void onSave({ content: finalName });
+              ref.current?.blur();
+            } catch {
+              // swallow — keep typed text
+            }
+          }}
+        />
+      )}
+
+      {/* Scene beat picker (right-anchored) */}
+      {isSceneHeading && (
+        <div className="absolute right-0 -bottom-7 z-10 font-sans">
+          <SceneBeatPicker
+            value={beat}
+            onChange={(b) => {
+              const next = { ...(block.metadata || {}), beat: b ?? undefined };
+              if (b === null) delete (next as any).beat;
+              void onSave({ metadata: next });
+            }}
+          />
+        </div>
+      )}
 
       {/* Beginner-friendly inline block-type toolbar (shows on focus) */}
       {isFocused && !slashOpen && (
