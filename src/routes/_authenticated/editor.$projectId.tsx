@@ -14,6 +14,8 @@ import { ArcSidebar } from "@/components/arc/ArcSidebar";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { aiAssist } from "@/lib/ai.functions";
+import { CoachPanel } from "@/components/editor/CoachPanel";
+import { CoachModeToggle } from "@/components/editor/CoachModeToggle";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
