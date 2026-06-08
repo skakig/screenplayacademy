@@ -50,7 +50,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       projectId,
       initialBlocks,
       blocksLoading,
-      characters,
+      characters = [],
       onCreateCharacter,
       onActiveBlockChange,
       onSaveStatus,
@@ -60,6 +60,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       onDraftWithAi,
       onInsertTemplate,
       primaryBusy,
+      persistence,
     },
     ref,
   ) {
@@ -70,6 +71,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       onSaveStatus,
       onLastSaved,
       onBlockCreated,
+      persistence,
     });
 
     // bubble active block info up (debounced by key string to avoid spam)
