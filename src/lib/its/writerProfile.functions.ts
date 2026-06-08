@@ -112,27 +112,11 @@ export const aggregateWriterProfile = createServerFn({ method: "POST" })
       last_aggregated_at: new Date().toISOString(),
     };
 
-    const { data: existing } = await context.supabase
+    const { data: upserted, error: upErr } = await context.supabase
       .from("writer_profiles")
-      .select("id")
-      .eq("user_id", context.userId)
-      .maybeSingle();
-
-    if (existing) {
-      const { data: updated, error: uErr } = await context.supabase
-        .from("writer_profiles")
-        .update(update)
-        .eq("user_id", context.userId)
-        .select()
-        .single();
-      if (uErr) throw new Error(uErr.message);
-      return updated;
-    }
-    const { data: created, error: cErr } = await context.supabase
-      .from("writer_profiles")
-      .insert({ ...update, user_id: context.userId })
+      .upsert({ ...update, user_id: context.userId }, { onConflict: "user_id" })
       .select()
       .single();
-    if (cErr) throw new Error(cErr.message);
-    return created;
+    if (upErr) throw new Error(upErr.message);
+    return upserted;
   });
