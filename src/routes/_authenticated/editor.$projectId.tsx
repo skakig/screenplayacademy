@@ -30,6 +30,8 @@ import { LoglineComposer } from "@/components/editor/LoglineComposer";
 import { progressForStep, shouldUseLoglineComposer, shouldRedirectStep } from "@/lib/editor/stepCompletion";
 import { OPENING_SCENE_TEMPLATE } from "@/lib/editor/openingTemplate";
 import { ArrowRight } from "lucide-react";
+import { EditorTour } from "@/components/editor/EditorTour";
+import { useEditorTour } from "@/hooks/useEditorTour";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
