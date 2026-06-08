@@ -735,7 +735,7 @@ function Editor() {
           completedCount={0}
         />
       )}
-      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_340px] max-w-[1600px] mx-auto">
+      <div className={`grid grid-cols-1 ${writeMode.on ? "lg:grid-cols-1" : "lg:grid-cols-[280px_1fr_340px]"} max-w-[1600px] mx-auto`}>
 
         {/* Left rail — Story Navigator (desktop) */}
         <aside data-tour="block-toolbar" className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)] sticky top-0 self-start max-h-[calc(100vh-104px)] overflow-auto bg-card/20">
