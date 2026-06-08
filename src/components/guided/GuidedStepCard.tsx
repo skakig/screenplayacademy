@@ -91,10 +91,12 @@ export function GuidedStepCard({
   const draftToUse = () => (notes.trim() || aiOutput.trim());
 
   const apply = useMutation({
-    mutationFn: (insertIntoEditor: boolean) => {
+    mutationFn: async (insertIntoEditor: boolean) => {
       const text = draftToUse();
       if (!text) throw new Error("Nothing to apply yet — write notes or run the AI helper first.");
-      return applyFn({ data: { projectId, stepKey: step.step_key, text, insertIntoEditor } });
+      const res = await applyFn({ data: { projectId, stepKey: step.step_key, text, insertIntoEditor } });
+      recordVersion(text, "applied", insertIntoEditor ? "Applied + editor" : "Applied to project");
+      return res;
     },
     onSuccess: (r: any) => {
       toast.success(r.summary ?? "Applied");
