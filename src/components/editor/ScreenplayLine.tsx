@@ -206,7 +206,7 @@ export function ScreenplayLine({
             : PLACEHOLDERS[block.block_type]
         }
         rows={1}
-        className="w-full bg-transparent border-none outline-none resize-none rounded px-1 -mx-1 caret-primary min-h-[2em]"
+        className="w-full bg-transparent border-none outline-none resize-none rounded px-1 -mx-1 caret-primary"
         style={{
           fontFamily: "inherit",
           fontSize: "inherit",
@@ -215,6 +215,8 @@ export function ScreenplayLine({
           textTransform: "inherit",
           fontWeight: "inherit",
           fontStyle: "inherit",
+          minHeight: "2.5em",
+          display: "block",
         } as any}
       />
 
