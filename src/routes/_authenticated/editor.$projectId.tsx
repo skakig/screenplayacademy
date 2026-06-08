@@ -36,6 +36,7 @@ import { CoachPane } from "@/components/editor/CoachPane";
 import { StoryBuilder } from "@/components/editor/StoryBuilder";
 import { StudioModeToggle } from "@/components/editor/StudioModeToggle";
 import { FeatureDock } from "@/components/editor/FeatureDock";
+import { GuidedStepStrip } from "@/components/editor/GuidedStepStrip";
 import { CanvasToolbar } from "@/components/editor/CanvasToolbar";
 import { useManuscriptAnalyzer } from "@/hooks/useManuscriptAnalyzer";
 import { useOnboarding } from "@/hooks/use-onboarding";
@@ -640,6 +641,7 @@ function Editor() {
               <CoachPane
                 projectId={projectId}
                 blocks={blocks as any}
+                activeBlockId={activeBlockId}
                 activeBlockType={activeBlock?.block_type ?? null}
                 defaultTab={coachDefaultTab}
                 onOpenStoryBuilder={() => { setStoryBuilderOpen(true); setRightDrawerOpen(false); }}
@@ -678,7 +680,15 @@ function Editor() {
           </div>
         </div>
       )}
+      {onboarding?.preferred_mode === "guided" && (
+        <GuidedStepStrip
+          projectId={projectId}
+          currentStep={guidedStep ?? null}
+          completedCount={0}
+        />
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_340px] max-w-[1600px] mx-auto">
+
         {/* Left rail — Story Navigator (desktop) */}
         <aside data-tour="block-toolbar" className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)] sticky top-0 self-start max-h-[calc(100vh-104px)] overflow-auto bg-card/20">
           <StoryNavigatorPane
@@ -885,7 +895,8 @@ function Editor() {
           <CoachPane
             projectId={projectId}
             blocks={blocks as any}
-            activeBlockType={activeBlock?.block_type ?? null}
+            activeBlockId={activeBlockId}
+                activeBlockType={activeBlock?.block_type ?? null}
             defaultTab={coachDefaultTab}
             onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
             aiTools={AI_TOOLS}

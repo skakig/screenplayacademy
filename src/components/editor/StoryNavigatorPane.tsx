@@ -13,6 +13,13 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { ProjectProgressCard } from "@/components/editor/ProjectProgressCard";
+
+const ACT_LABEL: Record<1 | 2 | 3, string> = {
+  1: "Act I · Setup",
+  2: "Act II · Confrontation",
+  3: "Act III · Resolution",
+};
 
 type Props = {
   projectId: string;
@@ -172,8 +179,12 @@ export function StoryNavigatorPane({
           ([1, 2, 3] as const).map((act) =>
             acts[act].length > 0 ? (
               <div key={act}>
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 px-1 mb-1">
-                  Act {act === 1 ? "I" : act === 2 ? "II" : "III"}
+                <div className="flex items-center gap-2 px-1 mb-1.5 mt-1">
+                  <span className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">
+                    {ACT_LABEL[act]}
+                  </span>
+                  <span className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
                 </div>
                 <ul className="space-y-1">
                   {acts[act].map((scene) => {
@@ -304,6 +315,8 @@ export function StoryNavigatorPane({
           <p><span className="text-primary">⌘1–7</span> set block type</p>
         </div>
       </div>
+
+      <ProjectProgressCard projectId={projectId} blocks={blocks} onAddScene={onAddScene} />
     </div>
   );
 }
