@@ -24,13 +24,17 @@ export const getWriterProfile = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     if (data) return data;
 
-    // Bootstrap a default profile row.
-    const { data: created, error: insErr } = await context.supabase
+    // Bootstrap a default profile row (idempotent — handles parallel callers).
+    const { error: insErr } = await context.supabase
       .from("writer_profiles")
-      .insert({ user_id: context.userId })
-      .select()
-      .single();
+      .upsert({ user_id: context.userId }, { onConflict: "user_id", ignoreDuplicates: true });
     if (insErr) throw new Error(insErr.message);
+    const { data: created, error: reErr } = await context.supabase
+      .from("writer_profiles")
+      .select("*")
+      .eq("user_id", context.userId)
+      .single();
+    if (reErr) throw new Error(reErr.message);
     return created;
   });
 
