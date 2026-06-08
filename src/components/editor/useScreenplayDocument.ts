@@ -94,21 +94,74 @@ export function useScreenplayDocument({
   );
 
   // ---------- persistence ----------
-  const queueInsert = useCallback((localId: string) => {
-    setTimeout(() => { void runInsert(localId); }, 0);
+  // When an adapter is provided, route everything through it. Otherwise fall
+  // back to the built-in Supabase path (production editor behavior).
+  const queueInsert = useCallback(
+    (localId: string) => {
+      if (persistence) {
+        const block = blocksRef.current.find((b) => b.id === localId);
+        if (!block || block.serverId) return;
+        markDirty();
+        persistence.queueInsert(
+          {
+            localId,
+            block_type: block.block_type,
+            content: block.content,
+            order_index: block.order_index,
+            metadata: block.metadata,
+          },
+          (serverId) => {
+            setLocalBlocks((prev) =>
+              prev.map((b) =>
+                b.id === localId
+                  ? { ...b, serverId, status: dirtyIds.current.has(localId) ? "dirty" : "clean" }
+                  : b,
+              ),
+            );
+            onBlockCreated?.(block.block_type);
+          },
+        );
+        return;
+      }
+      setTimeout(() => { void runInsert(localId); }, 0);
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    [persistence],
+  );
 
-  const scheduleUpdate = useCallback((localId: string, delay = 600) => {
-    const existing = saveTimers.current.get(localId);
-    if (existing) clearTimeout(existing);
-    const t = setTimeout(() => {
-      saveTimers.current.delete(localId);
-      void runUpdate(localId);
-    }, delay);
-    saveTimers.current.set(localId, t);
+  const scheduleUpdate = useCallback(
+    (localId: string, delay = 600) => {
+      if (persistence) {
+        persistence.scheduleUpdate(
+          localId,
+          (): PersistSnapshot | undefined => {
+            const b = blocksRef.current.find((x) => x.id === localId);
+            if (!b) return undefined;
+            return {
+              localId,
+              serverId: b.serverId,
+              block_type: b.block_type,
+              content: b.content,
+              order_index: b.order_index,
+              metadata: b.metadata,
+            };
+          },
+          delay,
+        );
+        return;
+      }
+      const existing = saveTimers.current.get(localId);
+      if (existing) clearTimeout(existing);
+      const t = setTimeout(() => {
+        saveTimers.current.delete(localId);
+        void runUpdate(localId);
+      }, delay);
+      saveTimers.current.set(localId, t);
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    [persistence],
+  );
+
 
   async function runInsert(localId: string) {
     const block = blocksRef.current.find((b) => b.id === localId);
