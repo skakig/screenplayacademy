@@ -15,6 +15,7 @@ function getRect(selector?: string): Rect | null {
   const el = document.querySelector(selector) as HTMLElement | null;
   if (!el) return null;
   const r = el.getBoundingClientRect();
+  if (r.width < 4 || r.height < 4) return null;
   return { top: r.top, left: r.left, width: r.width, height: r.height };
 }
 
