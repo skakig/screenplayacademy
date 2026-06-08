@@ -354,7 +354,8 @@ function Editor() {
                 <BlockEditor
                   key={b.id}
                   block={b}
-                  onUpdate={(patch) => updateBlock.mutate({ id: b.id, ...patch })}
+                  onSave={(patch) => saveBlock(b.id, patch)}
+                  onDirty={(content) => { writeDraft(b.id, content); markDirty(); }}
                   onDelete={() => deleteBlock.mutate(b.id)}
                   onInsertAfter={(block_type) => insertBlockAfter.mutate({ block_type, afterOrder: b.order_index })}
                   focusBlockId={focusBlockId}
