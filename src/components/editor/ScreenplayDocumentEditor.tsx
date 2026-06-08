@@ -41,6 +41,7 @@ export function ScreenplayDocumentEditor({
   onDraftWithAi,
   onInsertTemplate,
   primaryBusy,
+  isSaving,
 }: {
   blocks: any[];
   blocksLoading: boolean;
@@ -59,6 +60,7 @@ export function ScreenplayDocumentEditor({
   onDraftWithAi?: () => void;
   onInsertTemplate?: () => void;
   primaryBusy?: boolean;
+  isSaving?: (id: string) => boolean;
 }) {
   const ghostRef = useRef<HTMLTextAreaElement>(null);
   const isEmpty = !blocksLoading && blocks.length === 0;
