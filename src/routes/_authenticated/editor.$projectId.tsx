@@ -590,7 +590,7 @@ function Editor() {
         </section>
 
         {/* Right sidebar */}
-        <aside className="hidden lg:block border-l border-border/60 min-h-[calc(100vh-104px)] bg-card/20">
+        <aside data-tour="coach-panel" className="hidden lg:block border-l border-border/60 min-h-[calc(100vh-104px)] bg-card/20">
           <Tabs defaultValue="arc" className="w-full">
             <TabsList className="w-full rounded-none border-b border-border/40 bg-transparent h-10">
               <TabsTrigger value="arc" className="text-xs flex-1">Arc</TabsTrigger>
