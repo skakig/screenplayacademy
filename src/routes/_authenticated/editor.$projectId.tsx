@@ -407,6 +407,8 @@ function Editor() {
     await addBlock.mutateAsync("scene_heading");
   }, [addBlock]);
 
+  const tour = useEditorTour();
+
 
   return (
     <AppShell>
@@ -424,7 +426,17 @@ function Editor() {
             Back to guided path{guidedStep ? ` · ${guidedStep.replace(/_/g, " ")}` : ""}
           </Link>
         ) : <span />}
-        <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={tour.start}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
+            title="Replay the editor tour"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+            Replay tour
+          </button>
+          <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
+        </div>
       </div>
       {recovery && (
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3">
