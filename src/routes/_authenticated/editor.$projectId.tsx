@@ -221,12 +221,27 @@ function Editor() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data, block_type) => {
-      qc.invalidateQueries({ queryKey: ["blocks", projectId] });
+    onMutate: async (block_type: string) => {
+      await qc.cancelQueries({ queryKey: ["blocks", projectId] });
+      const prev = qc.getQueryData<any[]>(["blocks", projectId]) ?? [];
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const temp = { id: tempId, project_id: projectId, block_type, content: "", order_index: prev.length, metadata: null };
+      qc.setQueryData<any[]>(["blocks", projectId], [...prev, temp]);
+      setFocusBlockId(tempId);
+      return { tempId, prev };
+    },
+    onSuccess: (data, block_type, ctx: any) => {
+      qc.setQueryData<any[]>(["blocks", projectId], (old) =>
+        (old ?? []).map((b) => (b.id === ctx?.tempId ? data : b))
+      );
+      if (data?.id) setFocusBlockId(data.id);
       emitEvent({ event_type: "block_created", project_id: projectId, context: { block_type } });
       if (block_type === "scene_heading") {
         emitEvent({ event_type: "scene_created", project_id: projectId, context: { has_turn: false } });
       }
+    },
+    onError: (_e, _v, ctx: any) => {
+      if (ctx?.prev) qc.setQueryData(["blocks", projectId], ctx.prev);
     },
   });
 
