@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { GuidedStepCard } from "@/components/guided/GuidedStepCard";
 import { STEP_META } from "@/components/guided/stepMeta";
-import { updateGuidedStep } from "@/lib/academy.functions";
+import { updateGuidedStep, seedGuidedSteps } from "@/lib/academy.functions";
 
 export const Route = createFileRoute("/_authenticated/first-screenplay/$projectId")({
   head: () => ({ meta: [{ title: "First Screenplay Path — SceneSmith AI" }] }),
