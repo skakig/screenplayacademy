@@ -639,6 +639,7 @@ function Editor() {
           </Tabs>
         </aside>
       </div>
+      <EditorTour isOpen={tour.isOpen} onClose={tour.stop} />
     </AppShell>
   );
 }
