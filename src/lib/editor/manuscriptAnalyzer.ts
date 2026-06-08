@@ -63,10 +63,10 @@ export function buildOutline(blocks: Block[]): SceneOutline[] {
   const scenes: SceneOutline[] = [];
   let current: SceneOutline | null = null;
 
-  const startScene = (b: Block | null, index: number) => {
-    if (b && b.block_type === "scene_heading") {
+  const startScene = (b: Block, index: number): SceneOutline => {
+    if (b.block_type === "scene_heading") {
       const { location, timeOfDay } = parseSceneHeading(b.content);
-      current = {
+      return {
         id: b.id,
         headingBlockId: b.id,
         title: (b.content || "Untitled scene").trim() || "Untitled scene",
@@ -79,36 +79,33 @@ export function buildOutline(blocks: Block[]): SceneOutline[] {
         blockCount: 1,
         characters: [],
       };
-    } else if (b) {
-      current = {
-        id: `pre-${b.id}`,
-        headingBlockId: null,
-        title: "Opening",
-        location: null,
-        timeOfDay: null,
-        act: 1,
-        index,
-        startOrder: b.order_index,
-        endOrder: b.order_index,
-        blockCount: 1,
-        characters: [],
-      };
     }
+    return {
+      id: `pre-${b.id}`,
+      headingBlockId: null,
+      title: "Opening",
+      location: null,
+      timeOfDay: null,
+      act: 1,
+      index,
+      startOrder: b.order_index,
+      endOrder: b.order_index,
+      blockCount: 1,
+      characters: [],
+    };
   };
 
   for (const b of sorted) {
     if (b.block_type === "scene_heading") {
       if (current) scenes.push(current);
-      startScene(b, scenes.length);
+      current = startScene(b, scenes.length);
     } else {
-      if (!current) startScene(b, 0);
-      const cur: SceneOutline | null = current;
-      if (!cur) continue;
-      cur.endOrder = b.order_index;
-      cur.blockCount += 1;
+      if (!current) current = startScene(b, 0);
+      current.endOrder = b.order_index;
+      current.blockCount += 1;
       if (b.block_type === "character") {
         const n = normalizeCharacterName(b.content);
-        if (n && !cur.characters.includes(n)) cur.characters.push(n);
+        if (n && !current.characters.includes(n)) current.characters.push(n);
       }
     }
   }
