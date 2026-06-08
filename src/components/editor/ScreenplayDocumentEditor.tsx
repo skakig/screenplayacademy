@@ -62,42 +62,30 @@ export function ScreenplayDocumentEditor({
   primaryBusy?: boolean;
   isSaving?: (id: string) => boolean;
 }) {
-  const ghostRef = useRef<HTMLTextAreaElement>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
   const isEmpty = !blocksLoading && blocks.length === 0;
+  const creatingRef = useRef(false);
 
-  // Focus the ghost line automatically when there are no blocks yet, so the
-  // writer can type immediately on page load.
-  useEffect(() => {
-    if (isEmpty && ghostRef.current) {
-      ghostRef.current.focus();
-    }
-  }, [isEmpty]);
-
-  // Ghost line: when the user types into it, seed a real block with that
-  // character. We use the beforeinput event so we can capture the typed text,
-  // cancel the input on the ghost, and forward it into the new block.
-  const handleGhostInsert = useCallback(
-    (initialContent: string) => {
+  // Create a real block on focus/click of the ghost line — never on first
+  // keystroke. The first character must always land in a real, focused
+  // textarea so it cannot be lost.
+  const handleGhostActivate = useCallback(
+    (initialContent: string = "") => {
+      if (creatingRef.current) return;
+      creatingRef.current = true;
+      // Release the guard on next tick — by then the new block's mount
+      // effect will have moved focus away from the ghost.
+      setTimeout(() => { creatingRef.current = false; }, 50);
       if (blocks.length === 0) {
-        onAddBlock("scene_heading", initialContent);
+        onAddBlock("scene_heading", initialContent || undefined);
       } else {
         const last = blocks[blocks.length - 1];
         const nextType = nextBlockTypeAfter(last.block_type);
-        onInsertAfter({ block_type: nextType, afterOrder: last.order_index, initialContent });
+        onInsertAfter({ block_type: nextType, afterOrder: last.order_index, initialContent: initialContent || undefined });
       }
     },
     [blocks, onAddBlock, onInsertAfter],
   );
-
-  const handleGhostBeforeInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
-    const ne = e.nativeEvent as InputEvent;
-    // Only consume real character / paste input — let arrow keys etc. pass through.
-    if (ne.inputType && ne.inputType.startsWith("insert")) {
-      e.preventDefault();
-      const data = ne.data ?? "";
-      handleGhostInsert(data || "");
-    }
-  };
 
   // Click on the paper: clicks below the last line focus the ghost line.
   const handlePaperMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
