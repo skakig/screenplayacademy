@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { PersistenceAdapter, PersistSnapshot } from "./screenplayPersistence";
 
 export type SaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 
@@ -37,6 +38,7 @@ export function useScreenplayDocument({
   onSaveStatus,
   onLastSaved,
   onBlockCreated,
+  persistence,
 }: {
   projectId: string;
   initialBlocks: any[];
@@ -44,7 +46,14 @@ export function useScreenplayDocument({
   onSaveStatus?: (s: SaveStatus) => void;
   onLastSaved?: (ts: number) => void;
   onBlockCreated?: (block_type: string) => void;
+  /**
+   * Optional persistence adapter. When provided, all I/O is routed through it
+   * and the built-in Supabase path is bypassed. /editor-lab uses
+   * NullPersistenceAdapter to run fully local.
+   */
+  persistence?: PersistenceAdapter;
 }) {
+
   const qc = useQueryClient();
   const [localBlocks, setLocalBlocks] = useState<LocalBlock[]>([]);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
@@ -85,21 +94,74 @@ export function useScreenplayDocument({
   );
 
   // ---------- persistence ----------
-  const queueInsert = useCallback((localId: string) => {
-    setTimeout(() => { void runInsert(localId); }, 0);
+  // When an adapter is provided, route everything through it. Otherwise fall
+  // back to the built-in Supabase path (production editor behavior).
+  const queueInsert = useCallback(
+    (localId: string) => {
+      if (persistence) {
+        const block = blocksRef.current.find((b) => b.id === localId);
+        if (!block || block.serverId) return;
+        markDirty();
+        persistence.queueInsert(
+          {
+            localId,
+            block_type: block.block_type,
+            content: block.content,
+            order_index: block.order_index,
+            metadata: block.metadata,
+          },
+          (serverId) => {
+            setLocalBlocks((prev) =>
+              prev.map((b) =>
+                b.id === localId
+                  ? { ...b, serverId, status: dirtyIds.current.has(localId) ? "dirty" : "clean" }
+                  : b,
+              ),
+            );
+            onBlockCreated?.(block.block_type);
+          },
+        );
+        return;
+      }
+      setTimeout(() => { void runInsert(localId); }, 0);
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    [persistence],
+  );
 
-  const scheduleUpdate = useCallback((localId: string, delay = 600) => {
-    const existing = saveTimers.current.get(localId);
-    if (existing) clearTimeout(existing);
-    const t = setTimeout(() => {
-      saveTimers.current.delete(localId);
-      void runUpdate(localId);
-    }, delay);
-    saveTimers.current.set(localId, t);
+  const scheduleUpdate = useCallback(
+    (localId: string, delay = 600) => {
+      if (persistence) {
+        persistence.scheduleUpdate(
+          localId,
+          (): PersistSnapshot | undefined => {
+            const b = blocksRef.current.find((x) => x.id === localId);
+            if (!b) return undefined;
+            return {
+              localId,
+              serverId: b.serverId,
+              block_type: b.block_type,
+              content: b.content,
+              order_index: b.order_index,
+              metadata: b.metadata,
+            };
+          },
+          delay,
+        );
+        return;
+      }
+      const existing = saveTimers.current.get(localId);
+      if (existing) clearTimeout(existing);
+      const t = setTimeout(() => {
+        saveTimers.current.delete(localId);
+        void runUpdate(localId);
+      }, delay);
+      saveTimers.current.set(localId, t);
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    [persistence],
+  );
+
 
   async function runInsert(localId: string) {
     const block = blocksRef.current.find((b) => b.id === localId);
@@ -360,6 +422,19 @@ export function useScreenplayDocument({
     const cur = blocksRef.current;
     const idx = cur.findIndex((b) => b.id === localId);
     if (idx < 0) return;
+    // Never delete the final remaining block — clear it instead so the editor
+    // never becomes an empty non-editable surface (Acceptance Test 14).
+    if (cur.length <= 1) {
+      setLocalBlocks((prev) =>
+        prev.map((b) =>
+          b.id === localId ? { ...b, content: "", block_type: "scene_heading", status: "dirty" } : b,
+        ),
+      );
+      dirtyIds.current.add(localId);
+      markDirty();
+      scheduleUpdate(localId, 200);
+      return;
+    }
     const prevBlock = cur[idx - 1] ?? cur[idx + 1];
     const target = cur[idx];
     setLocalBlocks((prev) => prev.filter((b) => b.id !== localId));
@@ -370,8 +445,14 @@ export function useScreenplayDocument({
       clearTimeout(t);
       saveTimers.current.delete(localId);
     }
-    if (target?.serverId) void runDelete(target.serverId);
-  }, []);
+    persistence?.cancelPending?.(localId);
+    if (target?.serverId) {
+      if (persistence) persistence.queueDelete(target.serverId);
+      else void runDelete(target.serverId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persistence, markDirty, scheduleUpdate]);
+
 
   const jumpToServer = useCallback((serverId: string) => {
     const b = blocksRef.current.find((x) => x.serverId === serverId);

@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, FileText, Wand2 } from "lucide-react";
 import { useScreenplayDocument, type SaveStatus } from "./useScreenplayDocument";
 import { ScreenplayLine } from "./ScreenplayLine";
-import { nextBlockTypeAfter } from "@/lib/editor/nextBlockType";
+import { nextBlockTypeAfter } from "./screenplayKeymap";
 import type { CharacterHit } from "@/components/editor/CharacterAutocomplete";
+import type { PersistenceAdapter } from "./screenplayPersistence";
+
 
 export type ActiveBlockMeta = {
   localId: string;
@@ -24,8 +26,8 @@ type Props = {
   projectId: string;
   initialBlocks: any[];
   blocksLoading?: boolean;
-  characters: CharacterHit[];
-  onCreateCharacter: (name: string) => Promise<any>;
+  characters?: CharacterHit[];
+  onCreateCharacter?: (name: string) => Promise<any>;
   onActiveBlockChange?: (meta: ActiveBlockMeta) => void;
   onSaveStatus?: (s: SaveStatus) => void;
   onLastSaved?: (ts: number) => void;
@@ -34,6 +36,12 @@ type Props = {
   onDraftWithAi?: () => void;
   onInsertTemplate?: () => void;
   primaryBusy?: boolean;
+  /**
+   * Optional persistence adapter. When omitted, the hook falls back to its
+   * built-in Supabase path (production editor behavior). /editor-lab passes
+   * NullPersistenceAdapter to run fully local.
+   */
+  persistence?: PersistenceAdapter;
 };
 
 export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props>(
@@ -42,7 +50,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       projectId,
       initialBlocks,
       blocksLoading,
-      characters,
+      characters = [],
       onCreateCharacter,
       onActiveBlockChange,
       onSaveStatus,
@@ -52,6 +60,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       onDraftWithAi,
       onInsertTemplate,
       primaryBusy,
+      persistence,
     },
     ref,
   ) {
@@ -62,6 +71,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       onSaveStatus,
       onLastSaved,
       onBlockCreated,
+      persistence,
     });
 
     // bubble active block info up (debounced by key string to avoid spam)
@@ -167,7 +177,9 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     block={b}
                     isActive={b.id === doc.activeBlockId}
                     characters={characters}
-                    onCreateCharacter={onCreateCharacter}
+                    onCreateCharacter={
+                      onCreateCharacter ?? (async () => undefined)
+                    }
                     onFocus={() => doc.setActiveBlockId(b.id)}
                     onContentChange={(c) => doc.updateBlockContent(b.id, c)}
                     onChangeType={(t) => doc.changeBlockType(b.id, t)}
