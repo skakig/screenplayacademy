@@ -143,3 +143,13 @@ Coach card density, tone, and depth read from `writer_profiles.coaching_level` �
 3. **Scene status badges** — auto-derived (Idea = empty, Drafting = has blocks, Needs Rewrite = analyzer flags missing purpose/turn, Strong = all arc fields filled), or also user-settable from the scene card menu? Auto-derived and user-settable. 
 
 Once you answer these, I'll switch to build mode and start with Wave A.
+---
+
+## Wave B status: shipped
+
+- Migration: `writer_profiles`, `writing_events`, `coach_recommendations`, `editor_sessions` (RLS + grants).
+- Event spine: `src/lib/its/writerEvents.functions.ts` + `src/hooks/useWriterEvents.ts` (debounced fire-and-forget).
+- Wired emits in `editor.$projectId.tsx`: `block_created`, `scene_created`, `ai_request`.
+- Aggregator: `src/lib/its/writerProfile.functions.ts` (`getWriterProfile`, `aggregateWriterProfile`).
+- Rule engine + recs API: `src/lib/its/coachRecommendations.functions.ts` (5 starter rules: format_basics, scene_turn, subtext_dialogue, ai_dependence, visual_writing).
+- UI: `WriterInsightsPanel` mounted inside the Coach tab — shows 5 skill bars + recommendations with Teach me / Got it / Dismiss.
