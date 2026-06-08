@@ -789,7 +789,18 @@ function Editor() {
             </div>
           )}
 
-          <div className={`screenplay max-w-[680px] mx-auto bg-card border border-border/60 rounded-lg p-8 lg:p-12 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.5)] ${isLoglineStep ? "opacity-60" : ""}`}>
+          {!isLoglineStep && !redirect && (
+            <CanvasToolbar
+              blockType={activeBlock?.block_type ?? null}
+              onChangeType={(t) => activeBlock && void saveBlock(activeBlock.id, { block_type: t })}
+              pageCount={pageCount}
+              currentPage={Math.max(1, Math.min(pageCount, Math.ceil(((activeBlockId ? blocks.findIndex((b: any) => b.id === activeBlockId) + 1 : blocks.length) / Math.max(1, blocks.length)) * pageCount)))}
+              wordCount={blocks.reduce((n: number, b: any) => n + (b.content?.trim().split(/\s+/).filter(Boolean).length ?? 0), 0)}
+              sceneCount={outline.length}
+            />
+          )}
+
+          <div className={`screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 ${isLoglineStep ? "opacity-60" : ""}`}>
             {blocksLoading ? (
               <div className="space-y-3 py-8 font-sans">
                 <div className="h-5 w-2/3 bg-muted/50 rounded animate-pulse" />
