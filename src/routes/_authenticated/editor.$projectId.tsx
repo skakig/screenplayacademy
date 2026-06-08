@@ -59,6 +59,9 @@ const AI_TOOLS = [
 
 function Editor() {
   const { projectId } = Route.useParams();
+  const search = Route.useSearch();
+  const fromGuided = search.from === "guided";
+  const guidedStep = search.step;
   const qc = useQueryClient();
   const callAi = useServerFn(aiAssist);
 
