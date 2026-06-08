@@ -203,9 +203,24 @@ function Editor() {
         <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10">
           <div className="screenplay max-w-[680px] mx-auto bg-card/30 border border-border/40 rounded-lg p-8 lg:p-12 shadow-2xl">
             {blocks.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-muted-foreground mb-4 font-sans">Your blank page awaits.</p>
-                <Button onClick={() => addBlock.mutate("scene_heading")}><Plus className="h-4 w-4 mr-2" />Add Scene Heading</Button>
+              <div className="text-center py-16 font-sans">
+                <p className="text-lg font-semibold mb-1">
+                  {fromGuided ? "Let's write your opening scene." : "Your blank page awaits."}
+                </p>
+                <p className="text-sm text-muted-foreground mb-5 max-w-sm mx-auto">
+                  Start with a scene heading — it tells the reader where and when we are. The rest follows.
+                </p>
+                <div className="flex gap-2 justify-center flex-wrap">
+                  <Button onClick={async () => {
+                    await addBlock.mutateAsync("scene_heading");
+                    await addBlock.mutateAsync("action");
+                  }}>
+                    <Plus className="h-4 w-4 mr-2" />Start my scene
+                  </Button>
+                  <Button variant="outline" onClick={() => addBlock.mutate("scene_heading")}>
+                    Just a heading
+                  </Button>
+                </div>
               </div>
             ) : (
               blocks.map((b) => (
