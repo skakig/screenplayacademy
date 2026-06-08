@@ -379,15 +379,22 @@ function Editor() {
       return;
     }
     if (kind === "ai") {
-      // Step-specific AI helpers
       if (guidedStep === "opening_scene") return draftOpeningWithAi();
-      // For act1 / rough_draft / etc, run AI helper into the right rail output
-      setAiTool(guidedStep === "rough_draft" ? "Find plot holes" : guidedStep === "act1" ? "Build outline" : "Generate logline");
-      setAiPrompt(stepProgress.primaryAction.label);
-      await runAi();
+      const tool = guidedStep === "rough_draft" ? "Find plot holes" : guidedStep === "act1" ? "Build outline" : "Build outline";
+      setPrimaryBusy(true);
+      try {
+        const res = await callAi({ data: { projectId, tool, prompt: stepProgress.primaryAction.label, context: projectCtx } });
+        setAiOutput(res.text);
+        setAiTool(tool);
+        toast.success("AI response ready in the right panel");
+      } catch (e: any) {
+        toast.error(e.message ?? "AI request failed");
+      } finally {
+        setPrimaryBusy(false);
+      }
       return;
     }
-  }, [stepProgress, guidedStep, insertTemplate, draftOpeningWithAi, runAi]);
+  }, [stepProgress, guidedStep, insertTemplate, draftOpeningWithAi, callAi, projectId, projectCtx]);
 
   const handleMarkComplete = useCallback(async () => {
     if (!guidedStep) return;
