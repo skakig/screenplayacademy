@@ -95,6 +95,7 @@ export function CoachPane({
           <CoachModeToggle />
         </div>
         <CoachPanel sceneText={sceneText} blockCount={blocks.length} />
+        <WriterInsightsPanel projectId={projectId} />
         <div className="border-t border-border/40 pt-3 mt-3 space-y-2">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">AI Assistant</p>
           <Select value={aiTool} onValueChange={setAiTool}>
