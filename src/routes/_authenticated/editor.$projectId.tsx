@@ -407,6 +407,8 @@ function Editor() {
                   onInsertAfter={(block_type) => insertBlockAfter.mutate({ block_type, afterOrder: b.order_index })}
                   focusBlockId={focusBlockId}
                   onFocusDone={() => setFocusBlockId(null)}
+                  characters={characters}
+                  onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
                 />
               ))
             )}
