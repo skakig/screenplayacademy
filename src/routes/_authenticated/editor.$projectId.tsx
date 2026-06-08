@@ -505,14 +505,18 @@ function BlockEditor({
   onInsertAfter,
   focusBlockId,
   onFocusDone,
+  characters,
+  onCreateCharacter,
 }: {
   block: any;
-  onSave: (patch: { content?: string; block_type?: string }) => void | Promise<void>;
+  onSave: (patch: { content?: string; block_type?: string; metadata?: Record<string, any> }) => void | Promise<void>;
   onDirty: (content: string) => void;
   onDelete: () => void;
   onInsertAfter: (block_type: string) => void;
   focusBlockId: string | null;
   onFocusDone: () => void;
+  characters: CharacterHit[];
+  onCreateCharacter: (name: string) => Promise<any>;
 }) {
   const [val, setVal] = useState<string>(block.content ?? "");
   const ref = useRef<HTMLTextAreaElement>(null);
