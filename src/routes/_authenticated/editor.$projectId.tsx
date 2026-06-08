@@ -43,6 +43,8 @@ import { useOnboarding } from "@/hooks/use-onboarding";
 import { buildOutline, estimatePages } from "@/lib/editor/manuscriptAnalyzer";
 import { BookOpen } from "lucide-react";
 import { useWriterEvents } from "@/hooks/useWriterEvents";
+import { useWriteMode } from "@/hooks/use-write-mode";
+import { PencilLine } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
