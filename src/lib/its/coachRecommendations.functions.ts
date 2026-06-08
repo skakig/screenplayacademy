@@ -26,9 +26,11 @@ export const resolveCoachRecommendation = createServerFn({ method: "POST" })
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    const update: Record<string, unknown> = { status: data.status };
-    if (data.status === "shown") update.shown_at = new Date().toISOString();
-    else update.resolved_at = new Date().toISOString();
+    const now = new Date().toISOString();
+    const update =
+      data.status === "shown"
+        ? { status: data.status, shown_at: now }
+        : { status: data.status, resolved_at: now };
     const { error } = await context.supabase
       .from("coach_recommendations")
       .update(update)
