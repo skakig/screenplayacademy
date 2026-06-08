@@ -2,9 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Lock, PlayCircle, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { GuidedStepCard } from "@/components/guided/GuidedStepCard";
+import { STEP_META } from "@/components/guided/stepMeta";
 
 export const Route = createFileRoute("/_authenticated/first-screenplay/$projectId")({
   head: () => ({ meta: [{ title: "First Screenplay Path — SceneSmith AI" }] }),
@@ -18,7 +19,7 @@ function FirstScreenplayPage() {
     queryKey: ["first-screenplay", projectId],
     queryFn: async () => {
       const [{ data: project }, { data: steps }] = await Promise.all([
-        supabase.from("projects").select("title, logline").eq("id", projectId).maybeSingle(),
+        supabase.from("projects").select("title, logline, genre, tone, project_type").eq("id", projectId).maybeSingle(),
         supabase.from("project_guided_steps").select("*").eq("project_id", projectId).order("order_index"),
       ]);
       return { project, steps: steps ?? [] };
@@ -30,6 +31,7 @@ function FirstScreenplayPage() {
 
   const done = data.steps.filter((s) => s.status === "complete").length;
   const total = data.steps.length;
+  const projectContext = `Title: ${data.project.title}\nType: ${data.project.project_type}\nGenre: ${data.project.genre ?? ""}\nTone: ${data.project.tone ?? ""}\nLogline: ${data.project.logline ?? ""}`;
 
   return (
     <AppShell>
@@ -48,40 +50,22 @@ function FirstScreenplayPage() {
           </Button>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           {data.steps.map((s, i) => {
-            const icon = s.status === "complete" ? Check : s.status === "in_progress" ? PlayCircle : Lock;
-            const Icon = icon;
-            const styles =
-              s.status === "complete"
-                ? "border-primary/30 bg-primary/5"
-                : s.status === "in_progress"
-                  ? "border-primary/40 bg-card"
-                  : "border-border/40 bg-card/50 opacity-70";
+            const meta = STEP_META[s.step_key];
+            if (!meta) return null;
             return (
-              <Card key={s.id} className={`p-4 flex items-center gap-3 ${styles}`}>
-                <div className={`h-8 w-8 rounded-full flex items-center justify-center ${s.status === "complete" ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"}`}>
-                  <Icon className="h-4 w-4" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-xs text-muted-foreground">Step {i + 1}</div>
-                  <div className="font-medium text-sm">{s.title}</div>
-                </div>
-                {s.status === "in_progress" && (
-                  <Button size="sm" asChild>
-                    <Link to="/editor/$projectId" params={{ projectId }}>
-                      <Sparkles className="h-3.5 w-3.5 mr-1.5" />Work on this
-                    </Link>
-                  </Button>
-                )}
-              </Card>
+              <GuidedStepCard
+                key={s.id}
+                step={s as any}
+                meta={meta}
+                index={i}
+                projectId={projectId}
+                projectContext={projectContext}
+              />
             );
           })}
         </div>
-
-        <p className="text-xs text-muted-foreground text-center pt-4">
-          Detailed per-step lessons and AI helpers ship in the next update. Use the editor and Academy for now — your progress is being tracked.
-        </p>
       </div>
     </AppShell>
   );
