@@ -1,59 +1,102 @@
-# Phase 3 — Connect the tabs
+# Make the Editor Feel Like a Walkthrough
 
-Right now Characters, Story Arc, StoryPulse, and Coach are separate islands. This phase wires them into the editor so the fancy names start to mean something while you write.
+## The problem (from your screenshot)
 
-## What you'll feel
+The top rail says **"Step 2 of 13: Write your logline"** — but the editor below it shows a blank scene with `INT. AFRICAN DESERT` / `STEPHAN` and a row of block buttons. The two halves don't talk to each other:
 
-1. **Type a character name in the editor → it autocompletes** from your Characters tab. New names you type get offered as "Add to cast".
-2. **StoryPulse shows your real script**, not placeholder numbers — scene count, page count, pacing, character screen-time pulled from actual blocks.
-3. **Coach gets a "Teach me" mode** — a toggle in the Coach panel that switches its answers from "fix this line" to "explain the concept" with a link into the matching Academy lesson.
-4. **Scenes ↔ Story Arc** — each scene heading shows which beat it belongs to (Setup / Inciting / Midpoint / Climax / Resolution) and you can assign from a dropdown.
+- The rail tells you *what* to do but not *how* or *where*.
+- The editor lets you type blocks but never says "this is what 'done' looks like" or "here's the next thing."
+- After you add a scene heading and a character, there's no obvious next click.
+- "Continue" in the rail is the only progression signal, and it lives far from where you're actually working.
 
-## Build order
+We need the editor itself to behave like a teacher.
 
-### A. Character autocomplete (editor)
-- New `CharacterAutocomplete.tsx` — listens for `@` or all-caps typing inside a `character` block, queries existing characters for the project, renders a small popover.
-- "Add new character" inline action → inserts into `characters` table with `auto_detected=true` so the Characters tab can show "detected from script".
-- Server fn `listProjectCharacters` (read) + reuse existing create mutation.
+## What I'd build
 
-### B. StoryPulse real data
-- Replace mocked numbers in StoryPulse with a `getStoryPulse(projectId)` server fn that aggregates blocks:
-  - scene count, est. page count (1 page ≈ 55 lines), avg scene length, dialogue/action ratio, character line counts.
-- Keep the existing UI shell, swap data source.
+### 1. Step-aware Editor Coach (replaces the silent block toolbar as the focal point)
 
-### C. Coach "Teach me" mode
-- Toggle in `CoachPanel` header: **Fix** | **Teach**.
-- In Teach mode, the system prompt shifts to "explain the screenwriting concept behind the user's question, ≤120 words, then link the matching Academy lesson by slug".
-- Coach response renders a "Open lesson →" chip when a slug is returned.
+A single, always-visible coach card pinned to the top of the editor canvas (under the rail) that knows which guided step you're on and shows:
 
-### D. Scene ↔ Arc assignment
-- New table `scene_arc_assignments(project_id, scene_block_id, beat)` with RLS.
-- Small beat picker rendered next to each `scene_heading` block.
-- Story Arc tab reads these assignments to show which scenes fill which beat (and which beats are still empty).
+- **What this step is** (1 sentence from `stepMeta.concept`).
+- **What "done" looks like** (a checklist of 1–3 concrete sub-tasks the editor can detect).
+- **The single best next action** as a primary button (e.g. *"Generate 5 logline options"*, *"Insert opening scene template"*, *"Add your protagonist"*).
+- **A secondary "Show me an example"** that drops a real example into the page (greyed, dismissable).
+- **"Mark step complete & continue"** button that lights up only when the checklist is satisfied.
 
-## Files
+The coach replaces the current row of `+ Scene Heading / + Action / + Character …` as the primary surface. Those block buttons stay, but move to a smaller secondary toolbar below the coach (they're for power use, not first-time learning).
 
-**New**
-- `src/components/editor/CharacterAutocomplete.tsx`
-- `src/components/editor/SceneBeatPicker.tsx`
-- `src/lib/characters.functions.ts` (list + detect)
-- `src/lib/storypulse.functions.ts` (real aggregation)
-- `src/lib/sceneArc.functions.ts`
+### 2. Step-specific editor modes
 
-**Edited**
-- `src/routes/_authenticated/editor.$projectId.tsx` — mount autocomplete + beat picker
-- `src/components/editor/CoachPanel.tsx` — Fix/Teach toggle, lesson chip
-- `src/routes/_authenticated/storypulse.$projectId.tsx` — swap to real data
-- `src/routes/_authenticated/story-arc.$projectId.tsx` — read scene assignments
+The editor adapts to the current guided step instead of always showing a generic block surface:
 
-**DB migration**
-- `scene_arc_assignments` table (+ GRANT + RLS)
-- `characters.auto_detected boolean default false` column
+| Step | Editor shows |
+|---|---|
+| `logline` | A single-line logline composer with word counter (25–40), AI "generate 5 options" picker, save-to-project |
+| `protagonist` / `antagonist` | Auto-routes to Characters page with the coach card carried over (no blank editor) |
+| `theme` | Theme statement composer with AI suggestions, saves to project metadata |
+| `story_arc` / `midpoint` | Auto-routes to Story Arc page |
+| `scene_cards` | Auto-routes to Scenes page |
+| `opening_scene` | Editor with a pre-seeded **opening scene template** (FADE IN → scene heading → action → dialogue placeholders) and a "Draft with AI" button |
+| `act1` | Editor with an Act 1 beat checklist down the side; clicking a beat scrolls/inserts a stub |
+| `rough_draft` | Free editor + Coach panel in "diagnose" mode |
+| `table_read` / `pitch` | Auto-routes to those pages |
 
-## Out of scope (saved for Phase 4–5)
-- Editor empty-state templates ("Start from logline")
-- Weekly check-in dashboard
-- Storyboard ordering by scene
+Today the editor opens the same blank `INT. AFRICAN DESERT` / `STEPHAN` shell no matter which step you're on. That's the core source of the confusion.
 
-## Question for you
-Want me to ship **all four (A–D)** in one turn, or start with **A + C** (the two you'll feel while writing) and do StoryPulse + Scene-Arc in a follow-up?
+### 3. "What do I do next?" detector
+
+The coach watches the script and, when sub-tasks are satisfied, swaps the primary button to **"Looks good — continue to Step N"**. This gives the page a forward gear it doesn't have today.
+
+### 4. Empty-state that teaches, not a blank scene
+
+When a project has zero blocks, instead of pre-seeding `INT. AFRICAN DESERT` / `STEPHAN`, show:
+
+- A short "Welcome to the editor" panel with 3 buttons:
+  - *Use the opening scene template* (inserts FADE IN + sluglines + placeholders).
+  - *Let AI draft an opening from my logline* (uses existing `openingScene` helper).
+  - *I'll start from scratch* (then inserts a single empty scene heading).
+
+Today the editor seeds a confusing placeholder scene before the user has done anything, which makes the "walkthrough" feel broken.
+
+### 5. Visible micro-progress inside the step
+
+Add a thin checklist under the coach card so the user always sees the 1–3 atoms that make the current step "done", with live checkmarks as they type/save. E.g. for `opening_scene`:
+
+- [x] Scene heading exists
+- [ ] At least one action line
+- [ ] At least one dialogue line
+
+This is the difference between "Step 2 of 13" (abstract) and "2 of 3 things done on this step" (actionable).
+
+---
+
+## Scope (this turn)
+
+I propose shipping **the coach card + step-specific editor modes + empty-state teacher** in one pass, because those three together are what turn this into a walkthrough. The rest (per-step beat side-rails, animated transitions) can come after you feel the new flow.
+
+Concretely:
+
+**New files**
+- `src/components/editor/StepCoach.tsx` — the pinned coach card with concept, checklist, primary action, mark-complete.
+- `src/components/editor/EmptyEditorTeacher.tsx` — first-run welcome / template chooser.
+- `src/components/editor/LoglineComposer.tsx` — single-line composer used when step is `logline`.
+- `src/components/editor/ThemeComposer.tsx` — same idea for `theme`.
+- `src/lib/editor/stepCompletion.ts` — pure functions that take blocks + step and return `{ checks: [{label, done}], allDone }`.
+- `src/lib/editor/openingTemplate.ts` — block payloads for the opening-scene template.
+
+**Edited files**
+- `src/routes/_authenticated/editor.$projectId.tsx` — read `?step=` from URL (already linked from the rail), pick mode (logline / theme / opening / free), render `StepCoach` at top, render `EmptyEditorTeacher` when block count is 0, demote the `+ Scene Heading / + Action / …` row into a collapsible "Insert block" menu, and stop auto-seeding `INT. AFRICAN DESERT` / `STEPHAN`.
+- `src/components/guided/GuidedRail.tsx` — keep as-is but add the current step's `?step=<key>` query param to its links so the editor knows the context.
+- `src/routes/_authenticated/first-screenplay.$projectId.tsx` — each "Open" button on a step card already routes to its destination; add the `?step=<key>` query param so the editor / characters / story-arc pages can render the coach for that exact step.
+
+**Not in scope this turn** (next pass): Act 1 beat side-rail, animated "step complete" celebration, AI-driven proactive nudges, mobile-specific coach layout polish.
+
+## Technical notes
+
+- The coach reads the current step from `?step=<key>` first, falls back to the first non-complete row in `project_guided_steps`. This keeps deep-links from the rail and from the First Screenplay page consistent.
+- `stepCompletion.ts` is pure and gets unit-testable predicates (`hasSceneHeading`, `hasActionLine`, `hasDialogue`, `wordCount(loglineDraft) in [25,40]`, etc.).
+- "Mark step complete" calls the existing `project_guided_steps` update path used by the First Screenplay page — no new RPC needed.
+- Removing the auto-seeded `INT. AFRICAN DESERT` placeholder is a one-line change in the editor's initial-load effect; existing projects that already have those blocks are untouched.
+- No DB migration required.
+
+Approve and I'll build it.
