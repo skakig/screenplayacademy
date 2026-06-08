@@ -44,20 +44,6 @@ function loglineProgress(p: ProjectLite): StepProgress {
   };
 }
 
-function themeProgress(p: ProjectLite): StepProgress {
-  const has = !!p.theme && p.theme.trim().length > 0;
-  const checks: Check[] = [
-    { label: "Thematic statement saved on the project", done: has },
-  ];
-  return {
-    checks,
-    allDone: has,
-    primaryAction: has
-      ? { kind: "mark", label: "Mark theme complete" }
-      : { kind: "ai", label: "Suggest 5 themes" },
-  };
-}
-
 function openingSceneProgress(blocks: EditorBlock[]): StepProgress {
   const hasHeading = blocks.some((b) => b.block_type === "scene_heading" && (b.content ?? "").trim().length > 0);
   const hasAction = blocks.some((b) => b.block_type === "action" && (b.content ?? "").trim().length > 0);
@@ -96,7 +82,7 @@ export function progressForStep(
     case "logline":
       return loglineProgress(project);
     case "theme":
-      return themeProgress(project);
+      return genericNavigateProgress("Story Arc");
     case "opening_scene":
       return openingSceneProgress(blocks);
     case "protagonist":
@@ -146,9 +132,6 @@ export function progressForStep(
 export function shouldUseLoglineComposer(step: string | undefined) {
   return step === "logline";
 }
-export function shouldUseThemeComposer(step: string | undefined) {
-  return step === "theme";
-}
 export function shouldRedirectStep(step: string | undefined):
   | { destination: "characters" | "story-arc" | "scenes" | "pitch" | "tableread" }
   | null {
@@ -158,6 +141,7 @@ export function shouldRedirectStep(step: string | undefined):
       return { destination: "characters" };
     case "story_arc":
     case "midpoint":
+    case "theme":
       return { destination: "story-arc" };
     case "scene_cards":
       return { destination: "scenes" };
