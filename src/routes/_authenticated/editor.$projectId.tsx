@@ -417,8 +417,70 @@ function Editor() {
   }, [addBlock]);
 
   const tour = useEditorTour();
+  const [storyBuilderOpen, setStoryBuilderOpen] = useState(false);
 
-  // ===== Command-bar handlers (operate on the currently-focused block) =====
+  // Background auto-analyzer: detect new characters + sync scenes table.
+  useManuscriptAnalyzer({
+    projectId,
+    blocks: blocks as any,
+    existingCharacterNames: (characters as any[]).map((c) => c.name),
+  });
+
+  // Auto-seed: if the editor is opened on a writing step with no blocks and no
+  // step-specific composer in front of it, drop a single scene heading and
+  // park focus there so the writer can just start typing.
+  const autoSeededRef = useRef(false);
+  useEffect(() => {
+    if (autoSeededRef.current) return;
+    if (blocksLoading) return;
+    if (blocks.length > 0) return;
+    if (isLoglineStep || redirect) return;
+    // Only auto-seed when arriving from the guided path on a writing step,
+    // or when the user has no logline-style work pending. Skip if step is set
+    // and not a writing step.
+    if (guidedStep && !["opening_scene", "act1", "act2", "act3", "rough_draft", "first_scene", "write_first_scene"].includes(guidedStep)) return;
+    autoSeededRef.current = true;
+    // Wait one tick so the dialog/empty-state animations don't fight the focus.
+    setTimeout(() => {
+      addBlock.mutate("scene_heading");
+    }, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocksLoading, blocks.length, isLoglineStep, redirect, guidedStep]);
+
+  // After auto-seed, focus the new (single) empty block.
+  useEffect(() => {
+    if (blocks.length === 1 && !blocks[0].content && focusBlockId !== blocks[0].id) {
+      setFocusBlockId(blocks[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocks.length]);
+
+  // Derived: outline + page count for the manuscript header.
+  const outline = buildOutline(blocks as any);
+  const pageCount = estimatePages(blocks as any);
+  const activeSceneIdx = (() => {
+    if (!activeBlockId) return -1;
+    const b = blocks.find((x: any) => x.id === activeBlockId);
+    if (!b) return -1;
+    return outline.findIndex((s) => b.order_index >= s.startOrder && b.order_index <= s.endOrder);
+  })();
+  const activeScene = activeSceneIdx >= 0 ? outline[activeSceneIdx] : null;
+
+  const jumpToBlock = useCallback((blockId: string) => {
+    setFocusBlockId(blockId);
+    if (typeof document !== "undefined") {
+      // Scroll into view if rendered.
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`[data-block-id="${blockId}"]`) as HTMLElement | null;
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+  }, []);
+
+  const addSceneAtEnd = useCallback(() => {
+    addBlock.mutate("scene_heading");
+  }, [addBlock]);
+
   const activeBlock = blocks.find((b: any) => b.id === activeBlockId) ?? null;
   const activeIndex = activeBlock ? blocks.findIndex((b: any) => b.id === activeBlock.id) : -1;
   const prevType = activeIndex > 0 ? blocks[activeIndex - 1]?.block_type : undefined;
