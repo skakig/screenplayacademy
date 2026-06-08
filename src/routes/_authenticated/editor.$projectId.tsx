@@ -21,7 +21,7 @@ import { GuidedRail } from "@/components/guided/GuidedRail";
 import { CharacterAutocomplete, type CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import { SceneBeatPicker } from "@/components/editor/SceneBeatPicker";
 import { StepCoach } from "@/components/editor/StepCoach";
-import { EmptyEditorTeacher } from "@/components/editor/EmptyEditorTeacher";
+import { ScreenplayDocumentEditor } from "@/components/editor/ScreenplayDocumentEditor";
 import { LoglineComposer } from "@/components/editor/LoglineComposer";
 import { progressForStep, shouldUseLoglineComposer, shouldRedirectStep } from "@/lib/editor/stepCompletion";
 import { OPENING_SCENE_TEMPLATE } from "@/lib/editor/openingTemplate";
@@ -221,24 +221,25 @@ function Editor() {
   const emitEvent = useWriterEvents();
 
   const addBlock = useMutation({
-    mutationFn: async (block_type: string) => {
+    mutationFn: async ({ block_type, initialContent }: { block_type: string; initialContent?: string }) => {
       const order_index = blocks.length;
       const { data, error } = await supabase.from("script_blocks")
-        .insert({ project_id: projectId, block_type, content: "", order_index })
+        .insert({ project_id: projectId, block_type, content: initialContent ?? "", order_index })
         .select().single();
       if (error) throw error;
       return data;
     },
-    onMutate: async (block_type: string) => {
+    onMutate: async ({ block_type, initialContent }) => {
       await qc.cancelQueries({ queryKey: ["blocks", projectId] });
       const prev = qc.getQueryData<any[]>(["blocks", projectId]) ?? [];
       const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const temp = { id: tempId, project_id: projectId, block_type, content: "", order_index: prev.length, metadata: null };
+      const temp = { id: tempId, project_id: projectId, block_type, content: initialContent ?? "", order_index: prev.length, metadata: null };
       qc.setQueryData<any[]>(["blocks", projectId], [...prev, temp]);
+      if (initialContent) pendingTempContent.current.set(tempId, initialContent);
       setFocusBlockId(tempId);
       return { tempId, prev };
     },
-    onSuccess: (data, block_type, ctx: any) => {
+    onSuccess: (data, vars, ctx: any) => {
       qc.setQueryData<any[]>(["blocks", projectId], (old) =>
         (old ?? []).map((b) => (b.id === ctx?.tempId ? data : b))
       );
@@ -246,9 +247,11 @@ function Editor() {
       // Flush any text the user already typed into the temp row.
       const buffered = ctx?.tempId ? pendingTempContent.current.get(ctx.tempId) : undefined;
       if (ctx?.tempId) pendingTempContent.current.delete(ctx.tempId);
-      if (buffered && data?.id) void saveBlock(data.id, { content: buffered });
-      emitEvent({ event_type: "block_created", project_id: projectId, context: { block_type } });
-      if (block_type === "scene_heading") {
+      if (buffered && data?.id && buffered !== (data.content ?? "")) {
+        void saveBlock(data.id, { content: buffered });
+      }
+      emitEvent({ event_type: "block_created", project_id: projectId, context: { block_type: vars.block_type } });
+      if (vars.block_type === "scene_heading") {
         emitEvent({ event_type: "scene_created", project_id: projectId, context: { has_turn: false } });
       }
     },
@@ -259,18 +262,18 @@ function Editor() {
   });
 
   const insertBlockAfter = useMutation({
-    mutationFn: async ({ block_type, afterOrder }: { block_type: string; afterOrder: number }) => {
+    mutationFn: async ({ block_type, afterOrder, initialContent }: { block_type: string; afterOrder: number; initialContent?: string }) => {
       const sorted = [...blocks].sort((a, b) => a.order_index - b.order_index);
       const idx = sorted.findIndex((b) => b.order_index === afterOrder);
       const nextOrder = idx >= 0 && sorted[idx + 1] ? sorted[idx + 1].order_index : afterOrder + 1;
       const newOrder = (afterOrder + nextOrder) / 2;
       const { data, error } = await supabase.from("script_blocks")
-        .insert({ project_id: projectId, block_type, content: "", order_index: newOrder })
+        .insert({ project_id: projectId, block_type, content: initialContent ?? "", order_index: newOrder })
         .select().single();
       if (error) throw error;
       return data;
     },
-    onMutate: async ({ block_type, afterOrder }) => {
+    onMutate: async ({ block_type, afterOrder, initialContent }) => {
       await qc.cancelQueries({ queryKey: ["blocks", projectId] });
       const prev = qc.getQueryData<any[]>(["blocks", projectId]) ?? [];
       const sorted = [...prev].sort((a, b) => a.order_index - b.order_index);
@@ -278,8 +281,9 @@ function Editor() {
       const nextOrder = idx >= 0 && sorted[idx + 1] ? sorted[idx + 1].order_index : afterOrder + 1;
       const newOrder = (afterOrder + nextOrder) / 2;
       const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const temp = { id: tempId, project_id: projectId, block_type, content: "", order_index: newOrder, metadata: null };
+      const temp = { id: tempId, project_id: projectId, block_type, content: initialContent ?? "", order_index: newOrder, metadata: null };
       qc.setQueryData<any[]>(["blocks", projectId], [...prev, temp].sort((a, b) => a.order_index - b.order_index));
+      if (initialContent) pendingTempContent.current.set(tempId, initialContent);
       setFocusBlockId(tempId);
       return { tempId, prev };
     },
@@ -290,7 +294,9 @@ function Editor() {
       if (data?.id) setFocusBlockId(data.id);
       const buffered = ctx?.tempId ? pendingTempContent.current.get(ctx.tempId) : undefined;
       if (ctx?.tempId) pendingTempContent.current.delete(ctx.tempId);
-      if (buffered && data?.id) void saveBlock(data.id, { content: buffered });
+      if (buffered && data?.id && buffered !== (data.content ?? "")) {
+        void saveBlock(data.id, { content: buffered });
+      }
     },
     onError: (_e, _v, ctx: any) => {
       if (ctx?.tempId) pendingTempContent.current.delete(ctx.tempId);
@@ -488,7 +494,7 @@ function Editor() {
   }, [guidedStep, markStepComplete]);
 
   const startFromScratch = useCallback(async () => {
-    await addBlock.mutateAsync("scene_heading");
+    await addBlock.mutateAsync({ block_type: "scene_heading" });
   }, [addBlock]);
 
   const tour = useEditorTour();
@@ -538,29 +544,8 @@ function Editor() {
     existingCharacterNames: (characters as any[]).map((c) => c.name),
   });
 
-  // Auto-seed: an empty manuscript should not require a click to start. Whenever
-  // the editor opens with no blocks and we're not on the logline step (which has
-  // its own surface) or a redirect step, drop a scene_heading and focus it.
-  const autoSeededRef = useRef(false);
-  useEffect(() => {
-    if (autoSeededRef.current) return;
-    if (blocksLoading) return;
-    if (blocks.length > 0) return;
-    if (isLoglineStep || redirect) return;
-    autoSeededRef.current = true;
-    setTimeout(() => {
-      addBlock.mutate("scene_heading");
-    }, 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocksLoading, blocks.length, isLoglineStep, redirect]);
 
-  // After auto-seed, focus the new (single) empty block.
-  useEffect(() => {
-    if (blocks.length === 1 && !blocks[0].content && focusBlockId !== blocks[0].id) {
-      setFocusBlockId(blocks[0].id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocks.length]);
+
 
   // Derived: outline + page count for the manuscript header.
   const outline = buildOutline(blocks as any);
@@ -585,7 +570,7 @@ function Editor() {
   }, []);
 
   const addSceneAtEnd = useCallback(() => {
-    addBlock.mutate("scene_heading");
+    addBlock.mutate({ block_type: "scene_heading" });
   }, [addBlock]);
 
   const activeBlock = blocks.find((b: any) => b.id === activeBlockId) ?? null;
@@ -604,7 +589,7 @@ function Editor() {
       const nextType = nextBlockTypeAfter(activeBlock.block_type, prevType);
       insertBlockAfter.mutate({ block_type: nextType, afterOrder: activeBlock.order_index });
     } else if (blocks.length === 0) {
-      addBlock.mutate("scene_heading");
+      addBlock.mutate({ block_type: "scene_heading" });
     } else {
       const last = blocks[blocks.length - 1];
       const nextType = nextBlockTypeAfter(last.block_type);
@@ -922,98 +907,26 @@ function Editor() {
             <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">⌘↵</kbd> AI continue</span>
           </div>
 
-          <div
-            className="screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 cursor-text"
-            onMouseDown={(e) => {
-              const target = e.target as HTMLElement;
-              if (target.closest("textarea, button, input, [role='menu'], [data-block-toolbar]")) return;
-              e.preventDefault();
-              const all = (e.currentTarget as HTMLElement).querySelectorAll<HTMLTextAreaElement>("textarea");
-              if (all.length === 0) { cmdNewLine(); return; }
-              const y = e.clientY;
-              // If click is below the last textarea, treat as "new line at end"
-              const last = all[all.length - 1];
-              const lastRect = last.getBoundingClientRect();
-              if (y > lastRect.bottom + 8) { cmdNewLine(); return; }
-              // Otherwise focus the nearest textarea
-              let best: HTMLTextAreaElement = all[0];
-              let bestDist = Infinity;
-              all.forEach((t) => {
-                const r = t.getBoundingClientRect();
-                const d = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
-                if (d < bestDist) { bestDist = d; best = t; }
-              });
-              best.focus();
-              const len = best.value.length;
-              try { best.setSelectionRange(len, len); } catch {}
-            }}
-          >
-            {blocksLoading ? (
-              <div className="space-y-3 py-8 font-sans">
-                <div className="h-5 w-2/3 bg-muted/50 rounded animate-pulse" />
-                <div className="h-4 w-full bg-muted/40 rounded animate-pulse" />
-                <div className="h-4 w-5/6 bg-muted/40 rounded animate-pulse" />
-                <div className="h-4 w-3/4 bg-muted/40 rounded animate-pulse" />
-              </div>
-            ) : blocks.length === 0 ? (
-              <EmptyEditorTeacher
-                hasLogline={!!project?.logline}
-                onUseTemplate={() => insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
-                onDraftWithAi={draftOpeningWithAi}
-                onStartFromScratch={startFromScratch}
-                onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
-              />
-            ) : (
-              <>
-                {blocks.map((b, i) => {
-                  const isNewScene = b.block_type === "scene_heading" && i > 0;
-                  return (
-                    <div key={b.id} data-block-id={b.id}>
-                      {isNewScene && (
-                        <div className="my-6 flex items-center gap-3 font-sans" aria-hidden="true">
-                          <div className="h-px flex-1 bg-border/60" />
-                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-mono">
-                            Scene
-                          </span>
-                          <div className="h-px flex-1 bg-border/60" />
-                        </div>
-                      )}
-                      <BlockEditor
-                        block={b}
-                        prevBlockType={i > 0 ? blocks[i - 1].block_type : undefined}
-                        onSave={(patch) => saveBlock(b.id, patch)}
-                        onDirty={(content) => { writeDraft(b.id, content); markDirty(); }}
-                        onDelete={() => deleteBlock.mutate(b.id)}
-                        onInsertAfter={(block_type) => insertBlockAfter.mutate({ block_type, afterOrder: b.order_index })}
-                        focusBlockId={focusBlockId}
-                        onFocusDone={() => setFocusBlockId(null)}
-                        onActiveChange={(id, active) => setActiveBlockId((prev) => (active ? id : prev === id ? null : prev))}
-                        characters={characters}
-                        onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
-                      />
-                    </div>
-                  );
-                })}
+          <ScreenplayDocumentEditor
+            blocks={blocks as any[]}
+            blocksLoading={blocksLoading}
+            characters={characters as CharacterHit[]}
+            focusBlockId={focusBlockId}
+            setFocusBlockId={setFocusBlockId}
+            activeBlockId={activeBlockId}
+            setActiveBlockId={setActiveBlockId}
+            onAddBlock={(block_type, initialContent) => addBlock.mutate({ block_type, initialContent })}
+            onInsertAfter={(args) => insertBlockAfter.mutate(args)}
+            onSaveBlock={saveBlock}
+            onDeleteBlock={(id) => deleteBlock.mutate(id)}
+            onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
+            onDirty={(blockId, content) => { writeDraft(blockId, content); markDirty(); }}
+            onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
+            onDraftWithAi={draftOpeningWithAi}
+            onInsertTemplate={() => void insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
+            primaryBusy={primaryBusy || insertTemplate.isPending}
+          />
 
-                {/* Trailing writing line — looks like a blinking caret invitation, not a utility button */}
-                <button
-                  type="button"
-                  onClick={cmdNewLine}
-                  className="mt-2 w-full text-left py-2 flex items-center gap-2 group/ghost"
-                  title="Click or press Enter to start a new line"
-                  aria-label="Start a new line"
-                >
-                  <span className="inline-block w-px h-5 bg-primary/70 animate-pulse" aria-hidden="true" />
-                  <span className="font-sans text-xs text-muted-foreground/70 group-hover/ghost:text-foreground transition-colors">
-                    Start typing…
-                  </span>
-                  <span className="opacity-40 ml-auto font-mono text-[10px] text-muted-foreground">
-                    Enter · Tab change type · / menu
-                  </span>
-                </button>
-              </>
-            )}
-          </div>
 
           <EditorCommandBar
             currentBlockType={activeBlock?.block_type ?? null}
@@ -1081,361 +994,6 @@ function Editor() {
   );
 }
 
-function BlockEditor({
-  block,
-  prevBlockType,
-  onSave,
-  onDirty,
-  onDelete,
-  onInsertAfter,
-  focusBlockId,
-  onFocusDone,
-  onActiveChange,
-  characters,
-  onCreateCharacter,
-}: {
-  block: any;
-  prevBlockType?: string;
-  onSave: (patch: { content?: string; block_type?: string; metadata?: Record<string, any> }) => void | Promise<void>;
-  onDirty: (content: string) => void;
-  onDelete: () => void;
-  onInsertAfter: (block_type: string) => void;
-  focusBlockId: string | null;
-  onFocusDone: () => void;
-  onActiveChange?: (id: string, active: boolean) => void;
-  characters: CharacterHit[];
-  onCreateCharacter: (name: string) => Promise<any>;
-}) {
-  const [val, setVal] = useState<string>(block.content ?? "");
-  const ref = useRef<HTMLTextAreaElement>(null);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dirtyRef = useRef(false);
-
-  useEffect(() => {
-    // Don't overwrite local typing with server echo
-    if (!dirtyRef.current) setVal(block.content ?? "");
-  }, [block.content]);
-
-  // Debounced autosave — 800ms after last keystroke
-  const scheduleSave = useCallback((next: string) => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      saveTimer.current = null;
-      if (next === (block.content ?? "")) { dirtyRef.current = false; return; }
-      await onSave({ content: next });
-      dirtyRef.current = false;
-    }, 800);
-  }, [block.content, onSave]);
-
-  const flush = useCallback(() => {
-    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
-    if (val !== (block.content ?? "")) {
-      void onSave({ content: val });
-      dirtyRef.current = false;
-    }
-  }, [val, block.content, onSave]);
-
-  // Flush on unmount
-  useEffect(() => () => { flush(); }, [flush]);
-
-  // auto-resize
-  useEffect(() => {
-    if (ref.current) {
-      ref.current.style.height = "auto";
-      ref.current.style.height = ref.current.scrollHeight + "px";
-    }
-  }, [val]);
-
-  // focus newly inserted blocks
-  useEffect(() => {
-    if (focusBlockId === block.id && ref.current) {
-      ref.current.focus();
-      onFocusDone();
-    }
-  }, [focusBlockId, block.id, onFocusDone]);
-
-  const placeholder: Record<string, string> = {
-    scene_heading: "INT. LOCATION - DAY",
-    action: "Describe what we see...",
-    character: "CHARACTER NAME",
-    dialogue: "What they say...",
-    parenthetical: "(beat)",
-    transition: "CUT TO:",
-    shot: "CLOSE ON",
-    note: "Note to self...",
-  };
-
-  // Slash command state
-  const [slashOpen, setSlashOpen] = useState(false);
-  const [slashStart, setSlashStart] = useState<number>(-1);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  const query = slashOpen && slashStart >= 0
-    ? val.slice(slashStart + 1).toLowerCase()
-    : "";
-
-  const filtered = BLOCK_TYPES.filter((t) =>
-    t.label.toLowerCase().includes(query) ||
-    t.value.toLowerCase().includes(query) ||
-    t.shortcut.toLowerCase().includes(query) ||
-    t.aliases.some((a) => a.toLowerCase().includes(query))
-  );
-
-  const closeSlash = useCallback(() => {
-    setSlashOpen(false);
-    setSlashStart(-1);
-    setSelectedIndex(0);
-  }, []);
-
-  const executeSlash = useCallback((blockType: string) => {
-    // Remove slash text from current block
-    const beforeSlash = val.slice(0, slashStart);
-    const newVal = beforeSlash;
-    setVal(newVal);
-    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
-    void onSave({ content: newVal });
-    closeSlash();
-    onInsertAfter(blockType);
-  }, [val, slashStart, closeSlash, onSave, onInsertAfter]);
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (slashOpen) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        closeSlash();
-        return;
-      }
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setSelectedIndex((i) => (i + 1) % filtered.length);
-        return;
-      }
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSelectedIndex((i) => (i - 1 + filtered.length) % filtered.length);
-        return;
-      }
-      if (e.key === "Enter") {
-        e.preventDefault();
-        if (filtered[selectedIndex]) {
-          executeSlash(filtered[selectedIndex].value);
-        }
-        return;
-      }
-      if (e.key === "Tab") {
-        e.preventDefault();
-        if (filtered[selectedIndex]) {
-          executeSlash(filtered[selectedIndex].value);
-        }
-        return;
-      }
-    } else {
-      if (e.key === "Tab") {
-        e.preventDefault();
-        const next = cycleType(block.block_type, e.shiftKey ? -1 : 1);
-        void onSave({ block_type: next });
-        toast.success(`→ ${BLOCK_LABEL[next] ?? next}`, { duration: 1000 });
-        return;
-      }
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        // Flush current value before computing next line
-        if (val !== (block.content ?? "")) {
-          if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
-          void onSave({ content: val });
-        }
-        const nextType = nextBlockTypeAfter(block.block_type, prevBlockType);
-        onInsertAfter(nextType);
-        return;
-      }
-    }
-
-    if (e.key === "/" && !slashOpen) {
-      const pos = e.currentTarget.selectionStart;
-      setSlashOpen(true);
-      setSlashStart(pos);
-      setSelectedIndex(0);
-    }
-  };
-
-  const autoFormattedRef = useRef(false);
-
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newVal = e.target.value;
-    setVal(newVal);
-    dirtyRef.current = true;
-    onDirty(newVal);
-    scheduleSave(newVal);
-
-    // Auto-format: only fire once per block, and only when content is short
-    // enough that the writer is clearly still typing the first line.
-    if (!autoFormattedRef.current && newVal.length <= 40) {
-      const detected = detectBlockType(newVal);
-      if (detected && detected !== block.block_type) {
-        autoFormattedRef.current = true;
-        void onSave({ block_type: detected });
-        toast.success(`Auto-formatted as ${BLOCK_LABEL[detected]}`, { duration: 1400 });
-      }
-    }
-
-    if (slashOpen) {
-      // If the slash was removed (backspace, etc.), close menu
-      if (slashStart >= newVal.length || newVal[slashStart] !== "/") {
-        closeSlash();
-      }
-    }
-  };
-
-  // Close slash menu on click outside
-  useEffect(() => {
-    if (!slashOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        closeSlash();
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [slashOpen, closeSlash]);
-
-  const [isFocused, setIsFocused] = useState(false);
-  const QUICK_TYPES = ["scene_heading", "action", "character", "dialogue", "parenthetical"] as const;
-
-  const isCharBlock = block.block_type === "character";
-  const isSceneHeading = block.block_type === "scene_heading";
-  const showAutocomplete = isCharBlock && isFocused && !slashOpen;
-  const beat = (block.metadata as any)?.beat ?? null;
-
-  return (
-    <div
-      className={`group relative blk-${block.block_type} border-l-2 pl-3 -ml-3 transition-colors ${
-        isFocused ? "border-primary bg-primary/[0.04]" : "border-transparent hover:border-border"
-      }`}
-    >
-      <textarea
-        ref={ref}
-        value={val}
-        onChange={handleChange}
-        onFocus={() => { setIsFocused(true); onActiveChange?.(block.id, true); }}
-        onBlur={() => {
-          flush();
-          onActiveChange?.(block.id, false);
-          setTimeout(() => setIsFocused(false), 150);
-        }}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder[block.block_type]}
-        rows={1}
-        className="w-full bg-transparent border-none outline-none resize-none rounded px-1 -mx-1 placeholder:text-muted-foreground/60 caret-primary min-h-[1.5em]"
-        style={{ fontFamily: "inherit", fontSize: "inherit", color: "inherit", textAlign: "inherit", textTransform: "inherit", fontWeight: "inherit", fontStyle: "inherit" } as any}
-      />
-
-      {/* Character autocomplete */}
-      {showAutocomplete && (
-        <CharacterAutocomplete
-          query={val}
-          characters={characters}
-          anchorRef={ref as any}
-          onPick={(c) => {
-            setVal(c.name.toUpperCase());
-            void onSave({ content: c.name.toUpperCase() });
-            // Move focus out so the popover closes naturally
-            ref.current?.blur();
-          }}
-          onCreate={async (name) => {
-            try {
-              const created = await onCreateCharacter(name);
-              const finalName = (created?.name ?? name).toUpperCase();
-              setVal(finalName);
-              void onSave({ content: finalName });
-              ref.current?.blur();
-            } catch {
-              // swallow — keep typed text
-            }
-          }}
-        />
-      )}
-
-      {/* Scene beat picker (right-anchored) */}
-      {isSceneHeading && (
-        <div className="absolute right-0 -bottom-7 z-10 font-sans">
-          <SceneBeatPicker
-            value={beat}
-            onChange={(b) => {
-              const next = { ...(block.metadata || {}), beat: b ?? undefined };
-              if (b === null) delete (next as any).beat;
-              void onSave({ metadata: next });
-            }}
-          />
-        </div>
-      )}
-
-      {/* Beginner-friendly inline block-type toolbar (shows on focus) */}
-      {isFocused && !slashOpen && (
-        <div className="absolute right-0 -top-7 z-10 flex items-center gap-0.5 rounded-md border border-border/60 bg-popover/95 backdrop-blur shadow-sm px-1 py-0.5 font-sans">
-          {QUICK_TYPES.map((t) => {
-            const meta = BLOCK_TYPES.find((b) => b.value === t)!;
-            const active = block.block_type === t;
-            return (
-              <button
-                key={t}
-                onMouseDown={(e) => { e.preventDefault(); void onSave({ block_type: t }); }}
-                className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
-                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}
-                title={meta.label}
-              >
-                {meta.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Slash command menu */}
-      {slashOpen && filtered.length > 0 && (
-        <div
-          ref={menuRef}
-          className="absolute left-0 top-full mt-1 z-50 w-56 rounded-md border border-border bg-popover shadow-lg p-1 font-sans"
-        >
-          <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-            <Command className="h-3 w-3" /> Insert block
-          </div>
-          {filtered.map((t, i) => (
-            <button
-              key={t.value}
-              className={`w-full text-left flex items-center justify-between px-2 py-1.5 text-xs rounded-sm transition-colors ${
-                i === selectedIndex ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
-              }`}
-              onMouseEnter={() => setSelectedIndex(i)}
-              onClick={(e) => {
-                e.stopPropagation();
-                executeSlash(t.value);
-              }}
-            >
-              <div className="flex flex-col">
-                <span>{t.label}</span>
-                <span className="text-[10px] text-muted-foreground font-mono">{t.aliases.slice(0, 3).join(" ")}</span>
-              </div>
-              <span className="text-[10px] text-muted-foreground font-mono shrink-0">{t.shortcut}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Block controls */}
-      <div className="absolute -left-12 top-0 opacity-0 group-hover:opacity-100 transition flex flex-col gap-0.5 font-sans">
-        <Select value={block.block_type} onValueChange={(v) => void onSave({ block_type: v })}>
-          <SelectTrigger className="h-6 w-10 text-[10px] px-1"><span>{(block.block_type || "a")[0].toUpperCase()}</span></SelectTrigger>
-          <SelectContent>{BLOCK_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-        </Select>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onDelete}>
-          <Trash2 className="h-3 w-3" />
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 function formatExport(b: any): string {
   const c = String(b?.content ?? "");
