@@ -709,7 +709,7 @@ function BlockEditor({
 
       {/* Block controls */}
       <div className="absolute -left-12 top-0 opacity-0 group-hover:opacity-100 transition flex flex-col gap-0.5 font-sans">
-        <Select value={block.block_type} onValueChange={(v) => onUpdate({ block_type: v })}>
+        <Select value={block.block_type} onValueChange={(v) => void onSave({ block_type: v })}>
           <SelectTrigger className="h-6 w-10 text-[10px] px-1"><span>{(block.block_type || "a")[0].toUpperCase()}</span></SelectTrigger>
           <SelectContent>{BLOCK_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
         </Select>
