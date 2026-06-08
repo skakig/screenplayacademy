@@ -1,71 +1,109 @@
-## Why you can't write a screenplay right now
+# Writer-First Screenplay Editor
 
-I traced this through `editor.$projectId.tsx`, `BlockEditor`, `LoglineComposer`, `StepCoach`, and the guided-step gating. Five things conspire to make the canvas feel broken:
+Goal: the center panel should feel like a real page you type on — not a column of textareas. Guided logline step should swap the center for a Logline Builder instead of showing blocks.
 
-### 1. Guided mode hijacks the canvas
-You're on **Guided · Step 2 of 13 (Write your logline)**. At that step:
-- `isLoglineStep` is true → the screenplay canvas is **replaced** by `LoglineComposer` and dimmed to `opacity-60`.
-- Other early steps (`characters`, `story_arc`, `scenes`, `pitch`, `tableread`) push you to a different page via the redirect banner.
-- Only a handful of steps (`opening_scene`, `act1/2/3`, `rough_draft`, `first_scene`) actually let you type prose.
+## 1. New component: `ScreenplayDocumentEditor`
 
-Net effect: in Guided mode the "Editor" tab is **not an editor** for ~10 of 13 steps. That's the core problem.
+Create `src/components/editor/ScreenplayDocumentEditor.tsx` that owns the entire writing surface and the writing flow. The route file delegates the canvas to it.
 
-### 2. A runtime error overlay is on top of the canvas
-`duplicate key value violates unique constraint "writer_profiles_user_id_key"` — the profile bootstrap is inserting instead of upserting, so the global error toast covers the editor on every reload.
+Responsibilities:
+- Renders blocks as one continuous paper page (current `BlockEditor` styling preserved).
+- Owns `activeBlockId`, `prevType`, `pendingFocusId`, and the textarea ref map.
+- Always maintains an "active editable line":
+  - If `blocks.length === 0` → render an inline empty `action` line that auto-focuses on mount and persists to DB on first keystroke (optimistic local row → insert on first change, not on mount).
+  - If user clicks anywhere on blank paper below the last block → focus the last block if empty, else create a new typed block after it and focus it.
+  - If a block is deleted and was active → focus previous; if none, fall back to the always-present trailing empty line.
+- Exposes imperative methods to parent for the command bar (`newLine`, `cycleType`, `aiContinue`).
 
-### 3. The "blocks" UI doesn't invite typing
-The canvas renders `INT. AFRICAN DESERT` then `STEPHAN` with no visible empty line, no caret, no "press Enter to add dialogue" hint. `BlockEditor` is a 1-row auto-grow `<textarea>` with no border until focused — on a fresh scene it looks like static text, not an input.
+## 2. Reliable focus across React Query refetches
 
-### 4. Enter/Tab/slash are invisible
-Slash menu, Tab to cycle block type, Enter to insert the next logical block — all real, all undiscoverable. There is no inline ghost-line ("⏎ Action", "⏎ Dialogue") after the last block.
+Today `insertBlockAfter.onSuccess` sets a `setFocusBlockId(data.id)`, but invalidation/refetch races the ref map. Fix:
 
-### 5. No "always-on" composer at the bottom
-Professional screenplay tools keep a persistent caret. Here, if you click outside any block, there's nowhere to click back into.
+- Use optimistic cache update with `queryClient.setQueryData(["blocks", projectId], …)` to insert the new row immediately, so the DOM renders before the network round-trip.
+- After mutation success, reconcile by id.
+- A small `useLayoutEffect` watches `pendingFocusId` against the ref map; when the ref appears, call `focus()`, place caret at end, then clear `pendingFocusId`.
+- Same path used by Enter, click-below-paper, and empty-state-first-keystroke.
 
----
+## 3. Always-on trailing writing row
 
-## What I'll change
+Replace the current "Add line" ghost button with a real empty `<textarea>` rendered as the last child of the paper:
+- Looks identical to a normal block (typewriter font, correct left margin for its type).
+- Type defaults to `nextBlockTypeAfter(lastBlock?.block_type ?? "scene_heading")`.
+- Placeholder = "Start typing…" (or "INT. / EXT. — start your first scene" when blocks is empty).
+- On first keystroke, persists as a new block; trailing row regenerates below it.
+- Enter from any block focuses this row (or inserts before it and focuses the new block).
 
-### A. Fix the blocker
-1. **Stop the writer_profiles duplicate-insert** — switch the bootstrap to `upsert({...}, { onConflict: 'user_id', ignoreDuplicates: true })` (or pre-check) so the error overlay stops covering the editor.
+## 4. Click-anywhere-on-paper behavior
 
-### B. Make the editor always reachable
-2. **Stop hijacking the canvas in Guided mode.** Keep `StepCoach` and `LoglineComposer` as a **collapsible top panel**, but always render the screenplay canvas below at full opacity. Replace `isLoglineStep ? replace : show` with `always-show + optional step helper above`.
-3. **Remove the "this step is best done on another page" full-block redirect.** Keep it as a small inline link in the step strip, not a wall in front of the editor.
-4. **Auto-switch to Studio when the user clicks into the canvas** (or add a one-click "Just let me write" button on the step strip that flips `preferred_mode` → `studio` for this session).
+Replace the current "find nearest textarea by Y" handler with:
+- Click on a block → focus that block (native).
+- Click on paper *below* the last block → focus trailing writing row.
+- Click on paper *between* two blocks → insert a new block at that gap, focus it.
+- Click on paper *above* first block → focus first block at start.
 
-### C. Make the writing surface obvious
-5. **Persistent "Add line" affordance** under the last block: a full-width, dashed ghost row labeled `⏎  Action  ·  Tab to change type  ·  /  for menu` that focuses a new block on click.
-6. **Empty-scene starter**: when a scene has only a heading (and optionally a character), auto-insert an empty `action` block so there is always a visible caret-ready line.
-7. **Block borders on hover**, not just focus, so blocks read as inputs. Add a left "type pill" (ACTION / DIALOGUE / SLUG) that's clickable to change type.
-8. **Inline hint row** under the toolbar: `Enter = new block · Tab = change type · / = menu · ⌘↵ = AI continue`. Dismissable, remembered per user.
+## 5. Enter behavior
 
-### D. Polish the canvas chrome
-9. **CanvasToolbar**: make the block-type dropdown the primary control, wider, with keyboard shortcut hints; show current block type live as you move the caret.
-10. **Footer command bar**: keep `EditorCommandBar` visible even when `blocks.length === 0` so "AI continue / New line / Change type" are always one click away.
+Already wired via `BlockEditor.onEnter → insertBlockAfter`. Combine with focus fix in §2 so the new block focuses synchronously on the next paint. Shift+Enter keeps soft-break behavior already in place.
 
-### E. Out of scope (call out, don't build)
-- No swap to TipTap/ProseMirror — the existing block model is fine; the UX around it is the issue.
-- No schema changes beyond the upsert fix.
-- No changes to Coach pane, Story Navigator, or Feature Dock in this pass.
+## 6. Guided logline step swaps the canvas
 
----
+In `editor.$projectId.tsx`, when `isLoglineStep` is true:
+- Center column renders `<LoglineComposer />` as the primary surface (full width, centered, no opacity dimming).
+- `ScreenplayDocumentEditor` is hidden (not just dimmed) — guided logline is a different task.
+- A small "Open manuscript" link under the composer lets the user jump out.
+- `EditorCommandBar` is hidden during this step; the composer's own Save / Generate buttons are the primary CTAs.
 
-## Files I'll touch
+For other guided steps that *are* writing steps (`opening_scene`, `act1`, `rough_draft`, `first_scene`, `write_first_scene`), the manuscript stays primary and the step hint goes into the existing collapsible helper.
 
-- `src/routes/_authenticated/editor.$projectId.tsx` — drop the canvas hijack, render `LoglineComposer`/`StepCoach`/redirect as a top helper strip, always render the screenplay canvas, mount a persistent "Add line" ghost row, keep `EditorCommandBar` always mounted.
-- `src/components/editor/BlockEditor` (extract from the route file) — hover border, type pill, hint row.
-- `src/components/editor/CanvasToolbar.tsx` — primary type selector + shortcut legend.
-- Wherever `writer_profiles` is first inserted (likely a `useEnsureWriterProfile` hook or root loader) — switch to upsert/ignoreDuplicates.
-- `src/components/editor/StudioModeToggle.tsx` — add a "Just let me write" quick action that flips to Studio.
+## 7. Hide the "blocks" vocabulary
 
----
+User-visible strings change:
+- "Add line" → removed (trailing row replaces it).
+- "Change element type" stays — it's screenplay terminology.
+- Toolbar copy: "Element" instead of "Block type"; "New line" instead of "New block".
+- Analyzer toasts already say "scene" / "character" — leave as-is.
+
+DB column names and `script_blocks` table remain untouched.
+
+## 8. Write Mode
+
+Extend `StudioModeToggle` with a third value `write`:
+- `write` → hide left (Story Navigator) and right (Coach + Feature Dock + Progress) panes; center spans full width, capped at the current paper max-width.
+- `studio` (current default) → unchanged 3-column layout.
+- `coach` → unchanged.
+- Persist selection in localStorage (matches existing toggle pattern).
+- Mobile drawers still work in Write Mode (`Scenes` / `Coach` buttons stay accessible).
+
+## 9. Empty-project first-run
+
+When `blocks.length === 0` and we're not on logline step and not on a redirect step:
+- Don't auto-insert template blocks (current behavior).
+- Render trailing writing row with placeholder "INT. — Start your first scene" and focus it on mount.
+- User can begin typing immediately. Auto-format rules already promote `INT.` to `scene_heading`.
+
+## Files to add / change
+
+Add:
+- `src/components/editor/ScreenplayDocumentEditor.tsx` — owns canvas, focus, trailing row, click-on-paper, empty state.
+
+Edit:
+- `src/routes/_authenticated/editor.$projectId.tsx` — replace inline canvas JSX (~lines 770–910) with `<ScreenplayDocumentEditor … />`; swap center surface when `isLoglineStep`; route `EditorCommandBar` callbacks through it; hide side panes when mode === `write`. Remove the current "Add line" ghost button and the "find nearest textarea by Y" mouseDown handler.
+- `src/components/editor/StudioModeToggle.tsx` — add `write` mode option.
+- `src/components/editor/EditorCommandBar.tsx` — hidden during logline step; minor copy tweak ("Element" / "New line").
+
+No DB schema changes. No changes to `BlockEditor` internals, autoFormat, analyzer, or autosave.
+
+## Out of scope
+
+- Swapping textareas for ProseMirror/TipTap (would be a much bigger rewrite; current per-block textarea keeps autosave, autoformat, character autocomplete intact).
+- Touching Coach / Feature Dock / Progress card content.
+- Schema or server function changes beyond what's listed.
 
 ## Build order
-1. Fix writer_profiles upsert (clears the error overlay).
-2. Always-render canvas + collapse step helper (unblocks writing).
-3. Persistent "Add line" ghost row + auto empty action block.
-4. Hover borders, type pill, hint row.
-5. Toolbar + always-on command bar polish.
 
-After this pass, the canvas is the canvas on every step, in every mode, with a visible caret invitation at all times.
+1. `ScreenplayDocumentEditor` shell + trailing writing row + click-on-paper.
+2. Optimistic insert + `useLayoutEffect` focus reconciler (fixes flaky post-Enter focus).
+3. Empty-state auto-focus and first-keystroke persistence.
+4. Logline step swaps the center surface.
+5. Write Mode in `StudioModeToggle` + layout gating.
+6. Copy cleanup ("Add line" / "block" → screenplay terms).

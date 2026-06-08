@@ -43,6 +43,8 @@ import { useOnboarding } from "@/hooks/use-onboarding";
 import { buildOutline, estimatePages } from "@/lib/editor/manuscriptAnalyzer";
 import { BookOpen } from "lucide-react";
 import { useWriterEvents } from "@/hooks/useWriterEvents";
+import { useWriteMode } from "@/hooks/use-write-mode";
+import { PencilLine } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
@@ -219,18 +221,32 @@ function Editor() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data, block_type) => {
-      qc.invalidateQueries({ queryKey: ["blocks", projectId] });
+    onMutate: async (block_type: string) => {
+      await qc.cancelQueries({ queryKey: ["blocks", projectId] });
+      const prev = qc.getQueryData<any[]>(["blocks", projectId]) ?? [];
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const temp = { id: tempId, project_id: projectId, block_type, content: "", order_index: prev.length, metadata: null };
+      qc.setQueryData<any[]>(["blocks", projectId], [...prev, temp]);
+      setFocusBlockId(tempId);
+      return { tempId, prev };
+    },
+    onSuccess: (data, block_type, ctx: any) => {
+      qc.setQueryData<any[]>(["blocks", projectId], (old) =>
+        (old ?? []).map((b) => (b.id === ctx?.tempId ? data : b))
+      );
+      if (data?.id) setFocusBlockId(data.id);
       emitEvent({ event_type: "block_created", project_id: projectId, context: { block_type } });
       if (block_type === "scene_heading") {
         emitEvent({ event_type: "scene_created", project_id: projectId, context: { has_turn: false } });
       }
     },
+    onError: (_e, _v, ctx: any) => {
+      if (ctx?.prev) qc.setQueryData(["blocks", projectId], ctx.prev);
+    },
   });
 
   const insertBlockAfter = useMutation({
     mutationFn: async ({ block_type, afterOrder }: { block_type: string; afterOrder: number }) => {
-      // Find the next block's order_index to compute midpoint (fractional ordering — no bulk renumber)
       const sorted = [...blocks].sort((a, b) => a.order_index - b.order_index);
       const idx = sorted.findIndex((b) => b.order_index === afterOrder);
       const nextOrder = idx >= 0 && sorted[idx + 1] ? sorted[idx + 1].order_index : afterOrder + 1;
@@ -241,13 +257,33 @@ function Editor() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["blocks", projectId] });
+    onMutate: async ({ block_type, afterOrder }) => {
+      await qc.cancelQueries({ queryKey: ["blocks", projectId] });
+      const prev = qc.getQueryData<any[]>(["blocks", projectId]) ?? [];
+      const sorted = [...prev].sort((a, b) => a.order_index - b.order_index);
+      const idx = sorted.findIndex((b) => b.order_index === afterOrder);
+      const nextOrder = idx >= 0 && sorted[idx + 1] ? sorted[idx + 1].order_index : afterOrder + 1;
+      const newOrder = (afterOrder + nextOrder) / 2;
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const temp = { id: tempId, project_id: projectId, block_type, content: "", order_index: newOrder, metadata: null };
+      qc.setQueryData<any[]>(["blocks", projectId], [...prev, temp].sort((a, b) => a.order_index - b.order_index));
+      setFocusBlockId(tempId);
+      return { tempId, prev };
+    },
+    onSuccess: (data, _vars, ctx: any) => {
+      qc.setQueryData<any[]>(["blocks", projectId], (old) =>
+        (old ?? []).map((b) => (b.id === ctx?.tempId ? data : b))
+      );
       if (data?.id) setFocusBlockId(data.id);
+    },
+    onError: (_e, _v, ctx: any) => {
+      if (ctx?.prev) qc.setQueryData(["blocks", projectId], ctx.prev);
+      toast.error("Couldn't insert line");
     },
   });
 
   const saveBlock = useCallback(async (id: string, patch: { content?: string; block_type?: string; metadata?: Record<string, any> }) => {
+    if (id.startsWith("temp-")) return; // optimistic row; ignore until server returns real id
     markSaving();
     try {
       const update: any = {};
@@ -432,6 +468,7 @@ function Editor() {
   const [storyBuilderOpen, setStoryBuilderOpen] = useState(false);
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
+  const writeMode = useWriteMode();
 
   // Default right pane tab follows the user's preferred mode (Guided → Builder, Studio → Coach).
   const { data: onboarding } = useOnboarding();
@@ -474,26 +511,21 @@ function Editor() {
     existingCharacterNames: (characters as any[]).map((c) => c.name),
   });
 
-  // Auto-seed: if the editor is opened on a writing step with no blocks and no
-  // step-specific composer in front of it, drop a single scene heading and
-  // park focus there so the writer can just start typing.
+  // Auto-seed: an empty manuscript should not require a click to start. Whenever
+  // the editor opens with no blocks and we're not on the logline step (which has
+  // its own surface) or a redirect step, drop a scene_heading and focus it.
   const autoSeededRef = useRef(false);
   useEffect(() => {
     if (autoSeededRef.current) return;
     if (blocksLoading) return;
     if (blocks.length > 0) return;
     if (isLoglineStep || redirect) return;
-    // Only auto-seed when arriving from the guided path on a writing step,
-    // or when the user has no logline-style work pending. Skip if step is set
-    // and not a writing step.
-    if (guidedStep && !["opening_scene", "act1", "act2", "act3", "rough_draft", "first_scene", "write_first_scene"].includes(guidedStep)) return;
     autoSeededRef.current = true;
-    // Wait one tick so the dialog/empty-state animations don't fight the focus.
     setTimeout(() => {
       addBlock.mutate("scene_heading");
     }, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocksLoading, blocks.length, isLoglineStep, redirect, guidedStep]);
+  }, [blocksLoading, blocks.length, isLoglineStep, redirect]);
 
   // After auto-seed, focus the new (single) empty block.
   useEffect(() => {
@@ -611,6 +643,17 @@ function Editor() {
         ) : <span />}
         <div className="flex items-center gap-3">
           <StudioModeToggle />
+          <button
+            onClick={writeMode.toggle}
+            className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs rounded-full border transition-colors ${
+              writeMode.on
+                ? "bg-primary text-primary-foreground border-primary font-semibold shadow-sm"
+                : "border-border/60 bg-card/60 text-muted-foreground hover:text-foreground"
+            }`}
+            title="Hide side panels and focus on the page"
+          >
+            <PencilLine className="h-3 w-3" /> Write
+          </button>
           {/* Mobile pane toggles */}
           <Sheet open={leftDrawerOpen} onOpenChange={setLeftDrawerOpen}>
             <SheetTrigger asChild>
@@ -687,9 +730,10 @@ function Editor() {
           completedCount={0}
         />
       )}
-      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_340px] max-w-[1600px] mx-auto">
+      <div className={`grid grid-cols-1 ${writeMode.on ? "lg:grid-cols-1" : "lg:grid-cols-[280px_1fr_340px]"} max-w-[1600px] mx-auto`}>
 
         {/* Left rail — Story Navigator (desktop) */}
+        {!writeMode.on && (
         <aside data-tour="block-toolbar" className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)] sticky top-0 self-start max-h-[calc(100vh-104px)] overflow-auto bg-card/20">
           <StoryNavigatorPane
             projectId={projectId}
@@ -702,11 +746,37 @@ function Editor() {
             onAddScene={addSceneAtEnd}
           />
         </aside>
+        )}
 
 
 
         {/* Editor */}
         <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10 screenplay-canvas">
+          {isLoglineStep ? (
+            <div className="max-w-[760px] mx-auto pt-4">
+              <div className="mb-3 text-center">
+                <h1 className="text-2xl font-semibold">Write your logline</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  One sentence that captures your story. We'll come back to the screenplay once this is locked.
+                </p>
+              </div>
+              <LoglineComposer
+                projectId={projectId}
+                initialLogline={project?.logline}
+                projectContext={projectCtx}
+              />
+              <div className="text-center mt-4">
+                <Link
+                  to="/editor/$projectId"
+                  params={{ projectId }}
+                  className="text-xs text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+                >
+                  Skip to manuscript →
+                </Link>
+              </div>
+            </div>
+          ) : (
+          <>
           {/* Guided helpers — collapsible so they never block the canvas */}
           {(guidedStep || redirect || isLoglineStep) && (
             <details className="max-w-[760px] mx-auto mb-4 group font-sans" open>
@@ -834,6 +904,11 @@ function Editor() {
               const all = (e.currentTarget as HTMLElement).querySelectorAll<HTMLTextAreaElement>("textarea");
               if (all.length === 0) { cmdNewLine(); return; }
               const y = e.clientY;
+              // If click is below the last textarea, treat as "new line at end"
+              const last = all[all.length - 1];
+              const lastRect = last.getBoundingClientRect();
+              if (y > lastRect.bottom + 8) { cmdNewLine(); return; }
+              // Otherwise focus the nearest textarea
               let best: HTMLTextAreaElement = all[0];
               let bestDist = Infinity;
               all.forEach((t) => {
@@ -893,17 +968,20 @@ function Editor() {
                   );
                 })}
 
-                {/* Persistent "Add line" ghost row — always visible cursor invitation */}
+                {/* Trailing writing line — looks like a blinking caret invitation, not a utility button */}
                 <button
                   type="button"
                   onClick={cmdNewLine}
-                  className="mt-4 w-full text-left px-3 py-3 rounded-md border border-dashed border-border/50 hover:border-primary/60 hover:bg-primary/[0.03] transition-colors font-sans text-xs text-muted-foreground/80 hover:text-foreground flex items-center gap-2"
-                  title="Add a new line"
+                  className="mt-2 w-full text-left py-2 flex items-center gap-2 group/ghost"
+                  title="Click or press Enter to start a new line"
+                  aria-label="Start a new line"
                 >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>Add line</span>
-                  <span className="opacity-50 ml-auto font-mono">
-                    Enter · Shift+Enter soft break · Tab change type · / menu
+                  <span className="inline-block w-px h-5 bg-primary/70 animate-pulse" aria-hidden="true" />
+                  <span className="font-sans text-xs text-muted-foreground/70 group-hover/ghost:text-foreground transition-colors">
+                    Start typing…
+                  </span>
+                  <span className="opacity-40 ml-auto font-mono text-[10px] text-muted-foreground">
+                    Enter · Tab change type · / menu
                   </span>
                 </button>
               </>
@@ -937,10 +1015,13 @@ function Editor() {
               }}>Download .txt</Button>
             </div>
           )}
+          </>
+          )}
         </section>
 
 
         {/* Right sidebar — Intelligent Coach */}
+        {!writeMode.on && (
         <aside data-tour="coach-panel" className="hidden lg:block border-l border-border/60 min-h-[calc(100vh-104px)] bg-card/20 max-h-[calc(100vh-104px)] overflow-auto sticky top-0 self-start">
           <CoachPane
             projectId={projectId}
@@ -959,6 +1040,7 @@ function Editor() {
             onRunAi={runAi}
           />
         </aside>
+        )}
 
       </div>
       <FeatureDock projectId={projectId} />
