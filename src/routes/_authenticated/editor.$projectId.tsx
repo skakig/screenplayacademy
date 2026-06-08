@@ -648,6 +648,17 @@ function Editor() {
         ) : <span />}
         <div className="flex items-center gap-3">
           <StudioModeToggle />
+          <button
+            onClick={writeMode.toggle}
+            className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs rounded-full border transition-colors ${
+              writeMode.on
+                ? "bg-primary text-primary-foreground border-primary font-semibold shadow-sm"
+                : "border-border/60 bg-card/60 text-muted-foreground hover:text-foreground"
+            }`}
+            title="Hide side panels and focus on the page"
+          >
+            <PencilLine className="h-3 w-3" /> Write
+          </button>
           {/* Mobile pane toggles */}
           <Sheet open={leftDrawerOpen} onOpenChange={setLeftDrawerOpen}>
             <SheetTrigger asChild>
