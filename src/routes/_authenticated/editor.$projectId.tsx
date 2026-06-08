@@ -232,7 +232,6 @@ function Editor() {
 
   const insertBlockAfter = useMutation({
     mutationFn: async ({ block_type, afterOrder }: { block_type: string; afterOrder: number }) => {
-      // Find the next block's order_index to compute midpoint (fractional ordering — no bulk renumber)
       const sorted = [...blocks].sort((a, b) => a.order_index - b.order_index);
       const idx = sorted.findIndex((b) => b.order_index === afterOrder);
       const nextOrder = idx >= 0 && sorted[idx + 1] ? sorted[idx + 1].order_index : afterOrder + 1;
@@ -243,9 +242,28 @@ function Editor() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["blocks", projectId] });
+    onMutate: async ({ block_type, afterOrder }) => {
+      await qc.cancelQueries({ queryKey: ["blocks", projectId] });
+      const prev = qc.getQueryData<any[]>(["blocks", projectId]) ?? [];
+      const sorted = [...prev].sort((a, b) => a.order_index - b.order_index);
+      const idx = sorted.findIndex((b) => b.order_index === afterOrder);
+      const nextOrder = idx >= 0 && sorted[idx + 1] ? sorted[idx + 1].order_index : afterOrder + 1;
+      const newOrder = (afterOrder + nextOrder) / 2;
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const temp = { id: tempId, project_id: projectId, block_type, content: "", order_index: newOrder, metadata: null };
+      qc.setQueryData<any[]>(["blocks", projectId], [...prev, temp].sort((a, b) => a.order_index - b.order_index));
+      setFocusBlockId(tempId);
+      return { tempId, prev };
+    },
+    onSuccess: (data, _vars, ctx: any) => {
+      qc.setQueryData<any[]>(["blocks", projectId], (old) =>
+        (old ?? []).map((b) => (b.id === ctx?.tempId ? data : b))
+      );
       if (data?.id) setFocusBlockId(data.id);
+    },
+    onError: (_e, _v, ctx: any) => {
+      if (ctx?.prev) qc.setQueryData(["blocks", projectId], ctx.prev);
+      toast.error("Couldn't insert line");
     },
   });
 
