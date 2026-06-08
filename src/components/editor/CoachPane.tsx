@@ -111,50 +111,59 @@ export function CoachPane({
           <CoachModeToggle />
         </div>
         <CoachPanel sceneText={sceneText} blockCount={blocks.length} />
+        <SceneDataCard projectId={projectId} activeSceneIndex={activeSceneIndex} />
         <WriterInsightsPanel projectId={projectId} />
-        <div className="border-t border-border/40 pt-3 mt-3 space-y-2">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">AI Assistant</p>
-          <Select value={aiTool} onValueChange={setAiTool}>
-            <SelectTrigger className="text-xs h-8"><SelectValue /></SelectTrigger>
-            <SelectContent>{aiTools.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-          </Select>
-          <Textarea
-            value={aiPrompt}
-            onChange={(e) => setAiPrompt(e.target.value)}
-            placeholder="Specific instructions (optional)…"
-            className="text-xs min-h-[60px]"
-          />
-          <Button className="w-full" size="sm" onClick={onRunAi} disabled={aiLoading}>
-            {aiLoading ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Thinking…</> : <><Sparkles className="h-3.5 w-3.5 mr-1.5" />Run</>}
-          </Button>
-          {aiOutput && (
-            <>
-              <ScrollArea className="h-[300px] rounded-md border border-border/60 bg-background/50 p-3">
-                <p className="text-xs whitespace-pre-wrap text-foreground/90 font-mono">{aiOutput}</p>
-              </ScrollArea>
-              <Button variant="outline" size="sm" className="w-full" onClick={() => { navigator.clipboard.writeText(aiOutput); toast.success("Copied"); }}>
-                <Copy className="h-3.5 w-3.5 mr-1.5" />Copy
-              </Button>
-            </>
-          )}
-        </div>
+        {aiOutput && (
+          <div className="border-t border-border/40 pt-3 mt-3 space-y-2">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Last AI Response</p>
+            <ScrollArea className="h-[220px] rounded-md border border-border/60 bg-background/50 p-3">
+              <p className="text-xs whitespace-pre-wrap text-foreground/90 font-mono">{aiOutput}</p>
+            </ScrollArea>
+            <Button variant="outline" size="sm" className="w-full" onClick={() => { navigator.clipboard.writeText(aiOutput); toast.success("Copied"); }}>
+              <Copy className="h-3.5 w-3.5 mr-1.5" />Copy
+            </Button>
+          </div>
+        )}
+        <details className="border-t border-border/40 pt-3 mt-3">
+          <summary className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold cursor-pointer hover:text-foreground">
+            AI Assistant tools
+          </summary>
+          <div className="mt-2 space-y-2">
+            <Select value={aiTool} onValueChange={setAiTool}>
+              <SelectTrigger className="text-xs h-8"><SelectValue /></SelectTrigger>
+              <SelectContent>{aiTools.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+            </Select>
+            <Textarea
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder="Specific instructions (optional)…"
+              className="text-xs min-h-[60px]"
+            />
+            <Button className="w-full" size="sm" onClick={onRunAi} disabled={aiLoading}>
+              {aiLoading ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Thinking…</> : <><Sparkles className="h-3.5 w-3.5 mr-1.5" />Run tool</>}
+            </Button>
+          </div>
+        </details>
+        <AskCoachInput
+          onAsk={(prompt) => { setAiPrompt(prompt); onRunAi(); }}
+          loading={aiLoading}
+        />
       </TabsContent>
 
       {/* STORY BUILDER */}
       <TabsContent value="builder" className="m-0 p-4 space-y-3">
-        <h3 className="font-semibold flex items-center gap-1.5 text-sm"><Sparkles className="h-4 w-4 text-primary" />Story Builder</h3>
-        <p className="text-xs text-muted-foreground">
-          Build your story spine in three answers. SceneSmith drafts a logline, an 8-beat outline, and starter characters you can edit.
-        </p>
-        <Button onClick={onOpenStoryBuilder} className="w-full" size="sm">
-          <Sparkles className="h-3.5 w-3.5 mr-1.5" />Open Story Builder
-        </Button>
-        <div className="border-t border-border/40 pt-3 space-y-2 text-xs">
-          <SectionStatus label="Project Foundation" done={blocks.length > 0} />
-          <SectionStatus label="Characters" done={characters.length > 0} hint={`${characters.length} so far`} />
-          <SectionStatus label="Scenes" done={outline.length > 0} hint={`${outline.length} so far`} />
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-semibold flex items-center gap-1.5 text-sm"><Sparkles className="h-4 w-4 text-primary" />Story Builder</h3>
+          <Button onClick={onOpenStoryBuilder} size="sm" variant="outline" className="h-7 text-[11px]">
+            <Sparkles className="h-3 w-3 mr-1" />AI draft
+          </Button>
         </div>
+        <p className="text-xs text-muted-foreground">
+          Build your story spine section by section. Each step you complete unlocks the next.
+        </p>
+        <StoryBuilderPanel projectId={projectId} blocks={blocks} onOpenStoryBuilder={onOpenStoryBuilder} />
       </TabsContent>
+
 
       {/* ARC */}
       <TabsContent value="arc" className="m-0">
