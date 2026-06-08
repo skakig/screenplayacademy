@@ -15,11 +15,14 @@ import { ArcSidebar } from "@/components/arc/ArcSidebar";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { aiAssist } from "@/lib/ai.functions";
+import { listProjectCharacters, upsertCharacter } from "@/lib/characters.functions";
 import { CoachPanel } from "@/components/editor/CoachPanel";
 import { CoachModeToggle } from "@/components/editor/CoachModeToggle";
 import { AutosaveIndicator } from "@/components/editor/AutosaveIndicator";
 import type { AutosaveStatus } from "@/hooks/use-autosave";
 import { GuidedRail } from "@/components/guided/GuidedRail";
+import { CharacterAutocomplete, type CharacterHit } from "@/components/editor/CharacterAutocomplete";
+import { SceneBeatPicker } from "@/components/editor/SceneBeatPicker";
 import { GraduationCap, BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
