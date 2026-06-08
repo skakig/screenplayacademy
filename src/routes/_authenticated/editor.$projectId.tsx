@@ -284,7 +284,11 @@ function Editor() {
                 </div>
                 <CoachModeToggle />
               </div>
-              <CoachPanel sceneText={blocks.filter((b) => b.block_type !== "note").map((b) => `[${b.block_type}] ${b.content}`).join("\n").slice(-6000)} />
+              <CoachPanel
+                sceneText={blocks.filter((b) => b.block_type !== "note").map((b) => `[${b.block_type}] ${b.content}`).join("\n").slice(-6000)}
+                blockCount={blocks.length}
+                activeStep={guidedStep}
+              />
               <Select value={aiTool} onValueChange={setAiTool}>
                 <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>{AI_TOOLS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
