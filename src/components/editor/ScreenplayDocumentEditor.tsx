@@ -185,6 +185,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                   <ScreenplayLine
                     block={b}
                     isActive={b.id === doc.activeBlockId}
+                    isFirstEmpty={i === 0 && doc.localBlocks.length === 1 && b.content === "" && b.block_type === "scene_heading"}
                     characters={characters}
                     onCreateCharacter={
                       onCreateCharacter ?? (async () => undefined)
