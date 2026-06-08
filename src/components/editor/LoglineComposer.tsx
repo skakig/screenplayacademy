@@ -44,7 +44,7 @@ export function LoglineComposer({ projectId, initialLogline, projectContext }: P
       return res.text;
     },
     onSuccess: (text) => {
-      const lines = text.split("\n").map((l) => l.replace(/^\s*\d+[\.\)]\s*/, "").trim()).filter(Boolean).slice(0, 5);
+      const lines = text.split("\n").map((l: string) => l.replace(/^\s*\d+[\.\)]\s*/, "").trim()).filter(Boolean).slice(0, 5);
       setOptions(lines);
     },
     onError: (e: any) => toast.error(e.message ?? "AI request failed"),
