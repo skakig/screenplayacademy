@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Save, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
+import { ModeSettings } from "@/components/settings/ModeSettings";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Settings — SceneSmith AI" }] }),
