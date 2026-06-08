@@ -14,6 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
+      academy_lessons: {
+        Row: {
+          ai_button_label: string | null
+          concept: string | null
+          created_at: string
+          estimated_minutes: number
+          example: string | null
+          id: string
+          module_id: string
+          order_index: number
+          slug: string
+          task_prompt: string | null
+          title: string
+          why_it_matters: string | null
+        }
+        Insert: {
+          ai_button_label?: string | null
+          concept?: string | null
+          created_at?: string
+          estimated_minutes?: number
+          example?: string | null
+          id?: string
+          module_id: string
+          order_index?: number
+          slug: string
+          task_prompt?: string | null
+          title: string
+          why_it_matters?: string | null
+        }
+        Update: {
+          ai_button_label?: string | null
+          concept?: string | null
+          created_at?: string
+          estimated_minutes?: number
+          example?: string | null
+          id?: string
+          module_id?: string
+          order_index?: number
+          slug?: string
+          task_prompt?: string | null
+          title?: string
+          why_it_matters?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academy_lessons_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "academy_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      academy_modules: {
+        Row: {
+          created_at: string
+          description: string | null
+          estimated_minutes: number
+          id: string
+          order_index: number
+          slug: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          estimated_minutes?: number
+          id?: string
+          order_index?: number
+          slug: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          estimated_minutes?: number
+          id?: string
+          order_index?: number
+          slug?: string
+          title?: string
+        }
+        Relationships: []
+      }
       ai_requests: {
         Row: {
           created_at: string
@@ -717,6 +800,54 @@ export type Database = {
         }
         Relationships: []
       }
+      project_guided_steps: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          order_index: number
+          output_reference_id: string | null
+          output_type: string | null
+          project_id: string
+          status: string
+          step_key: string
+          title: string
+          updated_at: string
+          user_id: string
+          user_output: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          order_index?: number
+          output_reference_id?: string | null
+          output_type?: string | null
+          project_id: string
+          status?: string
+          step_key: string
+          title: string
+          updated_at?: string
+          user_id: string
+          user_output?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          order_index?: number
+          output_reference_id?: string | null
+          output_type?: string | null
+          project_id?: string
+          status?: string
+          step_key?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          user_output?: string | null
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           ai_help_level: string | null
@@ -1035,6 +1166,86 @@ export type Database = {
           status?: string
           style?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      user_lesson_progress: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          lesson_id: string
+          saved_output_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          user_output: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          lesson_id: string
+          saved_output_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          user_output?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          lesson_id?: string
+          saved_output_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          user_output?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_lesson_progress_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "academy_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_onboarding: {
+        Row: {
+          app_walkthrough_completed: boolean
+          coaching_level: string
+          created_at: string
+          first_project_created: boolean
+          id: string
+          preferred_mode: string
+          updated_at: string
+          user_id: string
+          writer_experience_level: string | null
+        }
+        Insert: {
+          app_walkthrough_completed?: boolean
+          coaching_level?: string
+          created_at?: string
+          first_project_created?: boolean
+          id?: string
+          preferred_mode?: string
+          updated_at?: string
+          user_id: string
+          writer_experience_level?: string | null
+        }
+        Update: {
+          app_walkthrough_completed?: boolean
+          coaching_level?: string
+          created_at?: string
+          first_project_created?: boolean
+          id?: string
+          preferred_mode?: string
+          updated_at?: string
+          user_id?: string
+          writer_experience_level?: string | null
         }
         Relationships: []
       }
