@@ -330,6 +330,75 @@ function Editor() {
     }
   };
 
+  // ====== Guided-step coach wiring ======
+  const projectCtx = `Title: ${project?.title ?? ""}\nType: ${project?.project_type ?? ""}\nGenre: ${project?.genre ?? ""}\nTone: ${project?.tone ?? ""}\nLogline: ${project?.logline ?? ""}`;
+  const stepProgress = progressForStep(guidedStep, blocks as any, project as any);
+  const redirect = shouldRedirectStep(guidedStep);
+  const isLoglineStep = shouldUseLoglineComposer(guidedStep);
+
+  const [primaryBusy, setPrimaryBusy] = useState(false);
+
+  const draftOpeningWithAi = useCallback(async () => {
+    setPrimaryBusy(true);
+    try {
+      const res = await callAi({
+        data: {
+          projectId,
+          tool: "openingScene",
+          prompt: "Draft a 1-2 page opening scene as screenplay blocks. Use FADE IN, scene heading (INT./EXT.), action, character, dialogue. Keep it tight and visual.",
+          context: projectCtx,
+        },
+      });
+      // Parse simple [block_type] content lines if present; otherwise fall back to action lines
+      const parsed: { block_type: string; content: string }[] = [];
+      const lines = res.text.split("\n").map((l) => l.trim()).filter(Boolean);
+      const tagRe = /^\[(scene_heading|action|character|dialogue|parenthetical|transition|shot|note)\]\s*(.*)$/i;
+      for (const l of lines) {
+        const m = l.match(tagRe);
+        if (m) parsed.push({ block_type: m[1].toLowerCase(), content: m[2] });
+        else if (/^(INT\.|EXT\.)/i.test(l)) parsed.push({ block_type: "scene_heading", content: l });
+        else if (/^FADE (IN|OUT)/i.test(l) || /^CUT TO:/i.test(l)) parsed.push({ block_type: "transition", content: l });
+        else if (/^[A-Z][A-Z\s\-\.']{2,}$/.test(l) && l.length < 40) parsed.push({ block_type: "character", content: l });
+        else parsed.push({ block_type: "action", content: l });
+      }
+      await insertTemplate.mutateAsync(parsed.length > 0 ? parsed : OPENING_SCENE_TEMPLATE);
+      toast.success("Drafted an opening — refine it from here");
+    } catch (e: any) {
+      toast.error(e.message ?? "Couldn't draft scene");
+    } finally {
+      setPrimaryBusy(false);
+    }
+  }, [callAi, projectId, projectCtx, insertTemplate]);
+
+  const handleCoachPrimary = useCallback(async () => {
+    if (!stepProgress.primaryAction) return;
+    const kind = stepProgress.primaryAction.kind;
+    if (kind === "insert") {
+      await insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE);
+      toast.success("Opening template inserted");
+      return;
+    }
+    if (kind === "ai") {
+      // Step-specific AI helpers
+      if (guidedStep === "opening_scene") return draftOpeningWithAi();
+      // For act1 / rough_draft / etc, run AI helper into the right rail output
+      setAiTool(guidedStep === "rough_draft" ? "Find plot holes" : guidedStep === "act1" ? "Build outline" : "Generate logline");
+      setAiPrompt(stepProgress.primaryAction.label);
+      await runAi();
+      return;
+    }
+  }, [stepProgress, guidedStep, insertTemplate, draftOpeningWithAi, runAi]);
+
+  const handleMarkComplete = useCallback(async () => {
+    if (!guidedStep) return;
+    await markStepComplete.mutateAsync(guidedStep);
+  }, [guidedStep, markStepComplete]);
+
+  const startFromScratch = useCallback(async () => {
+    await addBlock.mutateAsync("scene_heading");
+  }, [addBlock]);
+
+
   return (
     <AppShell>
       <ProjectNav projectId={projectId} title={project?.title} />
