@@ -594,7 +594,7 @@ function BlockEditor({
         e.preventDefault();
         const idx = BLOCK_TYPES.findIndex((t) => t.value === block.block_type);
         const next = BLOCK_TYPES[(idx + 1) % BLOCK_TYPES.length];
-        onUpdate({ block_type: next.value });
+        void onSave({ block_type: next.value });
         return;
       }
       if (e.key === "Enter" && !e.shiftKey) {
