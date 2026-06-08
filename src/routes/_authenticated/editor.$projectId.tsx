@@ -450,14 +450,16 @@ function Editor() {
 
 function BlockEditor({
   block,
-  onUpdate,
+  onSave,
+  onDirty,
   onDelete,
   onInsertAfter,
   focusBlockId,
   onFocusDone,
 }: {
   block: any;
-  onUpdate: (patch: { content?: string; block_type?: string }) => void;
+  onSave: (patch: { content?: string; block_type?: string }) => void | Promise<void>;
+  onDirty: (content: string) => void;
   onDelete: () => void;
   onInsertAfter: (block_type: string) => void;
   focusBlockId: string | null;
@@ -465,10 +467,35 @@ function BlockEditor({
 }) {
   const [val, setVal] = useState<string>(block.content ?? "");
   const ref = useRef<HTMLTextAreaElement>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dirtyRef = useRef(false);
 
-  useEffect(() => { setVal(block.content ?? ""); }, [block.content]);
+  useEffect(() => {
+    // Don't overwrite local typing with server echo
+    if (!dirtyRef.current) setVal(block.content ?? "");
+  }, [block.content]);
 
-  const flush = () => { if (val !== block.content) onUpdate({ content: val }); };
+  // Debounced autosave — 800ms after last keystroke
+  const scheduleSave = useCallback((next: string) => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      saveTimer.current = null;
+      if (next === (block.content ?? "")) { dirtyRef.current = false; return; }
+      await onSave({ content: next });
+      dirtyRef.current = false;
+    }, 800);
+  }, [block.content, onSave]);
+
+  const flush = useCallback(() => {
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+    if (val !== (block.content ?? "")) {
+      void onSave({ content: val });
+      dirtyRef.current = false;
+    }
+  }, [val, block.content, onSave]);
+
+  // Flush on unmount
+  useEffect(() => () => { flush(); }, [flush]);
 
   // auto-resize
   useEffect(() => {
