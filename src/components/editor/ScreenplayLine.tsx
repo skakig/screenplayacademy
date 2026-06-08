@@ -289,11 +289,17 @@ export function ScreenplayLine({
           {filtered.map((t, i) => (
             <button
               key={t.value}
+              type="button"
               className={`w-full text-left flex items-center justify-between px-2 py-1.5 text-xs rounded-sm transition-colors ${
                 i === selectedIndex ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
               }`}
               onMouseEnter={() => setSelectedIndex(i)}
-              onClick={(e) => { e.stopPropagation(); executeSlash(t.value); }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                executeSlash(t.value);
+                requestAnimationFrame(() => ref.current?.focus());
+              }}
             >
               <div className="flex flex-col">
                 <span>{t.label}</span>
