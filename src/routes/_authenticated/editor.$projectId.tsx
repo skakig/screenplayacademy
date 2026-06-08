@@ -1,13 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { ProjectNav } from "@/components/ProjectNav";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Plus, Trash2, Loader2, Copy, Command, ArrowLeft, HelpCircle, PanelLeft, PanelRight } from "lucide-react";
+import { Sparkles, Plus, Copy, ArrowLeft, HelpCircle, PanelLeft, PanelRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
@@ -18,10 +16,13 @@ import { updateGuidedStep } from "@/lib/academy.functions";
 import { AutosaveIndicator } from "@/components/editor/AutosaveIndicator";
 import type { AutosaveStatus } from "@/hooks/use-autosave";
 import { GuidedRail } from "@/components/guided/GuidedRail";
-import { CharacterAutocomplete, type CharacterHit } from "@/components/editor/CharacterAutocomplete";
-import { SceneBeatPicker } from "@/components/editor/SceneBeatPicker";
+import type { CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import { StepCoach } from "@/components/editor/StepCoach";
-import { ScreenplayDocumentEditor } from "@/components/editor/ScreenplayDocumentEditor";
+import {
+  ScreenplayDocumentEditor,
+  type ScreenplayEditorHandle,
+  type ActiveBlockMeta,
+} from "@/components/editor/ScreenplayDocumentEditor";
 import { LoglineComposer } from "@/components/editor/LoglineComposer";
 import { progressForStep, shouldUseLoglineComposer, shouldRedirectStep } from "@/lib/editor/stepCompletion";
 import { OPENING_SCENE_TEMPLATE } from "@/lib/editor/openingTemplate";
@@ -29,8 +30,8 @@ import { ArrowRight } from "lucide-react";
 import { EditorTour } from "@/components/editor/EditorTour";
 import { useEditorTour } from "@/hooks/useEditorTour";
 import { EditorCommandBar } from "@/components/editor/EditorCommandBar";
-import { nextBlockTypeAfter, cycleType } from "@/lib/editor/nextBlockType";
-import { detectBlockType, BLOCK_LABEL } from "@/lib/editor/autoFormat";
+import { cycleType } from "@/lib/editor/nextBlockType";
+import { BLOCK_LABEL } from "@/lib/editor/autoFormat";
 import { StoryNavigatorPane } from "@/components/editor/StoryNavigatorPane";
 import { CoachPane } from "@/components/editor/CoachPane";
 import { StoryBuilder } from "@/components/editor/StoryBuilder";
@@ -66,17 +67,6 @@ export const Route = createFileRoute("/_authenticated/editor/$projectId")({
     </div>
   ),
 });
-
-const BLOCK_TYPES = [
-  { value: "scene_heading", label: "Scene Heading", shortcut: "/scene", aliases: ["/heading", "/h", "/int", "/ext"] },
-  { value: "action", label: "Action", shortcut: "/action", aliases: ["/a", "/desc", "/description"] },
-  { value: "character", label: "Character", shortcut: "/character", aliases: ["/char", "/c", "/name"] },
-  { value: "dialogue", label: "Dialogue", shortcut: "/dialogue", aliases: ["/dia", "/d", "/line", "/speech"] },
-  { value: "parenthetical", label: "Parenthetical", shortcut: "/parenthetical", aliases: ["/parenth", "/p", "/wryly", "/beat"] },
-  { value: "transition", label: "Transition", shortcut: "/transition", aliases: ["/trans", "/t", "/cut", "/fade"] },
-  { value: "shot", label: "Shot", shortcut: "/shot", aliases: ["/s", "/camera", "/angle"] },
-  { value: "note", label: "Note", shortcut: "/note", aliases: ["/n", "/comment", "/reminder"] },
-];
 
 const AI_TOOLS = [
   "Generate logline", "Build outline", "Create character",
@@ -121,94 +111,16 @@ function Editor() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["characters", projectId] }),
   });
 
-  const [focusBlockId, setFocusBlockId] = useState<string | null>(null);
-  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const editorRef = useRef<ScreenplayEditorHandle>(null);
+  const [activeMeta, setActiveMeta] = useState<ActiveBlockMeta>(null);
+  const activeBlockId = activeMeta?.serverId ?? null;
+  const activeBlockType = activeMeta?.type ?? null;
 
-  // Autosave status (editor-wide, aggregated across block edits)
-  const draftKey = `editor-draft:${projectId}`;
+  // Editor-wide autosave indicator
   const [saveStatus, setSaveStatus] = useState<AutosaveStatus>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const pendingCount = useRef(0);
-  // Content typed into a yet-to-be-persisted (temp-*) block. Flushed to the
-  // real row once the optimistic insert returns the real id.
-  const pendingTempContent = useRef<Map<string, string>>(new Map());
-  // Tracks block ids that currently have a save request in-flight, so
-  // BlockEditor's server-echo sync can drop stale cache patches.
-  const inFlightSaves = useRef<Set<string>>(new Set());
-  const isSaving = useCallback((id: string) => inFlightSaves.current.has(id), []);
 
-  const markDirty = useCallback(() => {
-    // Only update visual state — pending save count is incremented per
-    // actual save operation in markSaving, NOT per keystroke (otherwise
-    // the indicator gets stuck on "Saving…").
-    setSaveStatus("dirty");
-  }, []);
-  const markSaving = useCallback(() => {
-    pendingCount.current += 1;
-    setSaveStatus("saving");
-  }, []);
-  const markSaved = useCallback(() => {
-    pendingCount.current = Math.max(0, pendingCount.current - 1);
-    if (pendingCount.current === 0) {
-      setSaveStatus("saved");
-      setLastSavedAt(Date.now());
-    }
-  }, []);
-  const markError = useCallback(() => {
-    pendingCount.current = Math.max(0, pendingCount.current - 1);
-    setSaveStatus("error");
-  }, []);
-
-  // Per-block draft persistence in localStorage (cleared on successful save)
-  const writeDraft = useCallback((blockId: string, content: string) => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem(draftKey);
-      const obj = raw ? JSON.parse(raw) : {};
-      obj[blockId] = { content, savedAt: Date.now() };
-      localStorage.setItem(draftKey, JSON.stringify(obj));
-    } catch { /* ignore */ }
-  }, [draftKey]);
-
-  const clearDraft = useCallback((blockId: string) => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem(draftKey);
-      if (!raw) return;
-      const obj = JSON.parse(raw);
-      delete obj[blockId];
-      if (Object.keys(obj).length === 0) localStorage.removeItem(draftKey);
-      else localStorage.setItem(draftKey, JSON.stringify(obj));
-    } catch { /* ignore */ }
-  }, [draftKey]);
-
-  // Recovery banner state
-  const [recovery, setRecovery] = useState<Record<string, { content: string; savedAt: number }> | null>(null);
-  useEffect(() => {
-    if (blocksLoading || typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem(draftKey);
-      if (!raw) return;
-      const obj = JSON.parse(raw) as Record<string, { content: string; savedAt: number }>;
-      const byId = new Map(blocks.map((b: any) => [b.id, b]));
-      const recoverable: Record<string, { content: string; savedAt: number }> = {};
-      for (const [id, draft] of Object.entries(obj)) {
-        const b = byId.get(id);
-        if (!b) continue;
-        if ((b.content ?? "") !== (draft.content ?? "") && draft.content?.trim() !== "") {
-          recoverable[id] = draft;
-        } else {
-          // Server already has this content — clean stale draft
-          delete obj[id];
-        }
-      }
-      if (Object.keys(recoverable).length > 0) setRecovery(recoverable);
-      // Persist cleaned drafts
-      if (Object.keys(obj).length === 0) localStorage.removeItem(draftKey);
-      else localStorage.setItem(draftKey, JSON.stringify(obj));
-    } catch { /* ignore */ }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocksLoading, projectId]);
+  const emitEvent = useWriterEvents();
 
   // beforeunload warning while unsaved
   useEffect(() => {
@@ -222,170 +134,10 @@ function Editor() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [saveStatus]);
 
-  const emitEvent = useWriterEvents();
-
-  const addBlock = useMutation({
-    mutationFn: async ({ block_type, initialContent }: { block_type: string; initialContent?: string }) => {
-      const order_index = blocks.length;
-      const { data, error } = await supabase.from("script_blocks")
-        .insert({ project_id: projectId, block_type, content: initialContent ?? "", order_index })
-        .select().single();
-      if (error) throw error;
-      return data;
-    },
-    onMutate: async ({ block_type, initialContent }) => {
-      await qc.cancelQueries({ queryKey: ["blocks", projectId] });
-      const prev = qc.getQueryData<any[]>(["blocks", projectId]) ?? [];
-      const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const temp = { id: tempId, project_id: projectId, block_type, content: initialContent ?? "", order_index: prev.length, metadata: null };
-      qc.setQueryData<any[]>(["blocks", projectId], [...prev, temp]);
-      if (initialContent) pendingTempContent.current.set(tempId, initialContent);
-      setFocusBlockId(tempId);
-      return { tempId, prev };
-    },
-    onSuccess: (data, vars, ctx: any) => {
-      qc.setQueryData<any[]>(["blocks", projectId], (old) =>
-        (old ?? []).map((b) => (b.id === ctx?.tempId ? data : b))
-      );
-      if (data?.id) setFocusBlockId(data.id);
-      // Flush any text the user already typed into the temp row.
-      const buffered = ctx?.tempId ? pendingTempContent.current.get(ctx.tempId) : undefined;
-      if (ctx?.tempId) pendingTempContent.current.delete(ctx.tempId);
-      if (buffered && data?.id && buffered !== (data.content ?? "")) {
-        void saveBlock(data.id, { content: buffered });
-      }
-      emitEvent({ event_type: "block_created", project_id: projectId, context: { block_type: vars.block_type } });
-      if (vars.block_type === "scene_heading") {
-        emitEvent({ event_type: "scene_created", project_id: projectId, context: { has_turn: false } });
-      }
-    },
-    onError: (_e, _v, ctx: any) => {
-      if (ctx?.tempId) pendingTempContent.current.delete(ctx.tempId);
-      if (ctx?.prev) qc.setQueryData(["blocks", projectId], ctx.prev);
-    },
-  });
-
-  const insertBlockAfter = useMutation({
-    mutationFn: async ({ block_type, afterOrder, initialContent }: { block_type: string; afterOrder: number; initialContent?: string }) => {
-      const sorted = [...blocks].sort((a, b) => a.order_index - b.order_index);
-      const idx = sorted.findIndex((b) => b.order_index === afterOrder);
-      const nextOrder = idx >= 0 && sorted[idx + 1] ? sorted[idx + 1].order_index : afterOrder + 1;
-      const newOrder = (afterOrder + nextOrder) / 2;
-      const { data, error } = await supabase.from("script_blocks")
-        .insert({ project_id: projectId, block_type, content: initialContent ?? "", order_index: newOrder })
-        .select().single();
-      if (error) throw error;
-      return data;
-    },
-    onMutate: async ({ block_type, afterOrder, initialContent }) => {
-      await qc.cancelQueries({ queryKey: ["blocks", projectId] });
-      const prev = qc.getQueryData<any[]>(["blocks", projectId]) ?? [];
-      const sorted = [...prev].sort((a, b) => a.order_index - b.order_index);
-      const idx = sorted.findIndex((b) => b.order_index === afterOrder);
-      const nextOrder = idx >= 0 && sorted[idx + 1] ? sorted[idx + 1].order_index : afterOrder + 1;
-      const newOrder = (afterOrder + nextOrder) / 2;
-      const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const temp = { id: tempId, project_id: projectId, block_type, content: initialContent ?? "", order_index: newOrder, metadata: null };
-      qc.setQueryData<any[]>(["blocks", projectId], [...prev, temp].sort((a, b) => a.order_index - b.order_index));
-      if (initialContent) pendingTempContent.current.set(tempId, initialContent);
-      setFocusBlockId(tempId);
-      return { tempId, prev };
-    },
-    onSuccess: (data, _vars, ctx: any) => {
-      qc.setQueryData<any[]>(["blocks", projectId], (old) =>
-        (old ?? []).map((b) => (b.id === ctx?.tempId ? data : b))
-      );
-      if (data?.id) setFocusBlockId(data.id);
-      const buffered = ctx?.tempId ? pendingTempContent.current.get(ctx.tempId) : undefined;
-      if (ctx?.tempId) pendingTempContent.current.delete(ctx.tempId);
-      if (buffered && data?.id && buffered !== (data.content ?? "")) {
-        void saveBlock(data.id, { content: buffered });
-      }
-    },
-    onError: (_e, _v, ctx: any) => {
-      if (ctx?.tempId) pendingTempContent.current.delete(ctx.tempId);
-      if (ctx?.prev) qc.setQueryData(["blocks", projectId], ctx.prev);
-      toast.error("Couldn't insert line");
-    },
-  });
-
-  const saveBlock = useCallback(async (id: string, patch: { content?: string; block_type?: string; metadata?: Record<string, any> }) => {
-    if (id.startsWith("temp-")) {
-      // Optimistic row not yet persisted — buffer the typed content so we
-      // can flush it as soon as the insert mutation returns the real id.
-      if (patch.content !== undefined) pendingTempContent.current.set(id, patch.content);
-      setSaveStatus("dirty");
-      return;
-    }
-    markSaving();
-    inFlightSaves.current.add(id);
-    try {
-      const update: any = {};
-      if (patch.content !== undefined) update.content = patch.content;
-      if (patch.block_type) update.block_type = patch.block_type;
-      if (patch.metadata !== undefined) update.metadata = patch.metadata;
-      const { error } = await supabase.from("script_blocks").update(update).eq("id", id);
-      if (error) throw error;
-      if (patch.content !== undefined) clearDraft(id);
-      // Patch the React Query cache in place — never invalidate, that would
-      // remount the focused textarea and lose the caret.
-      qc.setQueryData<any[]>(["blocks", projectId], (old) =>
-        (old ?? []).map((b) => (b.id === id ? { ...b, ...update } : b))
-      );
-      markSaved();
-    } catch (e: any) {
-      markError();
-      toast.error("Couldn't save — your work is kept locally and will retry on next edit");
-    } finally {
-      inFlightSaves.current.delete(id);
-    }
-  }, [clearDraft, markError, markSaved, markSaving, qc, projectId]);
-
-  const restoreRecovery = useCallback(async () => {
-    if (!recovery) return;
-    setSaveStatus("saving");
-    pendingCount.current = Object.keys(recovery).length;
-    for (const [id, draft] of Object.entries(recovery)) {
-      try {
-        const { error } = await supabase.from("script_blocks").update({ content: draft.content }).eq("id", id);
-        if (error) throw error;
-        qc.setQueryData<any[]>(["blocks", projectId], (old) =>
-          (old ?? []).map((b) => (b.id === id ? { ...b, content: draft.content } : b))
-        );
-        clearDraft(id);
-        markSaved();
-      } catch {
-        markError();
-      }
-    }
-    setRecovery(null);
-    toast.success("Restored your unsaved changes");
-  }, [recovery, clearDraft, markSaved, markError, qc, projectId]);
-
-  const discardRecovery = useCallback(() => {
-    if (!recovery) return;
-    for (const id of Object.keys(recovery)) clearDraft(id);
-    setRecovery(null);
-  }, [recovery, clearDraft]);
-
-  const deleteBlock = useMutation({
-    mutationFn: async (id: string) => {
-      clearDraft(id);
-      const { error } = await supabase.from("script_blocks").delete().eq("id", id);
-      if (error) throw error;
-      return id;
-    },
-    onSuccess: (id) => {
-      qc.setQueryData<any[]>(["blocks", projectId], (old) =>
-        (old ?? []).filter((b) => b.id !== id)
-      );
-    },
-  });
-
-  // Bulk insert template / starter blocks
+  // Bulk insert template / starter blocks (used by AI + template helpers)
   const insertTemplate = useMutation({
     mutationFn: async (template: { block_type: string; content: string }[]) => {
-      const startOrder = blocks.length;
+      const startOrder = (blocks?.length ?? 0);
       const rows = template.map((t, i) => ({
         project_id: projectId,
         block_type: t.block_type,
@@ -423,8 +175,8 @@ function Editor() {
     emitEvent({ event_type: "ai_request", project_id: projectId, context: { tool: aiTool } });
     try {
       const screenplay = blocks
-        .filter((b) => b.block_type !== "note")
-        .map((b) => `[${b.block_type}] ${b.content}`).join("\n");
+        .filter((b: any) => b.block_type !== "note")
+        .map((b: any) => `[${b.block_type}] ${b.content}`).join("\n");
       const ctx = `Project: ${project?.title}\nGenre: ${project?.genre ?? ""}\nLogline: ${project?.logline ?? ""}\n\nSCRIPT SO FAR:\n${screenplay.slice(-6000)}`;
       const res = await callAi({ data: { projectId, tool: aiTool, prompt: aiPrompt || aiTool, context: ctx } });
       setAiOutput(res.text);
@@ -454,7 +206,6 @@ function Editor() {
           context: projectCtx,
         },
       });
-      // Parse simple [block_type] content lines if present; otherwise fall back to action lines
       const parsed: { block_type: string; content: string }[] = [];
       const lines = res.text.split("\n").map((l: string) => l.trim()).filter(Boolean);
       const tagRe = /^\[(scene_heading|action|character|dialogue|parenthetical|transition|shot|note)\]\s*(.*)$/i;
@@ -506,42 +257,16 @@ function Editor() {
     await markStepComplete.mutateAsync(guidedStep);
   }, [guidedStep, markStepComplete]);
 
-  const startFromScratch = useCallback(async () => {
-    await addBlock.mutateAsync({ block_type: "scene_heading" });
-  }, [addBlock]);
-
-  // Auto-seed the very first scene heading so a brand-new project opens with
-  // a focused, editable line — no clicks, no ghost, instant typing.
-  const seededRef = useRef(false);
-  useEffect(() => {
-    if (seededRef.current) return;
-    if (blocksLoading) return;
-    if (blocks.length > 0) { seededRef.current = true; return; }
-    if (isLoglineStep) return;
-    if (addBlock.isPending) return;
-    seededRef.current = true;
-    addBlock.mutate({ block_type: "scene_heading" });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocksLoading, blocks.length, isLoglineStep]);
-
   const tour = useEditorTour();
   const [storyBuilderOpen, setStoryBuilderOpen] = useState(false);
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const writeMode = useWriteMode();
 
-  // Default right pane tab follows the user's preferred mode (Guided → Builder, Studio → Coach).
   const { data: onboarding } = useOnboarding();
   const coachDefaultTab = onboarding?.preferred_mode === "guided" ? "builder" : "coach";
 
   // Global Cmd/Ctrl+1–7 → set active block's type
-  const setActiveBlockType = useCallback((type: string) => {
-    const activeId = activeBlockId;
-    if (!activeId) return;
-    void saveBlock(activeId, { block_type: type });
-    toast.success(`→ ${BLOCK_LABEL[type] ?? type}`, { duration: 1000 });
-  }, [activeBlockId, saveBlock]);
-
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return;
@@ -557,78 +282,62 @@ function Editor() {
       const t = map[e.key];
       if (t) {
         e.preventDefault();
-        setActiveBlockType(t);
+        editorRef.current?.changeActiveType(t);
+        toast.success(`→ ${BLOCK_LABEL[t] ?? t}`, { duration: 800 });
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [setActiveBlockType]);
+  }, []);
 
-  // Background auto-analyzer: detect new characters + sync scenes table.
+  // Background auto-analyzer
   useManuscriptAnalyzer({
     projectId,
     blocks: blocks as any,
     existingCharacterNames: (characters as any[]).map((c) => c.name),
   });
 
-
-
-
-  // Derived: outline + page count for the manuscript header.
+  // Outline + page counts (driven by server blocks; refreshed when cache patches)
   const outline = buildOutline(blocks as any);
   const pageCount = estimatePages(blocks as any);
   const activeSceneIdx = (() => {
-    if (!activeBlockId) return -1;
-    const b = blocks.find((x: any) => x.id === activeBlockId);
-    if (!b) return -1;
-    return outline.findIndex((s) => b.order_index >= s.startOrder && b.order_index <= s.endOrder);
+    if (!activeMeta) return -1;
+    return outline.findIndex(
+      (s) => activeMeta.orderIndex >= s.startOrder && activeMeta.orderIndex <= s.endOrder,
+    );
   })();
   const activeScene = activeSceneIdx >= 0 ? outline[activeSceneIdx] : null;
 
-  const jumpToBlock = useCallback((blockId: string) => {
-    setFocusBlockId(blockId);
+  const jumpToBlock = useCallback((serverId: string) => {
+    editorRef.current?.jumpToServer(serverId);
     if (typeof document !== "undefined") {
-      // Scroll into view if rendered.
       requestAnimationFrame(() => {
-        const el = document.querySelector(`[data-block-id="${blockId}"]`) as HTMLElement | null;
+        const el = document.querySelector(`[data-block-id="${serverId}"]`) as HTMLElement | null;
         el?.scrollIntoView({ behavior: "smooth", block: "center" });
       });
     }
   }, []);
 
   const addSceneAtEnd = useCallback(() => {
-    addBlock.mutate({ block_type: "scene_heading" });
-  }, [addBlock]);
-
-  const activeBlock = blocks.find((b: any) => b.id === activeBlockId) ?? null;
-  const activeIndex = activeBlock ? blocks.findIndex((b: any) => b.id === activeBlock.id) : -1;
-  const prevType = activeIndex > 0 ? blocks[activeIndex - 1]?.block_type : undefined;
+    editorRef.current?.insertAtEnd("scene_heading");
+  }, []);
 
   const cmdCycleType = useCallback(() => {
-    if (!activeBlock) return;
-    const next = cycleType(activeBlock.block_type);
-    void saveBlock(activeBlock.id, { block_type: next });
-    toast.success(`→ ${BLOCK_LABEL[next] ?? next}`, { duration: 1200 });
-  }, [activeBlock, saveBlock]);
+    if (!activeBlockType) return;
+    const next = cycleType(activeBlockType);
+    editorRef.current?.changeActiveType(next);
+    toast.success(`→ ${BLOCK_LABEL[next] ?? next}`, { duration: 1000 });
+  }, [activeBlockType]);
 
   const cmdNewLine = useCallback(() => {
-    if (activeBlock) {
-      const nextType = nextBlockTypeAfter(activeBlock.block_type, prevType);
-      insertBlockAfter.mutate({ block_type: nextType, afterOrder: activeBlock.order_index });
-    } else if (blocks.length === 0) {
-      addBlock.mutate({ block_type: "scene_heading" });
-    } else {
-      const last = blocks[blocks.length - 1];
-      const nextType = nextBlockTypeAfter(last.block_type);
-      insertBlockAfter.mutate({ block_type: nextType, afterOrder: last.order_index });
-    }
-  }, [activeBlock, prevType, blocks, insertBlockAfter, addBlock]);
+    editorRef.current?.insertAfterActive();
+  }, []);
 
   const [aiContinueBusy, setAiContinueBusy] = useState(false);
   const cmdAiContinue = useCallback(async () => {
     setAiContinueBusy(true);
     try {
-      const tail = blocks
+      const tail = (blocks as any[])
         .slice(-20)
         .filter((b: any) => b.block_type !== "note")
         .map((b: any) => `[${b.block_type}] ${b.content}`)
@@ -661,8 +370,29 @@ function Editor() {
     }
   }, [blocks, callAi, projectId, projectCtx, insertTemplate]);
 
+  const handleBlockCreated = useCallback(
+    (block_type: string) => {
+      emitEvent({ event_type: "block_created", project_id: projectId, context: { block_type } });
+      if (block_type === "scene_heading") {
+        emitEvent({ event_type: "scene_created", project_id: projectId, context: { has_turn: false } });
+      }
+    },
+    [emitEvent, projectId],
+  );
 
-
+  const currentPage = Math.max(
+    1,
+    Math.min(
+      pageCount,
+      Math.ceil(
+        ((activeMeta
+          ? Math.max(1, (blocks as any[]).findIndex((b: any) => b.id === activeMeta.serverId) + 1)
+          : (blocks as any[]).length) /
+          Math.max(1, (blocks as any[]).length)) *
+          pageCount,
+      ),
+    ),
+  );
 
   return (
     <AppShell>
@@ -693,7 +423,6 @@ function Editor() {
           >
             <PencilLine className="h-3 w-3" /> Write
           </button>
-          {/* Mobile pane toggles */}
           <Sheet open={leftDrawerOpen} onOpenChange={setLeftDrawerOpen}>
             <SheetTrigger asChild>
               <button className="lg:hidden inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition rounded-md border border-border/60 px-2 py-1" title="Story Navigator">
@@ -724,7 +453,7 @@ function Editor() {
                 projectId={projectId}
                 blocks={blocks as any}
                 activeBlockId={activeBlockId}
-                activeBlockType={activeBlock?.block_type ?? null}
+                activeBlockType={activeBlockType}
                 defaultTab={coachDefaultTab}
                 onOpenStoryBuilder={() => { setStoryBuilderOpen(true); setRightDrawerOpen(false); }}
                 aiTools={AI_TOOLS}
@@ -748,20 +477,7 @@ function Editor() {
           </button>
           <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
         </div>
-
       </div>
-      {recovery && (
-        <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3">
-          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 flex items-center gap-3 flex-wrap">
-            <p className="text-sm flex-1">
-              We found <strong>{Object.keys(recovery).length}</strong> unsaved
-              {Object.keys(recovery).length === 1 ? " change" : " changes"} from your last session.
-            </p>
-            <Button size="sm" onClick={restoreRecovery}>Restore</Button>
-            <Button size="sm" variant="outline" onClick={discardRecovery}>Discard</Button>
-          </div>
-        </div>
-      )}
       {onboarding?.preferred_mode === "guided" && (
         <GuidedStepStrip
           projectId={projectId}
@@ -771,7 +487,6 @@ function Editor() {
       )}
       <div className={`grid grid-cols-1 ${writeMode.on ? "lg:grid-cols-1" : "lg:grid-cols-[280px_1fr_340px]"} max-w-[1600px] mx-auto`}>
 
-        {/* Left rail — Story Navigator (desktop) */}
         {!writeMode.on && (
         <aside data-tour="block-toolbar" className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)] sticky top-0 self-start max-h-[calc(100vh-104px)] overflow-auto bg-card/20">
           <StoryNavigatorPane
@@ -787,9 +502,6 @@ function Editor() {
         </aside>
         )}
 
-
-
-        {/* Editor */}
         <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10 screenplay-canvas">
           {isLoglineStep ? (
             <div className="max-w-[760px] mx-auto pt-4">
@@ -816,8 +528,7 @@ function Editor() {
             </div>
           ) : (
           <>
-          {/* Guided helpers — collapsible so they never block the canvas */}
-          {(guidedStep || redirect || isLoglineStep) && (
+          {(guidedStep || redirect) && (
             <details className="max-w-[760px] mx-auto mb-4 group font-sans" open>
               <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-border/60 bg-card/40 text-xs text-muted-foreground hover:bg-card/60">
                 <span className="flex items-center gap-2">
@@ -865,23 +576,15 @@ function Editor() {
                     </Button>
                   </div>
                 )}
-                {isLoglineStep && (
-                  <LoglineComposer
-                    projectId={projectId}
-                    initialLogline={project?.logline}
-                    projectContext={projectCtx}
-                  />
-                )}
               </div>
             </details>
           )}
 
-          {/* Manuscript header — page/scene counter + outline button */}
           <div className="max-w-[680px] mx-auto mb-3 flex items-center justify-between gap-3 font-sans px-1">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <BookOpen className="h-3.5 w-3.5" />
               <span className="font-mono tabular-nums">
-                Page {Math.max(1, Math.min(pageCount, Math.ceil(((activeBlockId ? blocks.findIndex((b: any) => b.id === activeBlockId) + 1 : blocks.length) / Math.max(1, blocks.length)) * pageCount)))} of {pageCount}
+                Page {currentPage} of {pageCount}
               </span>
               {activeScene && (
                 <>
@@ -918,15 +621,14 @@ function Editor() {
           </div>
 
           <CanvasToolbar
-            blockType={activeBlock?.block_type ?? null}
-            onChangeType={(t) => activeBlock && void saveBlock(activeBlock.id, { block_type: t })}
+            blockType={activeBlockType}
+            onChangeType={(t) => editorRef.current?.changeActiveType(t)}
             pageCount={pageCount}
-            currentPage={Math.max(1, Math.min(pageCount, Math.ceil(((activeBlockId ? blocks.findIndex((b: any) => b.id === activeBlockId) + 1 : blocks.length) / Math.max(1, blocks.length)) * pageCount)))}
-            wordCount={blocks.reduce((n: number, b: any) => n + (b.content?.trim().split(/\s+/).filter(Boolean).length ?? 0), 0)}
+            currentPage={currentPage}
+            wordCount={(blocks as any[]).reduce((n: number, b: any) => n + (b.content?.trim().split(/\s+/).filter(Boolean).length ?? 0), 0)}
             sceneCount={outline.length}
           />
 
-          {/* Discoverable shortcut legend */}
           <div className="max-w-[760px] mx-auto mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-mono text-muted-foreground/70 px-1">
             <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">Enter</kbd> next block</span>
             <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">Tab</kbd> change type</span>
@@ -935,44 +637,39 @@ function Editor() {
           </div>
 
           <ScreenplayDocumentEditor
-            blocks={blocks as any[]}
+            ref={editorRef}
+            projectId={projectId}
+            initialBlocks={blocks as any[]}
             blocksLoading={blocksLoading}
             characters={characters as CharacterHit[]}
-            focusBlockId={focusBlockId}
-            setFocusBlockId={setFocusBlockId}
-            activeBlockId={activeBlockId}
-            setActiveBlockId={setActiveBlockId}
-            onAddBlock={(block_type, initialContent) => addBlock.mutate({ block_type, initialContent })}
-            onInsertAfter={(args) => insertBlockAfter.mutate(args)}
-            onSaveBlock={saveBlock}
-            onDeleteBlock={(id) => deleteBlock.mutate(id)}
             onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
-            onDirty={(blockId, content) => { writeDraft(blockId, content); markDirty(); }}
+            onActiveBlockChange={setActiveMeta}
+            onSaveStatus={setSaveStatus}
+            onLastSaved={setLastSavedAt}
+            onBlockCreated={handleBlockCreated}
             onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
             onDraftWithAi={draftOpeningWithAi}
             onInsertTemplate={() => void insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
             primaryBusy={primaryBusy || insertTemplate.isPending}
-            isSaving={isSaving}
           />
 
-
           <EditorCommandBar
-            currentBlockType={activeBlock?.block_type ?? null}
-            hasFocus={!!activeBlock}
+            currentBlockType={activeBlockType}
+            hasFocus={!!activeMeta}
             onCycleType={cmdCycleType}
             onNewLine={cmdNewLine}
             onAiContinue={cmdAiContinue}
             aiBusy={aiContinueBusy}
           />
-          {blocks.length > 0 && (
+          {(blocks as any[]).length > 0 && (
             <div className="max-w-[680px] mx-auto mt-4 flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => {
-                const text = blocks.filter((b) => b.block_type !== "note").map(formatExport).join("\n\n");
+                const text = (blocks as any[]).filter((b: any) => b.block_type !== "note").map(formatExport).join("\n\n");
                 navigator.clipboard.writeText(text);
                 toast.success("Screenplay copied to clipboard");
               }}><Copy className="h-3.5 w-3.5 mr-1.5" />Copy</Button>
               <Button variant="outline" size="sm" onClick={() => {
-                const text = blocks.filter((b) => b.block_type !== "note").map(formatExport).join("\n\n");
+                const text = (blocks as any[]).filter((b: any) => b.block_type !== "note").map(formatExport).join("\n\n");
                 const blob = new Blob([text], { type: "text/plain" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
@@ -987,15 +684,13 @@ function Editor() {
           )}
         </section>
 
-
-        {/* Right sidebar — Intelligent Coach */}
         {!writeMode.on && (
         <aside data-tour="coach-panel" className="hidden lg:block border-l border-border/60 min-h-[calc(100vh-104px)] bg-card/20 max-h-[calc(100vh-104px)] overflow-auto sticky top-0 self-start">
           <CoachPane
             projectId={projectId}
             blocks={blocks as any}
             activeBlockId={activeBlockId}
-                activeBlockType={activeBlock?.block_type ?? null}
+            activeBlockType={activeBlockType}
             defaultTab={coachDefaultTab}
             onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
             aiTools={AI_TOOLS}
