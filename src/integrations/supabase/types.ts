@@ -701,6 +701,39 @@ export type Database = {
           },
         ]
       }
+      guided_step_versions: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          label: string | null
+          project_id: string
+          source: string
+          step_key: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          project_id: string
+          source?: string
+          step_key: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          project_id?: string
+          source?: string
+          step_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pitch_packages: {
         Row: {
           budget_tier: string | null
