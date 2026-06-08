@@ -900,6 +900,7 @@ function Editor() {
         </aside>
 
       </div>
+      <FeatureDock projectId={projectId} />
       <EditorTour isOpen={tour.isOpen} onClose={tour.stop} />
       <StoryBuilder
         projectId={projectId}
