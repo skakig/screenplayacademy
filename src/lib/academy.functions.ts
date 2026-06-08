@@ -415,3 +415,71 @@ export const aiGenerateRewriteExercise = createServerFn({ method: "POST" })
   .handler(async ({ data }) => callAI(
     `Create a focused rewriting exercise. Provide: (1) the principle being taught, (2) a "before" scene snippet (weak), (3) a guided 3-step rewrite plan, (4) a "after" example. Use the writer's context where possible.\n\nCONTEXT:\n${data.prompt}\n${data.context ?? ""}`,
   ));
+
+// ----- Guided step version history -----
+
+const VersionInput = z.object({
+  projectId: z.string().uuid(),
+  stepKey: z.string().min(1).max(64),
+  content: z.string().min(1).max(40000),
+  source: z.enum(["manual", "ai", "applied"]).optional(),
+  label: z.string().max(120).optional(),
+});
+
+export const saveStepVersion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => VersionInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("guided_step_versions").insert({
+      project_id: data.projectId,
+      user_id: context.userId,
+      step_key: data.stepKey,
+      content: data.content,
+      source: data.source ?? "manual",
+      label: data.label ?? null,
+    });
+    if (error) throw new Error(error.message);
+    // Trim to most recent 20 per step
+    const { data: rows } = await context.supabase
+      .from("guided_step_versions")
+      .select("id, created_at")
+      .eq("project_id", data.projectId)
+      .eq("step_key", data.stepKey)
+      .order("created_at", { ascending: false });
+    if (rows && rows.length > 20) {
+      const toDelete = rows.slice(20).map((r) => r.id);
+      await context.supabase.from("guided_step_versions").delete().in("id", toDelete);
+    }
+    return { ok: true };
+  });
+
+const ListVersionsInput = z.object({
+  projectId: z.string().uuid(),
+  stepKey: z.string().min(1).max(64),
+});
+
+export const listStepVersions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => ListVersionsInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("guided_step_versions")
+      .select("id, content, source, label, created_at")
+      .eq("project_id", data.projectId)
+      .eq("step_key", data.stepKey)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const deleteStepVersion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("guided_step_versions")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
