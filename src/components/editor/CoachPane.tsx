@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,9 @@ import { nextBlockTypeAfter } from "@/lib/editor/nextBlockType";
 import { toast } from "sonner";
 import type { Block } from "@/lib/editor/manuscriptAnalyzer";
 import { tallyCharacters, buildOutline } from "@/lib/editor/manuscriptAnalyzer";
+import { SceneDataCard } from "@/components/editor/coach/SceneDataCard";
+import { AskCoachInput } from "@/components/editor/coach/AskCoachInput";
+import { StoryBuilderPanel } from "@/components/editor/story-builder/StoryBuilderPanel";
 
 type Props = {
   projectId: string;
