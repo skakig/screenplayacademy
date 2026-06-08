@@ -19,6 +19,8 @@ import { CoachPanel } from "@/components/editor/CoachPanel";
 import { CoachModeToggle } from "@/components/editor/CoachModeToggle";
 import { AutosaveIndicator } from "@/components/editor/AutosaveIndicator";
 import type { AutosaveStatus } from "@/hooks/use-autosave";
+import { GuidedRail } from "@/components/guided/GuidedRail";
+import { GraduationCap, BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
