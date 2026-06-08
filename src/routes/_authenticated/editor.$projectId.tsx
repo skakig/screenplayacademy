@@ -416,6 +416,42 @@ function Editor() {
 
   const tour = useEditorTour();
   const [storyBuilderOpen, setStoryBuilderOpen] = useState(false);
+  const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
+  const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
+
+  // Default right pane tab follows the user's preferred mode (Guided → Builder, Studio → Coach).
+  const { data: onboarding } = useOnboarding();
+  const coachDefaultTab = onboarding?.preferred_mode === "guided" ? "builder" : "coach";
+
+  // Global Cmd/Ctrl+1–7 → set active block's type
+  const setActiveBlockType = useCallback((type: string) => {
+    const activeId = activeBlockId;
+    if (!activeId) return;
+    void saveBlock(activeId, { block_type: type });
+    toast.success(`→ ${BLOCK_LABEL[type] ?? type}`, { duration: 1000 });
+  }, [activeBlockId, saveBlock]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const map: Record<string, string> = {
+        "1": "scene_heading",
+        "2": "action",
+        "3": "character",
+        "4": "dialogue",
+        "5": "parenthetical",
+        "6": "transition",
+        "7": "shot",
+      };
+      const t = map[e.key];
+      if (t) {
+        e.preventDefault();
+        setActiveBlockType(t);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [setActiveBlockType]);
 
   // Background auto-analyzer: detect new characters + sync scenes table.
   useManuscriptAnalyzer({
