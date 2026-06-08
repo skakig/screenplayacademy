@@ -43,6 +43,17 @@ function FirstScreenplayPage() {
     },
   });
 
+  // Auto-seed guided steps if the project has none yet (safety net for projects
+  // created outside guided mode or before seeding existed).
+  useEffect(() => {
+    if (!data || seedAttemptedRef.current) return;
+    if (data.steps.length > 0) return;
+    seedAttemptedRef.current = true;
+    seedFn({ data: { projectId } })
+      .then(() => qc.invalidateQueries({ queryKey: ["first-screenplay", projectId] }))
+      .catch(() => { seedAttemptedRef.current = false; });
+  }, [data, projectId, seedFn, qc]);
+
   // Auto-complete create_project (Step 1) since the project exists
   useEffect(() => {
     if (!data?.steps) return;
