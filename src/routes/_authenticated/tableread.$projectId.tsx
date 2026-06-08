@@ -73,7 +73,10 @@ function TableRead() {
     onError: (e: any) => toast.error(e.message ?? "Failed"),
   });
 
-  const run = async () => { setLoading(true); try { await gen.mutateAsync(); } finally { setLoading(false); } };
+  const run = async () => {
+    setLoading(true);
+    try { await gen.mutateAsync(); } catch { /* handled in onError */ } finally { setLoading(false); }
+  };
 
   const refresh = async (id: string) => {
     try {
