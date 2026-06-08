@@ -24,7 +24,7 @@ export function StepCoach({
   primaryBusy,
   markBusy,
 }: Props) {
-  const navigate = useNavigate();
+  
   const meta = stepKey ? STEP_META[stepKey] : undefined;
   const [exampleOpen, setExampleOpen] = useState(false);
 
