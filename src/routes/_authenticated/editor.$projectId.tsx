@@ -611,31 +611,34 @@ function Editor() {
                 onStartFromScratch={startFromScratch}
               />
             ) : (
-              blocks.map((b) => (
+              blocks.map((b, i) => (
                 <BlockEditor
                   key={b.id}
                   block={b}
+                  prevBlockType={i > 0 ? blocks[i - 1].block_type : undefined}
                   onSave={(patch) => saveBlock(b.id, patch)}
                   onDirty={(content) => { writeDraft(b.id, content); markDirty(); }}
                   onDelete={() => deleteBlock.mutate(b.id)}
                   onInsertAfter={(block_type) => insertBlockAfter.mutate({ block_type, afterOrder: b.order_index })}
                   focusBlockId={focusBlockId}
                   onFocusDone={() => setFocusBlockId(null)}
+                  onActiveChange={(id, active) => setActiveBlockId((prev) => (active ? id : prev === id ? null : prev))}
                   characters={characters}
                   onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
                 />
               ))
             )}
-            {blocks.length > 0 && (
-              <div className="mt-6 flex flex-wrap gap-1.5 font-sans">
-                {BLOCK_TYPES.map((t) => (
-                  <Button key={t.value} variant="ghost" size="sm" className="h-7 text-xs" onClick={() => addBlock.mutate(t.value)}>
-                    + {t.label}
-                  </Button>
-                ))}
-              </div>
-            )}
           </div>
+          {blocks.length > 0 && (
+            <EditorCommandBar
+              currentBlockType={activeBlock?.block_type ?? null}
+              hasFocus={!!activeBlock}
+              onCycleType={cmdCycleType}
+              onNewLine={cmdNewLine}
+              onAiContinue={cmdAiContinue}
+              aiBusy={aiContinueBusy}
+            />
+          )}
           {blocks.length > 0 && (
             <div className="max-w-[680px] mx-auto mt-4 flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => {
