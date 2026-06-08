@@ -177,7 +177,9 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     block={b}
                     isActive={b.id === doc.activeBlockId}
                     characters={characters}
-                    onCreateCharacter={onCreateCharacter}
+                    onCreateCharacter={
+                      onCreateCharacter ?? (async () => undefined)
+                    }
                     onFocus={() => doc.setActiveBlockId(b.id)}
                     onContentChange={(c) => doc.updateBlockContent(b.id, c)}
                     onChangeType={(t) => doc.changeBlockType(b.id, t)}

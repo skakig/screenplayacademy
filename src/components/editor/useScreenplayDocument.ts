@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { PersistenceAdapter, PersistSnapshot } from "./screenplayPersistence";
 
 export type SaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 
@@ -37,6 +38,7 @@ export function useScreenplayDocument({
   onSaveStatus,
   onLastSaved,
   onBlockCreated,
+  persistence,
 }: {
   projectId: string;
   initialBlocks: any[];
@@ -44,7 +46,14 @@ export function useScreenplayDocument({
   onSaveStatus?: (s: SaveStatus) => void;
   onLastSaved?: (ts: number) => void;
   onBlockCreated?: (block_type: string) => void;
+  /**
+   * Optional persistence adapter. When provided, all I/O is routed through it
+   * and the built-in Supabase path is bypassed. /editor-lab uses
+   * NullPersistenceAdapter to run fully local.
+   */
+  persistence?: PersistenceAdapter;
 }) {
+
   const qc = useQueryClient();
   const [localBlocks, setLocalBlocks] = useState<LocalBlock[]>([]);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
