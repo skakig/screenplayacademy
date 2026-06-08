@@ -102,12 +102,13 @@ export function buildOutline(blocks: Block[]): SceneOutline[] {
       startScene(b, scenes.length);
     } else {
       if (!current) startScene(b, 0);
-      if (!current) continue;
-      current.endOrder = b.order_index;
-      current.blockCount += 1;
+      const cur: SceneOutline | null = current;
+      if (!cur) continue;
+      cur.endOrder = b.order_index;
+      cur.blockCount += 1;
       if (b.block_type === "character") {
         const n = normalizeCharacterName(b.content);
-        if (n && !current.characters.includes(n)) current.characters.push(n);
+        if (n && !cur.characters.includes(n)) cur.characters.push(n);
       }
     }
   }
