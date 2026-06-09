@@ -183,6 +183,7 @@ export function ScreenplayLine({
       }
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
+        runSafeFormat();
         onEnter();
         return;
       }
@@ -190,6 +191,7 @@ export function ScreenplayLine({
       if (e.key === "Enter" && e.shiftKey) {
         if (block.block_type === "action" || block.block_type === "note") return; // default newline
         e.preventDefault();
+        runSafeFormat();
         onEnter();
         return;
       }
@@ -225,7 +227,12 @@ export function ScreenplayLine({
         value={block.content}
         onChange={handleChange}
         onFocus={() => { setFocused(true); onFocus(); }}
-        onBlur={() => setTimeout(() => setFocused(false), 120)}
+        onBlur={() => {
+          // Run safe formatting on blur. Defer focus-state flip so the
+          // autocomplete/toolbar can still hand focus back without flicker.
+          runSafeFormat();
+          setTimeout(() => setFocused(false), 120);
+        }}
         onKeyDown={handleKeyDown}
         placeholder={
           isFirstEmpty
