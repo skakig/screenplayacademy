@@ -24,6 +24,8 @@ import {
   type ActiveBlockMeta,
 } from "@/components/editor/ScreenplayDocumentEditor";
 import { createSupabasePersistenceAdapter } from "@/components/editor/persistence/SupabasePersistenceAdapter";
+import { SaveStatusBanner } from "@/components/editor/SaveStatusBanner";
+import { clearDraft } from "@/components/editor/draftBackup";
 import { LoglineComposer } from "@/components/editor/LoglineComposer";
 import { progressForStep, shouldUseLoglineComposer, shouldRedirectStep } from "@/lib/editor/stepCompletion";
 import { OPENING_SCENE_TEMPLATE } from "@/lib/editor/openingTemplate";
@@ -120,6 +122,9 @@ function Editor() {
   // Editor-wide autosave indicator
   const [saveStatus, setSaveStatus] = useState<AutosaveStatus>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [failedCount, setFailedCount] = useState(0);
+
+  const emitEvent = useWriterEvents();
 
   // Local-first persistence adapter: owns insert/update/delete queues,
   // patches the ["blocks", projectId] cache in place. Never invalidates
@@ -129,18 +134,37 @@ function Editor() {
       createSupabasePersistenceAdapter({
         projectId,
         queryClient: qc,
-        onSaveStatus: (s) => setSaveStatus(s as AutosaveStatus),
-        onLastSaved: setLastSavedAt,
+        onSaveStatus: (s) => {
+          setSaveStatus(s as AutosaveStatus);
+        },
+        onLastSaved: (ts) => {
+          setLastSavedAt(ts);
+          // Full sync confirmed — drop the localStorage draft so a future
+          // session doesn't try to "restore" already-saved lines.
+          setFailedCount(0);
+          clearDraft(projectId);
+        },
+        onSaveError: (info) => {
+          setFailedCount((n) => n + 1);
+          emitEvent({
+            event_type: "save_failed",
+            project_id: projectId,
+            context: {
+              kind: info.kind,
+              message: info.message,
+              attempts: info.attempts,
+            },
+          });
+        },
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [projectId, qc],
   );
-
-  const emitEvent = useWriterEvents();
 
   // beforeunload warning while unsaved
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      if (saveStatus === "dirty" || saveStatus === "saving") {
+      if (saveStatus === "dirty" || saveStatus === "saving" || saveStatus === "error") {
         e.preventDefault();
         e.returnValue = "";
       }
@@ -148,6 +172,37 @@ function Editor() {
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [saveStatus]);
+
+  const retryFailed = useCallback(() => {
+    setFailedCount(0);
+    persistence.retryFailed?.();
+    toast.info("Retrying unsaved lines…");
+  }, [persistence]);
+
+  const copyAllText = useCallback(() => {
+    const local = editorRef.current?.getBlocks() ?? (blocks as any[]);
+    const text = local
+      .filter((b: any) => b.block_type !== "note")
+      .map(formatExport)
+      .join("\n\n");
+    navigator.clipboard.writeText(text);
+    toast.success("Script copied to clipboard as backup");
+  }, [blocks]);
+
+  const handleDraftRestored = useCallback(
+    (count: number) => {
+      toast.success(
+        `Restored ${count} unsaved line${count === 1 ? "" : "s"} from your last session`,
+        { duration: 6000 },
+      );
+      emitEvent({
+        event_type: "draft_restored",
+        project_id: projectId,
+        context: { count },
+      });
+    },
+    [emitEvent, projectId],
+  );
 
   // Bulk insert template / starter blocks (used by AI + template helpers)
   const insertTemplate = useMutation({
@@ -651,6 +706,13 @@ function Editor() {
             <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">⌘↵</kbd> AI continue</span>
           </div>
 
+          <SaveStatusBanner
+            visible={saveStatus === "error" || failedCount > 0}
+            failedCount={failedCount}
+            onRetry={retryFailed}
+            onCopyAll={copyAllText}
+          />
+
           <ScreenplayDocumentEditor
             ref={editorRef}
             projectId={projectId}
@@ -660,6 +722,7 @@ function Editor() {
             onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
             onActiveBlockChange={setActiveMeta}
             onBlockCreated={handleBlockCreated}
+            onDraftRestored={handleDraftRestored}
             onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
             onDraftWithAi={draftOpeningWithAi}
             onInsertTemplate={() => void insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}

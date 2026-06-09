@@ -40,6 +40,12 @@ export interface PersistenceAdapter {
 
   /** Optional: cancel any pending work for a local block (e.g. on delete). */
   cancelPending?(localId: string): void;
+
+  /** Optional: retry every block whose final save attempt failed. */
+  retryFailed?(): void;
+
+  /** Optional: returns the set of localIds whose last attempt failed permanently. */
+  getFailedIds?(): Set<string>;
 }
 
 /**
@@ -52,4 +58,6 @@ export const NullPersistenceAdapter: PersistenceAdapter = {
   scheduleUpdate: () => {},
   queueDelete: () => {},
   cancelPending: () => {},
+  retryFailed: () => {},
+  getFailedIds: () => new Set(),
 };
