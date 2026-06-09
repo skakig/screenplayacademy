@@ -57,6 +57,8 @@ type Props = {
   rejectedFixes?: Set<string>;
   /** Add a new term to the project dictionary. Wires the "Add" chip. */
   onAddDictionaryTerm?: (term: string, category?: "character" | "location" | "custom") => void;
+  /** Persist a rejected structural suggestion to project-level memory. */
+  onRejectFormatSuggestion?: (original: string, suggestedType: string) => void;
 };
 
 
