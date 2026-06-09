@@ -217,6 +217,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
             )}
           </div>
         )}
+        {blocksLoading && doc.localBlocks.length === 0 ? (
           <div className="space-y-3 py-8 font-sans">
             <div className="h-5 w-2/3 bg-muted/50 rounded animate-pulse" />
             <div className="h-4 w-full bg-muted/40 rounded animate-pulse" />
