@@ -331,6 +331,66 @@ export function ScreenplayLine({
         } as any}
       />
 
+      {visibleUnknowns.length > 0 && !focused && (
+        <div className="mt-1 flex flex-wrap items-center gap-1 font-sans">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
+            New word
+          </span>
+          {visibleUnknowns.slice(0, 4).map((term) => (
+            <div
+              key={term}
+              className="inline-flex items-center gap-0.5 rounded-full border border-amber-500/30 bg-amber-500/5 px-1.5 py-0.5 text-[11px] text-foreground/80"
+              title="SceneSmith hasn't seen this word before. Add it to the project so it's never flagged again."
+            >
+              <span className="font-mono">{term}</span>
+              {onAddDictionaryTerm && (
+                <>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onAddDictionaryTerm(term, "character");
+                      setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
+                    }}
+                    className="ml-1 inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-amber-500/10 transition"
+                    title="Add as character"
+                  >
+                    <BookPlus className="h-3 w-3" />
+                    Character
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onAddDictionaryTerm(term, "custom");
+                      setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
+                    }}
+                    className="inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-amber-500/10 transition"
+                    title="Add to project dictionary"
+                  >
+                    Term
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
+                }}
+                className="ml-0.5 inline-flex items-center justify-center rounded-full p-0.5 text-muted-foreground/70 hover:text-foreground hover:bg-amber-500/10 transition"
+                title="Ignore"
+                aria-label="Ignore"
+              >
+                <XIcon className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+
+
       {showAutocomplete && (
         <CharacterAutocomplete
           query={block.content}
