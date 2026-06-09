@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, FileText, Wand2 } from "lucide-react";
-import { useScreenplayDocument, type SaveStatus } from "./useScreenplayDocument";
+import { useScreenplayDocument, type SaveStatus, type LocalBlock } from "./useScreenplayDocument";
 import { ScreenplayLine } from "./ScreenplayLine";
 import { nextBlockTypeAfter } from "./screenplayKeymap";
 import type { CharacterHit } from "@/components/editor/CharacterAutocomplete";
@@ -20,6 +20,7 @@ export type ScreenplayEditorHandle = {
   insertAfterActive: (type?: string) => void;
   insertAtEnd: (type: string) => void;
   jumpToServer: (serverId: string) => void;
+  getBlocks: () => LocalBlock[];
 };
 
 type Props = {
@@ -103,6 +104,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
           doc.insertAtEnd(t);
         },
         jumpToServer: (serverId) => doc.jumpToServer(serverId),
+        getBlocks: () => doc.localBlocks,
       }),
       [doc],
     );

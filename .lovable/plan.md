@@ -1,83 +1,85 @@
-# Phase 1.5 — Mobile Stabilization for /editor-lab
+## Pass 3 — Production Integration of the Local-First Screenplay Engine
 
-Goal: make `/editor-lab` writable on iPhone Safari/Chrome with the Null adapter, without touching production `/editor/:projectId` or any other product surface. Stop after desktop + mobile Pass 1 both pass.
+### Current state (verified)
 
-## Scope
+`src/routes/_authenticated/editor.$projectId.tsx` already:
+- Mounts `ScreenplayDocumentEditor` with `initialBlocks={blocks}`, `onActiveBlockChange`, `onSaveStatus`, `onLastSaved`, `onBlockCreated`.
+- Holds only `activeMeta` (localId/serverId/type/orderIndex) for side panes — no longer owns `addBlock`, `saveBlock`, `pendingTempContent`, `inFlightSaves`, `focusBlockId`, or temp-ID juggling.
+- Uses `editorRef` (`changeActiveType`, `insertAtEnd`, `insertAfterActive`, `jumpToServer`) for toolbar / command bar / nav actions.
+- Keeps the Logline vs. manuscript fork via `shouldUseLoglineComposer(guidedStep)`.
+- Fires `block_created` / `scene_created` writer events via `onBlockCreated`.
 
-Only these files change:
+`useScreenplayDocument` already supports an injected `persistence` adapter; when none is passed it runs a legacy built-in Supabase path. Production currently passes none, so it uses the legacy path — that is the gap.
 
-- `src/components/editor/ScreenplayDocumentEditor.tsx` — paper tap handler.
-- `src/components/editor/ScreenplayLine.tsx` — first-line visibility, slash menu + toolbar focus retention.
-- `src/routes/editor-lab.tsx` — small mobile-friendly hint, no behavioral change to adapter logic.
-- `src/styles.css` — one or two `.screenplay` mobile rules (min-height for empty first line, placeholder contrast).
+`SupabasePersistenceAdapter` (Pass 2) is proven in `/editor-lab` and matches the contract: single-flight inserts, deferred updates, fire-and-forget deletes, in-place `queryClient.setQueryData(["blocks", projectId], …)` patching, **never** `invalidateQueries` during typing.
 
-Out of scope (do NOT touch): `editor.$projectId.tsx`, `useScreenplayDocument.ts` logic, SupabaseAdapter, StoryPulse, storyboard, table read, Academy, pitch, character engine, AI.
+### Goal
 
-## Problems being fixed
+Make the production editor use the same proven adapter, and make export read from local blocks. Nothing else moves.
 
-1. On iPhone, the lab page shows a blank paper rectangle — the first empty `scene_heading` textarea has no visible height and no readable placeholder against the warm paper, so users can't see where to tap.
-2. The paper-level `onMouseDown` calls `e.preventDefault()` before programmatically focusing a textarea. On iOS Safari, preventing default in a synthetic mouse event during a touch sequence frequently blocks the soft keyboard from opening.
-3. The slash menu uses `onClick` with `e.stopPropagation()` — on mobile this blurs the textarea before the command executes, closing the keyboard.
-4. The block-type toolbar buttons use `onMouseDown(e.preventDefault())` (good on desktop) but the textarea is not explicitly refocused after the type change, which on mobile can leave the keyboard closed.
-5. Lab currently encourages testing Supabase mode before Null mode is confirmed.
+### Scope of changes
 
-## Changes
+1. **Wire `SupabasePersistenceAdapter` into the production editor**
+   - In `editor.$projectId.tsx`, build the adapter once per `(projectId, queryClient)` with `useMemo`:
+     ```ts
+     const persistence = useMemo(
+       () => createSupabasePersistenceAdapter({
+         projectId, queryClient: qc,
+         onSaveStatus: setSaveStatus, onLastSaved: setLastSavedAt,
+       }),
+       [projectId, qc]
+     );
+     ```
+   - Pass `persistence={persistence}` to `<ScreenplayDocumentEditor />`.
+   - Remove `onSaveStatus`/`onLastSaved` props from the editor element (the adapter now owns the status stream); the hook's legacy status callbacks become inert when adapter is supplied.
+   - Result: typing path no longer touches the hook's legacy Supabase branch in production.
 
-### 1. First line is visibly writable (ScreenplayLine.tsx + styles.css)
+2. **Expose local blocks for export**
+   - Add to `ScreenplayEditorHandle`: `getBlocks: () => LocalBlock[]`.
+   - Implement in `ScreenplayDocumentEditor` via `useImperativeHandle` returning `doc.localBlocks` through a ref (read-on-call, not snapshot).
+   - In the route, change Copy and Download .txt buttons to call `editorRef.current?.getBlocks()` and feed those to `formatExport`. Keep server-blocks fallback only if the ref is unavailable (defensive).
 
-- Add a mobile-safe minimum tap height to empty textareas: `min-h-[2.25em]` (or via a `.screenplay textarea[data-block-editor]:placeholder-shown { min-height: 2.5rem; }` rule in `styles.css`). Applies to all empty lines, not just the first.
-- Raise placeholder contrast inside `.screenplay`: `placeholder:text-foreground/40` (currently `muted-foreground/60` which disappears on the warm paper). Verified visually on mobile.
-- For the very first empty `scene_heading` (no content, only block in doc), use a friendlier placeholder via prop or by detecting `isFirstEmpty` in `ScreenplayLine`: `"INT. LOCATION - DAY  ·  tap to start"`. Falls back to the existing per-type placeholder for every other case.
+3. **Retire the legacy Supabase path in the hook (safe cleanup)**
+   - In `useScreenplayDocument.ts`, since both production and lab will now pass an adapter, remove `runInsert` / `runUpdate` / `runDelete` and the inline `supabase` import.
+   - `deleteBlock` already calls `persistence.queueDelete` when adapter present; remove the `void runDelete(target.serverId)` else branch.
+   - Removes the "two paths" risk and ensures all I/O flows through the adapter contract.
+   - If safer for one pass, keep the legacy path but guarantee production always supplies an adapter; recommend removal in this pass to honor the contract ("editor hook owns local state only").
 
-No DOM structure change. Still a real `<textarea>`. No ghost div. No button.
+4. **Side panes & analyzers stay on the React Query cache (no change)**
+   - `StoryNavigatorPane`, `CoachPane`, `useManuscriptAnalyzer`, `buildOutline`, `estimatePages`, `currentPage`, `cmdAiContinue`, `runAi` continue to read `blocks` from `useQuery(["blocks", projectId])`. The adapter patches that cache in place after each successful sync, so these refresh without interrupting typing. **No `invalidateQueries(["blocks", projectId])` is added anywhere in the typing path.**
+   - `insertTemplate` (bulk AI/template insert) still invalidates `["blocks", projectId]`. That is intentional and only fires on explicit user actions (AI draft, opening template) — never during typing. Acceptable for Pass 3; flagged as a follow-up if it ever causes a race.
 
-### 2. Mobile tap-to-focus (ScreenplayDocumentEditor.tsx)
+5. **Active-block plumbing already correct**
+   - `activeBlockId = activeMeta?.serverId ?? null` is used only by side panes / outline / jump — not by the editor itself. Pre-persistence blocks won't highlight in nav for a brief moment; acceptable and matches lab behavior.
 
-Rewrite `handlePaperMouseDown` as a `pointerdown` (or `click`) handler with these rules:
+6. **Guided / Logline behavior preserved** — no change to the `isLoglineStep` branch.
 
-- If `e.target` is already inside a textarea/button/input/menu/toolbar → do nothing, let native focus run.
-- Else: do NOT call `preventDefault()` on the synthetic event. Find the nearest textarea by Y (existing logic) OR, if the tap is below the last line, call `insertBlockAfter(last, nextBlockTypeAfter(last.block_type))` and then `requestAnimationFrame(() => textarea.focus())`.
-- The new block + focus must happen synchronously inside the user gesture so iOS allows the keyboard to open.
+7. **Mobile** — the editor component itself carries the Pass 1.5 mobile fixes (paper `onClick` focus, min-height, placeholder contrast, slash/toolbar `onMouseDown`+focus restore). Production picks them up automatically by mounting the same component.
 
-Switch the event from `onMouseDown` to `onClick` (or `onPointerUp`) on the paper container — clicks fire after touch on iOS and reliably allow programmatic focus inside the same gesture. Keep desktop behavior intact.
+### Files touched
 
-### 3. Slash menu retains focus (ScreenplayLine.tsx)
+- `src/routes/_authenticated/editor.$projectId.tsx` — add adapter import + `useMemo`, pass `persistence`, switch Copy/Download to `getBlocks()`.
+- `src/components/editor/ScreenplayDocumentEditor.tsx` — extend `ScreenplayEditorHandle` with `getBlocks`, implement.
+- `src/components/editor/useScreenplayDocument.ts` — remove legacy Supabase branch (`runInsert`/`runUpdate`/`runDelete` + `supabase` import); keep adapter path only.
 
-- Replace slash menu item `onClick` with `onMouseDown={(e) => { e.preventDefault(); executeSlash(t.value); }}` — `preventDefault` on mousedown prevents blur, keeps keyboard open on mobile, and the textarea stays focused after the type change.
-- After `executeSlash`, explicitly refocus the textarea (`ref.current?.focus()`).
+No other files modified. No DB migrations. No new dependencies.
 
-### 4. Toolbar retains focus (ScreenplayLine.tsx)
+### Out of scope (do not touch)
 
-- Quick-type toolbar buttons already use `onMouseDown(e.preventDefault())`. Add an explicit `ref.current?.focus()` after `onChangeType(t)` so the keyboard does not close on mobile.
+StoryPulse, storyboard, table read, Academy, pitch, pricing, auth, onboarding, Character Engine ITS/PfHU, new AI features, visual redesigns, FeatureDock, EditorCommandBar internals, GuidedRail.
 
-### 5. Lab adapter default + copy (editor-lab.tsx)
+### Acceptance test (run after the change)
 
-- Default remains `null` (already correct). Add a one-line hint: "Verify Null mode first. Switch to Supabase only after Null passes."
-- No logic change to the toggle, status pill, or adapter factory.
+On `/editor/$projectId`, desktop + iPhone 14 Pro Max:
+1. Open a project. Type `int african desert day` → Enter.
+2. Type `The sun burns across an endless sea of sand.` → Enter.
+3. Tab to Character, type `STEPHAN` → Enter.
+4. Type `Just a few more clicks.` → Enter.
+5. Type `COMMANDER` → Enter → `You are lost, soldier.`
+6. Keep typing ~30 s.
 
-## Technical notes
+Expected: no first-character loss, no caret jump, no blur, no duplicate blocks, correct Scene Heading → Action and Character ↔ Dialogue transitions, refresh restores all content, autosave pill cycles `dirty → saving → saved`, side panels (page count, scene list, coach) update without interrupting typing, Copy/Download produce the just-typed text. Mobile keyboard opens on tap, first line visible.
 
-- `useScreenplayDocument` already seeds an initial empty `scene_heading` block and sets it active. That call path is unchanged. The fix is purely making that block *visible and tappable* on mobile.
-- Programmatic `.focus()` opens the iOS keyboard only when called synchronously inside a user gesture (touchend/click). We must not break that chain with `preventDefault` on the originating event, async timers, or microtask deferrals between the gesture and `.focus()`.
-- All styling tokens stay semantic (`text-foreground/40`, etc.) — no hard-coded colors.
+### Stop condition
 
-## Acceptance — must pass before stop
-
-Desktop (existing Pass 1 from `docs/EDITOR_ACCEPTANCE_TESTS.md`):
-
-- Type the full Stephan/Commander script for 30s, no first-character loss, no blur, no caret jump, no duplicates.
-
-Mobile (new — iPhone Safari at 430×777, Null adapter):
-
-1. Open `/editor-lab` → first writing line is visibly present with a readable placeholder.
-2. Tap the first line → keyboard opens, caret appears.
-3. Type `int african desert day` → Return → new Action line appears focused, keyboard stays open.
-4. Type the sand-sea line → Return → use inline toolbar to set Character → keyboard stays open.
-5. Type `STEPHAN` → Return → Dialogue line appears focused.
-6. Type for 30s straight, no blur, no duplicates, no swallowed first character.
-
-Verified via the browser tool at 430×777 viewport after the edits.
-
-## Stop condition
-
-Stop after both desktop and mobile Pass 1 pass with the Null adapter. Do NOT proceed to Phase 3 (production `/editor/:projectId` integration) in this pass.
+Stop after production `/editor/$projectId` passes the same acceptance test as `/editor-lab`. Do not begin StoryPulse, storyboard, table read, Academy, pitch, AI, or Character Engine work.
