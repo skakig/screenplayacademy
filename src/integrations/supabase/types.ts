@@ -989,8 +989,10 @@ export type Database = {
           full_name: string | null
           id: string
           plan: string
+          preferred_languages: string[]
           stripe_customer_id: string | null
           subscription_tier: string
+          ui_language: string
           updated_at: string
         }
         Insert: {
@@ -1001,8 +1003,10 @@ export type Database = {
           full_name?: string | null
           id: string
           plan?: string
+          preferred_languages?: string[]
           stripe_customer_id?: string | null
           subscription_tier?: string
+          ui_language?: string
           updated_at?: string
         }
         Update: {
@@ -1013,8 +1017,10 @@ export type Database = {
           full_name?: string | null
           id?: string
           plan?: string
+          preferred_languages?: string[]
           stripe_customer_id?: string | null
           subscription_tier?: string
+          ui_language?: string
           updated_at?: string
         }
         Relationships: []
@@ -1023,9 +1029,11 @@ export type Database = {
         Row: {
           approved: boolean
           category: string
+          cognate_of: Json | null
           created_at: string
           created_by: string | null
           created_from: string
+          false_friend_risk: string[] | null
           id: string
           language: string | null
           normalized_term: string | null
@@ -1037,9 +1045,11 @@ export type Database = {
         Insert: {
           approved?: boolean
           category?: string
+          cognate_of?: Json | null
           created_at?: string
           created_by?: string | null
           created_from?: string
+          false_friend_risk?: string[] | null
           id?: string
           language?: string | null
           normalized_term?: string | null
@@ -1051,9 +1061,11 @@ export type Database = {
         Update: {
           approved?: boolean
           category?: string
+          cognate_of?: Json | null
           created_at?: string
           created_by?: string | null
           created_from?: string
+          false_friend_risk?: string[] | null
           id?: string
           language?: string | null
           normalized_term?: string | null
@@ -1127,7 +1139,9 @@ export type Database = {
           genre: string | null
           id: string
           logline: string | null
+          project_language: string
           project_type: string
+          screenplay_language: string
           status: string
           target_length: string | null
           title: string
@@ -1141,7 +1155,9 @@ export type Database = {
           genre?: string | null
           id?: string
           logline?: string | null
+          project_language?: string
           project_type?: string
+          screenplay_language?: string
           status?: string
           target_length?: string | null
           title: string
@@ -1155,7 +1171,9 @@ export type Database = {
           genre?: string | null
           id?: string
           logline?: string | null
+          project_language?: string
           project_type?: string
+          screenplay_language?: string
           status?: string
           target_length?: string | null
           title?: string
@@ -1345,6 +1363,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          language: string | null
           metadata: Json
           order_index: number
           project_id: string
@@ -1357,6 +1376,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          language?: string | null
           metadata?: Json
           order_index?: number
           project_id: string
@@ -1369,6 +1389,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          language?: string | null
           metadata?: Json
           order_index?: number
           project_id?: string

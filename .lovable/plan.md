@@ -1,70 +1,100 @@
-# Pass 9 — Auto-Formatting Completeness
+# Pass 10 — Language Intelligence Core: multilingual + transfer-aware
 
-Builds on Pass 8's language layer. Goal: make structural auto-formatting *trustworthy* (high-confidence auto-applies, medium-confidence suggests, low-confidence stays out of the way) and handle the biggest pain point — pasting unformatted scripts.
+Goal: graduate `screenplayLanguageIntelligence.ts` from an English-only helper into a profile-aware engine that handles 9 languages (EN, ES, FR, DE, PT, IT, PL, UK, RU), respects the writer's known languages, and never applies English rules to non-English text.
+
+Anchored in `docs/SCREENPLAY_LANGUAGE_INTELLIGENCE.md` and the Language Transfer Bridge doctrine: capture the full language profile, compute transfer distance per (source, target) pair, never assume a monolingual baseline.
 
 ## Scope
 
-### 1. Confidence-tiered formatter (`screenplayAutoFormat.ts`)
-Rewrite `analyzeFormat(text, context)` to return:
-```ts
-{ suggestedType, confidence: 'high'|'medium'|'low', reason, transformedText? }
+In: persistence, language-aware mechanical fixes, per-block detection, cognate/false-friend metadata, character-name protection across scripts (Latin/Cyrillic), settings + soft onboarding prompt.
+
+Out (later passes): AI prompt bridge-language routing (10C), real ML language detection beyond heuristics, full localization of UI strings to all 9 languages, automatic glossary import.
+
+## Decisions locked from clarifying questions
+
+- Scope: 10A + 10B in this pass.
+- Languages: EN, ES, FR, DE, PT, IT, PL, UK, RU.
+- Onboarding: optional, soft prompt (no hard step).
+- Detection: project-level default with per-block override.
+
+## Architecture
+
+```text
+profiles.preferred_languages[]  ─┐
+projects.screenplay_language     ├─► LanguageContext ─► screenplayLanguageIntelligence
+script_blocks.language (nullable)┘                       ├─ capitalizeStandaloneI (EN-only gate)
+                                                         ├─ capitalizeSentenceStarts (locale rules)
+                                                         ├─ analyzeUnknownTerms (cognate-aware)
+                                                         └─ shouldPreserveUnknownTerm (script-aware)
+
+src/lib/language/
+  transferMatrix.ts        — typology table for the 9 langs
+  cognates.ts              — seed cognate / false-friend lists per (src,tgt)
+  scriptDetection.ts       — Unicode-block heuristics (Latin vs Cyrillic)
+  bridgeSelector.ts        — pick nearest viable known language for scaffolding
 ```
 
-**High-confidence (auto-apply on Enter/blur):**
-- `INT.`/`EXT.`/`INT./EXT.` prefix → `scene_heading` (uppercase the slug)
-- Line ending in `TO:` (CUT TO:, FADE TO:, DISSOLVE TO:) → `transition`
-- Fully wrapped in `(...)` and prev block is `character`/`dialogue` → `parenthetical`
-- All-uppercase single line (<=4 words, no punctuation) after Action/blank, followed by Enter → `character`
+## Database (single migration)
 
-**Medium-confidence (suggest via chip, don't auto-apply):**
-- Short uppercase line in Action context that *might* be a character cue
-- Action line ending in `:` that might be a Transition
-- Lowercase line currently typed in a Character block (probably Action)
-- Parenthetical longer than ~40 chars (probably Action with parens)
+1. `profiles.preferred_languages text[]` default `'{en}'`, `profiles.ui_language text` default `'en'`.
+2. `projects.screenplay_language text` default `'en'`, `projects.project_language text` default `'en'`.
+3. `script_blocks.language text` nullable (per-block override; falls back to project).
+4. `project_dictionary`: add `language text`, `cognate_of jsonb` (`{en: "lamp", pl: "lampa"}`), `false_friend_risk text[]` (list of language codes where the term means something different).
+5. Extend RLS only where new tables added — none here, all alters; existing policies cover new columns.
 
-**Low-confidence:** do nothing; respect user's chosen type.
+## Code work
 
-Honors `formatOverrideMemory` rejected-fix list so a reverted suggestion doesn't re-fire.
+### Foundation (10A)
+- **`src/lib/language/types.ts`**: `LanguageCode` union, `LanguageProfile`, expanded `LanguageContext` (`uiLanguage`, `screenplayLanguage`, `knownLanguages`, `blockLanguageOverride?`).
+- **`src/components/editor/screenplayLanguageIntelligence.ts`** rewrite:
+  - `capitalizeStandaloneI` already gated on EN — keep but also block when block language ≠ EN.
+  - `capitalizeSentenceStarts` becomes a registry of per-language rules. EN/ES/FR/DE/PT/IT/PL/UK/RU all do sentence-case, but DE preserves noun capitalization (skip mid-word changes), and Cyrillic uses `\p{Lu}/\p{Ll}` Unicode classes already.
+  - New `applySafeLanguageFixes(text, ctx)` dispatches by `ctx.effectiveLanguage`.
+  - New `shouldPreserveUnknownTerm` consults: project dictionary + character bible + script mismatch (Cyrillic token in EN screenplay → preserve, do not flag).
+- **`src/hooks/useLanguageContext.ts`**: builds the effective `LanguageContext` for a block by merging profile → project → block override.
+- **`src/components/editor/ScreenplayLine.tsx`**: pass new context shape; no behavior change to keystrokes.
+- **`src/components/editor/ScreenplayDocumentEditor.tsx`** and **`src/routes/_authenticated/editor.$projectId.tsx`**: fetch project's `screenplay_language` and pass down.
+- **Settings**: tiny "Languages I know" chip-strip on `/settings` (uses existing i18n keys via `t()`); writes to `profiles.preferred_languages`.
+- **Soft onboarding nudge**: one-time toast on first editor open if `preferred_languages.length === 1` and screenplay language differs from UI language — "We can help you write in {{lang}} better. Tell us which languages you know." Links to settings.
 
-### 2. Paste-batch formatting
-New helper `formatPastedScript(rawText, context)` → array of typed blocks using line-by-line heuristics (scene heading detection, blank-line block separation, character/dialogue pairing).
+### Transfer table (10B)
+- **`src/lib/language/transferMatrix.ts`**: pure data — 9×9 matrix with `{script, morphology, syntax, lexicon}` distances on 0–3 scale per the doctrine. Exports `transferDistance(src, tgt)` and `nearestBridge(known[], target)`.
+- **`src/lib/language/cognates.ts`**: seed list (~50 high-value entries per neighbor pair: EN↔ES, EN↔FR, EN↔DE, ES↔PT, ES↔IT, FR↔IT, PL↔UK, PL↔RU, UK↔RU). Each entry tagged with `false_friend_risk` where applicable (e.g. ES `embarazada` vs EN `embarrassed`).
+- **`analyzeUnknownTerms`** consults cognate table: a Polish writer typing English `lamp` is silently accepted because `lampa` is the known cognate; an unfamiliar term that matches a false-friend pattern surfaces a chip with a one-line warning.
+- **Character / location preservation across scripts**: `shouldPreserveUnknownTerm` recognizes that a token whose script ≠ effective language's script is almost certainly a foreign-language insert (Cyrillic char name in a Latin-script script) → never flag, never auto-correct.
 
-In `useScreenplayDocument.ts`, intercept paste when:
-- pasted text > 120 chars **or** contains 2+ newlines
+### Bridge selector (groundwork for 10C)
+- **`src/lib/language/bridgeSelector.ts`**: pure function `pickScaffoldLanguage({uiLanguage, knownLanguages, screenplayLanguage})`. Returns the nearest viable bridge. Not yet wired into AI prompts — exported for later.
 
-Open a new `PasteFormatPreviewDialog` that shows each detected block with its type, per-block accept/reject toggles, and three actions:
-- **Insert formatted** (default)
-- **Insert as plain Action**
-- **Cancel**
+## i18n keys to add (en stubs only, parity later)
 
-Small/single-line paste keeps current raw behavior.
+```text
+settings.language.title
+settings.language.knownLanguages
+settings.language.uiLanguage
+settings.language.screenplayLanguage
+editor.language.softPrompt.title
+editor.language.softPrompt.cta
+editor.language.blockOverride.label
+editor.language.unknownTerm.foreignWord
+editor.language.falseFriend.warning
+```
 
-### 3. Smart suggestion chip
-In `ScreenplayLine.tsx`, when current block has a *medium-confidence* alternative type, show a small inline chip ("Looks like a Character cue — convert?") near the line. Accept = apply transform + focus preserved. Dismiss = record in override memory for that block.
+## Acceptance tests
 
-Reuses the existing "New word" chip styling for visual consistency with Pass 8.
+1. Polish writer, screenplay language = pl, types `lampa` → no "unknown word" chip.
+2. Same writer types `kubelweinsteinman` → chip appears once, "Add to dictionary" works, never re-flagged.
+3. English writer, screenplay language = en, types `i'm tired` → auto-capitalizes to `I'm tired`.
+4. Russian writer, screenplay language = ru, types lowercase Cyrillic sentence start → capitalizes to Cyrillic capital, no Latin `I` rule fires.
+5. German writer, screenplay language = de, types `der Hund läuft.` → sentence start capitalizes; noun `Hund` is NOT lowercased mid-line.
+6. English screenplay with one Russian dialogue block: per-block override = `ru`. Cyrillic text in that block is never flagged; English rules don't fire inside it.
+7. Spanish writer types `embarazada` in an English Action block → false-friend chip warns "means 'pregnant', not 'embarrassed'".
+8. Refresh: project's `screenplay_language` persists; block-level overrides persist.
+9. Writer with only `preferred_languages=['en']` opens a Polish project for the first time → soft toast appears once, dismissible, never repeats.
+10. All existing Pass 8 acceptance tests still pass for English projects.
 
-### 4. Wire-up
-- `ScreenplayDocumentEditor.tsx`: pass `formatContext` (prev block type, char names) down; render the paste dialog at editor level.
-- `editor.$projectId.tsx`: no schema changes; reuses character + dictionary already fetched in Pass 8.
-- Telemetry: log `format_suggestion_shown`, `format_suggestion_accepted`, `format_suggestion_dismissed`, `paste_formatted`, `paste_inserted_raw` to existing `writing_events`.
+## Risks / open notes
 
-## Out of scope
-- AI-powered paste cleanup (separate pass).
-- Reformatting an entire existing script in place.
-- Drag-to-reorder blocks.
-
-## Acceptance test
-1. Type `int. coffee shop - day` + Enter → auto-converts to scene heading, next block is Action.
-2. In Action, type `JANE` + Enter → auto-promotes to Character, next is Dialogue.
-3. In Action, type `Sarah` (mixed case) + Enter → chip appears suggesting Character; dismiss; chip stays gone for that line.
-4. Paste a 10-line snippet with scene heading + action + dialogue → preview dialog appears; accept → blocks insert with correct types.
-5. Paste a single short sentence → inserts inline, no dialog.
-6. Apply a suggested fix, immediately Ctrl+Z → fix reverts and is remembered (won't re-suggest within the session).
-
-## Open questions
-1. **Paste dialog UX:** modal dialog vs inline preview-strip above the cursor? Modal is clearer; inline is faster. I'd go modal for v1.
-2. **Auto-apply scene heading capitalization** when user types `int. ` lowercase mid-line — yes or wait for Enter? I'd do it on the space after `int.`/`ext.` for instant feedback.
-3. Show suggestion chip on **every** medium-confidence line, or only after a brief idle pause (~600ms) to avoid flicker while typing? I'd lean idle-pause.
-
-Once you confirm (or just say "go"), I'll implement.
+- Sentence-start regex for Polish needs care around proper nouns like `Łódź` — handled by Unicode-class regex but worth a manual smoke test.
+- Seed cognate list will be incomplete; the engine must degrade gracefully (no cognate match ≠ flag as error).
+- We are NOT shipping bridge-language AI prompts yet (that is 10C). The selector exists so AI work can land later without re-plumbing.
