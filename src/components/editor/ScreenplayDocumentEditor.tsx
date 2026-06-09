@@ -208,9 +208,13 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
 
     return (
       <div
-        className="screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 cursor-text relative"
-        onClick={handlePaperClick}
+        ref={scrollRef}
+        className="screenplay-scroll relative h-full overflow-y-auto overscroll-contain"
       >
+        <div
+          className="screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 cursor-text relative"
+          onClick={handlePaperClick}
+        >
         {lastFormat && (
           <div
             className="sticky top-3 z-20 mx-auto mb-3 w-fit max-w-full font-sans"
