@@ -371,6 +371,61 @@ export function useScreenplayDocument({
     [insertBlockAfter],
   );
 
+  /**
+   * Batch-insert N blocks after a given anchor in a single state transaction.
+   * Returns the localIds in insertion order.
+   */
+  const insertBlocksAfter = useCallback(
+    (
+      afterLocalId: string | null,
+      defs: Array<{ block_type: string; content: string; metadata?: any }>,
+    ): string[] => {
+      if (defs.length === 0) return [];
+      const cur = blocksRef.current;
+      let idx = afterLocalId ? cur.findIndex((b) => b.id === afterLocalId) : cur.length - 1;
+      if (idx < 0) idx = cur.length - 1;
+      const insertAt = idx + 1;
+      const after = idx >= 0 ? cur[idx] : undefined;
+      const before = cur[insertAt];
+
+      const afterOrder = after?.order_index ?? -1;
+      const newBlocks: LocalBlock[] = defs.map((d, i) => ({
+        id: makeLocalId(),
+        block_type: d.block_type,
+        content: d.content,
+        order_index: afterOrder + 1 + i,
+        metadata: d.metadata,
+        status: "dirty",
+      }));
+      const shiftBy = newBlocks.length;
+      const needsRenumber =
+        before !== undefined && newBlocks[newBlocks.length - 1].order_index >= before.order_index;
+      const shiftedIds: string[] = needsRenumber ? cur.slice(insertAt).map((b) => b.id) : [];
+
+      for (const nb of newBlocks) dirtyIds.current.add(nb.id);
+      for (const sid of shiftedIds) dirtyIds.current.add(sid);
+
+      setLocalBlocks((prev) => {
+        const arr = [...prev];
+        const i = afterLocalId ? arr.findIndex((b) => b.id === afterLocalId) : arr.length - 1;
+        const at = i < 0 ? arr.length : i + 1;
+        if (needsRenumber) {
+          for (let j = at; j < arr.length; j++) {
+            arr[j] = { ...arr[j], order_index: arr[j].order_index + shiftBy, status: "dirty" };
+          }
+        }
+        arr.splice(at, 0, ...newBlocks);
+        return arr;
+      });
+      markDirty();
+      setActiveBlockId(newBlocks[newBlocks.length - 1].id);
+      for (const nb of newBlocks) queueInsert(nb.id);
+      for (const sid of shiftedIds) scheduleUpdate(sid, 200);
+      return newBlocks.map((b) => b.id);
+    },
+    [markDirty, queueInsert, scheduleUpdate],
+  );
+
   const deleteBlock = useCallback(
     (localId: string) => {
       const cur = blocksRef.current;
