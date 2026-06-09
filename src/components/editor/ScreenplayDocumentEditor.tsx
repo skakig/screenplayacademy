@@ -447,6 +447,13 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
           </>
         )}
         </div>
+        <PasteFormatPreviewDialog
+          open={!!pastePreview}
+          blocks={pastePreview?.blocks ?? []}
+          onCancel={() => setPastePreview(null)}
+          onInsertFormatted={insertParsed}
+          onInsertRaw={insertRaw}
+        />
       </div>
     );
   },
