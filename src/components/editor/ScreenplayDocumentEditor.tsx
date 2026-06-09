@@ -20,6 +20,7 @@ export type ScreenplayEditorHandle = {
   insertAfterActive: (type?: string) => void;
   insertAtEnd: (type: string) => void;
   jumpToServer: (serverId: string) => void;
+  getBlocks: () => LocalBlock[];
 };
 
 type Props = {
