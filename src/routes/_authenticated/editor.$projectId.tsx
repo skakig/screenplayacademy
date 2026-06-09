@@ -705,6 +705,13 @@ function Editor() {
             <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">⌘↵</kbd> AI continue</span>
           </div>
 
+          <SaveStatusBanner
+            visible={saveStatus === "error" || failedCount > 0}
+            failedCount={failedCount}
+            onRetry={retryFailed}
+            onCopyAll={copyAllText}
+          />
+
           <ScreenplayDocumentEditor
             ref={editorRef}
             projectId={projectId}
@@ -714,6 +721,7 @@ function Editor() {
             onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
             onActiveBlockChange={setActiveMeta}
             onBlockCreated={handleBlockCreated}
+            onDraftRestored={handleDraftRestored}
             onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
             onDraftWithAi={draftOpeningWithAi}
             onInsertTemplate={() => void insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
