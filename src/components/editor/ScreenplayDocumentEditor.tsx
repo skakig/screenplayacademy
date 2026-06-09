@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, FileText, Wand2, Info, X } from "lucide-react";
 import { useScreenplayDocument, type SaveStatus, type LocalBlock } from "./useScreenplayDocument";
@@ -49,7 +49,14 @@ type Props = {
   persistence?: PersistenceAdapter;
   /** Focus-zone mode for the active-line viewport scroller. */
   viewportMode?: ActiveLineViewportMode;
+  /** Project dictionary terms (lowercased) — protected from auto-correction. */
+  projectDictionary?: Set<string>;
+  /** Rejected-fix overrides (lowercased) — never reapply these. */
+  rejectedFixes?: Set<string>;
+  /** Add a new term to the project dictionary. Wires the "Add" chip. */
+  onAddDictionaryTerm?: (term: string, category?: "character" | "location" | "custom") => void;
 };
+
 
 export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props>(
   function ScreenplayDocumentEditor(
@@ -70,7 +77,11 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       primaryBusy,
       persistence,
       viewportMode = "normal",
+      projectDictionary,
+      rejectedFixes,
+      onAddDictionaryTerm,
     },
+
     ref,
   ) {
     const doc = useScreenplayDocument({
@@ -105,6 +116,29 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       const id = setTimeout(() => setLastFormat(null), 5000);
       return () => clearTimeout(id);
     }, [lastFormat]);
+
+    // Build a language-intelligence context once per relevant input change.
+    // Character names from the project sidebar, project dictionary terms,
+    // and any rejected fixes (sticky undo) are all lowercased sets.
+    const characterNameSet = useMemo(() => {
+      const s = new Set<string>();
+      for (const c of characters) {
+        if (c?.name) s.add(c.name.toLowerCase());
+      }
+      return s;
+    }, [characters]);
+
+    const languageContext = useMemo(
+      () => ({
+        blockType: "action", // overridden per-line by ScreenplayLine
+        characterNames: characterNameSet,
+        projectDictionary: projectDictionary ?? new Set<string>(),
+        rejectedFixes: rejectedFixes ?? new Set<string>(),
+      }),
+      [characterNameSet, projectDictionary, rejectedFixes],
+    );
+
+
 
     // Dedicated editor scroll container — owns screenplay scrolling so the
     // window doesn't have to. See docs/EDITOR_FOCUS_AND_VIEWPORT.md.
@@ -299,6 +333,9 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     onDeleteEmpty={() => doc.deleteBlock(b.id)}
                     onSlashInsert={(type) => doc.insertBlockAfter(b.id, type)}
                     onAutoFormatApplied={(e) => setLastFormat(e)}
+                    languageContext={{ ...languageContext, blockType: b.block_type }}
+                    onAddDictionaryTerm={onAddDictionaryTerm}
+
                   />
                 </div>
               );

@@ -1,12 +1,18 @@
-import { useEffect, useRef, useState } from "react";
-import { Command } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Command, BookPlus, X as XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cycleType } from "./screenplayKeymap";
 import { detectBlockType, BLOCK_LABEL } from "@/lib/editor/autoFormat";
 import { formatBlockText } from "./screenplayAutoFormat";
+import {
+  applySafeLanguageFixes,
+  analyzeUnknownTerms,
+  type LanguageContext,
+} from "./screenplayLanguageIntelligence";
 import { CharacterAutocomplete, type CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import { SceneBeatPicker } from "@/components/editor/SceneBeatPicker";
 import type { LocalBlock } from "./useScreenplayDocument";
+
 
 const BLOCK_TYPES = [
   { value: "scene_heading", label: "Scene Heading", shortcut: "/scene", aliases: ["/heading", "/h", "/int", "/ext"] },
@@ -38,6 +44,8 @@ export type AutoFormatEvent = {
   original: string;
   formatted: string;
   typeChanged: boolean;
+  /** Set when a high-confidence language fix (e.g. i → I) was applied. */
+  languageFixKind?: "capitalize_i" | "sentence_start";
 };
 
 export function ScreenplayLine({
@@ -54,6 +62,8 @@ export function ScreenplayLine({
   onFocus,
   onCreateCharacter,
   onAutoFormatApplied,
+  languageContext,
+  onAddDictionaryTerm,
 }: {
   block: LocalBlock;
   isActive: boolean;
@@ -68,9 +78,14 @@ export function ScreenplayLine({
   onFocus: () => void;
   onCreateCharacter: (name: string) => Promise<any>;
   onAutoFormatApplied?: (e: AutoFormatEvent) => void;
+  /** Project-aware language intelligence context. Optional. */
+  languageContext?: LanguageContext;
+  /** When provided, the "Add to Project Dictionary" chip becomes interactive. */
+  onAddDictionaryTerm?: (term: string, category?: "character" | "location" | "custom") => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [focused, setFocused] = useState(false);
+
 
   // auto-resize. For empty content, clear the inline height so the CSS
   // min-height (which keeps the line visible/tappable on mobile) can apply.
@@ -148,17 +163,29 @@ export function ScreenplayLine({
   /**
    * Run safe formatting on the current block. Returns true if anything changed.
    * Called only at Enter / blur — never per keystroke — so caret stability is preserved.
+   *
+   * Pipeline (order matters per docs):
+   *   1) applySafeLanguageFixes — high-confidence language fixes (i → I, etc.)
+   *   2) detectBlockType — one-shot type detection
+   *   3) formatBlockText — structural formatting for the (possibly new) type
    */
   const runSafeFormat = (): boolean => {
     const raw = block.content;
     if (!raw) return false;
-    // Medium-confidence type detection (one-shot): if the writer typed a
-    // strong scene-heading / character / transition / parenthetical signal
-    // into a generic block, switch type before formatting the text.
+
+    // 1) Language fixes first — they only change casing/punctuation, never
+    //    semantic meaning, and skip any token in characterNames / dictionary.
+    const langCtx: LanguageContext = languageContext
+      ? { ...languageContext, blockType: block.block_type }
+      : { blockType: block.block_type };
+    const langResult = applySafeLanguageFixes(raw, langCtx);
+    let working = langResult.text;
+
+    // 2) Type detection (one-shot).
     let effectiveType = block.block_type;
     let typeChanged = false;
     if (!autoTypedRef.current) {
-      const detected = detectBlockType(raw);
+      const detected = detectBlockType(working);
       if (detected && detected !== block.block_type) {
         autoTypedRef.current = true;
         onChangeType(detected);
@@ -167,7 +194,10 @@ export function ScreenplayLine({
         toast.success(`Auto-formatted as ${BLOCK_LABEL[detected]}`, { duration: 1200 });
       }
     }
-    const formatted = formatBlockText(effectiveType, raw);
+
+    // 3) Structural format.
+    const formatted = formatBlockText(effectiveType, working);
+
     if (formatted === raw && !typeChanged) return false;
     if (formatted === lastAppliedFormatRef.current && !typeChanged) return false;
     if (formatted !== raw) {
@@ -180,9 +210,34 @@ export function ScreenplayLine({
       original: raw,
       formatted,
       typeChanged,
+      languageFixKind: langResult.fixes[0]?.kind,
     });
     return true;
   };
+
+  // ---------- unknown-term suggestions (passive, blur/idle only) ----------
+  const [unknownTerms, setUnknownTerms] = useState<string[]>([]);
+  const [dismissedTerms, setDismissedTerms] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    // Re-scan only when block content settles (debounced) and the line is
+    // not actively being typed. Never per keystroke.
+    if (!languageContext) return;
+    if (focused) return;
+    const id = setTimeout(() => {
+      const decisions = analyzeUnknownTerms(block.content, {
+        ...languageContext,
+        blockType: block.block_type,
+      });
+      setUnknownTerms(decisions.map((d) => d.term));
+    }, 400);
+    return () => clearTimeout(id);
+  }, [block.content, block.block_type, focused, languageContext]);
+
+  const visibleUnknowns = useMemo(
+    () => unknownTerms.filter((t) => !dismissedTerms.has(t.toLowerCase())),
+    [unknownTerms, dismissedTerms],
+  );
+
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (slashOpen) {
@@ -275,6 +330,66 @@ export function ScreenplayLine({
           display: "block",
         } as any}
       />
+
+      {visibleUnknowns.length > 0 && !focused && (
+        <div className="mt-1 flex flex-wrap items-center gap-1 font-sans">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
+            New word
+          </span>
+          {visibleUnknowns.slice(0, 4).map((term) => (
+            <div
+              key={term}
+              className="inline-flex items-center gap-0.5 rounded-full border border-amber-500/30 bg-amber-500/5 px-1.5 py-0.5 text-[11px] text-foreground/80"
+              title="SceneSmith hasn't seen this word before. Add it to the project so it's never flagged again."
+            >
+              <span className="font-mono">{term}</span>
+              {onAddDictionaryTerm && (
+                <>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onAddDictionaryTerm(term, "character");
+                      setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
+                    }}
+                    className="ml-1 inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-amber-500/10 transition"
+                    title="Add as character"
+                  >
+                    <BookPlus className="h-3 w-3" />
+                    Character
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onAddDictionaryTerm(term, "custom");
+                      setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
+                    }}
+                    className="inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-amber-500/10 transition"
+                    title="Add to project dictionary"
+                  >
+                    Term
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
+                }}
+                className="ml-0.5 inline-flex items-center justify-center rounded-full p-0.5 text-muted-foreground/70 hover:text-foreground hover:bg-amber-500/10 transition"
+                title="Ignore"
+                aria-label="Ignore"
+              >
+                <XIcon className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+
 
       {showAutocomplete && (
         <CharacterAutocomplete
