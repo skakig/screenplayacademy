@@ -106,6 +106,33 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       return () => clearTimeout(id);
     }, [lastFormat]);
 
+    // Dedicated editor scroll container — owns screenplay scrolling so the
+    // window doesn't have to. See docs/EDITOR_FOCUS_AND_VIEWPORT.md.
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const isMobile =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(max-width: 640px)").matches;
+
+    const getActiveLineEl = useCallback(() => {
+      const id = doc.activeBlockId;
+      if (!id || !scrollRef.current) return null;
+      return scrollRef.current.querySelector<HTMLElement>(
+        `[data-local-id="${CSS.escape(id)}"]`,
+      );
+    }, [doc.activeBlockId]);
+
+    const { scheduleScroll } = useActiveLineViewport({
+      containerRef: scrollRef,
+      getActiveLineEl,
+      mode: viewportMode,
+      isMobile,
+    });
+
+    // Re-center on active-line change and on block count change (Enter inserts).
+    useEffect(() => {
+      scheduleScroll("enter");
+    }, [doc.activeBlockId, doc.localBlocks.length, scheduleScroll]);
+
     useImperativeHandle(
       ref,
       () => ({
@@ -122,10 +149,13 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
         insertAtEnd: (t) => {
           doc.insertAtEnd(t);
         },
-        jumpToServer: (serverId) => doc.jumpToServer(serverId),
+        jumpToServer: (serverId) => {
+          doc.jumpToServer(serverId);
+          scheduleScroll("jump", { force: true });
+        },
         getBlocks: () => doc.localBlocks,
       }),
-      [doc],
+      [doc, scheduleScroll],
     );
 
     // Use click (not mousedown) so iOS Safari completes the tap gesture before
