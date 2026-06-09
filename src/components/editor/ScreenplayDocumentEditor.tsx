@@ -49,7 +49,14 @@ type Props = {
   persistence?: PersistenceAdapter;
   /** Focus-zone mode for the active-line viewport scroller. */
   viewportMode?: ActiveLineViewportMode;
+  /** Project dictionary terms (lowercased) — protected from auto-correction. */
+  projectDictionary?: Set<string>;
+  /** Rejected-fix overrides (lowercased) — never reapply these. */
+  rejectedFixes?: Set<string>;
+  /** Add a new term to the project dictionary. Wires the "Add" chip. */
+  onAddDictionaryTerm?: (term: string, category?: "character" | "location" | "custom") => void;
 };
+
 
 export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props>(
   function ScreenplayDocumentEditor(
