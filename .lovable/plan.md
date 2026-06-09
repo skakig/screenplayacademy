@@ -1,85 +1,70 @@
-## Pass 3 — Production Integration of the Local-First Screenplay Engine
+# Plan — Screenplay Auto-Formatting
 
-### Current state (verified)
+Note: the doc is at `docs/SCREENPLAY_AUTO_FORMATTING.md` (not `add-screenplay-auto-formatting.md`). I read the full 535 lines.
 
-`src/routes/_authenticated/editor.$projectId.tsx` already:
-- Mounts `ScreenplayDocumentEditor` with `initialBlocks={blocks}`, `onActiveBlockChange`, `onSaveStatus`, `onLastSaved`, `onBlockCreated`.
-- Holds only `activeMeta` (localId/serverId/type/orderIndex) for side panes — no longer owns `addBlock`, `saveBlock`, `pendingTempContent`, `inFlightSaves`, `focusBlockId`, or temp-ID juggling.
-- Uses `editorRef` (`changeActiveType`, `insertAtEnd`, `insertAfterActive`, `jumpToServer`) for toolbar / command bar / nav actions.
-- Keeps the Logline vs. manuscript fork via `shouldUseLoglineComposer(guidedStep)`.
-- Fires `block_created` / `scene_created` writer events via `onBlockCreated`.
+## What exists today
 
-`useScreenplayDocument` already supports an injected `persistence` adapter; when none is passed it runs a legacy built-in Supabase path. Production currently passes none, so it uses the legacy path — that is the gap.
+- `src/lib/editor/autoFormat.ts` has **type detection** only: `detectBlockType(text)` returns a block type from raw text (`int…` → `scene_heading`, `(beat)` → `parenthetical`, short ALL-CAPS → `character`). It does **not** normalize text — `int desert day` keeps its lowercase even after detection.
+- `ScreenplayLine.tsx` calls `detectBlockType` on every keystroke (≤40 chars) and fires `onChangeType` with a toast. There is a `autoFormattedRef` one-shot-per-block guard that resets when content clears.
+- No `formatSceneHeading` / `formatCharacter` / `formatTransition` etc. exist anywhere. The Tab cycle and Enter transitions are already correct (Pass 4 consolidated them in `screenplayKeymap.ts`).
 
-`SupabasePersistenceAdapter` (Pass 2) is proven in `/editor-lab` and matches the contract: single-flight inserts, deferred updates, fire-and-forget deletes, in-place `queryClient.setQueryData(["blocks", projectId], …)` patching, **never** `invalidateQueries` during typing.
+## What the doc asks for
 
-### Goal
+A pure formatter module that turns raw input into clean screenplay text — **without** interrupting typing, **without** moving the caret mid-keystroke, and **without** fighting writers who edit back. High-confidence rules apply automatically; medium-confidence stays as a suggestion; low-confidence does nothing.
 
-Make the production editor use the same proven adapter, and make export read from local blocks. Nothing else moves.
+## Scope of this pass
 
-### Scope of changes
+### In
 
-1. **Wire `SupabasePersistenceAdapter` into the production editor**
-   - In `editor.$projectId.tsx`, build the adapter once per `(projectId, queryClient)` with `useMemo`:
-     ```ts
-     const persistence = useMemo(
-       () => createSupabasePersistenceAdapter({
-         projectId, queryClient: qc,
-         onSaveStatus: setSaveStatus, onLastSaved: setLastSavedAt,
-       }),
-       [projectId, qc]
-     );
-     ```
-   - Pass `persistence={persistence}` to `<ScreenplayDocumentEditor />`.
-   - Remove `onSaveStatus`/`onLastSaved` props from the editor element (the adapter now owns the status stream); the hook's legacy status callbacks become inert when adapter is supplied.
-   - Result: typing path no longer touches the hook's legacy Supabase branch in production.
+1. **New pure module** `src/components/editor/screenplayAutoFormat.ts` (matches the doc's recommended path) exporting:
+   - `formatSceneHeading(text): string` — uppercase, normalize `int`/`ext`/`i/e` prefix, insert ` - ` before recognized time-of-day tokens (DAY, NIGHT, MORNING, AFTERNOON, EVENING, DAWN, DUSK, SUNRISE, SUNSET, LATER, CONTINUOUS, SAME TIME, MOMENTS LATER), preserve secondary dashes already present.
+   - `formatCharacter(text): string` — uppercase name; normalize voice modifiers (`vo`/`v.o.`/`(vo)` → `(V.O.)`, `os`/`o.s.` → `(O.S.)`, `contd`/`cont'd` → `(CONT'D)`).
+   - `formatParenthetical(text): string` — wrap in `()` if missing; lowercase unless line contains proper nouns; leave alone if it looks long-form (suggest-only path, no forced wrap).
+   - `formatTransition(text): string` — uppercase; append `:` if missing; only when line matches a known transition verb (cut/fade/dissolve/smash cut/match cut/jump cut).
+   - `formatShot(text): string` — uppercase; normalize `pov X` → `POV - X`.
+   - `formatBlockText(blockType, text): string` — dispatcher; **action / dialogue / note are passthrough** (trim outer whitespace only).
+   - `analyzeFormat(text, ctx): FormatDecision` — returns `{ blockType, formattedText, confidence, reason, shouldApplyAutomatically }` per the doc's shape. Used by paste/import later.
+2. **Wire at safe moments** in `ScreenplayLine.tsx` and the document hook:
+   - **On Enter** (in `ScreenplayLine.handleKeyDown` Enter branch): call `formatBlockText(block.block_type, block.content)`. If different, call `onContentChange(formatted)` synchronously, then `onEnter()` on the next microtask so the cursor advances cleanly to the new block. Guarded against echo loops via `lastAppliedFormatRef`.
+   - **On blur** (in `ScreenplayLine.onBlur`): same call; only apply if the textarea is no longer focused (so we never preempt a re-focus).
+   - **On explicit type change** (in `useScreenplayDocument.changeBlockType`): after the type update, apply `formatBlockText(newType, content)` once. This covers toolbar clicks, Tab cycling, slash menu, and ⌘1–7 — all of which already funnel through `changeBlockType`.
+3. **Anti-fight guard**: extend the existing `autoFormattedRef` into `lastAppliedFormatRef` (stores the most recent formatted string). If the writer types content that, when re-formatted, would produce the same string we already applied and reverted from, don't re-apply. Caret stays put.
+4. **Replace today's keystroke-driven detect-and-toast** with the same `detectBlockType` call but only at Enter/blur (the doc explicitly says "destructive changes should wait for Enter, blur, or explicit confirmation"). Keep the toast for medium-confidence type changes; remove the per-keystroke firing.
+5. **Acceptance** (run on `/editor/$projectId`, per the doc's list):
+   - `int desert day` + Enter → `INT. DESERT - DAY`, next block Action.
+   - `ext street night` + Enter → `EXT. STREET - NIGHT`, next block Action.
+   - Character `stephan` + Enter → `STEPHAN`, next block Dialogue.
+   - Parenthetical `whispering` + Enter → `(whispering)`, next block Dialogue.
+   - Transition `cut to` + Enter → `CUT TO:`, next block Scene Heading.
+   - Shot `close on` + Enter → `CLOSE ON`, next block Action.
+   - Dialogue + Action casing preserved.
+   - No blur, no first/last-character loss, no caret jump.
+   - Undo (⌘Z) reverses the format step.
+   - If the writer edits the formatted text back, the editor does not re-apply.
 
-2. **Expose local blocks for export**
-   - Add to `ScreenplayEditorHandle`: `getBlocks: () => LocalBlock[]`.
-   - Implement in `ScreenplayDocumentEditor` via `useImperativeHandle` returning `doc.localBlocks` through a ref (read-on-call, not snapshot).
-   - In the route, change Copy and Download .txt buttons to call `editorRef.current?.getBlocks()` and feed those to `formatExport`. Keep server-blocks fallback only if the ref is unavailable (defensive).
+### Out (explicit follow-ups, not this pass)
 
-3. **Retire the legacy Supabase path in the hook (safe cleanup)**
-   - In `useScreenplayDocument.ts`, since both production and lab will now pass an adapter, remove `runInsert` / `runUpdate` / `runDelete` and the inline `supabase` import.
-   - `deleteBlock` already calls `persistence.queueDelete` when adapter present; remove the `void runDelete(target.serverId)` else branch.
-   - Removes the "two paths" risk and ensures all I/O flows through the adapter contract.
-   - If safer for one pass, keep the legacy path but guarantee production always supplies an adapter; recommend removal in this pass to honor the contract ("editor hook owns local state only").
+- **Paste / import batch formatter with preview** — needs its own UI surface; flagged in the doc as a separate flow.
+- **Editor Review Mode** suggestion accept/edit/reject UI.
+- **ITS / PfHU telemetry** (repeated-correction signals, lesson nudges).
+- **Smart quote conversion**, project-style settings.
+- Any AI/network-backed rewriting — auto-format stays pure and offline.
 
-4. **Side panes & analyzers stay on the React Query cache (no change)**
-   - `StoryNavigatorPane`, `CoachPane`, `useManuscriptAnalyzer`, `buildOutline`, `estimatePages`, `currentPage`, `cmdAiContinue`, `runAi` continue to read `blocks` from `useQuery(["blocks", projectId])`. The adapter patches that cache in place after each successful sync, so these refresh without interrupting typing. **No `invalidateQueries(["blocks", projectId])` is added anywhere in the typing path.**
-   - `insertTemplate` (bulk AI/template insert) still invalidates `["blocks", projectId]`. That is intentional and only fires on explicit user actions (AI draft, opening template) — never during typing. Acceptable for Pass 3; flagged as a follow-up if it ever causes a race.
+## Files touched
 
-5. **Active-block plumbing already correct**
-   - `activeBlockId = activeMeta?.serverId ?? null` is used only by side panes / outline / jump — not by the editor itself. Pre-persistence blocks won't highlight in nav for a brief moment; acceptable and matches lab behavior.
+- `src/components/editor/screenplayAutoFormat.ts` — **new**, pure module, no React, no DOM, no Supabase.
+- `src/components/editor/ScreenplayLine.tsx` — call formatter on Enter and blur; replace per-keystroke detect with Enter/blur detect; add `lastAppliedFormatRef`.
+- `src/components/editor/useScreenplayDocument.ts` — in `changeBlockType`, run `formatBlockText` once after the type update.
+- `src/lib/editor/autoFormat.ts` — keep `BLOCK_LABEL` and `detectBlockType` (used by Coach pane, command bar, and the new Enter/blur path). No deletions.
 
-6. **Guided / Logline behavior preserved** — no change to the `isLoglineStep` branch.
+## Architectural guarantees preserved
 
-7. **Mobile** — the editor component itself carries the Pass 1.5 mobile fixes (paper `onClick` focus, min-height, placeholder contrast, slash/toolbar `onMouseDown`+focus restore). Production picks them up automatically by mounting the same component.
+- **Local-first**: formatter is a pure string→string function. No Supabase, no network, no React Query touch. Persistence still flows through the same adapter.
+- **Caret stability**: formatting only runs at Enter or blur — never mid-keystroke. The Enter path sets new content + advances focus in a single React commit boundary.
+- **Stable React keys**: no change to `LocalBlock.id` semantics.
+- **Mobile**: toolbar block-change already routes through `changeBlockType`, so mobile users get the same formatting without needing Tab.
+- **No invalidation during typing**: unchanged.
 
-### Files touched
+## Acceptance gate before merge
 
-- `src/routes/_authenticated/editor.$projectId.tsx` — add adapter import + `useMemo`, pass `persistence`, switch Copy/Download to `getBlocks()`.
-- `src/components/editor/ScreenplayDocumentEditor.tsx` — extend `ScreenplayEditorHandle` with `getBlocks`, implement.
-- `src/components/editor/useScreenplayDocument.ts` — remove legacy Supabase branch (`runInsert`/`runUpdate`/`runDelete` + `supabase` import); keep adapter path only.
-
-No other files modified. No DB migrations. No new dependencies.
-
-### Out of scope (do not touch)
-
-StoryPulse, storyboard, table read, Academy, pitch, pricing, auth, onboarding, Character Engine ITS/PfHU, new AI features, visual redesigns, FeatureDock, EditorCommandBar internals, GuidedRail.
-
-### Acceptance test (run after the change)
-
-On `/editor/$projectId`, desktop + iPhone 14 Pro Max:
-1. Open a project. Type `int african desert day` → Enter.
-2. Type `The sun burns across an endless sea of sand.` → Enter.
-3. Tab to Character, type `STEPHAN` → Enter.
-4. Type `Just a few more clicks.` → Enter.
-5. Type `COMMANDER` → Enter → `You are lost, soldier.`
-6. Keep typing ~30 s.
-
-Expected: no first-character loss, no caret jump, no blur, no duplicate blocks, correct Scene Heading → Action and Character ↔ Dialogue transitions, refresh restores all content, autosave pill cycles `dirty → saving → saved`, side panels (page count, scene list, coach) update without interrupting typing, Copy/Download produce the just-typed text. Mobile keyboard opens on tap, first line visible.
-
-### Stop condition
-
-Stop after production `/editor/$projectId` passes the same acceptance test as `/editor-lab`. Do not begin StoryPulse, storyboard, table read, Academy, pitch, AI, or Character Engine work.
+Run the 12-item list above on `/editor/$projectId` on desktop and iPhone. If any test fails, fix the rule, don't widen the surface.
