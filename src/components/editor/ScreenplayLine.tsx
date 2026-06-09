@@ -156,20 +156,31 @@ export function ScreenplayLine({
     // strong scene-heading / character / transition / parenthetical signal
     // into a generic block, switch type before formatting the text.
     let effectiveType = block.block_type;
+    let typeChanged = false;
     if (!autoTypedRef.current) {
       const detected = detectBlockType(raw);
       if (detected && detected !== block.block_type) {
         autoTypedRef.current = true;
         onChangeType(detected);
         effectiveType = detected;
+        typeChanged = true;
         toast.success(`Auto-formatted as ${BLOCK_LABEL[detected]}`, { duration: 1200 });
       }
     }
     const formatted = formatBlockText(effectiveType, raw);
-    if (formatted === raw) return false;
-    if (formatted === lastAppliedFormatRef.current) return false;
-    lastAppliedFormatRef.current = formatted;
-    onContentChange(formatted);
+    if (formatted === raw && !typeChanged) return false;
+    if (formatted === lastAppliedFormatRef.current && !typeChanged) return false;
+    if (formatted !== raw) {
+      lastAppliedFormatRef.current = formatted;
+      onContentChange(formatted);
+    }
+    onAutoFormatApplied?.({
+      blockId: block.id,
+      blockType: effectiveType,
+      original: raw,
+      formatted,
+      typeChanged,
+    });
     return true;
   };
 
