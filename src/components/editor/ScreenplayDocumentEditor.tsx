@@ -77,7 +77,11 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       primaryBusy,
       persistence,
       viewportMode = "normal",
+      projectDictionary,
+      rejectedFixes,
+      onAddDictionaryTerm,
     },
+
     ref,
   ) {
     const doc = useScreenplayDocument({
