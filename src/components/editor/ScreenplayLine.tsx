@@ -222,7 +222,9 @@ export function ScreenplayLine({
   };
 
   // ---------- unknown-term suggestions (passive, blur/idle only) ----------
-  const [unknownTerms, setUnknownTerms] = useState<string[]>([]);
+  const [unknownTerms, setUnknownTerms] = useState<
+    Array<{ term: string; kind: "unknown_term" | "false_friend"; note?: string }>
+  >([]);
   const [dismissedTerms, setDismissedTerms] = useState<Set<string>>(new Set());
   useEffect(() => {
     // Re-scan only when block content settles (debounced) and the line is
@@ -234,13 +236,17 @@ export function ScreenplayLine({
         ...languageContext,
         blockType: block.block_type,
       });
-      setUnknownTerms(decisions.map((d) => d.term));
+      setUnknownTerms(
+        decisions
+          .filter((d) => d.kind === "unknown_term" || d.kind === "false_friend")
+          .map((d) => ({ term: d.term, kind: d.kind as "unknown_term" | "false_friend", note: d.reason })),
+      );
     }, 400);
     return () => clearTimeout(id);
   }, [block.content, block.block_type, focused, languageContext]);
 
   const visibleUnknowns = useMemo(
-    () => unknownTerms.filter((t) => !dismissedTerms.has(t.toLowerCase())),
+    () => unknownTerms.filter((u) => !dismissedTerms.has(u.term.toLowerCase())),
     [unknownTerms, dismissedTerms],
   );
 
