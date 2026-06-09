@@ -53,6 +53,7 @@ export function ScreenplayLine({
   isActive,
   isFirstEmpty,
   characters,
+  prevBlockType,
   onContentChange,
   onChangeType,
   onUpdateMetadata,
@@ -64,11 +65,14 @@ export function ScreenplayLine({
   onAutoFormatApplied,
   languageContext,
   onAddDictionaryTerm,
+  onRejectFormatSuggestion,
 }: {
   block: LocalBlock;
   isActive: boolean;
   isFirstEmpty?: boolean;
   characters: CharacterHit[];
+  /** Previous block's type — used by analyzeFormat for context-sensitive suggestions. */
+  prevBlockType?: string;
   onContentChange: (c: string) => void;
   onChangeType: (t: string) => void;
   onUpdateMetadata: (m: any) => void;
@@ -82,6 +86,8 @@ export function ScreenplayLine({
   languageContext?: LanguageContext;
   /** When provided, the "Add to Project Dictionary" chip becomes interactive. */
   onAddDictionaryTerm?: (term: string, category?: "character" | "location" | "custom") => void;
+  /** Called when the writer dismisses a structural format suggestion. */
+  onRejectFormatSuggestion?: (original: string, suggestedType: string) => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [focused, setFocused] = useState(false);
