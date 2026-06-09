@@ -173,10 +173,13 @@ export function useActiveLineViewport({
 
       if (rafRef.current != null) return; // existing loop will pick up new target
 
+      programmaticScrollRef.current = true;
+
       const step = (ts: number) => {
         const c = containerRef.current;
         if (!c) {
           rafRef.current = null;
+          programmaticScrollRef.current = false;
           return;
         }
         const elapsed = ts - animStartRef.current;
@@ -186,21 +189,21 @@ export function useActiveLineViewport({
           animFromRef.current +
           (animToRef.current - animFromRef.current) * eased;
 
-        programmaticScrollRef.current = true;
         c.scrollTop = next;
-        // Reset programmatic flag right after the scroll event fires.
-        queueMicrotask(() => {
-          programmaticScrollRef.current = false;
-        });
 
         if (t < 1) {
           rafRef.current = requestAnimationFrame(step);
         } else {
           rafRef.current = null;
+          // Let the final scroll event flush before re-enabling manual detection.
+          setTimeout(() => {
+            programmaticScrollRef.current = false;
+          }, 60);
         }
       };
 
       rafRef.current = requestAnimationFrame(step);
+
     },
     [containerRef],
   );
