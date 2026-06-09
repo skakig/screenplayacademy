@@ -713,22 +713,24 @@ function Editor() {
             onCopyAll={copyAllText}
           />
 
-          <ScreenplayDocumentEditor
-            ref={editorRef}
-            projectId={projectId}
-            initialBlocks={blocks as any[]}
-            blocksLoading={blocksLoading}
-            characters={characters as CharacterHit[]}
-            onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
-            onActiveBlockChange={setActiveMeta}
-            onBlockCreated={handleBlockCreated}
-            onDraftRestored={handleDraftRestored}
-            onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
-            onDraftWithAi={draftOpeningWithAi}
-            onInsertTemplate={() => void insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
-            primaryBusy={primaryBusy || insertTemplate.isPending}
-            persistence={persistence}
-          />
+          <div className="flex-1 min-h-0">
+            <ScreenplayDocumentEditor
+              ref={editorRef}
+              projectId={projectId}
+              initialBlocks={blocks as any[]}
+              blocksLoading={blocksLoading}
+              characters={characters as CharacterHit[]}
+              onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
+              onActiveBlockChange={setActiveMeta}
+              onBlockCreated={handleBlockCreated}
+              onDraftRestored={handleDraftRestored}
+              onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
+              onDraftWithAi={draftOpeningWithAi}
+              onInsertTemplate={() => void insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
+              primaryBusy={primaryBusy || insertTemplate.isPending}
+              persistence={persistence}
+            />
+          </div>
 
           <EditorCommandBar
             currentBlockType={activeBlockType}
