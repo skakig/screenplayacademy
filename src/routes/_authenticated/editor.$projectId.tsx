@@ -24,6 +24,8 @@ import {
   type ActiveBlockMeta,
 } from "@/components/editor/ScreenplayDocumentEditor";
 import { createSupabasePersistenceAdapter } from "@/components/editor/persistence/SupabasePersistenceAdapter";
+import { SaveStatusBanner } from "@/components/editor/SaveStatusBanner";
+import { clearDraft } from "@/components/editor/draftBackup";
 import { LoglineComposer } from "@/components/editor/LoglineComposer";
 import { progressForStep, shouldUseLoglineComposer, shouldRedirectStep } from "@/lib/editor/stepCompletion";
 import { OPENING_SCENE_TEMPLATE } from "@/lib/editor/openingTemplate";
