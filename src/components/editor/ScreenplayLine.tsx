@@ -3,6 +3,7 @@ import { Command } from "lucide-react";
 import { toast } from "sonner";
 import { cycleType } from "./screenplayKeymap";
 import { detectBlockType, BLOCK_LABEL } from "@/lib/editor/autoFormat";
+import { formatBlockText } from "./screenplayAutoFormat";
 import { CharacterAutocomplete, type CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import { SceneBeatPicker } from "@/components/editor/SceneBeatPicker";
 import type { LocalBlock } from "./useScreenplayDocument";
@@ -116,24 +117,50 @@ export function ScreenplayLine({
     onSlashInsert(type);
   };
 
-  // auto-format (one-shot per block lifetime; resets if cleared)
-  const autoFormattedRef = useRef(false);
+  // Anti-fight guard: remember the most recent string we auto-applied so we
+  // don't keep re-applying it after the writer edits back. Reset on clear.
+  const lastAppliedFormatRef = useRef<string | null>(null);
+  // One-shot type detection per block lifetime (Enter/blur only, not per keystroke).
+  const autoTypedRef = useRef(false);
   useEffect(() => {
-    if (block.content === "") autoFormattedRef.current = false;
+    if (block.content === "") {
+      lastAppliedFormatRef.current = null;
+      autoTypedRef.current = false;
+    }
   }, [block.content]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const v = e.target.value;
     onContentChange(v);
-    if (!autoFormattedRef.current && v.length <= 40) {
-      const detected = detectBlockType(v);
+    if (slashOpen && (slashStart >= v.length || v[slashStart] !== "/")) closeSlash();
+  };
+
+  /**
+   * Run safe formatting on the current block. Returns true if anything changed.
+   * Called only at Enter / blur — never per keystroke — so caret stability is preserved.
+   */
+  const runSafeFormat = (): boolean => {
+    const raw = block.content;
+    if (!raw) return false;
+    // Medium-confidence type detection (one-shot): if the writer typed a
+    // strong scene-heading / character / transition / parenthetical signal
+    // into a generic block, switch type before formatting the text.
+    let effectiveType = block.block_type;
+    if (!autoTypedRef.current) {
+      const detected = detectBlockType(raw);
       if (detected && detected !== block.block_type) {
-        autoFormattedRef.current = true;
+        autoTypedRef.current = true;
         onChangeType(detected);
+        effectiveType = detected;
         toast.success(`Auto-formatted as ${BLOCK_LABEL[detected]}`, { duration: 1200 });
       }
     }
-    if (slashOpen && (slashStart >= v.length || v[slashStart] !== "/")) closeSlash();
+    const formatted = formatBlockText(effectiveType, raw);
+    if (formatted === raw) return false;
+    if (formatted === lastAppliedFormatRef.current) return false;
+    lastAppliedFormatRef.current = formatted;
+    onContentChange(formatted);
+    return true;
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -156,6 +183,7 @@ export function ScreenplayLine({
       }
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
+        runSafeFormat();
         onEnter();
         return;
       }
@@ -163,6 +191,7 @@ export function ScreenplayLine({
       if (e.key === "Enter" && e.shiftKey) {
         if (block.block_type === "action" || block.block_type === "note") return; // default newline
         e.preventDefault();
+        runSafeFormat();
         onEnter();
         return;
       }
@@ -198,7 +227,12 @@ export function ScreenplayLine({
         value={block.content}
         onChange={handleChange}
         onFocus={() => { setFocused(true); onFocus(); }}
-        onBlur={() => setTimeout(() => setFocused(false), 120)}
+        onBlur={() => {
+          // Run safe formatting on blur. Defer focus-state flip so the
+          // autocomplete/toolbar can still hand focus back without flicker.
+          runSafeFormat();
+          setTimeout(() => setFocused(false), 120);
+        }}
         onKeyDown={handleKeyDown}
         placeholder={
           isFirstEmpty

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NullPersistenceAdapter, type PersistenceAdapter, type PersistSnapshot } from "./screenplayPersistence";
+import { formatBlockText } from "./screenplayAutoFormat";
 
 export type SaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 
@@ -205,7 +206,13 @@ export function useScreenplayDocument({
   const changeBlockType = useCallback(
     (localId: string, type: string) => {
       setLocalBlocks((prev) =>
-        prev.map((b) => (b.id === localId ? { ...b, block_type: type, status: "dirty" } : b)),
+        prev.map((b) => {
+          if (b.id !== localId) return b;
+          // Apply safe formatting once for the new type (high-confidence only;
+          // action/dialogue/note are passthrough trim).
+          const formatted = formatBlockText(type, b.content);
+          return { ...b, block_type: type, content: formatted, status: "dirty" };
+        }),
       );
       dirtyIds.current.add(localId);
       markDirty();
