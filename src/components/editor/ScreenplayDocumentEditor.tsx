@@ -145,8 +145,10 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
         characterNames: characterNameSet,
         projectDictionary: projectDictionary ?? new Set<string>(),
         rejectedFixes: rejectedFixes ?? new Set<string>(),
+        screenplayLanguage,
+        knownLanguages,
       }),
-      [characterNameSet, projectDictionary, rejectedFixes],
+      [characterNameSet, projectDictionary, rejectedFixes, screenplayLanguage, knownLanguages],
     );
 
 
