@@ -47,6 +47,8 @@ type Props = {
    * NullPersistenceAdapter to run fully local.
    */
   persistence?: PersistenceAdapter;
+  /** Focus-zone mode for the active-line viewport scroller. */
+  viewportMode?: ActiveLineViewportMode;
 };
 
 export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props>(
