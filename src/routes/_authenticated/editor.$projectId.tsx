@@ -23,6 +23,7 @@ import {
   type ScreenplayEditorHandle,
   type ActiveBlockMeta,
 } from "@/components/editor/ScreenplayDocumentEditor";
+import { createSupabasePersistenceAdapter } from "@/components/editor/persistence/SupabasePersistenceAdapter";
 import { LoglineComposer } from "@/components/editor/LoglineComposer";
 import { progressForStep, shouldUseLoglineComposer, shouldRedirectStep } from "@/lib/editor/stepCompletion";
 import { OPENING_SCENE_TEMPLATE } from "@/lib/editor/openingTemplate";
