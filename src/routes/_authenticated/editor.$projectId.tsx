@@ -114,6 +114,11 @@ function Editor() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["characters", projectId] }),
   });
 
+  // Project Dictionary — terms that should never be auto-corrected.
+  const dictionary = useProjectDictionary(projectId);
+
+
+
   const editorRef = useRef<ScreenplayEditorHandle>(null);
   const [activeMeta, setActiveMeta] = useState<ActiveBlockMeta>(null);
   const activeBlockId = activeMeta?.serverId ?? null;
