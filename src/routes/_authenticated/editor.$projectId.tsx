@@ -174,6 +174,7 @@ function Editor() {
   }, [saveStatus]);
 
   const retryFailed = useCallback(() => {
+    setFailedCount(0);
     persistence.retryFailed?.();
     toast.info("Retrying unsaved lines…");
   }, [persistence]);
