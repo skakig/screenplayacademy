@@ -181,9 +181,10 @@ export function ScreenplayLine({
 
     // 1) Language fixes first — they only change casing/punctuation, never
     //    semantic meaning, and skip any token in characterNames / dictionary.
+    const blockLang = (block.metadata as any)?.language as string | undefined;
     const langCtx: LanguageContext = languageContext
-      ? { ...languageContext, blockType: block.block_type }
-      : { blockType: block.block_type };
+      ? { ...languageContext, blockType: block.block_type, blockLanguageOverride: (blockLang as any) ?? null }
+      : { blockType: block.block_type, blockLanguageOverride: (blockLang as any) ?? null };
     const langResult = applySafeLanguageFixes(raw, langCtx);
     let working = langResult.text;
 
@@ -222,7 +223,9 @@ export function ScreenplayLine({
   };
 
   // ---------- unknown-term suggestions (passive, blur/idle only) ----------
-  const [unknownTerms, setUnknownTerms] = useState<string[]>([]);
+  const [unknownTerms, setUnknownTerms] = useState<
+    Array<{ term: string; kind: "unknown_term" | "false_friend"; note?: string }>
+  >([]);
   const [dismissedTerms, setDismissedTerms] = useState<Set<string>>(new Set());
   useEffect(() => {
     // Re-scan only when block content settles (debounced) and the line is
@@ -230,17 +233,23 @@ export function ScreenplayLine({
     if (!languageContext) return;
     if (focused) return;
     const id = setTimeout(() => {
+      const blockLang = (block.metadata as any)?.language as string | undefined;
       const decisions = analyzeUnknownTerms(block.content, {
         ...languageContext,
         blockType: block.block_type,
+        blockLanguageOverride: (blockLang as any) ?? null,
       });
-      setUnknownTerms(decisions.map((d) => d.term));
+      setUnknownTerms(
+        decisions
+          .filter((d) => d.kind === "unknown_term" || d.kind === "false_friend")
+          .map((d) => ({ term: d.term, kind: d.kind as "unknown_term" | "false_friend", note: d.reason })),
+      );
     }, 400);
     return () => clearTimeout(id);
-  }, [block.content, block.block_type, focused, languageContext]);
+  }, [block.content, block.block_type, block.metadata, focused, languageContext]);
 
   const visibleUnknowns = useMemo(
-    () => unknownTerms.filter((t) => !dismissedTerms.has(t.toLowerCase())),
+    () => unknownTerms.filter((u) => !dismissedTerms.has(u.term.toLowerCase())),
     [unknownTerms, dismissedTerms],
   );
 
@@ -393,58 +402,73 @@ export function ScreenplayLine({
       {visibleUnknowns.length > 0 && !focused && (
         <div className="mt-1 flex flex-wrap items-center gap-1 font-sans">
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
-            New word
+            {visibleUnknowns.some((u) => u.kind === "false_friend") ? "Heads up" : "New word"}
           </span>
-          {visibleUnknowns.slice(0, 4).map((term) => (
-            <div
-              key={term}
-              className="inline-flex items-center gap-0.5 rounded-full border border-amber-500/30 bg-amber-500/5 px-1.5 py-0.5 text-[11px] text-foreground/80"
-              title="SceneSmith hasn't seen this word before. Add it to the project so it's never flagged again."
-            >
-              <span className="font-mono">{term}</span>
-              {onAddDictionaryTerm && (
-                <>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      onAddDictionaryTerm(term, "character");
-                      setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
-                    }}
-                    className="ml-1 inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-amber-500/10 transition"
-                    title="Add as character"
-                  >
-                    <BookPlus className="h-3 w-3" />
-                    Character
-                  </button>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      onAddDictionaryTerm(term, "custom");
-                      setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
-                    }}
-                    className="inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-amber-500/10 transition"
-                    title="Add to project dictionary"
-                  >
-                    Term
-                  </button>
-                </>
-              )}
-              <button
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
-                }}
-                className="ml-0.5 inline-flex items-center justify-center rounded-full p-0.5 text-muted-foreground/70 hover:text-foreground hover:bg-amber-500/10 transition"
-                title="Ignore"
-                aria-label="Ignore"
+          {visibleUnknowns.slice(0, 4).map(({ term, kind, note }) => {
+            const isFalseFriend = kind === "false_friend";
+            return (
+              <div
+                key={`${kind}:${term}`}
+                className={
+                  "inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[11px] text-foreground/80 " +
+                  (isFalseFriend
+                    ? "border-orange-500/40 bg-orange-500/10"
+                    : "border-amber-500/30 bg-amber-500/5")
+                }
+                title={
+                  isFalseFriend
+                    ? note ?? "Possible false friend."
+                    : "SceneSmith hasn't seen this word before. Add it to the project so it's never flagged again."
+                }
               >
-                <XIcon className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
+                <span className="font-mono">{term}</span>
+                {isFalseFriend && note && (
+                  <span className="ml-1 text-[10px] text-muted-foreground/90">{note}</span>
+                )}
+                {!isFalseFriend && onAddDictionaryTerm && (
+                  <>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        onAddDictionaryTerm(term, "character");
+                        setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
+                      }}
+                      className="ml-1 inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-amber-500/10 transition"
+                      title="Add as character"
+                    >
+                      <BookPlus className="h-3 w-3" />
+                      Character
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        onAddDictionaryTerm(term, "custom");
+                        setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
+                      }}
+                      className="inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-amber-500/10 transition"
+                      title="Add to project dictionary"
+                    >
+                      Term
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
+                  }}
+                  className="ml-0.5 inline-flex items-center justify-center rounded-full p-0.5 text-muted-foreground/70 hover:text-foreground hover:bg-amber-500/10 transition"
+                  title="Ignore"
+                  aria-label="Ignore"
+                >
+                  <XIcon className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 

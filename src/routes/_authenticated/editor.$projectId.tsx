@@ -121,6 +121,54 @@ function Editor() {
   const dictionary = useProjectDictionary(projectId);
   const rejectedFixes = useMemo(() => getRejectedSet(projectId), [projectId]);
 
+  // Multilingual language intelligence wiring.
+  const { data: writerProfile } = useQuery({
+    queryKey: ["profile-languages"],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("preferred_languages, ui_language")
+        .eq("id", u.user.id)
+        .maybeSingle();
+      return data;
+    },
+  });
+  const screenplayLanguage = useMemo(
+    () => {
+      const raw = (project as any)?.screenplay_language;
+      // coerce to supported set; fall back to en
+      const supported = ["en","es","fr","de","pt","it","pl","uk","ru"] as const;
+      return (supported as readonly string[]).includes(raw) ? (raw as (typeof supported)[number]) : "en";
+    },
+    [project],
+  );
+  const knownLanguages = useMemo(() => {
+    const raw = (writerProfile as any)?.preferred_languages as string[] | undefined;
+    const supported = ["en","es","fr","de","pt","it","pl","uk","ru"] as const;
+    return (raw ?? ["en"]).filter((l) => (supported as readonly string[]).includes(l)) as Array<(typeof supported)[number]>;
+  }, [writerProfile]);
+
+  // Soft one-time prompt when screenplay language differs from UI/known set.
+  useEffect(() => {
+    if (!writerProfile || !project) return;
+    const key = `lovable.langSoftPrompt.${projectId}`;
+    if (typeof window === "undefined") return;
+    if (window.localStorage.getItem(key)) return;
+    if (knownLanguages.includes(screenplayLanguage)) return;
+    window.localStorage.setItem(key, "1");
+    const labels: Record<string, string> = {
+      en: "English", es: "Español", fr: "Français", de: "Deutsch",
+      pt: "Português", it: "Italiano", pl: "Polski", uk: "Українська", ru: "Русский",
+    };
+    toast(`Writing in ${labels[screenplayLanguage] ?? screenplayLanguage}?`, {
+      description: "Tell us which languages you know so we stop flagging familiar words.",
+      action: { label: "Set languages", onClick: () => { window.location.href = "/settings"; } },
+      duration: 8000,
+    });
+  }, [writerProfile, project, projectId, knownLanguages, screenplayLanguage]);
+
 
 
 
@@ -737,6 +785,8 @@ function Editor() {
               persistence={persistence}
               projectDictionary={dictionary.termSet}
               rejectedFixes={rejectedFixes}
+              screenplayLanguage={screenplayLanguage}
+              knownLanguages={knownLanguages}
               onAddDictionaryTerm={(term, category) => {
                 dictionary.addTerm({
                   term,
