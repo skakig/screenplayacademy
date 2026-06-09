@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Command, BookPlus, X as XIcon } from "lucide-react";
+import { Command, BookPlus, X as XIcon, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { cycleType } from "./screenplayKeymap";
 import { detectBlockType, BLOCK_LABEL } from "@/lib/editor/autoFormat";
-import { formatBlockText } from "./screenplayAutoFormat";
+import { formatBlockText, analyzeFormat } from "./screenplayAutoFormat";
 import {
   applySafeLanguageFixes,
   analyzeUnknownTerms,
