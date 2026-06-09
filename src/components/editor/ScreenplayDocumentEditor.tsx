@@ -333,6 +333,9 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     onDeleteEmpty={() => doc.deleteBlock(b.id)}
                     onSlashInsert={(type) => doc.insertBlockAfter(b.id, type)}
                     onAutoFormatApplied={(e) => setLastFormat(e)}
+                    languageContext={{ ...languageContext, blockType: b.block_type }}
+                    onAddDictionaryTerm={onAddDictionaryTerm}
+
                   />
                 </div>
               );
