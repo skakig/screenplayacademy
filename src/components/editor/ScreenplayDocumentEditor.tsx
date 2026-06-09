@@ -59,6 +59,10 @@ type Props = {
   onAddDictionaryTerm?: (term: string, category?: "character" | "location" | "custom") => void;
   /** Persist a rejected structural suggestion to project-level memory. */
   onRejectFormatSuggestion?: (original: string, suggestedType: string) => void;
+  /** Screenplay language (default for every block in the project). */
+  screenplayLanguage?: import("@/lib/language/types").LanguageCode;
+  /** Languages the writer reads/writes. Drives cognate / false-friend logic. */
+  knownLanguages?: import("@/lib/language/types").LanguageCode[];
 };
 
 
