@@ -181,9 +181,10 @@ export function ScreenplayLine({
 
     // 1) Language fixes first — they only change casing/punctuation, never
     //    semantic meaning, and skip any token in characterNames / dictionary.
+    const blockLang = (block.metadata as any)?.language as string | undefined;
     const langCtx: LanguageContext = languageContext
-      ? { ...languageContext, blockType: block.block_type }
-      : { blockType: block.block_type };
+      ? { ...languageContext, blockType: block.block_type, blockLanguageOverride: (blockLang as any) ?? null }
+      : { blockType: block.block_type, blockLanguageOverride: (blockLang as any) ?? null };
     const langResult = applySafeLanguageFixes(raw, langCtx);
     let working = langResult.text;
 
