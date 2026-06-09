@@ -31,7 +31,7 @@ import { ArrowRight } from "lucide-react";
 import { EditorTour } from "@/components/editor/EditorTour";
 import { useEditorTour } from "@/hooks/useEditorTour";
 import { EditorCommandBar } from "@/components/editor/EditorCommandBar";
-import { cycleType } from "@/lib/editor/nextBlockType";
+import { cycleType } from "@/components/editor/screenplayKeymap";
 import { BLOCK_LABEL } from "@/lib/editor/autoFormat";
 import { StoryNavigatorPane } from "@/components/editor/StoryNavigatorPane";
 import { CoachPane } from "@/components/editor/CoachPane";
