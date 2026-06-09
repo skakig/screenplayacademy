@@ -89,6 +89,8 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       rejectedFixes,
       onAddDictionaryTerm,
       onRejectFormatSuggestion,
+      screenplayLanguage,
+      knownLanguages,
     },
 
     ref,
