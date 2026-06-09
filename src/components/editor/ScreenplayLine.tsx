@@ -32,6 +32,14 @@ const PLACEHOLDERS: Record<string, string> = {
 
 const QUICK_TYPES = ["scene_heading", "action", "character", "dialogue", "parenthetical"] as const;
 
+export type AutoFormatEvent = {
+  blockId: string;
+  blockType: string;
+  original: string;
+  formatted: string;
+  typeChanged: boolean;
+};
+
 export function ScreenplayLine({
   block,
   isActive,
@@ -45,6 +53,7 @@ export function ScreenplayLine({
   onSlashInsert,
   onFocus,
   onCreateCharacter,
+  onAutoFormatApplied,
 }: {
   block: LocalBlock;
   isActive: boolean;
@@ -58,6 +67,7 @@ export function ScreenplayLine({
   onSlashInsert: (type: string) => void;
   onFocus: () => void;
   onCreateCharacter: (name: string) => Promise<any>;
+  onAutoFormatApplied?: (e: AutoFormatEvent) => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [focused, setFocused] = useState(false);
