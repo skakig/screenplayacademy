@@ -1,12 +1,18 @@
-import { useEffect, useRef, useState } from "react";
-import { Command } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Command, BookPlus, X as XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cycleType } from "./screenplayKeymap";
 import { detectBlockType, BLOCK_LABEL } from "@/lib/editor/autoFormat";
 import { formatBlockText } from "./screenplayAutoFormat";
+import {
+  applySafeLanguageFixes,
+  analyzeUnknownTerms,
+  type LanguageContext,
+} from "./screenplayLanguageIntelligence";
 import { CharacterAutocomplete, type CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import { SceneBeatPicker } from "@/components/editor/SceneBeatPicker";
 import type { LocalBlock } from "./useScreenplayDocument";
+
 
 const BLOCK_TYPES = [
   { value: "scene_heading", label: "Scene Heading", shortcut: "/scene", aliases: ["/heading", "/h", "/int", "/ext"] },
