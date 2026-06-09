@@ -745,6 +745,11 @@ function Editor() {
                 });
                 toast.success(`Added "${term}" to project dictionary`, { duration: 1500 });
               }}
+              onRejectFormatSuggestion={(original) => {
+                import("@/components/editor/formatOverrideMemory").then((m) =>
+                  m.markFixRejected(projectId, original),
+                );
+              }}
             />
 
           </div>
