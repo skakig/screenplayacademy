@@ -1019,6 +1019,59 @@ export type Database = {
         }
         Relationships: []
       }
+      project_dictionary: {
+        Row: {
+          approved: boolean
+          category: string
+          created_at: string
+          created_by: string | null
+          created_from: string
+          id: string
+          language: string | null
+          normalized_term: string | null
+          notes: string | null
+          project_id: string
+          term: string
+          updated_at: string
+        }
+        Insert: {
+          approved?: boolean
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          created_from?: string
+          id?: string
+          language?: string | null
+          normalized_term?: string | null
+          notes?: string | null
+          project_id: string
+          term: string
+          updated_at?: string
+        }
+        Update: {
+          approved?: boolean
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          created_from?: string
+          id?: string
+          language?: string | null
+          normalized_term?: string | null
+          notes?: string | null
+          project_id?: string
+          term?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_dictionary_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_guided_steps: {
         Row: {
           completed_at: string | null
