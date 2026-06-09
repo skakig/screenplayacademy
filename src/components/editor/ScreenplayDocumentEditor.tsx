@@ -320,6 +320,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
     return (
       <div
         ref={scrollRef}
+        onPaste={handlePaste}
         className="screenplay-scroll relative h-full overflow-y-auto overscroll-contain"
       >
         <div
