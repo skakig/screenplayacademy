@@ -120,7 +120,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
     // Build a language-intelligence context once per relevant input change.
     // Character names from the project sidebar, project dictionary terms,
     // and any rejected fixes (sticky undo) are all lowercased sets.
-    const characterNameSet = React.useMemo(() => {
+    const characterNameSet = useMemo(() => {
       const s = new Set<string>();
       for (const c of characters) {
         if (c?.name) s.add(c.name.toLowerCase());
@@ -128,7 +128,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       return s;
     }, [characters]);
 
-    const languageContext = React.useMemo(
+    const languageContext = useMemo(
       () => ({
         blockType: "action", // overridden per-line by ScreenplayLine
         characterNames: characterNameSet,
