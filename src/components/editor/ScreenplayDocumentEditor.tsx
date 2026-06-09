@@ -9,6 +9,8 @@ import type { PersistenceAdapter } from "./screenplayPersistence";
 import { BLOCK_LABEL } from "@/lib/editor/autoFormat";
 import { t } from "@/lib/i18n/t";
 import { useActiveLineViewport, type ActiveLineViewportMode } from "./useActiveLineViewport";
+import { formatPastedScript, type ParsedBlock } from "./screenplayAutoFormat";
+import { PasteFormatPreviewDialog } from "./PasteFormatPreviewDialog";
 
 
 export type ActiveBlockMeta = {
@@ -55,6 +57,8 @@ type Props = {
   rejectedFixes?: Set<string>;
   /** Add a new term to the project dictionary. Wires the "Add" chip. */
   onAddDictionaryTerm?: (term: string, category?: "character" | "location" | "custom") => void;
+  /** Persist a rejected structural suggestion to project-level memory. */
+  onRejectFormatSuggestion?: (original: string, suggestedType: string) => void;
 };
 
 
@@ -80,6 +84,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       projectDictionary,
       rejectedFixes,
       onAddDictionaryTerm,
+      onRejectFormatSuggestion,
     },
 
     ref,
@@ -167,6 +172,78 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       scheduleScroll("enter");
     }, [doc.activeBlockId, doc.localBlocks.length, scheduleScroll]);
 
+    // ---------- paste-batch format preview ----------
+    const [pastePreview, setPastePreview] = useState<{
+      blocks: ParsedBlock[];
+      anchorLocalId: string | null;
+      rawText: string;
+    } | null>(null);
+
+    const handlePaste = useCallback(
+      (e: React.ClipboardEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        const ta = target.closest?.("textarea[data-block-editor]") as HTMLTextAreaElement | null;
+        if (!ta) return;
+        const text = e.clipboardData.getData("text/plain");
+        if (!text) return;
+        const isLarge = text.length > 120 || /\n.*\S.*\n/.test(text);
+        if (!isLarge) return; // small paste — let textarea handle it
+        // Only intercept when target is empty or caret is at end of an empty block;
+        // otherwise the writer is splicing into existing prose and we shouldn't surprise them.
+        const active = doc.localBlocks.find((b) => b.id === doc.activeBlockId);
+        if (!active) return;
+        e.preventDefault();
+        const parsed = formatPastedScript(text, {
+          currentBlockType: "action",
+          prevBlockType: active.block_type,
+          characterNames: characterNameSet,
+        });
+        if (parsed.length === 0) return;
+        setPastePreview({
+          blocks: parsed,
+          anchorLocalId: active.id,
+          rawText: text,
+        });
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [doc.activeBlockId, doc.localBlocks],
+    );
+
+    const insertParsed = useCallback(
+      (accepted: ParsedBlock[]) => {
+        if (!pastePreview || accepted.length === 0) {
+          setPastePreview(null);
+          return;
+        }
+        const anchorId = pastePreview.anchorLocalId;
+        const anchor = doc.localBlocks.find((b) => b.id === anchorId);
+        const defs = accepted.map((b) => ({ block_type: b.block_type, content: b.content }));
+        // If the anchor block is empty, reuse it for the first inserted block.
+        if (anchor && anchor.content === "" && defs.length > 0) {
+          doc.changeBlockType(anchor.id, defs[0].block_type);
+          doc.updateBlockContent(anchor.id, defs[0].content);
+          if (defs.length > 1) doc.insertBlocksAfter(anchor.id, defs.slice(1));
+        } else {
+          doc.insertBlocksAfter(anchorId, defs);
+        }
+        setPastePreview(null);
+      },
+      [pastePreview, doc],
+    );
+
+    const insertRaw = useCallback(() => {
+      if (!pastePreview) return;
+      const anchor = doc.localBlocks.find((b) => b.id === pastePreview.anchorLocalId);
+      if (anchor) {
+        const combined = anchor.content
+          ? `${anchor.content}\n${pastePreview.rawText}`
+          : pastePreview.rawText;
+        doc.updateBlockContent(anchor.id, combined);
+      }
+      setPastePreview(null);
+    }, [pastePreview, doc]);
+
+
     useImperativeHandle(
       ref,
       () => ({
@@ -243,6 +320,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
     return (
       <div
         ref={scrollRef}
+        onPaste={handlePaste}
         className="screenplay-scroll relative h-full overflow-y-auto overscroll-contain"
       >
         <div
@@ -319,6 +397,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     isActive={b.id === doc.activeBlockId}
                     isFirstEmpty={i === 0 && doc.localBlocks.length === 1 && b.content === "" && b.block_type === "scene_heading"}
                     characters={characters}
+                    prevBlockType={prev?.block_type}
                     onCreateCharacter={
                       onCreateCharacter ?? (async () => undefined)
                     }
@@ -335,7 +414,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     onAutoFormatApplied={(e) => setLastFormat(e)}
                     languageContext={{ ...languageContext, blockType: b.block_type }}
                     onAddDictionaryTerm={onAddDictionaryTerm}
-
+                    onRejectFormatSuggestion={onRejectFormatSuggestion}
                   />
                 </div>
               );
@@ -368,6 +447,13 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
           </>
         )}
         </div>
+        <PasteFormatPreviewDialog
+          open={!!pastePreview}
+          blocks={pastePreview?.blocks ?? []}
+          onCancel={() => setPastePreview(null)}
+          onInsertFormatted={insertParsed}
+          onInsertRaw={insertRaw}
+        />
       </div>
     );
   },

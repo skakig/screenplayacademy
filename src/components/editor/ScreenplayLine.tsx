@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Command, BookPlus, X as XIcon } from "lucide-react";
+import { Command, BookPlus, X as XIcon, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { cycleType } from "./screenplayKeymap";
 import { detectBlockType, BLOCK_LABEL } from "@/lib/editor/autoFormat";
-import { formatBlockText } from "./screenplayAutoFormat";
+import { formatBlockText, analyzeFormat } from "./screenplayAutoFormat";
 import {
   applySafeLanguageFixes,
   analyzeUnknownTerms,
@@ -53,6 +53,7 @@ export function ScreenplayLine({
   isActive,
   isFirstEmpty,
   characters,
+  prevBlockType,
   onContentChange,
   onChangeType,
   onUpdateMetadata,
@@ -64,11 +65,14 @@ export function ScreenplayLine({
   onAutoFormatApplied,
   languageContext,
   onAddDictionaryTerm,
+  onRejectFormatSuggestion,
 }: {
   block: LocalBlock;
   isActive: boolean;
   isFirstEmpty?: boolean;
   characters: CharacterHit[];
+  /** Previous block's type — used by analyzeFormat for context-sensitive suggestions. */
+  prevBlockType?: string;
   onContentChange: (c: string) => void;
   onChangeType: (t: string) => void;
   onUpdateMetadata: (m: any) => void;
@@ -82,6 +86,8 @@ export function ScreenplayLine({
   languageContext?: LanguageContext;
   /** When provided, the "Add to Project Dictionary" chip becomes interactive. */
   onAddDictionaryTerm?: (term: string, category?: "character" | "location" | "custom") => void;
+  /** Called when the writer dismisses a structural format suggestion. */
+  onRejectFormatSuggestion?: (original: string, suggestedType: string) => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [focused, setFocused] = useState(false);
@@ -238,6 +244,59 @@ export function ScreenplayLine({
     [unknownTerms, dismissedTerms],
   );
 
+  // ---------- medium-confidence structural suggestion (idle, blur-only) ----------
+  const [suggestion, setSuggestion] = useState<{
+    type: string;
+    reason: string;
+    transformedText: string;
+    fromContent: string;
+  } | null>(null);
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (focused) return;
+    if (!block.content.trim()) { setSuggestion(null); return; }
+    const id = setTimeout(() => {
+      const decision = analyzeFormat(block.content, {
+        currentBlockType: block.block_type,
+        prevBlockType,
+        characterNames: languageContext?.characterNames,
+      });
+      if (
+        decision.confidence === "medium" &&
+        decision.suggestedType !== block.block_type &&
+        !dismissedSuggestions.has(`${block.block_type}>${decision.suggestedType}|${block.content}`)
+      ) {
+        setSuggestion({
+          type: decision.suggestedType,
+          reason: decision.reason,
+          transformedText: decision.transformedText,
+          fromContent: block.content,
+        });
+      } else {
+        setSuggestion(null);
+      }
+    }, 600);
+    return () => clearTimeout(id);
+  }, [block.content, block.block_type, focused, prevBlockType, languageContext?.characterNames, dismissedSuggestions]);
+
+  const acceptSuggestion = () => {
+    if (!suggestion) return;
+    onChangeType(suggestion.type);
+    if (suggestion.transformedText !== block.content) {
+      onContentChange(suggestion.transformedText);
+    }
+    setSuggestion(null);
+    toast.success(`→ ${BLOCK_LABEL[suggestion.type] ?? suggestion.type}`, { duration: 1000 });
+  };
+  const dismissSuggestion = () => {
+    if (!suggestion) return;
+    setDismissedSuggestions((s) =>
+      new Set(s).add(`${block.block_type}>${suggestion.type}|${suggestion.fromContent}`),
+    );
+    onRejectFormatSuggestion?.(suggestion.fromContent, suggestion.type);
+    setSuggestion(null);
+  };
+
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (slashOpen) {
@@ -388,6 +447,37 @@ export function ScreenplayLine({
           ))}
         </div>
       )}
+
+      {suggestion && !focused && (
+        <div className="mt-1 flex flex-wrap items-center gap-1 font-sans">
+          <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-[11px] text-foreground/80">
+            <Wand2 className="h-3 w-3 text-primary" aria-hidden="true" />
+            <span className="truncate max-w-[260px]">
+              {suggestion.reason} — convert to {BLOCK_LABEL[suggestion.type] ?? suggestion.type}?
+            </span>
+            <button
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); acceptSuggestion(); }}
+              className="ml-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] bg-primary/15 hover:bg-primary/25 text-primary transition"
+              title="Convert"
+            >
+              Convert
+            </button>
+            <button
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); dismissSuggestion(); }}
+              className="inline-flex items-center justify-center rounded-full p-0.5 text-muted-foreground hover:text-foreground hover:bg-primary/10 transition"
+              title="Dismiss"
+              aria-label="Dismiss"
+            >
+              <XIcon className="h-3 w-3" />
+            </button>
+          </span>
+        </div>
+      )}
+
+
+
 
 
 
