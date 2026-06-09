@@ -214,6 +214,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     }}
                     onDeleteEmpty={() => doc.deleteBlock(b.id)}
                     onSlashInsert={(type) => doc.insertBlockAfter(b.id, type)}
+                    onAutoFormatApplied={(e) => setLastFormat(e)}
                   />
                 </div>
               );
