@@ -134,6 +134,20 @@ export function formatShot(text: string): string {
   return upper;
 }
 
+/**
+ * Capitalize the first letter of every sentence in prose blocks.
+ * Idempotent — safe to re-run. Preserves interior casing (proper nouns,
+ * acronyms, intentional ALL CAPS for emphasis).
+ */
+export function capitalizeSentences(text: string): string {
+  if (!text) return text;
+  // Capitalize the very first alphabetic character.
+  let out = text.replace(/^(\s*["'(\[]*\s*)([a-z])/, (_m, p1, p2) => p1 + p2.toUpperCase());
+  // Capitalize letters that follow sentence terminators + whitespace.
+  out = out.replace(/([.!?]\s+["'(\[]*)([a-z])/g, (_m, p1, p2) => p1 + p2.toUpperCase());
+  return out;
+}
+
 /** Dispatcher. Returns input unchanged for action/dialogue/note (passthrough + trim). */
 export function formatBlockText(blockType: string, text: string): string {
   if (text == null) return text;
@@ -151,9 +165,12 @@ export function formatBlockText(blockType: string, text: string): string {
     case "action":
     case "dialogue":
     case "note":
-    default:
-      // Passthrough — only trim outer whitespace, preserve casing/voice.
-      return text.replace(/^[ \t]+/, "").replace(/[ \t]+$/, "");
+    default: {
+      // Trim outer whitespace, then capitalize sentence starts so beginners
+      // get professional-looking prose without manual fixing.
+      const trimmed = text.replace(/^[ \t]+/, "").replace(/[ \t]+$/, "");
+      return capitalizeSentences(trimmed);
+    }
   }
 }
 
