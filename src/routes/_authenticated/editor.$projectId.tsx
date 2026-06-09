@@ -379,13 +379,9 @@ function Editor() {
   const activeScene = activeSceneIdx >= 0 ? outline[activeSceneIdx] : null;
 
   const jumpToBlock = useCallback((serverId: string) => {
+    // jumpToServer also triggers the active-line viewport scroller so the
+    // jumped-to block lands in the focus zone — no manual scrollIntoView here.
     editorRef.current?.jumpToServer(serverId);
-    if (typeof document !== "undefined") {
-      requestAnimationFrame(() => {
-        const el = document.querySelector(`[data-block-id="${serverId}"]`) as HTMLElement | null;
-        el?.scrollIntoView({ behavior: "smooth", block: "center" });
-      });
-    }
   }, []);
 
   const addSceneAtEnd = useCallback(() => {
