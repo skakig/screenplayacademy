@@ -466,6 +466,7 @@ export function useScreenplayDocument({
     changeBlockType,
     updateBlockMetadata,
     insertBlockAfter,
+    insertBlocksAfter,
     insertAtEnd,
     deleteBlock,
     jumpToServer,
