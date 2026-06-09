@@ -172,6 +172,78 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       scheduleScroll("enter");
     }, [doc.activeBlockId, doc.localBlocks.length, scheduleScroll]);
 
+    // ---------- paste-batch format preview ----------
+    const [pastePreview, setPastePreview] = useState<{
+      blocks: ParsedBlock[];
+      anchorLocalId: string | null;
+      rawText: string;
+    } | null>(null);
+
+    const handlePaste = useCallback(
+      (e: React.ClipboardEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        const ta = target.closest?.("textarea[data-block-editor]") as HTMLTextAreaElement | null;
+        if (!ta) return;
+        const text = e.clipboardData.getData("text/plain");
+        if (!text) return;
+        const isLarge = text.length > 120 || /\n.*\S.*\n/.test(text);
+        if (!isLarge) return; // small paste — let textarea handle it
+        // Only intercept when target is empty or caret is at end of an empty block;
+        // otherwise the writer is splicing into existing prose and we shouldn't surprise them.
+        const active = doc.localBlocks.find((b) => b.id === doc.activeBlockId);
+        if (!active) return;
+        e.preventDefault();
+        const parsed = formatPastedScript(text, {
+          currentBlockType: "action",
+          prevBlockType: active.block_type,
+          characterNames: characterNameSet,
+        });
+        if (parsed.length === 0) return;
+        setPastePreview({
+          blocks: parsed,
+          anchorLocalId: active.id,
+          rawText: text,
+        });
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [doc.activeBlockId, doc.localBlocks],
+    );
+
+    const insertParsed = useCallback(
+      (accepted: ParsedBlock[]) => {
+        if (!pastePreview || accepted.length === 0) {
+          setPastePreview(null);
+          return;
+        }
+        const anchorId = pastePreview.anchorLocalId;
+        const anchor = doc.localBlocks.find((b) => b.id === anchorId);
+        const defs = accepted.map((b) => ({ block_type: b.block_type, content: b.content }));
+        // If the anchor block is empty, reuse it for the first inserted block.
+        if (anchor && anchor.content === "" && defs.length > 0) {
+          doc.changeBlockType(anchor.id, defs[0].block_type);
+          doc.updateBlockContent(anchor.id, defs[0].content);
+          if (defs.length > 1) doc.insertBlocksAfter(anchor.id, defs.slice(1));
+        } else {
+          doc.insertBlocksAfter(anchorId, defs);
+        }
+        setPastePreview(null);
+      },
+      [pastePreview, doc],
+    );
+
+    const insertRaw = useCallback(() => {
+      if (!pastePreview) return;
+      const anchor = doc.localBlocks.find((b) => b.id === pastePreview.anchorLocalId);
+      if (anchor) {
+        const combined = anchor.content
+          ? `${anchor.content}\n${pastePreview.rawText}`
+          : pastePreview.rawText;
+        doc.updateBlockContent(anchor.id, combined);
+      }
+      setPastePreview(null);
+    }, [pastePreview, doc]);
+
+
     useImperativeHandle(
       ref,
       () => ({
