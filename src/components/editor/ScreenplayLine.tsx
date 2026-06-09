@@ -163,17 +163,29 @@ export function ScreenplayLine({
   /**
    * Run safe formatting on the current block. Returns true if anything changed.
    * Called only at Enter / blur — never per keystroke — so caret stability is preserved.
+   *
+   * Pipeline (order matters per docs):
+   *   1) applySafeLanguageFixes — high-confidence language fixes (i → I, etc.)
+   *   2) detectBlockType — one-shot type detection
+   *   3) formatBlockText — structural formatting for the (possibly new) type
    */
   const runSafeFormat = (): boolean => {
     const raw = block.content;
     if (!raw) return false;
-    // Medium-confidence type detection (one-shot): if the writer typed a
-    // strong scene-heading / character / transition / parenthetical signal
-    // into a generic block, switch type before formatting the text.
+
+    // 1) Language fixes first — they only change casing/punctuation, never
+    //    semantic meaning, and skip any token in characterNames / dictionary.
+    const langCtx: LanguageContext = languageContext
+      ? { ...languageContext, blockType: block.block_type }
+      : { blockType: block.block_type };
+    const langResult = applySafeLanguageFixes(raw, langCtx);
+    let working = langResult.text;
+
+    // 2) Type detection (one-shot).
     let effectiveType = block.block_type;
     let typeChanged = false;
     if (!autoTypedRef.current) {
-      const detected = detectBlockType(raw);
+      const detected = detectBlockType(working);
       if (detected && detected !== block.block_type) {
         autoTypedRef.current = true;
         onChangeType(detected);
@@ -182,7 +194,10 @@ export function ScreenplayLine({
         toast.success(`Auto-formatted as ${BLOCK_LABEL[detected]}`, { duration: 1200 });
       }
     }
-    const formatted = formatBlockText(effectiveType, raw);
+
+    // 3) Structural format.
+    const formatted = formatBlockText(effectiveType, working);
+
     if (formatted === raw && !typeChanged) return false;
     if (formatted === lastAppliedFormatRef.current && !typeChanged) return false;
     if (formatted !== raw) {
@@ -195,9 +210,34 @@ export function ScreenplayLine({
       original: raw,
       formatted,
       typeChanged,
+      languageFixKind: langResult.fixes[0]?.kind,
     });
     return true;
   };
+
+  // ---------- unknown-term suggestions (passive, blur/idle only) ----------
+  const [unknownTerms, setUnknownTerms] = useState<string[]>([]);
+  const [dismissedTerms, setDismissedTerms] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    // Re-scan only when block content settles (debounced) and the line is
+    // not actively being typed. Never per keystroke.
+    if (!languageContext) return;
+    if (focused) return;
+    const id = setTimeout(() => {
+      const decisions = analyzeUnknownTerms(block.content, {
+        ...languageContext,
+        blockType: block.block_type,
+      });
+      setUnknownTerms(decisions.map((d) => d.term));
+    }, 400);
+    return () => clearTimeout(id);
+  }, [block.content, block.block_type, focused, languageContext]);
+
+  const visibleUnknowns = useMemo(
+    () => unknownTerms.filter((t) => !dismissedTerms.has(t.toLowerCase())),
+    [unknownTerms, dismissedTerms],
+  );
+
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (slashOpen) {
