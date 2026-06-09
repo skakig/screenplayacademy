@@ -11,7 +11,7 @@ import { WriterInsightsPanel } from "@/components/editor/WriterInsightsPanel";
 import { CoachModeToggle } from "@/components/editor/CoachModeToggle";
 import { ArcSidebar } from "@/components/arc/ArcSidebar";
 import { BLOCK_LABEL } from "@/lib/editor/autoFormat";
-import { nextBlockTypeAfter } from "@/lib/editor/nextBlockType";
+import { nextBlockTypeAfter } from "./screenplayKeymap";
 import { toast } from "sonner";
 import type { Block } from "@/lib/editor/manuscriptAnalyzer";
 import { tallyCharacters, buildOutline } from "@/lib/editor/manuscriptAnalyzer";

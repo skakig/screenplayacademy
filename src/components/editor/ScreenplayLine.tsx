@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Command } from "lucide-react";
 import { toast } from "sonner";
-import { cycleType } from "@/lib/editor/nextBlockType";
+import { cycleType } from "./screenplayKeymap";
 import { detectBlockType, BLOCK_LABEL } from "@/lib/editor/autoFormat";
 import { CharacterAutocomplete, type CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import { SceneBeatPicker } from "@/components/editor/SceneBeatPicker";
