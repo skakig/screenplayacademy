@@ -330,6 +330,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
             )}
           </>
         )}
+        </div>
       </div>
     );
   },
