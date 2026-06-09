@@ -572,7 +572,7 @@ function Editor() {
         </aside>
         )}
 
-        <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10 screenplay-canvas">
+        <section className="h-[calc(100vh-104px)] flex flex-col p-6 lg:p-10 screenplay-canvas overflow-hidden">
           {isLoglineStep ? (
             <div className="max-w-[760px] mx-auto pt-4">
               <div className="mb-3 text-center">
