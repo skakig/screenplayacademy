@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, FileText, Wand2, Info, X } from "lucide-react";
 import { useScreenplayDocument, type SaveStatus, type LocalBlock } from "./useScreenplayDocument";
