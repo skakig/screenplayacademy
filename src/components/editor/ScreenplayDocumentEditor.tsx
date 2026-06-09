@@ -397,6 +397,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     isActive={b.id === doc.activeBlockId}
                     isFirstEmpty={i === 0 && doc.localBlocks.length === 1 && b.content === "" && b.block_type === "scene_heading"}
                     characters={characters}
+                    prevBlockType={prev?.block_type}
                     onCreateCharacter={
                       onCreateCharacter ?? (async () => undefined)
                     }
@@ -413,7 +414,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     onAutoFormatApplied={(e) => setLastFormat(e)}
                     languageContext={{ ...languageContext, blockType: b.block_type }}
                     onAddDictionaryTerm={onAddDictionaryTerm}
-
+                    onRejectFormatSuggestion={onRejectFormatSuggestion}
                   />
                 </div>
               );
