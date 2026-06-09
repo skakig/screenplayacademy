@@ -104,6 +104,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
           doc.insertAtEnd(t);
         },
         jumpToServer: (serverId) => doc.jumpToServer(serverId),
+        getBlocks: () => doc.localBlocks,
       }),
       [doc],
     );
