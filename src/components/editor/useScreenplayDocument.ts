@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NullPersistenceAdapter, type PersistenceAdapter, type PersistSnapshot } from "./screenplayPersistence";
 import { formatBlockText } from "./screenplayAutoFormat";
+import { readDraft, writeDraft } from "./draftBackup";
 
 export type SaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 
@@ -31,12 +32,13 @@ function rowToLocal(r: any): LocalBlock {
 }
 
 export function useScreenplayDocument({
-  projectId: _projectId,
+  projectId,
   initialBlocks,
   blocksLoading,
   onSaveStatus,
   onLastSaved: _onLastSaved,
   onBlockCreated,
+  onDraftRestored,
   persistence,
 }: {
   projectId: string;
@@ -45,6 +47,12 @@ export function useScreenplayDocument({
   onSaveStatus?: (s: SaveStatus) => void;
   onLastSaved?: (ts: number) => void;
   onBlockCreated?: (block_type: string) => void;
+  /**
+   * Called once on mount if a local draft contained unsaved blocks that
+   * weren't on the server. Reports how many lines were restored so the
+   * UI can show a toast.
+   */
+  onDraftRestored?: (count: number) => void;
   /**
    * Persistence adapter. All I/O is routed through it. Defaults to
    * NullPersistenceAdapter so the hook stays fully local when no adapter
@@ -115,7 +123,7 @@ export function useScreenplayDocument({
     [adapter],
   );
 
-  // ---------- hydration / server-echo merge ----------
+  // ---------- hydration / server-echo merge + draft restore ----------
   useEffect(() => {
     if (!hydratedOnce.current) {
       if (blocksLoading) return;
@@ -123,6 +131,46 @@ export function useScreenplayDocument({
         .slice()
         .sort((a, b) => a.order_index - b.order_index)
         .map(rowToLocal);
+
+      // ----- restore unsaved blocks from a previous session, if any -----
+      const restoredInserts: string[] = [];
+      try {
+        const draft = projectId ? readDraft(projectId) : null;
+        if (draft && Array.isArray(draft.blocks) && draft.blocks.length > 0) {
+          const serverIds = new Set(initial.map((b) => b.serverId).filter(Boolean) as string[]);
+          // Dedupe by content + nearby order_index so we don't double-up
+          // a line that's already on the server.
+          const seenContent = new Set(
+            initial.map((b) => `${b.block_type}|${(b.content || "").trim()}`),
+          );
+          const maxOrder = initial.length > 0
+            ? Math.max(...initial.map((b) => b.order_index))
+            : -1;
+          let nextOrder = maxOrder + 1;
+          for (const d of draft.blocks) {
+            const content = (d.content || "").toString();
+            if (!content.trim()) continue;
+            if (d.serverId && serverIds.has(d.serverId)) continue;
+            const key = `${d.block_type}|${content.trim()}`;
+            if (seenContent.has(key)) continue;
+            seenContent.add(key);
+            const nb: LocalBlock = {
+              id: makeLocalId(),
+              block_type: (d.block_type as string) || "action",
+              content,
+              order_index: nextOrder++,
+              metadata: d.metadata,
+              status: "dirty",
+            };
+            initial.push(nb);
+            dirtyIds.current.add(nb.id);
+            restoredInserts.push(nb.id);
+          }
+        }
+      } catch {
+        // ignore
+      }
+
       if (initial.length === 0) {
         const seed: LocalBlock = {
           id: makeLocalId(),
@@ -134,7 +182,6 @@ export function useScreenplayDocument({
         initial.push(seed);
         dirtyIds.current.add(seed.id);
         setActiveBlockId(seed.id);
-        // Defer to next tick so the React commit happens before adapter callback.
         setTimeout(() => queueInsert(seed.id), 0);
         markDirty();
       } else {
@@ -142,6 +189,14 @@ export function useScreenplayDocument({
       }
       setLocalBlocks(initial);
       hydratedOnce.current = true;
+      if (restoredInserts.length > 0) {
+        // Queue inserts for restored blocks on next tick (state needs to commit
+        // so blocksRef sees them).
+        setTimeout(() => {
+          for (const id of restoredInserts) queueInsert(id);
+          onDraftRestored?.(restoredInserts.length);
+        }, 0);
+      }
       return;
     }
 
@@ -174,8 +229,6 @@ export function useScreenplayDocument({
           merged.push(rowToLocal(r));
         }
       }
-      // Preserve local-only (not yet persisted) blocks. Drop a single empty
-      // seed if real server rows have arrived.
       const localOnly = prev.filter((b) => !b.serverId && !seenLocalIds.has(b.id));
       const dropSeed =
         merged.length > 0 &&
@@ -189,6 +242,34 @@ export function useScreenplayDocument({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialBlocks, blocksLoading]);
+
+  // ---------- local-first draft mirror to localStorage ----------
+  useEffect(() => {
+    if (!projectId) return;
+    if (!hydratedOnce.current) return;
+    const t = setTimeout(() => {
+      writeDraft(projectId, blocksRef.current);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [projectId, localBlocks]);
+
+  // Synchronous flush on unload so the last keystroke is captured.
+  useEffect(() => {
+    if (!projectId) return;
+    const handler = () => {
+      try {
+        writeDraft(projectId, blocksRef.current);
+      } catch {
+        // noop
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    window.addEventListener("pagehide", handler);
+    return () => {
+      window.removeEventListener("beforeunload", handler);
+      window.removeEventListener("pagehide", handler);
+    };
+  }, [projectId]);
 
   // ---------- public mutators ----------
   const updateBlockContent = useCallback(
@@ -208,8 +289,6 @@ export function useScreenplayDocument({
       setLocalBlocks((prev) =>
         prev.map((b) => {
           if (b.id !== localId) return b;
-          // Apply safe formatting once for the new type (high-confidence only;
-          // action/dialogue/note are passthrough trim).
           const formatted = formatBlockText(type, b.content);
           return { ...b, block_type: type, content: formatted, status: "dirty" };
         }),
@@ -239,13 +318,20 @@ export function useScreenplayDocument({
       let idx = afterLocalId ? cur.findIndex((b) => b.id === afterLocalId) : cur.length - 1;
       if (idx < 0) idx = cur.length - 1;
       const after = idx >= 0 ? cur[idx] : undefined;
-      const before = cur[idx + 1];
-      const newOrder =
-        after && before
-          ? (after.order_index + before.order_index) / 2
-          : after
-            ? after.order_index + 1
-            : 0;
+      const insertAt = idx + 1;
+      const before = cur[insertAt];
+
+      // CRITICAL: order_index is INTEGER in Postgres. Using `(after+before)/2`
+      // produced fractional values that Postgres silently rejected, causing
+      // data loss. Instead, place the new block at `after+1` and renumber
+      // every block from `before` onward by +1 when there's no integer gap.
+      const afterOrder = after?.order_index ?? -1;
+      const newOrder = afterOrder + 1;
+      const needsRenumber = before !== undefined && newOrder >= before.order_index;
+      const shiftedIds: string[] = needsRenumber
+        ? cur.slice(insertAt).map((b) => b.id)
+        : [];
+
       const nb: LocalBlock = {
         id: makeLocalId(),
         block_type: blockType,
@@ -254,19 +340,27 @@ export function useScreenplayDocument({
         status: "dirty",
       };
       dirtyIds.current.add(nb.id);
+      for (const sid of shiftedIds) dirtyIds.current.add(sid);
+
       setLocalBlocks((prev) => {
         const arr = [...prev];
         const i = afterLocalId ? arr.findIndex((b) => b.id === afterLocalId) : arr.length - 1;
         const at = i < 0 ? arr.length : i + 1;
+        if (needsRenumber) {
+          for (let j = at; j < arr.length; j++) {
+            arr[j] = { ...arr[j], order_index: arr[j].order_index + 1, status: "dirty" };
+          }
+        }
         arr.splice(at, 0, nb);
         return arr;
       });
       markDirty();
       setActiveBlockId(nb.id);
       queueInsert(nb.id);
+      for (const sid of shiftedIds) scheduleUpdate(sid, 200);
       return nb.id;
     },
-    [markDirty, queueInsert],
+    [markDirty, queueInsert, scheduleUpdate],
   );
 
   const insertAtEnd = useCallback(
@@ -282,7 +376,6 @@ export function useScreenplayDocument({
       const cur = blocksRef.current;
       const idx = cur.findIndex((b) => b.id === localId);
       if (idx < 0) return;
-      // Never delete the final remaining block — clear it instead.
       if (cur.length <= 1) {
         setLocalBlocks((prev) =>
           prev.map((b) =>
