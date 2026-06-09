@@ -270,7 +270,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
               const prev = i > 0 ? doc.localBlocks[i - 1] : undefined;
               const isNewScene = b.block_type === "scene_heading" && i > 0;
               return (
-                <div key={b.id}>
+                <div key={b.id} data-local-id={b.id}>
                   {isNewScene && (
                     <div className="my-6 flex items-center gap-3 font-sans" aria-hidden="true">
                       <div className="h-px flex-1 bg-border/60" />
