@@ -232,9 +232,11 @@ export function ScreenplayLine({
     if (!languageContext) return;
     if (focused) return;
     const id = setTimeout(() => {
+      const blockLang = (block.metadata as any)?.language as string | undefined;
       const decisions = analyzeUnknownTerms(block.content, {
         ...languageContext,
         blockType: block.block_type,
+        blockLanguageOverride: (blockLang as any) ?? null,
       });
       setUnknownTerms(
         decisions
@@ -243,7 +245,7 @@ export function ScreenplayLine({
       );
     }, 400);
     return () => clearTimeout(id);
-  }, [block.content, block.block_type, focused, languageContext]);
+  }, [block.content, block.block_type, block.metadata, focused, languageContext]);
 
   const visibleUnknowns = useMemo(
     () => unknownTerms.filter((u) => !dismissedTerms.has(u.term.toLowerCase())),
