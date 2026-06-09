@@ -119,6 +119,8 @@ function Editor() {
 
   // Project Dictionary — terms that should never be auto-corrected.
   const dictionary = useProjectDictionary(projectId);
+  const rejectedFixes = useMemo(() => getRejectedSet(projectId), [projectId]);
+
 
 
 
