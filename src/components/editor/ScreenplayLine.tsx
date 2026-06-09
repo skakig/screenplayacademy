@@ -44,6 +44,8 @@ export type AutoFormatEvent = {
   original: string;
   formatted: string;
   typeChanged: boolean;
+  /** Set when a high-confidence language fix (e.g. i → I) was applied. */
+  languageFixKind?: "capitalize_i" | "sentence_start";
 };
 
 export function ScreenplayLine({
@@ -60,6 +62,8 @@ export function ScreenplayLine({
   onFocus,
   onCreateCharacter,
   onAutoFormatApplied,
+  languageContext,
+  onAddDictionaryTerm,
 }: {
   block: LocalBlock;
   isActive: boolean;
@@ -74,9 +78,14 @@ export function ScreenplayLine({
   onFocus: () => void;
   onCreateCharacter: (name: string) => Promise<any>;
   onAutoFormatApplied?: (e: AutoFormatEvent) => void;
+  /** Project-aware language intelligence context. Optional. */
+  languageContext?: LanguageContext;
+  /** When provided, the "Add to Project Dictionary" chip becomes interactive. */
+  onAddDictionaryTerm?: (term: string, category?: "character" | "location" | "custom") => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [focused, setFocused] = useState(false);
+
 
   // auto-resize. For empty content, clear the inline height so the CSS
   // min-height (which keeps the line visible/tappable on mobile) can apply.
