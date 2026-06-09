@@ -736,7 +736,7 @@ function Editor() {
               primaryBusy={primaryBusy || insertTemplate.isPending}
               persistence={persistence}
               projectDictionary={dictionary.termSet}
-              rejectedFixes={useMemo(() => getRejectedSet(projectId), [projectId])}
+              rejectedFixes={rejectedFixes}
               onAddDictionaryTerm={(term, category) => {
                 dictionary.addTerm({
                   term,
