@@ -244,6 +244,59 @@ export function ScreenplayLine({
     [unknownTerms, dismissedTerms],
   );
 
+  // ---------- medium-confidence structural suggestion (idle, blur-only) ----------
+  const [suggestion, setSuggestion] = useState<{
+    type: string;
+    reason: string;
+    transformedText: string;
+    fromContent: string;
+  } | null>(null);
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (focused) return;
+    if (!block.content.trim()) { setSuggestion(null); return; }
+    const id = setTimeout(() => {
+      const decision = analyzeFormat(block.content, {
+        currentBlockType: block.block_type,
+        prevBlockType,
+        characterNames: languageContext?.characterNames,
+      });
+      if (
+        decision.confidence === "medium" &&
+        decision.suggestedType !== block.block_type &&
+        !dismissedSuggestions.has(`${block.block_type}>${decision.suggestedType}|${block.content}`)
+      ) {
+        setSuggestion({
+          type: decision.suggestedType,
+          reason: decision.reason,
+          transformedText: decision.transformedText,
+          fromContent: block.content,
+        });
+      } else {
+        setSuggestion(null);
+      }
+    }, 600);
+    return () => clearTimeout(id);
+  }, [block.content, block.block_type, focused, prevBlockType, languageContext?.characterNames, dismissedSuggestions]);
+
+  const acceptSuggestion = () => {
+    if (!suggestion) return;
+    onChangeType(suggestion.type);
+    if (suggestion.transformedText !== block.content) {
+      onContentChange(suggestion.transformedText);
+    }
+    setSuggestion(null);
+    toast.success(`→ ${BLOCK_LABEL[suggestion.type] ?? suggestion.type}`, { duration: 1000 });
+  };
+  const dismissSuggestion = () => {
+    if (!suggestion) return;
+    setDismissedSuggestions((s) =>
+      new Set(s).add(`${block.block_type}>${suggestion.type}|${suggestion.fromContent}`),
+    );
+    onRejectFormatSuggestion?.(suggestion.fromContent, suggestion.type);
+    setSuggestion(null);
+  };
+
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (slashOpen) {
