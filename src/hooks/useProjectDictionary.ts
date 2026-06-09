@@ -32,7 +32,7 @@ export function useProjectDictionary(projectId: string | undefined) {
   const addMutation = useMutation({
     mutationFn: (vars: {
       term: string;
-      category?: DictionaryEntry["category"] extends infer C ? string : string;
+      category?: string;
       createdFrom?: string;
       notes?: string;
     }) =>
@@ -45,6 +45,7 @@ export function useProjectDictionary(projectId: string | undefined) {
           notes: vars.notes,
         },
       }),
+
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["project_dictionary", projectId] });
     },
