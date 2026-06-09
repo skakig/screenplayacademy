@@ -117,6 +117,29 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       return () => clearTimeout(id);
     }, [lastFormat]);
 
+    // Build a language-intelligence context once per relevant input change.
+    // Character names from the project sidebar, project dictionary terms,
+    // and any rejected fixes (sticky undo) are all lowercased sets.
+    const characterNameSet = React.useMemo(() => {
+      const s = new Set<string>();
+      for (const c of characters) {
+        if (c?.name) s.add(c.name.toLowerCase());
+      }
+      return s;
+    }, [characters]);
+
+    const languageContext = React.useMemo(
+      () => ({
+        blockType: "action", // overridden per-line by ScreenplayLine
+        characterNames: characterNameSet,
+        projectDictionary: projectDictionary ?? new Set<string>(),
+        rejectedFixes: rejectedFixes ?? new Set<string>(),
+      }),
+      [characterNameSet, projectDictionary, rejectedFixes],
+    );
+
+
+
     // Dedicated editor scroll container — owns screenplay scrolling so the
     // window doesn't have to. See docs/EDITOR_FOCUS_AND_VIEWPORT.md.
     const scrollRef = useRef<HTMLDivElement>(null);
