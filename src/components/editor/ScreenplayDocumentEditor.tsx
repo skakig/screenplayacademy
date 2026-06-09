@@ -9,6 +9,8 @@ import type { PersistenceAdapter } from "./screenplayPersistence";
 import { BLOCK_LABEL } from "@/lib/editor/autoFormat";
 import { t } from "@/lib/i18n/t";
 import { useActiveLineViewport, type ActiveLineViewportMode } from "./useActiveLineViewport";
+import { formatPastedScript, type ParsedBlock } from "./screenplayAutoFormat";
+import { PasteFormatPreviewDialog } from "./PasteFormatPreviewDialog";
 
 
 export type ActiveBlockMeta = {
