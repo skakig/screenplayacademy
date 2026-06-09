@@ -89,6 +89,16 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       );
     }, [doc.activeBlockId, doc.localBlocks, onActiveBlockChange]);
 
+    // Auto-format indicator state. Shows a small pill describing the most
+    // recent format event for ~5s, with a "why" tooltip for beginners.
+    const [lastFormat, setLastFormat] = useState<AutoFormatEvent | null>(null);
+    const [whyOpen, setWhyOpen] = useState(false);
+    useEffect(() => {
+      if (!lastFormat) return;
+      const id = setTimeout(() => setLastFormat(null), 5000);
+      return () => clearTimeout(id);
+    }, [lastFormat]);
+
     useImperativeHandle(
       ref,
       () => ({
