@@ -32,6 +32,14 @@ const PLACEHOLDERS: Record<string, string> = {
 
 const QUICK_TYPES = ["scene_heading", "action", "character", "dialogue", "parenthetical"] as const;
 
+export type AutoFormatEvent = {
+  blockId: string;
+  blockType: string;
+  original: string;
+  formatted: string;
+  typeChanged: boolean;
+};
+
 export function ScreenplayLine({
   block,
   isActive,
@@ -45,6 +53,7 @@ export function ScreenplayLine({
   onSlashInsert,
   onFocus,
   onCreateCharacter,
+  onAutoFormatApplied,
 }: {
   block: LocalBlock;
   isActive: boolean;
@@ -58,6 +67,7 @@ export function ScreenplayLine({
   onSlashInsert: (type: string) => void;
   onFocus: () => void;
   onCreateCharacter: (name: string) => Promise<any>;
+  onAutoFormatApplied?: (e: AutoFormatEvent) => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [focused, setFocused] = useState(false);
@@ -146,20 +156,31 @@ export function ScreenplayLine({
     // strong scene-heading / character / transition / parenthetical signal
     // into a generic block, switch type before formatting the text.
     let effectiveType = block.block_type;
+    let typeChanged = false;
     if (!autoTypedRef.current) {
       const detected = detectBlockType(raw);
       if (detected && detected !== block.block_type) {
         autoTypedRef.current = true;
         onChangeType(detected);
         effectiveType = detected;
+        typeChanged = true;
         toast.success(`Auto-formatted as ${BLOCK_LABEL[detected]}`, { duration: 1200 });
       }
     }
     const formatted = formatBlockText(effectiveType, raw);
-    if (formatted === raw) return false;
-    if (formatted === lastAppliedFormatRef.current) return false;
-    lastAppliedFormatRef.current = formatted;
-    onContentChange(formatted);
+    if (formatted === raw && !typeChanged) return false;
+    if (formatted === lastAppliedFormatRef.current && !typeChanged) return false;
+    if (formatted !== raw) {
+      lastAppliedFormatRef.current = formatted;
+      onContentChange(formatted);
+    }
+    onAutoFormatApplied?.({
+      blockId: block.id,
+      blockType: effectiveType,
+      original: raw,
+      formatted,
+      typeChanged,
+    });
     return true;
   };
 

@@ -1,11 +1,13 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Sparkles, FileText, Wand2 } from "lucide-react";
+import { Sparkles, FileText, Wand2, Info, X } from "lucide-react";
 import { useScreenplayDocument, type SaveStatus, type LocalBlock } from "./useScreenplayDocument";
-import { ScreenplayLine } from "./ScreenplayLine";
+import { ScreenplayLine, type AutoFormatEvent } from "./ScreenplayLine";
 import { nextBlockTypeAfter } from "./screenplayKeymap";
 import type { CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import type { PersistenceAdapter } from "./screenplayPersistence";
+import { BLOCK_LABEL } from "@/lib/editor/autoFormat";
+import { t } from "@/lib/i18n/t";
 
 
 export type ActiveBlockMeta = {
@@ -87,6 +89,16 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       );
     }, [doc.activeBlockId, doc.localBlocks, onActiveBlockChange]);
 
+    // Auto-format indicator state. Shows a small pill describing the most
+    // recent format event for ~5s, with a "why" tooltip for beginners.
+    const [lastFormat, setLastFormat] = useState<AutoFormatEvent | null>(null);
+    const [whyOpen, setWhyOpen] = useState(false);
+    useEffect(() => {
+      if (!lastFormat) return;
+      const id = setTimeout(() => setLastFormat(null), 5000);
+      return () => clearTimeout(id);
+    }, [lastFormat]);
+
     useImperativeHandle(
       ref,
       () => ({
@@ -159,9 +171,52 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
 
     return (
       <div
-        className="screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 cursor-text"
+        className="screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 cursor-text relative"
         onClick={handlePaperClick}
       >
+        {lastFormat && (
+          <div
+            className="sticky top-3 z-20 mx-auto mb-3 w-fit max-w-full font-sans"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 backdrop-blur px-3 py-1.5 shadow-sm text-xs text-foreground">
+              <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" aria-hidden="true" />
+              <span className="truncate max-w-[320px]">
+                {lastFormat.typeChanged
+                  ? t("editor.autoFormat.indicator", {
+                      result: BLOCK_LABEL[lastFormat.blockType] ?? lastFormat.blockType,
+                    })
+                  : t("editor.autoFormat.indicatorGeneric")}
+              </span>
+              <button
+                type="button"
+                onClick={() => setWhyOpen((v) => !v)}
+                className="inline-flex items-center justify-center rounded-full p-0.5 text-muted-foreground hover:text-foreground hover:bg-background/60 transition"
+                aria-label={t("editor.autoFormat.whyTitle")}
+                title={t("editor.autoFormat.whyTitle")}
+              >
+                <Info className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => { setLastFormat(null); setWhyOpen(false); }}
+                className="inline-flex items-center justify-center rounded-full p-0.5 text-muted-foreground hover:text-foreground hover:bg-background/60 transition"
+                aria-label={t("editor.autoFormat.dismiss")}
+                title={t("editor.autoFormat.dismiss")}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            {whyOpen && (
+              <div className="mt-2 mx-auto max-w-[420px] rounded-lg border border-border/60 bg-popover px-3 py-2 text-xs text-muted-foreground shadow-md">
+                <div className="font-semibold text-foreground mb-1">
+                  {t("editor.autoFormat.whyTitle")}
+                </div>
+                <p className="leading-relaxed">{t("editor.autoFormat.whyBody")}</p>
+              </div>
+            )}
+          </div>
+        )}
         {blocksLoading && doc.localBlocks.length === 0 ? (
           <div className="space-y-3 py-8 font-sans">
             <div className="h-5 w-2/3 bg-muted/50 rounded animate-pulse" />
@@ -202,6 +257,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     }}
                     onDeleteEmpty={() => doc.deleteBlock(b.id)}
                     onSlashInsert={(type) => doc.insertBlockAfter(b.id, type)}
+                    onAutoFormatApplied={(e) => setLastFormat(e)}
                   />
                 </div>
               );
