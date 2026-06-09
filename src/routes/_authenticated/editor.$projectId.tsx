@@ -785,6 +785,8 @@ function Editor() {
               persistence={persistence}
               projectDictionary={dictionary.termSet}
               rejectedFixes={rejectedFixes}
+              screenplayLanguage={screenplayLanguage}
+              knownLanguages={knownLanguages}
               onAddDictionaryTerm={(term, category) => {
                 dictionary.addTerm({
                   term,
