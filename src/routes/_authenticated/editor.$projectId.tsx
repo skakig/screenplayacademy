@@ -379,13 +379,9 @@ function Editor() {
   const activeScene = activeSceneIdx >= 0 ? outline[activeSceneIdx] : null;
 
   const jumpToBlock = useCallback((serverId: string) => {
+    // jumpToServer also triggers the active-line viewport scroller so the
+    // jumped-to block lands in the focus zone — no manual scrollIntoView here.
     editorRef.current?.jumpToServer(serverId);
-    if (typeof document !== "undefined") {
-      requestAnimationFrame(() => {
-        const el = document.querySelector(`[data-block-id="${serverId}"]`) as HTMLElement | null;
-        el?.scrollIntoView({ behavior: "smooth", block: "center" });
-      });
-    }
   }, []);
 
   const addSceneAtEnd = useCallback(() => {
@@ -572,7 +568,7 @@ function Editor() {
         </aside>
         )}
 
-        <section className="min-h-[calc(100vh-104px)] p-6 lg:p-10 screenplay-canvas">
+        <section className="h-[calc(100vh-104px)] flex flex-col p-6 lg:p-10 screenplay-canvas overflow-hidden">
           {isLoglineStep ? (
             <div className="max-w-[760px] mx-auto pt-4">
               <div className="mb-3 text-center">
@@ -713,22 +709,24 @@ function Editor() {
             onCopyAll={copyAllText}
           />
 
-          <ScreenplayDocumentEditor
-            ref={editorRef}
-            projectId={projectId}
-            initialBlocks={blocks as any[]}
-            blocksLoading={blocksLoading}
-            characters={characters as CharacterHit[]}
-            onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
-            onActiveBlockChange={setActiveMeta}
-            onBlockCreated={handleBlockCreated}
-            onDraftRestored={handleDraftRestored}
-            onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
-            onDraftWithAi={draftOpeningWithAi}
-            onInsertTemplate={() => void insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
-            primaryBusy={primaryBusy || insertTemplate.isPending}
-            persistence={persistence}
-          />
+          <div className="flex-1 min-h-0">
+            <ScreenplayDocumentEditor
+              ref={editorRef}
+              projectId={projectId}
+              initialBlocks={blocks as any[]}
+              blocksLoading={blocksLoading}
+              characters={characters as CharacterHit[]}
+              onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
+              onActiveBlockChange={setActiveMeta}
+              onBlockCreated={handleBlockCreated}
+              onDraftRestored={handleDraftRestored}
+              onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
+              onDraftWithAi={draftOpeningWithAi}
+              onInsertTemplate={() => void insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
+              primaryBusy={primaryBusy || insertTemplate.isPending}
+              persistence={persistence}
+            />
+          </div>
 
           <EditorCommandBar
             currentBlockType={activeBlockType}

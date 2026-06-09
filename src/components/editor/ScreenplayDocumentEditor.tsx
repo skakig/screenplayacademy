@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, FileText, Wand2, Info, X } from "lucide-react";
 import { useScreenplayDocument, type SaveStatus, type LocalBlock } from "./useScreenplayDocument";
@@ -8,6 +8,7 @@ import type { CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import type { PersistenceAdapter } from "./screenplayPersistence";
 import { BLOCK_LABEL } from "@/lib/editor/autoFormat";
 import { t } from "@/lib/i18n/t";
+import { useActiveLineViewport, type ActiveLineViewportMode } from "./useActiveLineViewport";
 
 
 export type ActiveBlockMeta = {
@@ -46,6 +47,8 @@ type Props = {
    * NullPersistenceAdapter to run fully local.
    */
   persistence?: PersistenceAdapter;
+  /** Focus-zone mode for the active-line viewport scroller. */
+  viewportMode?: ActiveLineViewportMode;
 };
 
 export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props>(
@@ -66,6 +69,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       onInsertTemplate,
       primaryBusy,
       persistence,
+      viewportMode = "normal",
     },
     ref,
   ) {
@@ -102,6 +106,33 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       return () => clearTimeout(id);
     }, [lastFormat]);
 
+    // Dedicated editor scroll container — owns screenplay scrolling so the
+    // window doesn't have to. See docs/EDITOR_FOCUS_AND_VIEWPORT.md.
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const isMobile =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(max-width: 640px)").matches;
+
+    const getActiveLineEl = useCallback(() => {
+      const id = doc.activeBlockId;
+      if (!id || !scrollRef.current) return null;
+      return scrollRef.current.querySelector<HTMLElement>(
+        `[data-local-id="${CSS.escape(id)}"]`,
+      );
+    }, [doc.activeBlockId]);
+
+    const { scheduleScroll } = useActiveLineViewport({
+      containerRef: scrollRef,
+      getActiveLineEl,
+      mode: viewportMode,
+      isMobile,
+    });
+
+    // Re-center on active-line change and on block count change (Enter inserts).
+    useEffect(() => {
+      scheduleScroll("enter");
+    }, [doc.activeBlockId, doc.localBlocks.length, scheduleScroll]);
+
     useImperativeHandle(
       ref,
       () => ({
@@ -118,10 +149,13 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
         insertAtEnd: (t) => {
           doc.insertAtEnd(t);
         },
-        jumpToServer: (serverId) => doc.jumpToServer(serverId),
+        jumpToServer: (serverId) => {
+          doc.jumpToServer(serverId);
+          scheduleScroll("jump", { force: true });
+        },
         getBlocks: () => doc.localBlocks,
       }),
-      [doc],
+      [doc, scheduleScroll],
     );
 
     // Use click (not mousedown) so iOS Safari completes the tap gesture before
@@ -174,9 +208,13 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
 
     return (
       <div
-        className="screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 cursor-text relative"
-        onClick={handlePaperClick}
+        ref={scrollRef}
+        className="screenplay-scroll relative h-full overflow-y-auto overscroll-contain"
       >
+        <div
+          className="screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 cursor-text relative"
+          onClick={handlePaperClick}
+        >
         {lastFormat && (
           <div
             className="sticky top-3 z-20 mx-auto mb-3 w-fit max-w-full font-sans"
@@ -232,7 +270,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
               const prev = i > 0 ? doc.localBlocks[i - 1] : undefined;
               const isNewScene = b.block_type === "scene_heading" && i > 0;
               return (
-                <div key={b.id}>
+                <div key={b.id} data-local-id={b.id}>
                   {isNewScene && (
                     <div className="my-6 flex items-center gap-3 font-sans" aria-hidden="true">
                       <div className="h-px flex-1 bg-border/60" />
@@ -292,6 +330,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
             )}
           </>
         )}
+        </div>
       </div>
     );
   },
