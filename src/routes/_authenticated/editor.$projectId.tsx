@@ -733,7 +733,18 @@ function Editor() {
               onInsertTemplate={() => void insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
               primaryBusy={primaryBusy || insertTemplate.isPending}
               persistence={persistence}
+              projectDictionary={dictionary.termSet}
+              rejectedFixes={useMemo(() => getRejectedSet(projectId), [projectId])}
+              onAddDictionaryTerm={(term, category) => {
+                dictionary.addTerm({
+                  term,
+                  category: (category ?? "custom") as never,
+                  createdFrom: "script_detection",
+                });
+                toast.success(`Added "${term}" to project dictionary`, { duration: 1500 });
+              }}
             />
+
           </div>
 
           <EditorCommandBar
