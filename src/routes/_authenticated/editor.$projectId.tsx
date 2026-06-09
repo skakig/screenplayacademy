@@ -659,13 +659,12 @@ function Editor() {
             characters={characters as CharacterHit[]}
             onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
             onActiveBlockChange={setActiveMeta}
-            onSaveStatus={setSaveStatus}
-            onLastSaved={setLastSavedAt}
             onBlockCreated={handleBlockCreated}
             onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
             onDraftWithAi={draftOpeningWithAi}
             onInsertTemplate={() => void insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
             primaryBusy={primaryBusy || insertTemplate.isPending}
+            persistence={persistence}
           />
 
           <EditorCommandBar
@@ -679,12 +678,14 @@ function Editor() {
           {(blocks as any[]).length > 0 && (
             <div className="max-w-[680px] mx-auto mt-4 flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => {
-                const text = (blocks as any[]).filter((b: any) => b.block_type !== "note").map(formatExport).join("\n\n");
+                const local = editorRef.current?.getBlocks() ?? (blocks as any[]);
+                const text = local.filter((b: any) => b.block_type !== "note").map(formatExport).join("\n\n");
                 navigator.clipboard.writeText(text);
                 toast.success("Screenplay copied to clipboard");
               }}><Copy className="h-3.5 w-3.5 mr-1.5" />Copy</Button>
               <Button variant="outline" size="sm" onClick={() => {
-                const text = (blocks as any[]).filter((b: any) => b.block_type !== "note").map(formatExport).join("\n\n");
+                const local = editorRef.current?.getBlocks() ?? (blocks as any[]);
+                const text = local.filter((b: any) => b.block_type !== "note").map(formatExport).join("\n\n");
                 const blob = new Blob([text], { type: "text/plain" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
