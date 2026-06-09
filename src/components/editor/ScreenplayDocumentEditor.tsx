@@ -1,11 +1,13 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Sparkles, FileText, Wand2 } from "lucide-react";
+import { Sparkles, FileText, Wand2, Info, X } from "lucide-react";
 import { useScreenplayDocument, type SaveStatus, type LocalBlock } from "./useScreenplayDocument";
-import { ScreenplayLine } from "./ScreenplayLine";
+import { ScreenplayLine, type AutoFormatEvent } from "./ScreenplayLine";
 import { nextBlockTypeAfter } from "./screenplayKeymap";
 import type { CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import type { PersistenceAdapter } from "./screenplayPersistence";
+import { BLOCK_LABEL } from "@/lib/editor/autoFormat";
+import { t } from "@/lib/i18n/t";
 
 
 export type ActiveBlockMeta = {
