@@ -69,6 +69,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       onInsertTemplate,
       primaryBusy,
       persistence,
+      viewportMode = "normal",
     },
     ref,
   ) {
