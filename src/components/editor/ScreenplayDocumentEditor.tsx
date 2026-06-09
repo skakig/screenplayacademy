@@ -35,6 +35,7 @@ type Props = {
   onSaveStatus?: (s: SaveStatus) => void;
   onLastSaved?: (ts: number) => void;
   onBlockCreated?: (block_type: string) => void;
+  onDraftRestored?: (count: number) => void;
   onOpenStoryBuilder?: () => void;
   onDraftWithAi?: () => void;
   onInsertTemplate?: () => void;
@@ -59,6 +60,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       onSaveStatus,
       onLastSaved,
       onBlockCreated,
+      onDraftRestored,
       onOpenStoryBuilder,
       onDraftWithAi,
       onInsertTemplate,
@@ -74,6 +76,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       onSaveStatus,
       onLastSaved,
       onBlockCreated,
+      onDraftRestored,
       persistence,
     });
 
