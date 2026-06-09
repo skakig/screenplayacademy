@@ -121,6 +121,20 @@ function Editor() {
   const [saveStatus, setSaveStatus] = useState<AutosaveStatus>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
+  // Local-first persistence adapter: owns insert/update/delete queues,
+  // patches the ["blocks", projectId] cache in place. Never invalidates
+  // during typing. One adapter per (projectId, queryClient).
+  const persistence = useMemo(
+    () =>
+      createSupabasePersistenceAdapter({
+        projectId,
+        queryClient: qc,
+        onSaveStatus: (s) => setSaveStatus(s as AutosaveStatus),
+        onLastSaved: setLastSavedAt,
+      }),
+    [projectId, qc],
+  );
+
   const emitEvent = useWriterEvents();
 
   // beforeunload warning while unsaved
