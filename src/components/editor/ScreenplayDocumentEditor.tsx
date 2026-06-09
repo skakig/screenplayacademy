@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, FileText, Wand2, Info, X } from "lucide-react";
 import { useScreenplayDocument, type SaveStatus, type LocalBlock } from "./useScreenplayDocument";
@@ -8,6 +8,7 @@ import type { CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import type { PersistenceAdapter } from "./screenplayPersistence";
 import { BLOCK_LABEL } from "@/lib/editor/autoFormat";
 import { t } from "@/lib/i18n/t";
+import { useActiveLineViewport, type ActiveLineViewportMode } from "./useActiveLineViewport";
 
 
 export type ActiveBlockMeta = {
