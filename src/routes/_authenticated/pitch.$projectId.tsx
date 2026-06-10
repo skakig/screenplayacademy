@@ -6,10 +6,12 @@ import { AppShell } from "@/components/AppShell";
 import { ProjectNav } from "@/components/ProjectNav";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Sparkles, Copy, Loader2 } from "lucide-react";
+import { Sparkles, Copy, Loader2, FileDown, Clapperboard } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { generatePitchPackage } from "@/lib/ai.functions";
+import { format } from "date-fns";
+import { downloadPitchKitPdf } from "@/components/editor/pitchKitPdf";
 
 export const Route = createFileRoute("/_authenticated/pitch/$projectId")({
   head: () => ({ meta: [{ title: "Pitch Package — SceneSmith AI" }] }),
