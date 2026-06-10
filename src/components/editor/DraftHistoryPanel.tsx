@@ -529,6 +529,60 @@ export function DraftHistoryPanel({ projectId }: Props) {
         </div>
       )}
 
+      {comparisons.length > 0 && (
+        <div className="rounded-md border border-border/50 bg-card/30 p-2 space-y-1.5">
+          <div className="flex items-center gap-1.5 px-0.5">
+            <Bookmark className="h-3 w-3 text-primary" />
+            <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
+              Saved comparisons
+            </p>
+          </div>
+          <ul className="space-y-1">
+            {comparisons.map((c) => {
+              const missing =
+                !takes.find((t) => t.id === c.leftTakeId) ||
+                !takes.find((t) => t.id === c.rightTakeId);
+              return (
+                <li
+                  key={c.id}
+                  className="flex items-center gap-1 rounded border border-border/40 bg-background/40 px-2 py-1"
+                >
+                  <button
+                    type="button"
+                    onClick={() => reopenComparison(c)}
+                    disabled={missing}
+                    className="flex-1 min-w-0 text-left disabled:opacity-50"
+                    title={
+                      missing
+                        ? "A referenced take is no longer available"
+                        : "Reopen comparison"
+                    }
+                  >
+                    <p className="text-xs font-medium truncate">{c.label}</p>
+                    <p className="text-[10px] text-muted-foreground font-mono">
+                      {format(c.savedAt, "MMM d · HH:mm")}
+                      {missing && (
+                        <span className="ml-1.5 text-amber-500">· take missing</span>
+                      )}
+                    </p>
+                  </button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => deleteComparison(c.id)}
+                    aria-label="Delete saved comparison"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+
       {takes.length === 0 ? (
         <p className="text-xs text-muted-foreground italic px-1">
           No takes yet. Capture your first slate before a big rewrite.
