@@ -153,6 +153,44 @@ export function DraftHistoryPanel({ projectId }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [diffOpen, setDiffOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [comparisons, setComparisons] = useState<SavedComparison[]>([]);
+
+  useEffect(() => {
+    setComparisons(readComparisons(projectId));
+  }, [projectId]);
+
+  const saveComparison = (label: string) => {
+    if (selectedIds.length !== 2) return;
+    const [a, b] = selectedIds;
+    const entry: SavedComparison = {
+      id: `cmp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      label,
+      leftTakeId: a,
+      rightTakeId: b,
+      savedAt: Date.now(),
+    };
+    const next = [entry, ...comparisons].slice(0, 25);
+    writeComparisons(projectId, next);
+    setComparisons(next);
+    toast.success(`Saved comparison "${label}"`);
+  };
+
+  const reopenComparison = (cmp: SavedComparison) => {
+    const left = takes.find((t) => t.id === cmp.leftTakeId);
+    const right = takes.find((t) => t.id === cmp.rightTakeId);
+    if (!left || !right) {
+      toast.error("One of the takes in this comparison is no longer available.");
+      return;
+    }
+    setSelectedIds([cmp.leftTakeId, cmp.rightTakeId]);
+    setDiffOpen(true);
+  };
+
+  const deleteComparison = (id: string) => {
+    const next = comparisons.filter((c) => c.id !== id);
+    writeComparisons(projectId, next);
+    setComparisons(next);
+  };
 
   const toggleSelected = (id: string) => {
     setSelectedIds((prev) => {
