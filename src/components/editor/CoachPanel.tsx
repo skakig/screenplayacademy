@@ -157,7 +157,7 @@ export function CoachPanel({
                 <div className="flex items-center gap-2">
                   <p className="text-xs text-muted-foreground">{run.isPending ? "Reading…" : "Get a take on this scene."}</p>
                   <Button size="sm" variant="outline" className="ml-auto h-7 text-xs" onClick={() => run.mutate()} disabled={run.isPending || !sceneText}>
-                    Coach this scene
+                    Director's notes
                   </Button>
                 </div>
               )}
