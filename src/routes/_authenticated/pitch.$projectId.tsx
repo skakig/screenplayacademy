@@ -139,6 +139,51 @@ function Pitch() {
               );
             })}
             {pitch.generated_at && <p className="text-xs text-muted-foreground text-center">Generated {new Date(pitch.generated_at).toLocaleString()}</p>}
+
+            <Card className="p-5">
+              <div className="flex items-start justify-between mb-3 gap-2">
+                <div className="flex items-center gap-2">
+                  <Clapperboard className="h-4 w-4 text-primary" />
+                  <h3 className="font-display text-lg font-semibold">Revision Timeline</h3>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={exportingTimeline || !takes || takes.length === 0}
+                  onClick={exportTimeline}
+                >
+                  {exportingTimeline ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <FileDown className="h-3.5 w-3.5 mr-1.5" />
+                  )}
+                  Export PDF
+                </Button>
+              </div>
+              {!takes || takes.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">
+                  No revision takes captured yet. Slate one from the editor's Takes &amp; Revisions panel.
+                </p>
+              ) : (
+                <ol className="space-y-2">
+                  {takes.map((t: any, i: number) => (
+                    <li
+                      key={t.id}
+                      className="flex items-center gap-3 text-sm border-l-2 border-primary/40 pl-3 py-1"
+                    >
+                      <span className="font-mono text-xs text-muted-foreground w-10 shrink-0">
+                        TAKE {String(takes.length - i).padStart(2, "0")}
+                      </span>
+                      <span className="font-medium flex-1 truncate">{t.name}</span>
+                      <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">
+                        {format(new Date(t.captured_at), "MMM d, HH:mm")} ·{" "}
+                        {(t.word_count ?? 0).toLocaleString()} words
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </Card>
           </div>
         )}
       </div>
