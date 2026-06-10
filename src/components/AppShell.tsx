@@ -16,11 +16,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/auth", replace: true });
   };
   const nav = [
-    { to: "/dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
-    { to: "/projects" as const, label: "Projects", icon: FolderKanban },
-    { to: "/academy" as const, label: "Academy", icon: GraduationCap },
+    { to: "/dashboard" as const, label: "Studio Lobby", icon: LayoutDashboard },
+    { to: "/projects" as const, label: "Script Vault", icon: FolderKanban },
+    { to: "/academy" as const, label: "Screenplay School", icon: GraduationCap },
     { to: "/pricing" as const, label: "Pricing", icon: Sparkles },
-    { to: "/settings" as const, label: "Settings", icon: Settings },
+    { to: "/settings" as const, label: "Studio Settings", icon: Settings },
   ];
   return (
     <div className="min-h-screen flex flex-col">
