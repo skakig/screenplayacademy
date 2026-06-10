@@ -1,11 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Clapperboard, RotateCcw, Trash2, Camera } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Clapperboard, RotateCcw, Trash2, Camera, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { readDraft, type DraftPayload } from "./draftBackup";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 
 type Take = {
   id: string;
@@ -58,6 +68,13 @@ export function DraftHistoryPanel({ projectId }: Props) {
   const [takes, setTakes] = useState<Take[]>([]);
   const [name, setName] = useState("");
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState("");
+
+  const [pendingRestore, setPendingRestore] = useState<Take | null>(null);
+  const [pendingDiscard, setPendingDiscard] = useState<Take | null>(null);
+  const [discardConfirmText, setDiscardConfirmText] = useState("");
+
   const refresh = useCallback(() => setTakes(readTakes(projectId)), [projectId]);
 
   useEffect(() => {
@@ -85,11 +102,33 @@ export function DraftHistoryPanel({ projectId }: Props) {
     toast.success(`Slated "${take.name}"`);
   };
 
-  const restore = (take: Take) => {
+  const startRename = (take: Take) => {
+    setEditingId(take.id);
+    setEditingValue(take.name);
+  };
+
+  const commitRename = () => {
+    if (!editingId) return;
+    const trimmed = editingValue.trim();
+    if (!trimmed) {
+      setEditingId(null);
+      return;
+    }
+    const next = takes.map((t) => (t.id === editingId ? { ...t, name: trimmed } : t));
+    writeTakes(projectId, next);
+    setTakes(next);
+    setEditingId(null);
+    setEditingValue("");
+  };
+
+  const cancelRename = () => {
+    setEditingId(null);
+    setEditingValue("");
+  };
+
+  const performRestore = (take: Take) => {
     if (typeof window === "undefined") return;
-    if (!window.confirm(`Roll back to "${take.name}"? Your current draft will be replaced.`)) return;
     try {
-      // Snapshot current state first so the rollback itself is reversible.
       const current = readDraft(projectId);
       if (current && current.blocks.length > 0) {
         const safety: Take = {
@@ -113,11 +152,15 @@ export function DraftHistoryPanel({ projectId }: Props) {
     }
   };
 
-  const remove = (take: Take) => {
+  const performDiscard = (take: Take) => {
     const next = takes.filter((t) => t.id !== take.id);
     writeTakes(projectId, next);
     setTakes(next);
+    toast.success(`Discarded "${take.name}"`);
   };
+
+  const discardPhrase = useMemo(() => pendingDiscard?.name ?? "", [pendingDiscard]);
+  const discardMatches = discardConfirmText.trim() === discardPhrase.trim() && discardPhrase.length > 0;
 
   return (
     <div className="space-y-3">
@@ -131,7 +174,7 @@ export function DraftHistoryPanel({ projectId }: Props) {
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder='Take name (e.g. "Act II reworked")'
+          placeholder='Take label (e.g. "Act II reworked")'
           className="h-8 text-xs"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -156,56 +199,213 @@ export function DraftHistoryPanel({ projectId }: Props) {
       ) : (
         <ScrollArea className="h-[360px] -mr-2 pr-2">
           <ul className="space-y-2">
-            {takes.map((t, i) => (
-              <li
-                key={t.id}
-                className="rounded-md border border-border/50 bg-card/30 overflow-hidden"
-              >
-                <div className="flex items-stretch">
-                  <div
-                    className="w-9 shrink-0 flex flex-col items-center justify-center bg-primary/10 border-r border-border/50 font-mono text-[10px] text-primary/80 leading-tight py-2"
-                    aria-hidden
-                  >
-                    <span className="text-muted-foreground">TAKE</span>
-                    <span className="text-sm font-semibold">
-                      {String(takes.length - i).padStart(2, "0")}
-                    </span>
-                  </div>
-                  <div className="flex-1 p-2.5 min-w-0">
-                    <p className="text-xs font-medium truncate">{t.name}</p>
-                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                      {formatDistanceToNow(t.capturedAt, { addSuffix: true })}
-                      <span className="mx-1.5 opacity-50">·</span>
-                      {t.wordCount.toLocaleString()} words
-                      <span className="mx-1.5 opacity-50">·</span>
-                      {t.blockCount} lines
-                    </p>
-                    <div className="flex items-center gap-1 mt-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-6 text-[10px] px-2"
-                        onClick={() => restore(t)}
+            {takes.map((t, i) => {
+              const isEditing = editingId === t.id;
+              return (
+                <li
+                  key={t.id}
+                  className="rounded-md border border-border/50 bg-card/30 overflow-hidden"
+                >
+                  <div className="flex items-stretch">
+                    <div
+                      className="w-9 shrink-0 flex flex-col items-center justify-center bg-primary/10 border-r border-border/50 font-mono text-[10px] text-primary/80 leading-tight py-2"
+                      aria-hidden
+                    >
+                      <span className="text-muted-foreground">TAKE</span>
+                      <span className="text-sm font-semibold">
+                        {String(takes.length - i).padStart(2, "0")}
+                      </span>
+                    </div>
+                    <div className="flex-1 p-2.5 min-w-0">
+                      {isEditing ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            autoFocus
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                commitRename();
+                              } else if (e.key === "Escape") {
+                                e.preventDefault();
+                                cancelRename();
+                              }
+                            }}
+                            className="h-6 text-xs px-2"
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={commitRename}
+                            aria-label="Save label"
+                          >
+                            <Check className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={cancelRename}
+                            aria-label="Cancel"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 group">
+                          <p className="text-xs font-medium truncate flex-1">{t.name}</p>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => startRename(t)}
+                            aria-label="Rename take"
+                            title="Rename"
+                          >
+                            <Pencil className="h-2.5 w-2.5" />
+                          </Button>
+                        </div>
+                      )}
+                      <p
+                        className="text-[10px] text-muted-foreground font-mono mt-0.5"
+                        title={new Date(t.capturedAt).toLocaleString()}
                       >
-                        <RotateCcw className="h-3 w-3 mr-1" />
-                        Roll back
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground"
-                        onClick={() => remove(t)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                        {format(t.capturedAt, "MMM d, yyyy · HH:mm")}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground/80 font-mono">
+                        {formatDistanceToNow(t.capturedAt, { addSuffix: true })}
+                        <span className="mx-1.5 opacity-50">·</span>
+                        {t.wordCount.toLocaleString()} words
+                        <span className="mx-1.5 opacity-50">·</span>
+                        {t.blockCount} lines
+                      </p>
+                      <div className="flex items-center gap-1 mt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 text-[10px] px-2"
+                          onClick={() => setPendingRestore(t)}
+                        >
+                          <RotateCcw className="h-3 w-3 mr-1" />
+                          Roll back
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 text-[10px] px-2 text-muted-foreground hover:text-destructive"
+                          onClick={() => {
+                            setPendingDiscard(t);
+                            setDiscardConfirmText("");
+                          }}
+                          aria-label={`Discard ${t.name}`}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         </ScrollArea>
       )}
+
+      {/* Restore confirmation */}
+      <AlertDialog
+        open={pendingRestore !== null}
+        onOpenChange={(open) => !open && setPendingRestore(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Roll back to this take?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your current draft will be replaced with{" "}
+              <strong className="text-foreground">"{pendingRestore?.name}"</strong>{" "}
+              ({pendingRestore?.wordCount.toLocaleString()} words,{" "}
+              {pendingRestore?.blockCount} lines).
+              <br />
+              <span className="text-xs text-muted-foreground mt-2 block">
+                Don't worry — we'll auto-slate your current draft first so you can roll
+                forward again.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingRestore) performRestore(pendingRestore);
+                setPendingRestore(null);
+              }}
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+              Roll back
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Discard confirmation (type-to-confirm) */}
+      <AlertDialog
+        open={pendingDiscard !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDiscard(null);
+            setDiscardConfirmText("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard this take?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes the snapshot{" "}
+              <strong className="text-foreground">"{discardPhrase}"</strong>. Your
+              current draft is not affected, but you won't be able to roll back to this
+              take afterward.
+              <br />
+              <span className="block mt-3 text-xs text-foreground">
+                Type the take name to confirm:
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            value={discardConfirmText}
+            onChange={(e) => setDiscardConfirmText(e.target.value)}
+            placeholder={discardPhrase}
+            className="h-8 text-xs font-mono"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && discardMatches && pendingDiscard) {
+                e.preventDefault();
+                performDiscard(pendingDiscard);
+                setPendingDiscard(null);
+                setDiscardConfirmText("");
+              }
+            }}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!discardMatches}
+              onClick={() => {
+                if (pendingDiscard && discardMatches) {
+                  performDiscard(pendingDiscard);
+                  setPendingDiscard(null);
+                  setDiscardConfirmText("");
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Discard take
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
