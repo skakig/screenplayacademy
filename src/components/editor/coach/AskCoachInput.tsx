@@ -33,7 +33,7 @@ export function AskCoachInput({ onAsk, loading, placeholder }: Props) {
               submit();
             }
           }}
-          placeholder={placeholder ?? "Ask Coach about this scene…"}
+          placeholder={placeholder ?? "Ask the Director's Chair about this scene…"}
           className="text-xs min-h-[56px] pr-10 resize-none bg-background/60 border-border/60 focus-visible:ring-primary/30"
         />
         <button
