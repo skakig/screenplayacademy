@@ -41,20 +41,19 @@ import { BLOCK_LABEL } from "@/lib/editor/autoFormat";
 import { StoryNavigatorPane } from "@/components/editor/StoryNavigatorPane";
 import { CoachPane } from "@/components/editor/CoachPane";
 import { StoryBuilder } from "@/components/editor/StoryBuilder";
-import { StudioModeToggle } from "@/components/editor/StudioModeToggle";
+import { WriterDeskModeToggle } from "@/components/editor/WriterDeskModeToggle";
 import { FeatureDock } from "@/components/editor/FeatureDock";
 import { GuidedStepStrip } from "@/components/editor/GuidedStepStrip";
 import { CanvasToolbar } from "@/components/editor/CanvasToolbar";
 import { useManuscriptAnalyzer } from "@/hooks/useManuscriptAnalyzer";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { buildOutline, estimatePages } from "@/lib/editor/manuscriptAnalyzer";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Map as MapIcon, Clapperboard } from "lucide-react";
 import { useWriterEvents } from "@/hooks/useWriterEvents";
 import { useWriteMode } from "@/hooks/use-write-mode";
-import { PencilLine } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
-  head: () => ({ meta: [{ title: "Editor — SceneSmith AI" }] }),
+  head: () => ({ meta: [{ title: "Writer's Desk — Screenplay Academy" }] }),
   validateSearch: (s: Record<string, unknown>) => ({
     from: typeof s.from === "string" ? s.from : undefined,
     step: typeof s.step === "string" ? s.step : undefined,
@@ -534,26 +533,18 @@ function Editor() {
             Back to guided path{guidedStep ? ` · ${guidedStep.replace(/_/g, " ")}` : ""}
           </Link>
         ) : <span />}
-        <div className="flex items-center gap-3">
-          <StudioModeToggle />
-          <button
-            onClick={writeMode.toggle}
-            className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs rounded-full border transition-colors ${
-              writeMode.on
-                ? "bg-primary text-primary-foreground border-primary font-semibold shadow-sm"
-                : "border-border/60 bg-card/60 text-muted-foreground hover:text-foreground"
-            }`}
-            title="Hide side panels and focus on the page"
-          >
-            <PencilLine className="h-3 w-3" /> Write
-          </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <WriterDeskModeToggle />
           <Sheet open={leftDrawerOpen} onOpenChange={setLeftDrawerOpen}>
             <SheetTrigger asChild>
-              <button className="lg:hidden inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition rounded-md border border-border/60 px-2 py-1" title="Story Navigator">
-                <PanelLeft className="h-3.5 w-3.5" /> Scenes
+              <button className="lg:hidden inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition rounded-md border border-border/60 px-2 py-1" title="Script Map">
+                <PanelLeft className="h-3.5 w-3.5" /> Script Map
               </button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[300px] p-4 overflow-auto">
+              <div className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground mb-3 flex items-center gap-1.5">
+                <MapIcon className="h-3 w-3" /> Script Map
+              </div>
               <StoryNavigatorPane
                 projectId={projectId}
                 projectTitle={project?.title}
@@ -568,8 +559,8 @@ function Editor() {
           </Sheet>
           <Sheet open={rightDrawerOpen} onOpenChange={setRightDrawerOpen}>
             <SheetTrigger asChild>
-              <button className="lg:hidden inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition rounded-md border border-border/60 px-2 py-1" title="Coach">
-                <PanelRight className="h-3.5 w-3.5" /> Coach
+              <button className="lg:hidden inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition rounded-md border border-border/60 px-2 py-1" title="Director's Chair">
+                <PanelRight className="h-3.5 w-3.5" /> Director
               </button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[360px] p-0 overflow-auto">
@@ -609,10 +600,17 @@ function Editor() {
           completedCount={0}
         />
       )}
-      <div className={`grid grid-cols-1 ${writeMode.on ? "lg:grid-cols-1" : "lg:grid-cols-[280px_1fr_340px]"} max-w-[1600px] mx-auto`}>
+      <div className={`grid grid-cols-1 ${writeMode.on ? "lg:grid-cols-1" : "lg:grid-cols-[260px_1fr_320px]"} max-w-[1600px] mx-auto`}>
 
         {!writeMode.on && (
-        <aside data-tour="block-toolbar" className="hidden lg:block border-r border-border/60 p-4 min-h-[calc(100vh-104px)] sticky top-0 self-start max-h-[calc(100vh-104px)] overflow-auto bg-card/20">
+        <aside
+          data-tour="block-toolbar"
+          aria-label="Script Map"
+          className="hidden lg:block border-r border-border/40 p-4 min-h-[calc(100vh-104px)] sticky top-0 self-start max-h-[calc(100vh-104px)] overflow-auto bg-card/10"
+        >
+          <div className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground mb-3 flex items-center gap-1.5">
+            <MapIcon className="h-3 w-3" /> Script Map
+          </div>
           <StoryNavigatorPane
             projectId={projectId}
             projectTitle={project?.title}
@@ -838,7 +836,14 @@ function Editor() {
         </section>
 
         {!writeMode.on && (
-        <aside data-tour="coach-panel" className="hidden lg:block border-l border-border/60 min-h-[calc(100vh-104px)] bg-card/20 max-h-[calc(100vh-104px)] overflow-auto sticky top-0 self-start">
+        <aside
+          data-tour="coach-panel"
+          aria-label="Director's Chair"
+          className="hidden lg:block border-l border-border/40 min-h-[calc(100vh-104px)] bg-card/10 max-h-[calc(100vh-104px)] overflow-auto sticky top-0 self-start"
+        >
+          <div className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground px-4 pt-4 pb-2 flex items-center gap-1.5 border-b border-border/30">
+            <Clapperboard className="h-3 w-3" /> Director's Chair
+          </div>
           <CoachPane
             projectId={projectId}
             blocks={blocks as any}
