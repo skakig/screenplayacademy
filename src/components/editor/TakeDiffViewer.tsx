@@ -71,12 +71,21 @@ function BlockCell({
   );
 }
 
-export function TakeDiffViewer({ open, onOpenChange, left, right }: Props) {
+export function TakeDiffViewer({ open, onOpenChange, left, right, onSave, defaultLabel }: Props) {
   const rows = useMemo(
     () => (left && right ? diffTakes(left.payload, right.payload) : []),
     [left, right],
   );
   const summary = useMemo(() => diffSummary(rows), [rows]);
+  const [label, setLabel] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setLabel(defaultLabel ?? (left && right ? `${left.name} ↔ ${right.name}` : ""));
+      setSaved(false);
+    }
+  }, [open, defaultLabel, left, right]);
 
   if (!left || !right) return null;
 
