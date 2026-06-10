@@ -23,11 +23,16 @@ import {
   Cloud,
   CloudOff,
   Loader2,
+  ArrowLeftRight,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 import { readDraft, type DraftPayload } from "./draftBackup";
 import { formatDistanceToNow, format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { TakeDiffViewer } from "./TakeDiffViewer";
+import { downloadPitchKitPdf } from "./pitchKitPdf";
 
 type Take = {
   id: string;
