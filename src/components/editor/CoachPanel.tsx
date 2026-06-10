@@ -105,7 +105,7 @@ export function CoachPanel({
     <Card className="p-3 border-primary/20 bg-primary/5">
       <div className="flex items-center gap-2 mb-2">
         <Sparkles className="h-3.5 w-3.5 text-primary" />
-        <span className="text-xs font-semibold uppercase tracking-wide text-primary">Coach</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-primary">Director's Chair</span>
         <span className="text-[10px] text-muted-foreground capitalize">· {level}</span>
         <div className="ml-auto flex items-center gap-1">
           {/* Fix / Teach toggle */}
