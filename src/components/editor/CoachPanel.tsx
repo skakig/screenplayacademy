@@ -120,7 +120,7 @@ export function CoachPanel({
             <button
               className={`text-[10px] px-1.5 py-0.5 rounded-sm flex items-center gap-1 ${mode === "teach" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
               onClick={() => { setMode("teach"); setOutput(null); }}
-              title="Ask Coach to explain a screenwriting concept"
+              title="Ask the Director's Chair to explain a screenwriting concept"
             >
               <GraduationCap className="h-2.5 w-2.5" /> Teach
             </button>
