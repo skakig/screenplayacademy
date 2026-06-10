@@ -559,7 +559,7 @@ function Editor() {
           </Sheet>
           <Sheet open={rightDrawerOpen} onOpenChange={setRightDrawerOpen}>
             <SheetTrigger asChild>
-              <button className="lg:hidden inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition rounded-md border border-border/60 px-2 py-1" title="Director's Chair">
+              <button className="xl:hidden inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition rounded-md border border-border/60 px-2 py-1" title="Director's Chair">
                 <PanelRight className="h-3.5 w-3.5" /> Director
               </button>
             </SheetTrigger>
@@ -600,7 +600,13 @@ function Editor() {
           completedCount={0}
         />
       )}
-      <div className={`grid grid-cols-1 ${writeMode.on ? "lg:grid-cols-1" : "lg:grid-cols-[260px_1fr_320px]"} max-w-[1600px] mx-auto`}>
+      <div
+        className={`grid grid-cols-1 max-w-[1600px] mx-auto ${
+          writeMode.on
+            ? "lg:grid-cols-1"
+            : "lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_300px]"
+        }`}
+      >
 
         {!writeMode.on && (
         <aside
@@ -624,7 +630,7 @@ function Editor() {
         </aside>
         )}
 
-        <section className="h-[calc(100vh-104px)] flex flex-col p-6 lg:p-10 screenplay-canvas overflow-hidden">
+        <section className="h-[calc(100vh-104px)] min-w-0 flex flex-col p-4 sm:p-6 lg:p-6 xl:p-8 screenplay-canvas overflow-hidden">
           {isLoglineStep ? (
             <div className="max-w-[760px] mx-auto pt-4">
               <div className="mb-3 text-center">
