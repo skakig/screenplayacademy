@@ -46,8 +46,53 @@ function Pitch() {
     queryKey: ["pitch", projectId],
     queryFn: async () => (await supabase.from("pitch_packages").select("*").eq("project_id", projectId).maybeSingle()).data,
   });
+  const { data: takes } = useQuery({
+    queryKey: ["draft_takes", projectId],
+    queryFn: async () =>
+      (
+        await supabase
+          .from("draft_takes")
+          .select("id, name, captured_at, block_count, word_count, payload")
+          .eq("project_id", projectId)
+          .order("captured_at", { ascending: false })
+          .limit(25)
+      ).data ?? [],
+  });
 
   const [loading, setLoading] = useState(false);
+  const [exportingTimeline, setExportingTimeline] = useState(false);
+
+  const exportTimeline = async () => {
+    if (!takes || takes.length === 0) {
+      toast.error("No takes captured yet for this project.");
+      return;
+    }
+    setExportingTimeline(true);
+    try {
+      const title = project?.title ?? "Untitled project";
+      const mapped = takes.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        capturedAt: new Date(t.captured_at).getTime(),
+        blockCount: t.block_count ?? 0,
+        wordCount: t.word_count ?? 0,
+        payload: t.payload,
+      }));
+      downloadPitchKitPdf(
+        {
+          projectTitle: title,
+          takes: mapped,
+          selectedTakeIds: mapped.slice(0, 3).map((t) => t.id),
+        },
+        `${title.replace(/\s+/g, "_")}-pitch-revisions.pdf`,
+      );
+      toast.success("Revision timeline PDF downloaded");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't export PDF");
+    } finally {
+      setExportingTimeline(false);
+    }
+  };
   const gen = useMutation({
     mutationFn: async () => callGen({ data: { projectId } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["pitch", projectId] }); toast.success("Pitch package generated"); },
