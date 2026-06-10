@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,8 +7,10 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight, Bookmark, Check } from "lucide-react";
 import type { DraftPayload } from "./draftBackup";
 import { diffTakes, diffSummary } from "./takeDiff";
 import { format } from "date-fns";
@@ -25,6 +27,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   left: TakeSummary | null;
   right: TakeSummary | null;
+  onSave?: (label: string) => void;
+  defaultLabel?: string;
 };
 
 const opStyle: Record<string, string> = {
@@ -67,12 +71,21 @@ function BlockCell({
   );
 }
 
-export function TakeDiffViewer({ open, onOpenChange, left, right }: Props) {
+export function TakeDiffViewer({ open, onOpenChange, left, right, onSave, defaultLabel }: Props) {
   const rows = useMemo(
     () => (left && right ? diffTakes(left.payload, right.payload) : []),
     [left, right],
   );
   const summary = useMemo(() => diffSummary(rows), [rows]);
+  const [label, setLabel] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setLabel(defaultLabel ?? (left && right ? `${left.name} ↔ ${right.name}` : ""));
+      setSaved(false);
+    }
+  }, [open, defaultLabel, left, right]);
 
   if (!left || !right) return null;
 
@@ -113,6 +126,38 @@ export function TakeDiffViewer({ open, onOpenChange, left, right }: Props) {
             {format(right.capturedAt, "MMM d, HH:mm")}
           </div>
         </div>
+
+        {onSave && (
+          <div className="flex items-center gap-2 rounded-md border border-border/50 bg-card/40 px-2 py-1.5">
+            <Bookmark className="h-3.5 w-3.5 text-primary shrink-0" />
+            <Input
+              value={label}
+              onChange={(e) => {
+                setLabel(e.target.value);
+                setSaved(false);
+              }}
+              placeholder="Comparison label"
+              className="h-7 text-xs flex-1"
+            />
+            <Button
+              size="sm"
+              variant={saved ? "secondary" : "outline"}
+              className="h-7 text-[11px] px-2"
+              disabled={!label.trim() || saved}
+              onClick={() => {
+                onSave(label.trim());
+                setSaved(true);
+              }}
+            >
+              {saved ? (
+                <><Check className="h-3 w-3 mr-1" />Saved</>
+              ) : (
+                "Save comparison"
+              )}
+            </Button>
+          </div>
+        )}
+
 
         <ScrollArea className="h-[60vh] pr-2">
           <ul className="space-y-1.5">

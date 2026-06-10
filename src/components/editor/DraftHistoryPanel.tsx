@@ -25,6 +25,7 @@ import {
   Loader2,
   ArrowLeftRight,
   FileDown,
+  Bookmark,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -46,9 +47,43 @@ type Take = {
 };
 
 const TAKES_PREFIX = "scenesmith.takes.v1.";
+const COMPARISONS_PREFIX = "scenesmith.comparisons.v1.";
 
 function takesKey(projectId: string) {
   return TAKES_PREFIX + projectId;
+}
+
+type SavedComparison = {
+  id: string;
+  label: string;
+  leftTakeId: string;
+  rightTakeId: string;
+  savedAt: number;
+};
+
+function comparisonsKey(projectId: string) {
+  return COMPARISONS_PREFIX + projectId;
+}
+
+function readComparisons(projectId: string): SavedComparison[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(comparisonsKey(projectId));
+    if (!raw) return [];
+    const arr = JSON.parse(raw) as SavedComparison[];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeComparisons(projectId: string, items: SavedComparison[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(comparisonsKey(projectId), JSON.stringify(items));
+  } catch {
+    /* quota — silent */
+  }
 }
 
 function readTakes(projectId: string): Take[] {
@@ -118,6 +153,44 @@ export function DraftHistoryPanel({ projectId }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [diffOpen, setDiffOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [comparisons, setComparisons] = useState<SavedComparison[]>([]);
+
+  useEffect(() => {
+    setComparisons(readComparisons(projectId));
+  }, [projectId]);
+
+  const saveComparison = (label: string) => {
+    if (selectedIds.length !== 2) return;
+    const [a, b] = selectedIds;
+    const entry: SavedComparison = {
+      id: `cmp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      label,
+      leftTakeId: a,
+      rightTakeId: b,
+      savedAt: Date.now(),
+    };
+    const next = [entry, ...comparisons].slice(0, 25);
+    writeComparisons(projectId, next);
+    setComparisons(next);
+    toast.success(`Saved comparison "${label}"`);
+  };
+
+  const reopenComparison = (cmp: SavedComparison) => {
+    const left = takes.find((t) => t.id === cmp.leftTakeId);
+    const right = takes.find((t) => t.id === cmp.rightTakeId);
+    if (!left || !right) {
+      toast.error("One of the takes in this comparison is no longer available.");
+      return;
+    }
+    setSelectedIds([cmp.leftTakeId, cmp.rightTakeId]);
+    setDiffOpen(true);
+  };
+
+  const deleteComparison = (id: string) => {
+    const next = comparisons.filter((c) => c.id !== id);
+    writeComparisons(projectId, next);
+    setComparisons(next);
+  };
 
   const toggleSelected = (id: string) => {
     setSelectedIds((prev) => {
@@ -456,6 +529,60 @@ export function DraftHistoryPanel({ projectId }: Props) {
         </div>
       )}
 
+      {comparisons.length > 0 && (
+        <div className="rounded-md border border-border/50 bg-card/30 p-2 space-y-1.5">
+          <div className="flex items-center gap-1.5 px-0.5">
+            <Bookmark className="h-3 w-3 text-primary" />
+            <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
+              Saved comparisons
+            </p>
+          </div>
+          <ul className="space-y-1">
+            {comparisons.map((c) => {
+              const missing =
+                !takes.find((t) => t.id === c.leftTakeId) ||
+                !takes.find((t) => t.id === c.rightTakeId);
+              return (
+                <li
+                  key={c.id}
+                  className="flex items-center gap-1 rounded border border-border/40 bg-background/40 px-2 py-1"
+                >
+                  <button
+                    type="button"
+                    onClick={() => reopenComparison(c)}
+                    disabled={missing}
+                    className="flex-1 min-w-0 text-left disabled:opacity-50"
+                    title={
+                      missing
+                        ? "A referenced take is no longer available"
+                        : "Reopen comparison"
+                    }
+                  >
+                    <p className="text-xs font-medium truncate">{c.label}</p>
+                    <p className="text-[10px] text-muted-foreground font-mono">
+                      {format(c.savedAt, "MMM d · HH:mm")}
+                      {missing && (
+                        <span className="ml-1.5 text-amber-500">· take missing</span>
+                      )}
+                    </p>
+                  </button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => deleteComparison(c.id)}
+                    aria-label="Delete saved comparison"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+
       {takes.length === 0 ? (
         <p className="text-xs text-muted-foreground italic px-1">
           No takes yet. Capture your first slate before a big rewrite.
@@ -717,6 +844,7 @@ export function DraftHistoryPanel({ projectId }: Props) {
               })()
             : null
         }
+        onSave={saveComparison}
       />
     </div>
   );
