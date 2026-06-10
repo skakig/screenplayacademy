@@ -39,7 +39,7 @@ export const EDITOR_TOUR_STEPS: TourStep[] = [
   {
     id: "coach-panel",
     title: "Get AI feedback anytime",
-    body: "Use the AI Assistant on the right to diagnose your draft, rewrite scenes, or sharpen dialogue.",
+    body: "Use the Director's Chair on the right to diagnose your draft, rewrite scenes, or sharpen dialogue.",
     targetSelector: '[data-tour="coach-panel"]',
     placement: "left",
   },

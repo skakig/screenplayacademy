@@ -17,7 +17,7 @@ export function CoachModeToggle() {
   return (
     <div className="flex items-center gap-1.5">
       <Sparkles className="h-3.5 w-3.5 text-primary" />
-      <span className="text-xs text-muted-foreground">Coach</span>
+      <span className="text-xs text-muted-foreground">Director</span>
       <Select value={value} onValueChange={(v: "off" | "gentle" | "active" | "teaching") => mutate.mutate(v)}>
         <SelectTrigger className="h-7 w-28 text-xs"><SelectValue /></SelectTrigger>
         <SelectContent>

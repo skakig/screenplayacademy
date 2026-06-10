@@ -45,14 +45,14 @@ function Projects() {
       <div className="max-w-[1400px] mx-auto px-4 py-10">
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
           <div>
-            <h1 className="text-4xl font-bold tracking-tight">Projects</h1>
+            <h1 className="text-4xl font-bold tracking-tight">Script Vault</h1>
             <p className="text-muted-foreground mt-1">Every screenplay in one place.</p>
           </div>
-          <Button size="lg" onClick={() => navigate({ to: "/projects/new" })}><Plus className="h-4 w-4 mr-2" />New Project</Button>
+          <Button size="lg" onClick={() => navigate({ to: "/projects/new" })}><Plus className="h-4 w-4 mr-2" />Start a Script</Button>
         </div>
         <div className="relative mb-6 max-w-md">
           <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search projects..." className="pl-9" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search the vault..." className="pl-9" />
         </div>
 
         {isLoading ? (
@@ -60,9 +60,9 @@ function Projects() {
         ) : filtered.length === 0 ? (
           <Card className="p-12 text-center border-dashed">
             <Film className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <h3 className="font-semibold mb-1">No projects yet</h3>
-            <p className="text-sm text-muted-foreground mb-4">Start by creating your first screenplay.</p>
-            <Button onClick={() => navigate({ to: "/projects/new" })}><Plus className="h-4 w-4 mr-2" />New Project</Button>
+            <h3 className="font-semibold mb-1">The vault is empty</h3>
+            <p className="text-sm text-muted-foreground mb-4">Start your first screenplay — the page is waiting.</p>
+            <Button onClick={() => navigate({ to: "/projects/new" })}><Plus className="h-4 w-4 mr-2" />Start a Script</Button>
           </Card>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

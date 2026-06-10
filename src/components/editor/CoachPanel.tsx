@@ -105,7 +105,7 @@ export function CoachPanel({
     <Card className="p-3 border-primary/20 bg-primary/5">
       <div className="flex items-center gap-2 mb-2">
         <Sparkles className="h-3.5 w-3.5 text-primary" />
-        <span className="text-xs font-semibold uppercase tracking-wide text-primary">Coach</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-primary">Director's Chair</span>
         <span className="text-[10px] text-muted-foreground capitalize">· {level}</span>
         <div className="ml-auto flex items-center gap-1">
           {/* Fix / Teach toggle */}
@@ -120,7 +120,7 @@ export function CoachPanel({
             <button
               className={`text-[10px] px-1.5 py-0.5 rounded-sm flex items-center gap-1 ${mode === "teach" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
               onClick={() => { setMode("teach"); setOutput(null); }}
-              title="Ask Coach to explain a screenwriting concept"
+              title="Ask the Director's Chair to explain a screenwriting concept"
             >
               <GraduationCap className="h-2.5 w-2.5" /> Teach
             </button>
@@ -157,7 +157,7 @@ export function CoachPanel({
                 <div className="flex items-center gap-2">
                   <p className="text-xs text-muted-foreground">{run.isPending ? "Reading…" : "Get a take on this scene."}</p>
                   <Button size="sm" variant="outline" className="ml-auto h-7 text-xs" onClick={() => run.mutate()} disabled={run.isPending || !sceneText}>
-                    Coach this scene
+                    Director's notes
                   </Button>
                 </div>
               )}
@@ -167,7 +167,7 @@ export function CoachPanel({
       )}
       {!collapsed && mode === "teach" && (
         <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ask Coach to teach</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ask the Director's Chair</p>
           <div className="flex gap-1.5">
             <Input
               value={teachQuery}

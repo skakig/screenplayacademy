@@ -89,12 +89,12 @@ function Dashboard() {
       <div className="max-w-[1400px] mx-auto px-4 py-10">
         <div className="flex items-end justify-between flex-wrap gap-4 mb-8">
           <div>
-            <h1 className="text-4xl font-bold tracking-tight">Your Studio</h1>
+            <h1 className="text-4xl font-bold tracking-tight">Studio Lobby</h1>
             <p className="text-muted-foreground mt-1">Every great film starts with a blank page. Yours doesn't have to.</p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size="lg" className="shadow-lg shadow-primary/20"><Plus className="h-4 w-4 mr-2" />New Project</Button>
+              <Button size="lg" className="shadow-lg shadow-primary/20"><Plus className="h-4 w-4 mr-2" />Start a Script</Button>
             </DialogTrigger>
             <NewProjectDialog onCreate={(v) => create.mutate(v)} loading={create.isPending} />
           </Dialog>
@@ -115,15 +115,15 @@ function Dashboard() {
           ))}
         </div>
 
-        <h2 className="text-xl font-semibold mb-4">Recent Projects</h2>
+        <h2 className="text-xl font-semibold mb-4">In Production</h2>
         {isLoading ? (
           <div className="text-muted-foreground">Loading...</div>
         ) : projects.length === 0 ? (
           <Card className="p-12 text-center border-dashed">
             <Film className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <h3 className="font-semibold mb-1">No projects yet</h3>
-            <p className="text-sm text-muted-foreground mb-4">Create your first screenplay to begin.</p>
-            <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" />Start Writing</Button>
+            <h3 className="font-semibold mb-1">The page is waiting</h3>
+            <p className="text-sm text-muted-foreground mb-4">Start your first screenplay to open the Writer's Desk.</p>
+            <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" />Start a Script</Button>
           </Card>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -154,7 +154,7 @@ function NewProjectDialog({ onCreate, loading }: { onCreate: (v: any) => void; l
   });
   return (
     <DialogContent className="max-w-lg">
-      <DialogHeader><DialogTitle>New Project</DialogTitle></DialogHeader>
+      <DialogHeader><DialogTitle>Start a Script</DialogTitle></DialogHeader>
       <div className="space-y-3">
         <div><Label>Title *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="The Last Lighthouse" /></div>
         <div className="grid grid-cols-2 gap-3">

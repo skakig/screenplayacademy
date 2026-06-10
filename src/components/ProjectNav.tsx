@@ -8,14 +8,14 @@ export function ProjectNav({ projectId, title }: { projectId: string; title?: st
 
   const items = [
     ...(isGuided ? [{ to: "/first-screenplay/$projectId" as const, label: "Guided Path", icon: BookOpen }] : []),
-    { to: "/editor/$projectId" as const, label: "Editor", icon: FileText },
-    { to: "/scenes/$projectId" as const, label: "Scenes", icon: LayoutGrid },
-    { to: "/characters/$projectId" as const, label: "Characters", icon: Users },
-    { to: "/story-arc/$projectId" as const, label: "Story Arc", icon: GitBranch },
-    { to: "/arc-timeline/$projectId" as const, label: "StoryPulse", icon: Activity },
-    { to: "/storyboard/$projectId" as const, label: "Storyboard", icon: ImageIcon },
-    { to: "/tableread/$projectId" as const, label: "Table Read", icon: Mic },
-    { to: "/pitch/$projectId" as const, label: "Pitch", icon: Sparkles },
+    { to: "/editor/$projectId" as const, label: "Writer's Desk", icon: FileText },
+    { to: "/scenes/$projectId" as const, label: "Scene Board", icon: LayoutGrid },
+    { to: "/characters/$projectId" as const, label: "Casting Wall", icon: Users },
+    { to: "/story-arc/$projectId" as const, label: "Story Spine", icon: GitBranch },
+    { to: "/arc-timeline/$projectId" as const, label: "Dramatic Pulse", icon: Activity },
+    { to: "/storyboard/$projectId" as const, label: "Shot Wall", icon: ImageIcon },
+    { to: "/tableread/$projectId" as const, label: "Rehearsal Room", icon: Mic },
+    { to: "/pitch/$projectId" as const, label: "Producer Room", icon: Sparkles },
   ];
   return (
     <div className="border-b border-border/60 bg-card/30 backdrop-blur">
