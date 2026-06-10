@@ -154,7 +154,7 @@ function NewProjectDialog({ onCreate, loading }: { onCreate: (v: any) => void; l
   });
   return (
     <DialogContent className="max-w-lg">
-      <DialogHeader><DialogTitle>New Project</DialogTitle></DialogHeader>
+      <DialogHeader><DialogTitle>Start a Script</DialogTitle></DialogHeader>
       <div className="space-y-3">
         <div><Label>Title *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="The Last Lighthouse" /></div>
         <div className="grid grid-cols-2 gap-3">
