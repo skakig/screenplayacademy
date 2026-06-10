@@ -127,6 +127,38 @@ export function TakeDiffViewer({ open, onOpenChange, left, right, onSave, defaul
           </div>
         </div>
 
+        {onSave && (
+          <div className="flex items-center gap-2 rounded-md border border-border/50 bg-card/40 px-2 py-1.5">
+            <Bookmark className="h-3.5 w-3.5 text-primary shrink-0" />
+            <Input
+              value={label}
+              onChange={(e) => {
+                setLabel(e.target.value);
+                setSaved(false);
+              }}
+              placeholder="Comparison label"
+              className="h-7 text-xs flex-1"
+            />
+            <Button
+              size="sm"
+              variant={saved ? "secondary" : "outline"}
+              className="h-7 text-[11px] px-2"
+              disabled={!label.trim() || saved}
+              onClick={() => {
+                onSave(label.trim());
+                setSaved(true);
+              }}
+            >
+              {saved ? (
+                <><Check className="h-3 w-3 mr-1" />Saved</>
+              ) : (
+                "Save comparison"
+              )}
+            </Button>
+          </div>
+        )}
+
+
         <ScrollArea className="h-[60vh] pr-2">
           <ul className="space-y-1.5">
             {rows.map((r, idx) => (
