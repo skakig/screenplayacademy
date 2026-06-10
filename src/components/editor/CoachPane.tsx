@@ -95,19 +95,19 @@ export function CoachPane({
   return (
     <Tabs defaultValue={defaultTab} className="w-full">
       <TabsList className="w-full rounded-none border-b border-border/40 bg-transparent h-10 grid grid-cols-7 px-1 gap-0.5">
-        <TabsTrigger value="coach" className="text-[10px] px-1" title="Coach"><Compass className="h-3.5 w-3.5" /></TabsTrigger>
+        <TabsTrigger value="coach" className="text-[10px] px-1" title="Director's Chair"><Compass className="h-3.5 w-3.5" /></TabsTrigger>
         <TabsTrigger value="builder" className="text-[10px] px-1" title="Story Builder"><Sparkles className="h-3.5 w-3.5" /></TabsTrigger>
-        <TabsTrigger value="arc" className="text-[10px] px-1" title="Arc"><Drama className="h-3.5 w-3.5" /></TabsTrigger>
-        <TabsTrigger value="cast" className="text-[10px] px-1" title="Characters"><Users className="h-3.5 w-3.5" /></TabsTrigger>
+        <TabsTrigger value="arc" className="text-[10px] px-1" title="Story Spine"><Drama className="h-3.5 w-3.5" /></TabsTrigger>
+        <TabsTrigger value="cast" className="text-[10px] px-1" title="Casting Wall"><Users className="h-3.5 w-3.5" /></TabsTrigger>
         <TabsTrigger value="format" className="text-[10px] px-1" title="Format"><Type className="h-3.5 w-3.5" /></TabsTrigger>
         <TabsTrigger value="notes" className="text-[10px] px-1" title="Notes"><NotebookPen className="h-3.5 w-3.5" /></TabsTrigger>
-        <TabsTrigger value="tableread" className="text-[10px] px-1" title="Table Read"><Headphones className="h-3.5 w-3.5" /></TabsTrigger>
+        <TabsTrigger value="tableread" className="text-[10px] px-1" title="Rehearsal Room"><Headphones className="h-3.5 w-3.5" /></TabsTrigger>
       </TabsList>
 
-      {/* COACH */}
+      {/* DIRECTOR'S CHAIR */}
       <TabsContent value="coach" className="m-0 p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="font-semibold flex items-center gap-1.5 text-sm"><Compass className="h-4 w-4 text-primary" />Coach</h3>
+          <h3 className="font-semibold flex items-center gap-1.5 text-sm"><Compass className="h-4 w-4 text-primary" />Director's Chair</h3>
           <CoachModeToggle />
         </div>
         <CoachPanel sceneText={sceneText} blockCount={blocks.length} />
