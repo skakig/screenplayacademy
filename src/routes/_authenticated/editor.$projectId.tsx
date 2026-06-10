@@ -845,7 +845,7 @@ function Editor() {
         <aside
           data-tour="coach-panel"
           aria-label="Director's Chair"
-          className="hidden lg:block border-l border-border/40 min-h-[calc(100vh-104px)] bg-card/10 max-h-[calc(100vh-104px)] overflow-auto sticky top-0 self-start"
+          className="hidden xl:block border-l border-border/40 min-h-[calc(100vh-104px)] bg-card/10 max-h-[calc(100vh-104px)] overflow-auto sticky top-0 self-start"
         >
           <div className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground px-4 pt-4 pb-2 flex items-center gap-1.5 border-b border-border/30">
             <Clapperboard className="h-3 w-3" /> Director's Chair
