@@ -167,7 +167,7 @@ export function CoachPanel({
       )}
       {!collapsed && mode === "teach" && (
         <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ask Coach to teach</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ask the Director's Chair</p>
           <div className="flex gap-1.5">
             <Input
               value={teachQuery}
