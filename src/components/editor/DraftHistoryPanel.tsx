@@ -23,11 +23,16 @@ import {
   Cloud,
   CloudOff,
   Loader2,
+  ArrowLeftRight,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 import { readDraft, type DraftPayload } from "./draftBackup";
 import { formatDistanceToNow, format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { TakeDiffViewer } from "./TakeDiffViewer";
+import { downloadPitchKitPdf } from "./pitchKitPdf";
 
 type Take = {
   id: string;
@@ -109,6 +114,56 @@ export function DraftHistoryPanel({ projectId }: Props) {
   const [pendingRestore, setPendingRestore] = useState<Take | null>(null);
   const [pendingDiscard, setPendingDiscard] = useState<Take | null>(null);
   const [discardConfirmText, setDiscardConfirmText] = useState("");
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      // keep most recent two
+      const next = [...prev, id];
+      return next.length > 2 ? next.slice(next.length - 2) : next;
+    });
+  };
+
+  const exportPdf = async () => {
+    if (takes.length === 0) {
+      toast.error("No takes to export yet.");
+      return;
+    }
+    setExporting(true);
+    try {
+      const { data: project } = await supabase
+        .from("projects")
+        .select("title")
+        .eq("id", projectId)
+        .maybeSingle();
+      const title = project?.title ?? "Untitled project";
+      const selected = selectedIds.length > 0 ? selectedIds : takes.slice(0, 3).map((t) => t.id);
+      downloadPitchKitPdf(
+        {
+          projectTitle: title,
+          takes: takes.map((t) => ({
+            id: t.id,
+            name: t.name,
+            capturedAt: t.capturedAt,
+            blockCount: t.blockCount,
+            wordCount: t.wordCount,
+            payload: t.payload,
+          })),
+          selectedTakeIds: selected,
+        },
+        `${title.replace(/\s+/g, "_")}-revisions.pdf`,
+      );
+      toast.success("Revisions PDF downloaded");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't export PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Initial load + cloud sync
   useEffect(() => {
@@ -362,6 +417,45 @@ export function DraftHistoryPanel({ projectId }: Props) {
         </p>
       </div>
 
+      {takes.length > 0 && (
+        <div className="flex items-center gap-1.5 px-0.5">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[11px] px-2 flex-1"
+            disabled={selectedIds.length !== 2}
+            onClick={() => setDiffOpen(true)}
+            title={
+              selectedIds.length === 2
+                ? "Compare the two selected takes"
+                : "Tick two takes to compare"
+            }
+          >
+            <ArrowLeftRight className="h-3 w-3 mr-1.5" />
+            Compare ({selectedIds.length}/2)
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[11px] px-2 flex-1"
+            disabled={exporting}
+            onClick={exportPdf}
+            title={
+              selectedIds.length > 0
+                ? `Export PDF with ${selectedIds.length} selected take(s) + timeline`
+                : "Export PDF with timeline + 3 most recent takes"
+            }
+          >
+            {exporting ? (
+              <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+            ) : (
+              <FileDown className="h-3 w-3 mr-1.5" />
+            )}
+            Export PDF
+          </Button>
+        </div>
+      )}
+
       {takes.length === 0 ? (
         <p className="text-xs text-muted-foreground italic px-1">
           No takes yet. Capture your first slate before a big rewrite.
@@ -378,6 +472,14 @@ export function DraftHistoryPanel({ projectId }: Props) {
                   className="rounded-md border border-border/50 bg-card/30 overflow-hidden"
                 >
                   <div className="flex items-stretch">
+                    <div className="w-7 shrink-0 flex items-start justify-center bg-card/40 border-r border-border/40 pt-3">
+                      <Checkbox
+                        checked={selectedIds.includes(t.id)}
+                        onCheckedChange={() => toggleSelected(t.id)}
+                        aria-label={`Select ${t.name}`}
+                        className="h-3.5 w-3.5"
+                      />
+                    </div>
                     <div
                       className="w-9 shrink-0 flex flex-col items-center justify-center bg-primary/10 border-r border-border/50 font-mono text-[10px] text-primary/80 leading-tight py-2"
                       aria-hidden
@@ -595,6 +697,27 @@ export function DraftHistoryPanel({ projectId }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TakeDiffViewer
+        open={diffOpen}
+        onOpenChange={setDiffOpen}
+        left={
+          selectedIds.length === 2
+            ? (() => {
+                const t = takes.find((x) => x.id === selectedIds[0]);
+                return t ? { id: t.id, name: t.name, capturedAt: t.capturedAt, payload: t.payload } : null;
+              })()
+            : null
+        }
+        right={
+          selectedIds.length === 2
+            ? (() => {
+                const t = takes.find((x) => x.id === selectedIds[1]);
+                return t ? { id: t.id, name: t.name, capturedAt: t.capturedAt, payload: t.payload } : null;
+              })()
+            : null
+        }
+      />
     </div>
   );
 }
