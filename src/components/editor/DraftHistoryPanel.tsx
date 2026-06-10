@@ -844,6 +844,7 @@ export function DraftHistoryPanel({ projectId }: Props) {
               })()
             : null
         }
+        onSave={saveComparison}
       />
     </div>
   );
