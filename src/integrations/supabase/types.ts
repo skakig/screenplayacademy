@@ -836,6 +836,53 @@ export type Database = {
         }
         Relationships: []
       }
+      draft_takes: {
+        Row: {
+          block_count: number
+          captured_at: string
+          created_at: string
+          id: string
+          name: string
+          payload: Json
+          project_id: string
+          updated_at: string
+          user_id: string
+          word_count: number
+        }
+        Insert: {
+          block_count?: number
+          captured_at?: string
+          created_at?: string
+          id?: string
+          name: string
+          payload: Json
+          project_id: string
+          updated_at?: string
+          user_id: string
+          word_count?: number
+        }
+        Update: {
+          block_count?: number
+          captured_at?: string
+          created_at?: string
+          id?: string
+          name?: string
+          payload?: Json
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+          word_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_takes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       editor_sessions: {
         Row: {
           ai_accepts: number
