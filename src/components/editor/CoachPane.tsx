@@ -126,7 +126,7 @@ export function CoachPane({
         )}
         <details className="border-t border-border/40 pt-3 mt-3">
           <summary className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold cursor-pointer hover:text-foreground">
-            AI Assistant tools
+            Studio Tools
           </summary>
           <div className="mt-2 space-y-2">
             <Select value={aiTool} onValueChange={setAiTool}>
