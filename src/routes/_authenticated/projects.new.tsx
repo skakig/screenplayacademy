@@ -53,9 +53,9 @@ function NewProject() {
     <AppShell>
       <div className="max-w-2xl mx-auto px-4 py-10">
         <Link to="/projects" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mb-4">
-          <ArrowLeft className="h-3 w-3" /> Back to projects
+          <ArrowLeft className="h-3 w-3" /> Back to the vault
         </Link>
-        <h1 className="text-3xl font-bold tracking-tight mb-1">New Project</h1>
+        <h1 className="text-3xl font-bold tracking-tight mb-1">Start a Script</h1>
         <p className="text-muted-foreground mb-6">Tell us about your story. You can change all of this later.</p>
         <Card className="p-6 space-y-4">
           <div>
