@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Loader2, Compass, Drama, Type, NotebookPen, Headphones, Users, MicVocal, Copy } from "lucide-react";
+import { Sparkles, Loader2, Compass, Drama, Type, NotebookPen, Headphones, Users, MicVocal, Copy, History } from "lucide-react";
+import { DraftHistoryPanel } from "@/components/editor/DraftHistoryPanel";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "@tanstack/react-router";
@@ -94,11 +95,12 @@ export function CoachPane({
 
   return (
     <Tabs defaultValue={defaultTab} className="w-full">
-      <TabsList className="w-full rounded-none border-b border-border/40 bg-transparent h-10 grid grid-cols-7 px-1 gap-0.5">
+      <TabsList className="w-full rounded-none border-b border-border/40 bg-transparent h-10 grid grid-cols-8 px-1 gap-0.5">
         <TabsTrigger value="coach" className="text-[10px] px-1" title="Director's Chair"><Compass className="h-3.5 w-3.5" /></TabsTrigger>
         <TabsTrigger value="builder" className="text-[10px] px-1" title="Story Builder"><Sparkles className="h-3.5 w-3.5" /></TabsTrigger>
         <TabsTrigger value="arc" className="text-[10px] px-1" title="Story Spine"><Drama className="h-3.5 w-3.5" /></TabsTrigger>
         <TabsTrigger value="cast" className="text-[10px] px-1" title="Casting Wall"><Users className="h-3.5 w-3.5" /></TabsTrigger>
+        <TabsTrigger value="takes" className="text-[10px] px-1" title="Takes & Revisions"><History className="h-3.5 w-3.5" /></TabsTrigger>
         <TabsTrigger value="format" className="text-[10px] px-1" title="Format"><Type className="h-3.5 w-3.5" /></TabsTrigger>
         <TabsTrigger value="notes" className="text-[10px] px-1" title="Notes"><NotebookPen className="h-3.5 w-3.5" /></TabsTrigger>
         <TabsTrigger value="tableread" className="text-[10px] px-1" title="Rehearsal Room"><Headphones className="h-3.5 w-3.5" /></TabsTrigger>
@@ -188,6 +190,19 @@ export function CoachPane({
         <Button asChild variant="outline" size="sm" className="w-full">
           <Link to="/characters/$projectId" params={{ projectId }}>Open Character workshop</Link>
         </Button>
+      </TabsContent>
+
+      {/* TAKES & REVISIONS */}
+      <TabsContent value="takes" className="m-0 p-4 space-y-3">
+        <div>
+          <h3 className="font-semibold flex items-center gap-1.5 text-sm">
+            <History className="h-4 w-4 text-primary" />Takes &amp; Revisions
+          </h3>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-mono mt-1">
+            Roll cameras · slate · roll back
+          </p>
+        </div>
+        <DraftHistoryPanel projectId={projectId} />
       </TabsContent>
 
       {/* FORMAT */}
