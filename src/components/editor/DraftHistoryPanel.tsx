@@ -697,6 +697,27 @@ export function DraftHistoryPanel({ projectId }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TakeDiffViewer
+        open={diffOpen}
+        onOpenChange={setDiffOpen}
+        left={
+          selectedIds.length === 2
+            ? (() => {
+                const t = takes.find((x) => x.id === selectedIds[0]);
+                return t ? { id: t.id, name: t.name, capturedAt: t.capturedAt, payload: t.payload } : null;
+              })()
+            : null
+        }
+        right={
+          selectedIds.length === 2
+            ? (() => {
+                const t = takes.find((x) => x.id === selectedIds[1]);
+                return t ? { id: t.id, name: t.name, capturedAt: t.capturedAt, payload: t.payload } : null;
+              })()
+            : null
+        }
+      />
     </div>
   );
 }
