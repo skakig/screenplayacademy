@@ -47,9 +47,43 @@ type Take = {
 };
 
 const TAKES_PREFIX = "scenesmith.takes.v1.";
+const COMPARISONS_PREFIX = "scenesmith.comparisons.v1.";
 
 function takesKey(projectId: string) {
   return TAKES_PREFIX + projectId;
+}
+
+type SavedComparison = {
+  id: string;
+  label: string;
+  leftTakeId: string;
+  rightTakeId: string;
+  savedAt: number;
+};
+
+function comparisonsKey(projectId: string) {
+  return COMPARISONS_PREFIX + projectId;
+}
+
+function readComparisons(projectId: string): SavedComparison[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(comparisonsKey(projectId));
+    if (!raw) return [];
+    const arr = JSON.parse(raw) as SavedComparison[];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeComparisons(projectId: string, items: SavedComparison[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(comparisonsKey(projectId), JSON.stringify(items));
+  } catch {
+    /* quota — silent */
+  }
 }
 
 function readTakes(projectId: string): Take[] {
