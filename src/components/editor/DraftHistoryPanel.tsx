@@ -115,6 +115,56 @@ export function DraftHistoryPanel({ projectId }: Props) {
   const [pendingDiscard, setPendingDiscard] = useState<Take | null>(null);
   const [discardConfirmText, setDiscardConfirmText] = useState("");
 
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      // keep most recent two
+      const next = [...prev, id];
+      return next.length > 2 ? next.slice(next.length - 2) : next;
+    });
+  };
+
+  const exportPdf = async () => {
+    if (takes.length === 0) {
+      toast.error("No takes to export yet.");
+      return;
+    }
+    setExporting(true);
+    try {
+      const { data: project } = await supabase
+        .from("projects")
+        .select("title")
+        .eq("id", projectId)
+        .maybeSingle();
+      const title = project?.title ?? "Untitled project";
+      const selected = selectedIds.length > 0 ? selectedIds : takes.slice(0, 3).map((t) => t.id);
+      downloadPitchKitPdf(
+        {
+          projectTitle: title,
+          takes: takes.map((t) => ({
+            id: t.id,
+            name: t.name,
+            capturedAt: t.capturedAt,
+            blockCount: t.blockCount,
+            wordCount: t.wordCount,
+            payload: t.payload,
+          })),
+          selectedTakeIds: selected,
+        },
+        `${title.replace(/\s+/g, "_")}-revisions.pdf`,
+      );
+      toast.success("Revisions PDF downloaded");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't export PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // Initial load + cloud sync
   useEffect(() => {
     let cancelled = false;
