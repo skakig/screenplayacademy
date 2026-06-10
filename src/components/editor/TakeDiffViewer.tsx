@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,8 +7,10 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight, Bookmark, Check } from "lucide-react";
 import type { DraftPayload } from "./draftBackup";
 import { diffTakes, diffSummary } from "./takeDiff";
 import { format } from "date-fns";
