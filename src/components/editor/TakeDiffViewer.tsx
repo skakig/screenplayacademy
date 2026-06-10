@@ -27,6 +27,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   left: TakeSummary | null;
   right: TakeSummary | null;
+  onSave?: (label: string) => void;
+  defaultLabel?: string;
 };
 
 const opStyle: Record<string, string> = {
