@@ -12,10 +12,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Clapperboard, RotateCcw, Trash2, Camera, Pencil, Check, X } from "lucide-react";
+import {
+  Clapperboard,
+  RotateCcw,
+  Trash2,
+  Camera,
+  Pencil,
+  Check,
+  X,
+  Cloud,
+  CloudOff,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { readDraft, type DraftPayload } from "./draftBackup";
 import { formatDistanceToNow, format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
 type Take = {
   id: string;
@@ -24,6 +36,8 @@ type Take = {
   blockCount: number;
   wordCount: number;
   payload: DraftPayload;
+  serverId?: string;
+  syncStatus?: "synced" | "pending" | "error" | "local";
 };
 
 const TAKES_PREFIX = "scenesmith.takes.v1.";
@@ -60,13 +74,34 @@ function countWords(payload: DraftPayload): number {
   );
 }
 
+function mergeTakes(local: Take[], remote: Take[]): Take[] {
+  // De-dupe by serverId, then by id; prefer remote payload (latest captured).
+  const byServer = new Map<string, Take>();
+  const localOnly: Take[] = [];
+
+  for (const t of local) {
+    if (t.serverId) byServer.set(t.serverId, t);
+    else localOnly.push(t);
+  }
+  for (const r of remote) {
+    if (r.serverId) byServer.set(r.serverId, { ...r, syncStatus: "synced" });
+  }
+
+  const merged = [...byServer.values(), ...localOnly];
+  merged.sort((a, b) => b.capturedAt - a.capturedAt);
+  return merged.slice(0, 25);
+}
+
 type Props = {
   projectId: string;
 };
 
+type SyncState = "idle" | "syncing" | "offline" | "error";
+
 export function DraftHistoryPanel({ projectId }: Props) {
   const [takes, setTakes] = useState<Take[]>([]);
   const [name, setName] = useState("");
+  const [syncState, setSyncState] = useState<SyncState>("idle");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState("");
@@ -75,13 +110,100 @@ export function DraftHistoryPanel({ projectId }: Props) {
   const [pendingDiscard, setPendingDiscard] = useState<Take | null>(null);
   const [discardConfirmText, setDiscardConfirmText] = useState("");
 
-  const refresh = useCallback(() => setTakes(readTakes(projectId)), [projectId]);
-
+  // Initial load + cloud sync
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    let cancelled = false;
+    const local = readTakes(projectId);
+    setTakes(local);
 
-  const capture = () => {
+    (async () => {
+      setSyncState("syncing");
+      try {
+        const { data, error } = await supabase
+          .from("draft_takes")
+          .select("id, name, captured_at, block_count, word_count, payload")
+          .eq("project_id", projectId)
+          .order("captured_at", { ascending: false })
+          .limit(25);
+        if (cancelled) return;
+        if (error) {
+          setSyncState("offline");
+          return;
+        }
+        const remote: Take[] = (data ?? []).map((r: any) => ({
+          id: `take-srv-${r.id}`,
+          serverId: r.id,
+          name: r.name,
+          capturedAt: new Date(r.captured_at).getTime(),
+          blockCount: r.block_count ?? 0,
+          wordCount: r.word_count ?? 0,
+          payload: r.payload,
+          syncStatus: "synced",
+        }));
+        const merged = mergeTakes(local, remote);
+        writeTakes(projectId, merged);
+        setTakes(merged);
+        setSyncState("idle");
+
+        // Backfill: push any local-only takes to cloud
+        const localOnly = merged.filter((t) => !t.serverId);
+        for (const t of localOnly) {
+          await pushTake(t);
+        }
+      } catch {
+        if (!cancelled) setSyncState("offline");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  const pushTake = useCallback(
+    async (take: Take): Promise<Take> => {
+      try {
+        const { data: userRes } = await supabase.auth.getUser();
+        const userId = userRes.user?.id;
+        if (!userId) return { ...take, syncStatus: "local" };
+        const { data, error } = await supabase
+          .from("draft_takes")
+          .insert({
+            project_id: projectId,
+            user_id: userId,
+            name: take.name,
+            captured_at: new Date(take.capturedAt).toISOString(),
+            block_count: take.blockCount,
+            word_count: take.wordCount,
+            payload: take.payload as any,
+          })
+          .select("id")
+          .single();
+        if (error || !data) {
+          const updated = { ...take, syncStatus: "error" as const };
+          setTakes((prev) => {
+            const next = prev.map((t) => (t.id === take.id ? updated : t));
+            writeTakes(projectId, next);
+            return next;
+          });
+          return updated;
+        }
+        const updated: Take = { ...take, serverId: data.id, syncStatus: "synced" };
+        setTakes((prev) => {
+          const next = prev.map((t) => (t.id === take.id ? updated : t));
+          writeTakes(projectId, next);
+          return next;
+        });
+        return updated;
+      } catch {
+        return { ...take, syncStatus: "error" };
+      }
+    },
+    [projectId],
+  );
+
+  const capture = async () => {
     const draft = readDraft(projectId);
     if (!draft || draft.blocks.length === 0) {
       toast.error("Nothing to capture yet — write a few lines first.");
@@ -94,12 +216,14 @@ export function DraftHistoryPanel({ projectId }: Props) {
       blockCount: draft.blocks.length,
       wordCount: countWords(draft),
       payload: draft,
+      syncStatus: "pending",
     };
     const next = [take, ...takes].slice(0, 25);
     writeTakes(projectId, next);
     setTakes(next);
     setName("");
     toast.success(`Slated "${take.name}"`);
+    await pushTake(take);
   };
 
   const startRename = (take: Take) => {
@@ -107,18 +231,27 @@ export function DraftHistoryPanel({ projectId }: Props) {
     setEditingValue(take.name);
   };
 
-  const commitRename = () => {
+  const commitRename = async () => {
     if (!editingId) return;
     const trimmed = editingValue.trim();
     if (!trimmed) {
       setEditingId(null);
       return;
     }
+    const target = takes.find((t) => t.id === editingId);
     const next = takes.map((t) => (t.id === editingId ? { ...t, name: trimmed } : t));
     writeTakes(projectId, next);
     setTakes(next);
     setEditingId(null);
     setEditingValue("");
+
+    if (target?.serverId) {
+      const { error } = await supabase
+        .from("draft_takes")
+        .update({ name: trimmed })
+        .eq("id", target.serverId);
+      if (error) toast.error("Couldn't sync rename to the cloud.");
+    }
   };
 
   const cancelRename = () => {
@@ -138,8 +271,11 @@ export function DraftHistoryPanel({ projectId }: Props) {
           blockCount: current.blocks.length,
           wordCount: countWords(current),
           payload: current,
+          syncStatus: "pending",
         };
         writeTakes(projectId, [safety, ...readTakes(projectId)].slice(0, 25));
+        // Fire-and-forget cloud sync of safety slate
+        void pushTake(safety);
       }
       window.localStorage.setItem(
         "scenesmith.draft.v1." + projectId,
@@ -152,24 +288,58 @@ export function DraftHistoryPanel({ projectId }: Props) {
     }
   };
 
-  const performDiscard = (take: Take) => {
+  const performDiscard = async (take: Take) => {
     const next = takes.filter((t) => t.id !== take.id);
     writeTakes(projectId, next);
     setTakes(next);
     toast.success(`Discarded "${take.name}"`);
+
+    if (take.serverId) {
+      const { error } = await supabase
+        .from("draft_takes")
+        .delete()
+        .eq("id", take.serverId);
+      if (error) toast.error("Couldn't sync delete to the cloud.");
+    }
   };
 
   const discardPhrase = useMemo(() => pendingDiscard?.name ?? "", [pendingDiscard]);
-  const discardMatches = discardConfirmText.trim() === discardPhrase.trim() && discardPhrase.length > 0;
+  const discardMatches =
+    discardConfirmText.trim() === discardPhrase.trim() && discardPhrase.length > 0;
+
+  const syncLabel =
+    syncState === "syncing"
+      ? "Syncing…"
+      : syncState === "offline"
+        ? "Offline — local only"
+        : syncState === "error"
+          ? "Sync error"
+          : "Synced across devices";
+
+  const SyncIcon =
+    syncState === "syncing" ? Loader2 : syncState === "offline" ? CloudOff : Cloud;
 
   return (
     <div className="space-y-3">
       <div className="rounded-md border border-border/60 bg-card/40 p-3 space-y-2">
-        <div className="flex items-center gap-1.5">
-          <Clapperboard className="h-3.5 w-3.5 text-primary" />
-          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
-            Slate a new take
-          </p>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <Clapperboard className="h-3.5 w-3.5 text-primary" />
+            <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
+              Slate a new take
+            </p>
+          </div>
+          <div
+            className="flex items-center gap-1 text-[10px] text-muted-foreground"
+            title={syncLabel}
+          >
+            <SyncIcon
+              className={`h-3 w-3 ${syncState === "syncing" ? "animate-spin" : ""} ${
+                syncState === "offline" ? "text-amber-500" : ""
+              }`}
+            />
+            <span className="hidden sm:inline">{syncLabel}</span>
+          </div>
         </div>
         <Input
           value={name}
@@ -188,7 +358,7 @@ export function DraftHistoryPanel({ projectId }: Props) {
           Capture this take
         </Button>
         <p className="text-[10px] text-muted-foreground leading-snug">
-          Snapshots your current draft locally. Up to 25 takes per project.
+          Snapshots your current draft and syncs to the cloud. Up to 25 takes per project.
         </p>
       </div>
 
@@ -201,6 +371,7 @@ export function DraftHistoryPanel({ projectId }: Props) {
           <ul className="space-y-2">
             {takes.map((t, i) => {
               const isEditing = editingId === t.id;
+              const status = t.syncStatus ?? (t.serverId ? "synced" : "local");
               return (
                 <li
                   key={t.id}
@@ -256,6 +427,24 @@ export function DraftHistoryPanel({ projectId }: Props) {
                       ) : (
                         <div className="flex items-center gap-1 group">
                           <p className="text-xs font-medium truncate flex-1">{t.name}</p>
+                          {status === "pending" && (
+                            <Loader2
+                              className="h-2.5 w-2.5 text-muted-foreground animate-spin"
+                              aria-label="Syncing"
+                            />
+                          )}
+                          {status === "error" && (
+                            <CloudOff
+                              className="h-2.5 w-2.5 text-amber-500"
+                              aria-label="Sync failed — saved locally"
+                            />
+                          )}
+                          {status === "synced" && (
+                            <Cloud
+                              className="h-2.5 w-2.5 text-muted-foreground/60"
+                              aria-label="Synced"
+                            />
+                          )}
                           <Button
                             size="sm"
                             variant="ghost"
@@ -363,9 +552,9 @@ export function DraftHistoryPanel({ projectId }: Props) {
             <AlertDialogTitle>Discard this take?</AlertDialogTitle>
             <AlertDialogDescription>
               This permanently deletes the snapshot{" "}
-              <strong className="text-foreground">"{discardPhrase}"</strong>. Your
-              current draft is not affected, but you won't be able to roll back to this
-              take afterward.
+              <strong className="text-foreground">"{discardPhrase}"</strong> from this
+              device and the cloud. Your current draft is not affected, but you won't be
+              able to roll back to this take afterward.
               <br />
               <span className="block mt-3 text-xs text-foreground">
                 Type the take name to confirm:
