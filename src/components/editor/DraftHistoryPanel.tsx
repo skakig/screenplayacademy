@@ -472,6 +472,14 @@ export function DraftHistoryPanel({ projectId }: Props) {
                   className="rounded-md border border-border/50 bg-card/30 overflow-hidden"
                 >
                   <div className="flex items-stretch">
+                    <div className="w-7 shrink-0 flex items-start justify-center bg-card/40 border-r border-border/40 pt-3">
+                      <Checkbox
+                        checked={selectedIds.includes(t.id)}
+                        onCheckedChange={() => toggleSelected(t.id)}
+                        aria-label={`Select ${t.name}`}
+                        className="h-3.5 w-3.5"
+                      />
+                    </div>
                     <div
                       className="w-9 shrink-0 flex flex-col items-center justify-center bg-primary/10 border-r border-border/50 font-mono text-[10px] text-primary/80 leading-tight py-2"
                       aria-hidden
