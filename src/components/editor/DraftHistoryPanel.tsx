@@ -417,6 +417,45 @@ export function DraftHistoryPanel({ projectId }: Props) {
         </p>
       </div>
 
+      {takes.length > 0 && (
+        <div className="flex items-center gap-1.5 px-0.5">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[11px] px-2 flex-1"
+            disabled={selectedIds.length !== 2}
+            onClick={() => setDiffOpen(true)}
+            title={
+              selectedIds.length === 2
+                ? "Compare the two selected takes"
+                : "Tick two takes to compare"
+            }
+          >
+            <ArrowLeftRight className="h-3 w-3 mr-1.5" />
+            Compare ({selectedIds.length}/2)
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[11px] px-2 flex-1"
+            disabled={exporting}
+            onClick={exportPdf}
+            title={
+              selectedIds.length > 0
+                ? `Export PDF with ${selectedIds.length} selected take(s) + timeline`
+                : "Export PDF with timeline + 3 most recent takes"
+            }
+          >
+            {exporting ? (
+              <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+            ) : (
+              <FileDown className="h-3 w-3 mr-1.5" />
+            )}
+            Export PDF
+          </Button>
+        </div>
+      )}
+
       {takes.length === 0 ? (
         <p className="text-xs text-muted-foreground italic px-1">
           No takes yet. Capture your first slate before a big rewrite.
