@@ -1,100 +1,69 @@
-# Pass 10 — Language Intelligence Core: multilingual + transfer-aware
+# Plan — Cinematic Writer's Room Visual Redesign
 
-Goal: graduate `screenplayLanguageIntelligence.ts` from an English-only helper into a profile-aware engine that handles 9 languages (EN, ES, FR, DE, PT, IT, PL, UK, RU), respects the writer's known languages, and never applies English rules to non-English text.
+Scope: `visualdesign.md` only. Import pipeline comes in a separate pass after this lands. All work is **presentation-only** — no changes to editor typing engine, persistence, auth, AI calls, Supabase schema, or routes (routes keep their URLs; only labels change). AGENTS.md prime directive holds: the screenplay page is sacred and must never lose focus, caret, or behavior.
 
-Anchored in `docs/SCREENPLAY_LANGUAGE_INTELLIGENCE.md` and the Language Transfer Bridge doctrine: capture the full language profile, compute transfer distance per (source, target) pair, never assume a monolingual baseline.
+## Guardrails (non-negotiable)
 
-## Scope
+- Do **not** touch `useScreenplayDocument.ts`, `screenplayKeymap.ts`, `screenplayPersistence.ts`, `LocalDraftStore`, `SupabasePersistenceAdapter`, or the local-first block model.
+- Do **not** rename route files or URLs — labels change in nav/UI strings only (keeps `/editor/:projectId`, `/characters`, etc. stable).
+- Do **not** introduce remote `@import` in `src/styles.css` (font loading via `<link>` in `__root.tsx`).
+- All copy goes through `t()` keys (existing i18n infra). EN strings updated; other locales stay stubbed.
+- Every pass ends with the Stage-1 acceptance test still passing.
 
-In: persistence, language-aware mechanical fixes, per-block detection, cognate/false-friend metadata, character-name protection across scripts (Latin/Cyrillic), settings + soft onboarding prompt.
+## Phased build (matches visualdesign.md §21)
 
-Out (later passes): AI prompt bridge-language routing (10C), real ML language detection beyond heuristics, full localization of UI strings to all 9 languages, automatic glossary import.
+### Pass V1 — Tokens & Theme System
+- Replace tokens in `src/styles.css` with the two cinematic palettes (Midnight Screening Room / Writer's Desk) using `oklch` equivalents of the supplied hex.
+- Add `--font-display` (Cormorant Garamond), `--font-ui` (Inter), keep `--font-script` (Courier Prime). Load via `<link>` in `__root.tsx` head.
+- Add light-mode block under `:root` and dark-mode under `.dark` (or vice versa) so the existing theme toggle just works.
+- Update `.screenplay-paper` and `.screenplay-canvas` to consume the new tokens (paper feels warmer in light, deeper desk in dark).
+- Keep all existing token names (`--background`, `--primary`, `--accent`, `--gold`, etc.) so shadcn components and current screens don't break.
 
-## Decisions locked from clarifying questions
+### Pass V2 — Navigation Rename + Microcopy
+- Add new i18n keys (`nav.studioLobby`, `nav.scriptVault`, `nav.writersDesk`, `nav.sceneBoard`, `nav.castingWall`, `nav.storySpine`, `nav.dramaticPulse`, `nav.shotWall`, `nav.rehearsalRoom`, `nav.producerRoom`, `nav.screenplaySchool`, `nav.studioSettings`, plus AI role labels and CTA copy from §6/§19).
+- Update `AppShell.tsx`, `ProjectNav.tsx`, dashboard cards, settings, etc. to use the new labels. URLs unchanged.
+- Replace generic CTAs: "New Project" → "Start a Script", "Coach Recommendations" → "Director's Notes", etc.
 
-- Scope: 10A + 10B in this pass.
-- Languages: EN, ES, FR, DE, PT, IT, PL, UK, RU.
-- Onboarding: optional, soft prompt (no hard step).
-- Detection: project-level default with per-block override.
+### Pass V3 — Landing Page
+- Rebuild `src/routes/index.tsx` with the cinematic split hero, layered product mockup (screenplay page + corkboard cards + dossier + storyboard frame + waveform + director note), and the section list from §7.
+- Use design tokens only. No new functionality. Preserve all CTAs to `/auth` and `/pricing`.
 
-## Architecture
+### Pass V4 — Auth & Onboarding Atmosphere
+- Restyle `src/routes/auth.tsx` with "Welcome back to the studio. Your script is waiting." copy and CTAs from §8.
+- Restyle `src/routes/_authenticated/onboarding.tsx` with the 3-step "What are we making?" / "What kind of story?" / "How much help?" flow. Persist selections to existing onboarding fields (no schema change — reuse existing profile fields where possible; if a field doesn't exist, store in `profiles.onboarding_metadata` jsonb if present, otherwise defer the field and just route forward).
 
-```text
-profiles.preferred_languages[]  ─┐
-projects.screenplay_language     ├─► LanguageContext ─► screenplayLanguageIntelligence
-script_blocks.language (nullable)┘                       ├─ capitalizeStandaloneI (EN-only gate)
-                                                         ├─ capitalizeSentenceStarts (locale rules)
-                                                         ├─ analyzeUnknownTerms (cognate-aware)
-                                                         └─ shouldPreserveUnknownTerm (script-aware)
+### Pass V5 — Studio Lobby (Dashboard)
+- Restyle `dashboard.tsx` and `GuidedDashboard.tsx` as project lobby with slate-style project cards and the screenplay pipeline strip (Idea → Logline → … → Pitch). Pure visual; data sources unchanged.
 
-src/lib/language/
-  transferMatrix.ts        — typology table for the 9 langs
-  cognates.ts              — seed cognate / false-friend lists per (src,tgt)
-  scriptDetection.ts       — Unicode-block heuristics (Latin vs Cyrillic)
-  bridgeSelector.ts        — pick nearest viable known language for scaffolding
-```
+### Pass V6 — Writer's Desk Layout (Editor chrome)
+- In `editor.$projectId.tsx` and `ScreenplayDocumentEditor.tsx`: rename sidebars to **Script Map** (left) and **Director's Chair** (right), introduce Writer / Studio / Rehearsal mode toggle wired to the existing `useWriteMode` / `StudioModeToggle` hooks.
+- Tune chrome so the paper page is visually dominant (reduce panel weight, soften borders, use new paper/desk tokens). **No edits to the line-editing engine.**
 
-## Database (single migration)
+### Pass V7 — Creative Panels Polish
+- Scene Board (`scenes.$projectId.tsx`) → index-card aesthetic.
+- Casting Wall (`characters.$projectId.tsx`) → dossier card aesthetic, reusing existing data.
+- Director's Chair (`CoachPane.tsx` / `CoachPanel.tsx`) → role-based studio tools presentation (Script Doctor, Dialogue Punch-Up, etc.) over the existing AI surface. Roles map to existing tools; no new AI endpoints in this pass.
+- Rehearsal Room (`tableread.$projectId.tsx`) → theatre/table-read visual treatment.
 
-1. `profiles.preferred_languages text[]` default `'{en}'`, `profiles.ui_language text` default `'en'`.
-2. `projects.screenplay_language text` default `'en'`, `projects.project_language text` default `'en'`.
-3. `script_blocks.language text` nullable (per-block override; falls back to project).
-4. `project_dictionary`: add `language text`, `cognate_of jsonb` (`{en: "lamp", pl: "lampa"}`), `false_friend_risk text[]` (list of language codes where the term means something different).
-5. Extend RLS only where new tables added — none here, all alters; existing policies cover new columns.
+### Pass V8 — Motion, Responsive, A11y
+- Subtle hover/lift on cards, soft theme crossfade, slide-in for Director's Chair (Motion for React — already in stack).
+- Tablet → drawers; mobile → writing-first with bottom sheet for block type + tools.
+- Honor `prefers-reduced-motion`. Verify WCAG AA contrast on both themes. Visible focus rings on the new accent.
 
-## Code work
+## Acceptance per pass
+- Stage-1 typing acceptance test from `AGENTS.md` still passes.
+- Theme toggle works on every screen.
+- No hardcoded color utilities (`text-white`, `bg-[#...]`) introduced — semantic tokens only.
+- Light mode feels like a writer's desk; dark mode feels like a midnight screening room.
+- Screenplay page remains the visually dominant element on the editor route.
 
-### Foundation (10A)
-- **`src/lib/language/types.ts`**: `LanguageCode` union, `LanguageProfile`, expanded `LanguageContext` (`uiLanguage`, `screenplayLanguage`, `knownLanguages`, `blockLanguageOverride?`).
-- **`src/components/editor/screenplayLanguageIntelligence.ts`** rewrite:
-  - `capitalizeStandaloneI` already gated on EN — keep but also block when block language ≠ EN.
-  - `capitalizeSentenceStarts` becomes a registry of per-language rules. EN/ES/FR/DE/PT/IT/PL/UK/RU all do sentence-case, but DE preserves noun capitalization (skip mid-word changes), and Cyrillic uses `\p{Lu}/\p{Ll}` Unicode classes already.
-  - New `applySafeLanguageFixes(text, ctx)` dispatches by `ctx.effectiveLanguage`.
-  - New `shouldPreserveUnknownTerm` consults: project dictionary + character bible + script mismatch (Cyrillic token in EN screenplay → preserve, do not flag).
-- **`src/hooks/useLanguageContext.ts`**: builds the effective `LanguageContext` for a block by merging profile → project → block override.
-- **`src/components/editor/ScreenplayLine.tsx`**: pass new context shape; no behavior change to keystrokes.
-- **`src/components/editor/ScreenplayDocumentEditor.tsx`** and **`src/routes/_authenticated/editor.$projectId.tsx`**: fetch project's `screenplay_language` and pass down.
-- **Settings**: tiny "Languages I know" chip-strip on `/settings` (uses existing i18n keys via `t()`); writes to `profiles.preferred_languages`.
-- **Soft onboarding nudge**: one-time toast on first editor open if `preferred_languages.length === 1` and screenplay language differs from UI language — "We can help you write in {{lang}} better. Tell us which languages you know." Links to settings.
+## Out of scope (handled in later passes)
+- Import pipeline (next user-requested pass after V1–V8 land).
+- Storyboard image generation, table-read voice features, pitch deck builder logic.
+- Any database schema changes.
+- Translating UI strings beyond EN (i18n keys added, other locale catalogues stay stubbed per current state).
 
-### Transfer table (10B)
-- **`src/lib/language/transferMatrix.ts`**: pure data — 9×9 matrix with `{script, morphology, syntax, lexicon}` distances on 0–3 scale per the doctrine. Exports `transferDistance(src, tgt)` and `nearestBridge(known[], target)`.
-- **`src/lib/language/cognates.ts`**: seed list (~50 high-value entries per neighbor pair: EN↔ES, EN↔FR, EN↔DE, ES↔PT, ES↔IT, FR↔IT, PL↔UK, PL↔RU, UK↔RU). Each entry tagged with `false_friend_risk` where applicable (e.g. ES `embarazada` vs EN `embarrassed`).
-- **`analyzeUnknownTerms`** consults cognate table: a Polish writer typing English `lamp` is silently accepted because `lampa` is the known cognate; an unfamiliar term that matches a false-friend pattern surfaces a chip with a one-line warning.
-- **Character / location preservation across scripts**: `shouldPreserveUnknownTerm` recognizes that a token whose script ≠ effective language's script is almost certainly a foreign-language insert (Cyrillic char name in a Latin-script script) → never flag, never auto-correct.
+## Suggested first pass to implement
+**Pass V1 (tokens & theme)** — it unblocks every other pass, is low-risk, and produces an immediate visible shift toward the Cinematic Writer's Room aesthetic without touching any logic.
 
-### Bridge selector (groundwork for 10C)
-- **`src/lib/language/bridgeSelector.ts`**: pure function `pickScaffoldLanguage({uiLanguage, knownLanguages, screenplayLanguage})`. Returns the nearest viable bridge. Not yet wired into AI prompts — exported for later.
-
-## i18n keys to add (en stubs only, parity later)
-
-```text
-settings.language.title
-settings.language.knownLanguages
-settings.language.uiLanguage
-settings.language.screenplayLanguage
-editor.language.softPrompt.title
-editor.language.softPrompt.cta
-editor.language.blockOverride.label
-editor.language.unknownTerm.foreignWord
-editor.language.falseFriend.warning
-```
-
-## Acceptance tests
-
-1. Polish writer, screenplay language = pl, types `lampa` → no "unknown word" chip.
-2. Same writer types `kubelweinsteinman` → chip appears once, "Add to dictionary" works, never re-flagged.
-3. English writer, screenplay language = en, types `i'm tired` → auto-capitalizes to `I'm tired`.
-4. Russian writer, screenplay language = ru, types lowercase Cyrillic sentence start → capitalizes to Cyrillic capital, no Latin `I` rule fires.
-5. German writer, screenplay language = de, types `der Hund läuft.` → sentence start capitalizes; noun `Hund` is NOT lowercased mid-line.
-6. English screenplay with one Russian dialogue block: per-block override = `ru`. Cyrillic text in that block is never flagged; English rules don't fire inside it.
-7. Spanish writer types `embarazada` in an English Action block → false-friend chip warns "means 'pregnant', not 'embarrassed'".
-8. Refresh: project's `screenplay_language` persists; block-level overrides persist.
-9. Writer with only `preferred_languages=['en']` opens a Polish project for the first time → soft toast appears once, dismissible, never repeats.
-10. All existing Pass 8 acceptance tests still pass for English projects.
-
-## Risks / open notes
-
-- Sentence-start regex for Polish needs care around proper nouns like `Łódź` — handled by Unicode-class regex but worth a manual smoke test.
-- Seed cognate list will be incomplete; the engine must degrade gracefully (no cognate match ≠ flag as error).
-- We are NOT shipping bridge-language AI prompts yet (that is 10C). The selector exists so AI work can land later without re-plumbing.
+Confirm and I'll start with V1; we can chain V2–V8 as discrete passes so you can review each before moving on. Import pipeline plan follows after V-series lands.
