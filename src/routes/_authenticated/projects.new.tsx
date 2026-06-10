@@ -16,7 +16,7 @@ import { useOnboarding } from "@/hooks/use-onboarding";
 import { seedGuidedSteps } from "@/lib/academy.functions";
 
 export const Route = createFileRoute("/_authenticated/projects/new")({
-  head: () => ({ meta: [{ title: "New Project — SceneSmith AI" }] }),
+  head: () => ({ meta: [{ title: "Start a Script — SceneSmith AI" }] }),
   component: NewProject,
 });
 
