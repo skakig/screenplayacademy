@@ -42,6 +42,8 @@ import {
 } from "@/lib/import/parse.functions";
 import { commitImport } from "@/lib/import/commit.functions";
 import { extractFileText } from "@/lib/import/extract.functions";
+import { diagnoseImport } from "@/lib/import/diagnose.functions";
+import { ImportDiagnosticsPanel } from "@/components/import/ImportDiagnosticsPanel";
 import { readDraft, writeDraft } from "@/components/editor/draftBackup";
 import { supabase } from "@/integrations/supabase/client";
 import { t } from "@/lib/i18n/t";
@@ -119,6 +121,10 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
   const [filter, setFilter] = useState<"all" | "needs_review" | "approved">("all");
   const [mode, setMode] = useState<"replace" | "append" | "new_project">("replace");
   const [newTitle, setNewTitle] = useState("");
+  const [runDiagnostics, setRunDiagnostics] = useState(true);
+  const [reportId, setReportId] = useState<string | null>(null);
+  const [diagOpen, setDiagOpen] = useState(false);
+  const [diagBusy, setDiagBusy] = useState(false);
 
   const create = useServerFn(createImportSession);
   const parse = useServerFn(parseScreenplay);
@@ -127,6 +133,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
   const bulkApprove = useServerFn(bulkApproveCandidates);
   const commit = useServerFn(commitImport);
   const extract = useServerFn(extractFileText);
+  const diagnose = useServerFn(diagnoseImport);
 
   useEffect(() => {
     if (!open) {
@@ -139,6 +146,10 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
         setFilter("all");
         setMode("replace");
         setNewTitle("");
+        setRunDiagnostics(true);
+        setReportId(null);
+        setDiagOpen(false);
+        setDiagBusy(false);
         setBusy(false);
       }, 200);
     }
@@ -347,13 +358,24 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
       setStep("done");
       onImported?.();
 
-      // For replace/new_project, full reload of editor route brings everything online cleanly.
+      // Run AI diagnostics in the background — non-blocking; user sees a CTA when ready.
+      if (runDiagnostics && sessionId) {
+        setDiagBusy(true);
+        diagnose({ data: { sessionId, projectId: targetProjectId } })
+          .then((res) => setReportId(res.reportId))
+          .catch((e) => console.error("diagnoseImport", e))
+          .finally(() => setDiagBusy(false));
+      }
+
+      // For replace/new_project, full reload brings everything online cleanly —
+      // but defer reload long enough for the user to open the AI report.
+      const reloadDelay = runDiagnostics ? 5000 : 600;
       if (mode === "new_project") {
         setTimeout(() => {
           window.location.assign(`/editor/${targetProjectId}`);
-        }, 600);
+        }, reloadDelay);
       } else {
-        setTimeout(() => window.location.reload(), 600);
+        setTimeout(() => window.location.reload(), reloadDelay);
       }
     } catch (e: any) {
       toast.error(e?.message ?? t("import.error.commit"));
@@ -407,19 +429,47 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
             setNewTitle={setNewTitle}
             summary={summary}
             busy={busy}
+            runDiagnostics={runDiagnostics}
+            setRunDiagnostics={setRunDiagnostics}
             onBack={() => setStep("review")}
             onCommit={doCommit}
           />
         )}
 
         {step === "done" && (
-          <div className="py-12 text-center space-y-3">
+          <div className="py-10 text-center space-y-3">
             <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
             <p className="text-lg font-semibold">{t("import.done.title")}</p>
-            <p className="text-sm text-muted-foreground">{t("import.done.loading")}</p>
+            {runDiagnostics ? (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {diagBusy
+                    ? t("import.done.diagRunning")
+                    : reportId
+                      ? t("import.done.diagReady")
+                      : t("import.done.loading")}
+                </p>
+                {reportId && (
+                  <Button size="sm" onClick={() => setDiagOpen(true)}>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    {t("import.done.viewReport")}
+                  </Button>
+                )}
+                {diagBusy && (
+                  <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t("import.done.loading")}</p>
+            )}
           </div>
         )}
       </DialogContent>
+      <ImportDiagnosticsPanel
+        open={diagOpen}
+        onOpenChange={setDiagOpen}
+        reportId={reportId}
+      />
     </Dialog>
   );
 }
@@ -674,6 +724,8 @@ function CommitStep({
   setNewTitle,
   summary,
   busy,
+  runDiagnostics,
+  setRunDiagnostics,
   onBack,
   onCommit,
 }: {
@@ -683,6 +735,8 @@ function CommitStep({
   setNewTitle: (v: string) => void;
   summary: { approved: number };
   busy: boolean;
+  runDiagnostics: boolean;
+  setRunDiagnostics: (v: boolean) => void;
   onBack: () => void;
   onCommit: () => void;
 }) {
@@ -739,6 +793,25 @@ function CommitStep({
           </div>
         </Label>
       </RadioGroup>
+
+      <label className="flex items-start gap-3 p-3 rounded-md border border-border/60 bg-card/30 cursor-pointer hover:border-primary/40">
+        <input
+          type="checkbox"
+          checked={runDiagnostics}
+          onChange={(e) => setRunDiagnostics(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-border accent-primary"
+        />
+        <div className="min-w-0">
+          <p className="text-sm font-medium flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            {t("import.commit.diagnostics.label")}
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            {t("import.commit.diagnostics.hint")}
+          </p>
+        </div>
+      </label>
+
 
       <div className="flex justify-between">
         <Button variant="ghost" onClick={onBack}>

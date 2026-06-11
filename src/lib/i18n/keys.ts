@@ -83,6 +83,12 @@ export const i18nStrings = {
 
   "import.done.title": "Import complete",
   "import.done.loading": "Loading your screenplay…",
+  "import.done.diagRunning": "AI is reviewing your import…",
+  "import.done.diagReady": "AI review ready.",
+  "import.done.viewReport": "View AI report",
+  "import.commit.diagnostics.label": "Run AI diagnostics after import",
+  "import.commit.diagnostics.hint":
+    "Lovable AI reviews formatting, structure, characters, and world consistency. You can dismiss any suggestion.",
 
   "import.nav.back": "Back",
   "import.nav.continue": "Continue",

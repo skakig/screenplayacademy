@@ -27,6 +27,7 @@ import {
   FileDown,
   Bookmark,
   Upload,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,6 +37,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { TakeDiffViewer } from "./TakeDiffViewer";
 import { downloadPitchKitPdf } from "./pitchKitPdf";
 import { ImportWizard } from "@/components/import/ImportWizard";
+import { ImportDiagnosticsPanel } from "@/components/import/ImportDiagnosticsPanel";
+import { getLatestImportReport } from "@/lib/import/diagnose.functions";
+import { useServerFn } from "@tanstack/react-start";
 
 type Take = {
   id: string;
@@ -174,6 +178,19 @@ export function DraftHistoryPanel({ projectId }: Props) {
   const [exporting, setExporting] = useState(false);
   const [comparisons, setComparisons] = useState<SavedComparison[]>([]);
   const [importOpen, setImportOpen] = useState(false);
+  const [latestReportId, setLatestReportId] = useState<string | null>(null);
+  const [diagOpen, setDiagOpen] = useState(false);
+  const latestReport = useServerFn(getLatestImportReport);
+
+  useEffect(() => {
+    let cancelled = false;
+    latestReport({ data: { projectId } })
+      .then((r) => !cancelled && setLatestReportId(r?.id ?? null))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, latestReport, importOpen]);
 
   // Load comparisons (local + cloud) and backfill local-only entries once their takes have serverIds.
   useEffect(() => {
@@ -589,6 +606,17 @@ export function DraftHistoryPanel({ projectId }: Props) {
               <Upload className="h-3 w-3" />
               <span className="hidden sm:inline">Import</span>
             </button>
+            {latestReportId && (
+              <button
+                type="button"
+                onClick={() => setDiagOpen(true)}
+                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition"
+                title="View last AI import review"
+              >
+                <Sparkles className="h-3 w-3" />
+                <span className="hidden sm:inline">AI review</span>
+              </button>
+            )}
             <div
               className="flex items-center gap-1 text-[10px] text-muted-foreground"
               title={syncLabel}
@@ -995,6 +1023,12 @@ export function DraftHistoryPanel({ projectId }: Props) {
         open={importOpen}
         onOpenChange={setImportOpen}
         projectId={projectId}
+      />
+
+      <ImportDiagnosticsPanel
+        open={diagOpen}
+        onOpenChange={setDiagOpen}
+        reportId={latestReportId}
       />
     </div>
   );
