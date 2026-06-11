@@ -192,7 +192,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
     try {
       await update({ data: { candidateId: c.id, patch: { user_override_type: type } } });
     } catch {
-      toast.error("Couldn't save change");
+      toast.error(t("import.error.save"));
     }
   };
 
