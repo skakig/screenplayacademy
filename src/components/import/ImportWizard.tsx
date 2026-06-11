@@ -154,7 +154,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
       await reload(session.id);
       setStep("review");
     } catch (e: any) {
-      toast.error(e?.message ?? "Couldn't start import");
+      toast.error(e?.message ?? t("import.error.start"));
     } finally {
       setBusy(false);
     }
@@ -164,9 +164,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
     const sourceType = TEXT_EXTS[ext];
     if (!sourceType) {
-      toast.error(
-        "This format is coming in the next pass. Try .txt, .fountain, .md — or paste the text.",
-      );
+      toast.error(t("import.error.unsupportedFormat"));
       return;
     }
     const text = await file.text();
