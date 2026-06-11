@@ -69,13 +69,14 @@ export function parseScreenplayText(raw: string, knownCharacterNames: string[] =
 
   const candidates: Candidate[] = [];
   let sceneCounter = 0;
-  let lastNonBlank: Candidate | null = null;
+  // Holder object so TS doesn't narrow the closure-mutated value to `never`.
+  const state: { lastNonBlank: Candidate | null } = { lastNonBlank: null };
   let order = 0;
 
   const push = (c: Omit<Candidate, "order_index">): Candidate => {
     const next: Candidate = { ...c, order_index: order++ };
     candidates.push(next);
-    if (c.raw_text.trim()) lastNonBlank = next;
+    if (c.raw_text.trim()) state.lastNonBlank = next;
     return next;
   };
 
