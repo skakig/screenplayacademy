@@ -4,7 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, BookOpen, ArrowRight, Sparkles, Plus } from "lucide-react";
+import { GraduationCap, BookOpen, ArrowRight, Sparkles, Plus, Upload } from "lucide-react";
+import { useState } from "react";
+import { ImportWizard } from "@/components/import/ImportWizard";
 
 export function GuidedDashboard() {
   const navigate = useNavigate();
