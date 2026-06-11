@@ -59,6 +59,8 @@ type SavedComparison = {
   leftTakeId: string;
   rightTakeId: string;
   savedAt: number;
+  serverId?: string;
+  syncStatus?: "synced" | "pending" | "error" | "local";
 };
 
 function comparisonsKey(projectId: string) {
@@ -84,6 +86,21 @@ function writeComparisons(projectId: string, items: SavedComparison[]) {
   } catch {
     /* quota — silent */
   }
+}
+
+function mergeComparisons(local: SavedComparison[], remote: SavedComparison[]): SavedComparison[] {
+  const byServer = new Map<string, SavedComparison>();
+  const localOnly: SavedComparison[] = [];
+  for (const c of local) {
+    if (c.serverId) byServer.set(c.serverId, c);
+    else localOnly.push(c);
+  }
+  for (const r of remote) {
+    if (r.serverId) byServer.set(r.serverId, { ...r, syncStatus: "synced" });
+  }
+  const merged = [...byServer.values(), ...localOnly];
+  merged.sort((a, b) => b.savedAt - a.savedAt);
+  return merged.slice(0, 25);
 }
 
 function readTakes(projectId: string): Take[] {
