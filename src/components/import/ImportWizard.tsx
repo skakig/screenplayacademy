@@ -411,20 +411,20 @@ function SourceStep({
   return (
     <Tabs defaultValue="paste" className="w-full">
       <TabsList>
-        <TabsTrigger value="paste">Paste text</TabsTrigger>
-        <TabsTrigger value="upload">Upload file</TabsTrigger>
+        <TabsTrigger value="paste">{t("import.source.tab.paste")}</TabsTrigger>
+        <TabsTrigger value="upload">{t("import.source.tab.upload")}</TabsTrigger>
       </TabsList>
       <TabsContent value="paste" className="space-y-3">
         <Textarea
           value={pasted}
           onChange={(e) => setPasted(e.target.value)}
-          placeholder="Paste your screenplay, treatment, or rough draft here…"
+          placeholder={t("import.source.paste.placeholder")}
           className="min-h-[280px] font-mono text-xs"
         />
         <div className="flex justify-end">
           <Button onClick={onPaste} disabled={busy || !pasted.trim()}>
             {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-            Parse text
+            {t("import.source.paste.cta")}
           </Button>
         </div>
       </TabsContent>
@@ -434,9 +434,9 @@ function SourceStep({
           className="border-2 border-dashed border-border/60 rounded-md p-10 flex flex-col items-center gap-2 cursor-pointer hover:border-primary/50 transition"
         >
           <FileText className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm font-medium">Drop a file or click to choose</p>
+          <p className="text-sm font-medium">{t("import.source.upload.cta")}</p>
           <p className="text-[11px] text-muted-foreground">
-            .txt · .fountain · .md (more formats coming next pass)
+            {t("import.source.upload.formats")}
           </p>
           <Input
             id="import-file"
@@ -451,7 +451,7 @@ function SourceStep({
         </label>
         {busy && (
           <p className="text-xs text-muted-foreground flex items-center gap-2 justify-center">
-            <Loader2 className="h-3 w-3 animate-spin" /> Parsing…
+            <Loader2 className="h-3 w-3 animate-spin" /> {t("import.source.upload.parsing")}
           </p>
         )}
       </TabsContent>
