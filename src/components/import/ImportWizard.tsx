@@ -42,6 +42,8 @@ import {
 } from "@/lib/import/parse.functions";
 import { commitImport } from "@/lib/import/commit.functions";
 import { extractFileText } from "@/lib/import/extract.functions";
+import { diagnoseImport } from "@/lib/import/diagnose.functions";
+import { ImportDiagnosticsPanel } from "@/components/import/ImportDiagnosticsPanel";
 import { readDraft, writeDraft } from "@/components/editor/draftBackup";
 import { supabase } from "@/integrations/supabase/client";
 import { t } from "@/lib/i18n/t";
