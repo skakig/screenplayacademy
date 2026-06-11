@@ -672,6 +672,7 @@ function SourceStep({
         )}
       </TabsContent>
     </Tabs>
+    </>
   );
 }
 
