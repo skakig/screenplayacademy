@@ -1024,6 +1024,12 @@ export function DraftHistoryPanel({ projectId }: Props) {
         onOpenChange={setImportOpen}
         projectId={projectId}
       />
+
+      <ImportDiagnosticsPanel
+        open={diagOpen}
+        onOpenChange={setDiagOpen}
+        reportId={latestReportId}
+      />
     </div>
   );
 }
