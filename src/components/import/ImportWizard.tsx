@@ -424,6 +424,17 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
   );
 }
 
+async function fileToBase64(file: File): Promise<string> {
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
 function SourceStep({
   pasted,
   setPasted,
