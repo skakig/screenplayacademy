@@ -126,6 +126,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
   const update = useServerFn(updateImportCandidate);
   const bulkApprove = useServerFn(bulkApproveCandidates);
   const commit = useServerFn(commitImport);
+  const extract = useServerFn(extractFileText);
 
   useEffect(() => {
     if (!open) {
