@@ -178,6 +178,19 @@ export function DraftHistoryPanel({ projectId }: Props) {
   const [exporting, setExporting] = useState(false);
   const [comparisons, setComparisons] = useState<SavedComparison[]>([]);
   const [importOpen, setImportOpen] = useState(false);
+  const [latestReportId, setLatestReportId] = useState<string | null>(null);
+  const [diagOpen, setDiagOpen] = useState(false);
+  const latestReport = useServerFn(getLatestImportReport);
+
+  useEffect(() => {
+    let cancelled = false;
+    latestReport({ data: { projectId } })
+      .then((r) => !cancelled && setLatestReportId(r?.id ?? null))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, latestReport, importOpen]);
 
   // Load comparisons (local + cloud) and backfill local-only entries once their takes have serverIds.
   useEffect(() => {
