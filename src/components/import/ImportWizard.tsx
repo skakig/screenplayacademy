@@ -568,14 +568,63 @@ function SourceStep({
   onPaste,
   onFile,
   busy,
+  resumable,
+  onResume,
+  onDismissResumable,
 }: {
   pasted: string;
   setPasted: (v: string) => void;
   onPaste: () => void;
   onFile: (file: File) => void;
   busy: boolean;
+  resumable: { id: string; file_name: string | null; source_type: string; status: string }[];
+  onResume: (sid: string) => void;
+  onDismissResumable: (sid: string) => void;
 }) {
   return (
+    <>
+      {resumable.length > 0 && (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 mb-3 space-y-2">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-400 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">{t("import.resume.banner.title")}</p>
+              <p className="text-xs text-muted-foreground">
+                {t("import.resume.banner.body", { count: resumable.length })}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {resumable.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-center gap-2 rounded border border-border/50 bg-card/60 px-2 py-1"
+              >
+                <span className="text-xs truncate max-w-[200px]">
+                  {r.file_name ?? r.source_type}
+                </span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-6 text-[11px]"
+                  disabled={busy}
+                  onClick={() => onResume(r.id)}
+                >
+                  {t("import.resume.cta")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-[11px]"
+                  onClick={() => onDismissResumable(r.id)}
+                >
+                  {t("import.resume.dismiss")}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     <Tabs defaultValue="paste" className="w-full">
       <TabsList>
         <TabsTrigger value="paste">{t("import.source.tab.paste")}</TabsTrigger>
