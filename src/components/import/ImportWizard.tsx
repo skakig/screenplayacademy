@@ -358,13 +358,24 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
       setStep("done");
       onImported?.();
 
-      // For replace/new_project, full reload of editor route brings everything online cleanly.
+      // Run AI diagnostics in the background — non-blocking; user sees a CTA when ready.
+      if (runDiagnostics && sessionId) {
+        setDiagBusy(true);
+        diagnose({ data: { sessionId, projectId: targetProjectId } })
+          .then((res) => setReportId(res.reportId))
+          .catch((e) => console.error("diagnoseImport", e))
+          .finally(() => setDiagBusy(false));
+      }
+
+      // For replace/new_project, full reload brings everything online cleanly —
+      // but defer reload long enough for the user to open the AI report.
+      const reloadDelay = runDiagnostics ? 5000 : 600;
       if (mode === "new_project") {
         setTimeout(() => {
           window.location.assign(`/editor/${targetProjectId}`);
-        }, 600);
+        }, reloadDelay);
       } else {
-        setTimeout(() => window.location.reload(), 600);
+        setTimeout(() => window.location.reload(), reloadDelay);
       }
     } catch (e: any) {
       toast.error(e?.message ?? t("import.error.commit"));
