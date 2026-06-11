@@ -230,11 +230,11 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
     const characters = new Set<string>();
     const scenes: string[] = [];
     for (const c of live) {
-      const t = c.user_override_type ?? c.proposed_block_type;
-      if (t === "character" && c.proposed_character_name) {
+      const bt = c.user_override_type ?? c.proposed_block_type;
+      if (bt === "character" && c.proposed_character_name) {
         characters.add(c.proposed_character_name.toUpperCase());
       }
-      if (t === "scene_heading") scenes.push(c.raw_text);
+      if (bt === "scene_heading") scenes.push(c.raw_text);
     }
     return {
       total: live.length,
