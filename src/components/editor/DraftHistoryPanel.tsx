@@ -172,9 +172,96 @@ export function DraftHistoryPanel({ projectId }: Props) {
   const [exporting, setExporting] = useState(false);
   const [comparisons, setComparisons] = useState<SavedComparison[]>([]);
 
+  // Load comparisons (local + cloud) and backfill local-only entries once their takes have serverIds.
   useEffect(() => {
-    setComparisons(readComparisons(projectId));
+    let cancelled = false;
+    const local = readComparisons(projectId);
+    setComparisons(local);
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("draft_take_comparisons")
+          .select("id, label, left_take_id, right_take_id, saved_at")
+          .eq("project_id", projectId)
+          .order("saved_at", { ascending: false })
+          .limit(25);
+        if (cancelled || error || !data) return;
+        const remote: SavedComparison[] = data.map((r: any) => ({
+          id: `cmp-srv-${r.id}`,
+          serverId: r.id,
+          label: r.label,
+          leftTakeId: `take-srv-${r.left_take_id}`,
+          rightTakeId: `take-srv-${r.right_take_id}`,
+          savedAt: new Date(r.saved_at).getTime(),
+          syncStatus: "synced",
+        }));
+        const merged = mergeComparisons(local, remote);
+        writeComparisons(projectId, merged);
+        if (!cancelled) setComparisons(merged);
+      } catch {
+        /* offline — keep local */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [projectId]);
+
+  const pushComparison = useCallback(
+    async (cmp: SavedComparison, leftServerId: string, rightServerId: string) => {
+      try {
+        const { data: userRes } = await supabase.auth.getUser();
+        const userId = userRes.user?.id;
+        if (!userId) return;
+        const { data, error } = await supabase
+          .from("draft_take_comparisons")
+          .insert({
+            project_id: projectId,
+            user_id: userId,
+            label: cmp.label,
+            left_take_id: leftServerId,
+            right_take_id: rightServerId,
+            saved_at: new Date(cmp.savedAt).toISOString(),
+          })
+          .select("id")
+          .single();
+        if (error || !data) {
+          setComparisons((prev) => {
+            const next = prev.map((c) =>
+              c.id === cmp.id ? { ...c, syncStatus: "error" as const } : c,
+            );
+            writeComparisons(projectId, next);
+            return next;
+          });
+          return;
+        }
+        setComparisons((prev) => {
+          const next = prev.map((c) =>
+            c.id === cmp.id ? { ...c, serverId: data.id, syncStatus: "synced" as const } : c,
+          );
+          writeComparisons(projectId, next);
+          return next;
+        });
+      } catch {
+        /* offline — leave pending */
+      }
+    },
+    [projectId],
+  );
+
+  // Backfill any local-only comparisons once both referenced takes have a serverId.
+  useEffect(() => {
+    const pending = comparisons.filter((c) => !c.serverId && c.syncStatus !== "pending");
+    if (pending.length === 0) return;
+    for (const c of pending) {
+      const left = takes.find((t) => t.id === c.leftTakeId);
+      const right = takes.find((t) => t.id === c.rightTakeId);
+      if (left?.serverId && right?.serverId) {
+        void pushComparison(c, left.serverId, right.serverId);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [takes, comparisons, pushComparison]);
 
   const saveComparison = (label: string) => {
     if (selectedIds.length !== 2) return;
@@ -185,11 +272,18 @@ export function DraftHistoryPanel({ projectId }: Props) {
       leftTakeId: a,
       rightTakeId: b,
       savedAt: Date.now(),
+      syncStatus: "pending",
     };
     const next = [entry, ...comparisons].slice(0, 25);
     writeComparisons(projectId, next);
     setComparisons(next);
     toast.success(`Saved comparison "${label}"`);
+
+    const left = takes.find((t) => t.id === a);
+    const right = takes.find((t) => t.id === b);
+    if (left?.serverId && right?.serverId) {
+      void pushComparison(entry, left.serverId, right.serverId);
+    }
   };
 
   const reopenComparison = (cmp: SavedComparison) => {
@@ -203,10 +297,18 @@ export function DraftHistoryPanel({ projectId }: Props) {
     setDiffOpen(true);
   };
 
-  const deleteComparison = (id: string) => {
+  const deleteComparison = async (id: string) => {
+    const target = comparisons.find((c) => c.id === id);
     const next = comparisons.filter((c) => c.id !== id);
     writeComparisons(projectId, next);
     setComparisons(next);
+    if (target?.serverId) {
+      const { error } = await supabase
+        .from("draft_take_comparisons")
+        .delete()
+        .eq("id", target.serverId);
+      if (error) toast.error("Couldn't sync delete to the cloud.");
+    }
   };
 
   const toggleSelected = (id: string) => {
