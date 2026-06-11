@@ -204,6 +204,54 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
     }
   };
 
+  const resumeSession = async (sid: string) => {
+    setBusy(true);
+    try {
+      setSessionId(sid);
+      await reload(sid);
+      setStep("review");
+    } catch (e: any) {
+      toast.error(e?.message ?? t("import.error.start"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const dismissResumable = async (sid: string) => {
+    try {
+      await cancelSession({ data: { sessionId: sid } });
+      setResumable((prev) => prev.filter((r) => r.id !== sid));
+    } catch {
+      /* non-blocking */
+    }
+  };
+
+  const doRevert = async () => {
+    if (!sessionId) return;
+    if (typeof window !== "undefined" && !window.confirm(t("import.revert.confirm"))) return;
+    setBusy(true);
+    try {
+      const res = await revert({ data: { sessionId } });
+      // Hydrate editor draft with the restored blocks
+      const draftBlocks = (res.blocks as any[]).map((r, i) => ({
+        id: `local-${Date.now().toString(36)}-${i.toString(36)}`,
+        serverId: r.id,
+        block_type: r.block_type,
+        content: r.content ?? "",
+        order_index: r.order_index,
+        metadata: r.metadata,
+        status: "clean" as const,
+      }));
+      writeDraft(res.projectId as string, draftBlocks as any);
+      toast.success(t("import.revert.success"));
+      setTimeout(() => window.location.reload(), 400);
+    } catch (e: any) {
+      toast.error(e?.message ?? t("import.revert.error"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const onFileChosen = async (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
     const textType = TEXT_EXTS[ext];
