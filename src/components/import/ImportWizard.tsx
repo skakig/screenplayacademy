@@ -119,6 +119,10 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
   const [filter, setFilter] = useState<"all" | "needs_review" | "approved">("all");
   const [mode, setMode] = useState<"replace" | "append" | "new_project">("replace");
   const [newTitle, setNewTitle] = useState("");
+  const [runDiagnostics, setRunDiagnostics] = useState(true);
+  const [reportId, setReportId] = useState<string | null>(null);
+  const [diagOpen, setDiagOpen] = useState(false);
+  const [diagBusy, setDiagBusy] = useState(false);
 
   const create = useServerFn(createImportSession);
   const parse = useServerFn(parseScreenplay);
@@ -127,6 +131,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
   const bulkApprove = useServerFn(bulkApproveCandidates);
   const commit = useServerFn(commitImport);
   const extract = useServerFn(extractFileText);
+  const diagnose = useServerFn(diagnoseImport);
 
   useEffect(() => {
     if (!open) {
