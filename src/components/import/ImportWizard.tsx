@@ -43,6 +43,7 @@ import {
 import { commitImport } from "@/lib/import/commit.functions";
 import { readDraft, writeDraft } from "@/components/editor/draftBackup";
 import { supabase } from "@/integrations/supabase/client";
+import { t } from "@/lib/i18n/t";
 
 const BLOCK_TYPES = [
   "scene_heading",
@@ -140,7 +141,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
 
   const startFromText = async (sourceType: SourceType, rawText: string, fileName?: string) => {
     if (!rawText.trim()) {
-      toast.error("Nothing to import yet.");
+      toast.error(t("import.error.empty"));
       return;
     }
     setBusy(true);
@@ -153,7 +154,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
       await reload(session.id);
       setStep("review");
     } catch (e: any) {
-      toast.error(e?.message ?? "Couldn't start import");
+      toast.error(e?.message ?? t("import.error.start"));
     } finally {
       setBusy(false);
     }
@@ -163,9 +164,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
     const sourceType = TEXT_EXTS[ext];
     if (!sourceType) {
-      toast.error(
-        "This format is coming in the next pass. Try .txt, .fountain, .md — or paste the text.",
-      );
+      toast.error(t("import.error.unsupportedFormat"));
       return;
     }
     const text = await file.text();
@@ -182,7 +181,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
       setCandidates((prev) =>
         prev.map((x) => (x.id === c.id ? { ...x, approved: !approved } : x)),
       );
-      toast.error("Couldn't save change");
+      toast.error(t("import.error.save"));
     }
   };
 
@@ -193,7 +192,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
     try {
       await update({ data: { candidateId: c.id, patch: { user_override_type: type } } });
     } catch {
-      toast.error("Couldn't save change");
+      toast.error(t("import.error.save"));
     }
   };
 
@@ -202,7 +201,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
     try {
       await update({ data: { candidateId: c.id, patch: { removed: true, approved: false } } });
     } catch {
-      toast.error("Couldn't save change");
+      toast.error(t("import.error.save"));
     }
   };
 
@@ -212,7 +211,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
     try {
       await bulkApprove({ data: { sessionId, confidence: "high" } });
       await reload(sessionId);
-      toast.success("All high-confidence blocks approved");
+      toast.success(t("import.review.approveHigh.toast"));
     } finally {
       setBusy(false);
     }
@@ -231,11 +230,11 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
     const characters = new Set<string>();
     const scenes: string[] = [];
     for (const c of live) {
-      const t = c.user_override_type ?? c.proposed_block_type;
-      if (t === "character" && c.proposed_character_name) {
+      const bt = c.user_override_type ?? c.proposed_block_type;
+      if (bt === "character" && c.proposed_character_name) {
         characters.add(c.proposed_character_name.toUpperCase());
       }
-      if (t === "scene_heading") scenes.push(c.raw_text);
+      if (bt === "scene_heading") scenes.push(c.raw_text);
     }
     return {
       total: live.length,
@@ -249,11 +248,11 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
   const doCommit = async () => {
     if (!sessionId) return;
     if (summary.approved === 0) {
-      toast.error("Approve at least one block first.");
+      toast.error(t("import.error.approveOne"));
       return;
     }
     if (mode === "new_project" && !newTitle.trim()) {
-      toast.error("Give the new project a title.");
+      toast.error(t("import.error.newTitle"));
       return;
     }
     setBusy(true);
@@ -269,7 +268,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
               await supabase.from("draft_takes").insert({
                 project_id: projectId,
                 user_id: uid,
-                name: `Before import — ${new Date().toLocaleString()}`,
+                name: t("import.commit.takeName", { when: new Date().toLocaleString() }),
                 captured_at: new Date().toISOString(),
                 block_count: current.blocks.length,
                 word_count: current.blocks.reduce(
@@ -315,7 +314,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
         writeDraft(targetProjectId, draftBlocks as any);
       }
 
-      toast.success(`Imported ${result.blockCount} blocks`);
+      toast.success(t("import.commit.success", { count: result.blockCount }));
       setStep("done");
       onImported?.();
 
@@ -328,7 +327,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
         setTimeout(() => window.location.reload(), 600);
       }
     } catch (e: any) {
-      toast.error(e?.message ?? "Couldn't commit import");
+      toast.error(e?.message ?? t("import.error.commit"));
     } finally {
       setBusy(false);
     }
@@ -340,12 +339,9 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-4 w-4 text-primary" />
-            Import existing screenplay
+            {t("import.title")}
           </DialogTitle>
-          <DialogDescription>
-            Bring your work in. SceneSmith parses it, shows you exactly what it found, and never
-            rewrites a line you didn't approve.
-          </DialogDescription>
+          <DialogDescription>{t("import.description")}</DialogDescription>
         </DialogHeader>
 
         {step === "source" && (
@@ -390,8 +386,8 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
         {step === "done" && (
           <div className="py-12 text-center space-y-3">
             <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
-            <p className="text-lg font-semibold">Import complete</p>
-            <p className="text-sm text-muted-foreground">Loading your screenplay…</p>
+            <p className="text-lg font-semibold">{t("import.done.title")}</p>
+            <p className="text-sm text-muted-foreground">{t("import.done.loading")}</p>
           </div>
         )}
       </DialogContent>
@@ -415,20 +411,20 @@ function SourceStep({
   return (
     <Tabs defaultValue="paste" className="w-full">
       <TabsList>
-        <TabsTrigger value="paste">Paste text</TabsTrigger>
-        <TabsTrigger value="upload">Upload file</TabsTrigger>
+        <TabsTrigger value="paste">{t("import.source.tab.paste")}</TabsTrigger>
+        <TabsTrigger value="upload">{t("import.source.tab.upload")}</TabsTrigger>
       </TabsList>
       <TabsContent value="paste" className="space-y-3">
         <Textarea
           value={pasted}
           onChange={(e) => setPasted(e.target.value)}
-          placeholder="Paste your screenplay, treatment, or rough draft here…"
+          placeholder={t("import.source.paste.placeholder")}
           className="min-h-[280px] font-mono text-xs"
         />
         <div className="flex justify-end">
           <Button onClick={onPaste} disabled={busy || !pasted.trim()}>
             {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-            Parse text
+            {t("import.source.paste.cta")}
           </Button>
         </div>
       </TabsContent>
@@ -438,9 +434,9 @@ function SourceStep({
           className="border-2 border-dashed border-border/60 rounded-md p-10 flex flex-col items-center gap-2 cursor-pointer hover:border-primary/50 transition"
         >
           <FileText className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm font-medium">Drop a file or click to choose</p>
+          <p className="text-sm font-medium">{t("import.source.upload.cta")}</p>
           <p className="text-[11px] text-muted-foreground">
-            .txt · .fountain · .md (more formats coming next pass)
+            {t("import.source.upload.formats")}
           </p>
           <Input
             id="import-file"
@@ -455,7 +451,7 @@ function SourceStep({
         </label>
         {busy && (
           <p className="text-xs text-muted-foreground flex items-center gap-2 justify-center">
-            <Loader2 className="h-3 w-3 animate-spin" /> Parsing…
+            <Loader2 className="h-3 w-3 animate-spin" /> {t("import.source.upload.parsing")}
           </p>
         )}
       </TabsContent>
@@ -481,7 +477,7 @@ function ReviewStep({
   filter: "all" | "needs_review" | "approved";
   setFilter: (f: "all" | "needs_review" | "approved") => void;
   onToggleApprove: (c: Candidate) => void;
-  onChangeType: (c: Candidate, t: string) => void;
+  onChangeType: (c: Candidate, type: string) => void;
   onRemove: (c: Candidate) => void;
   onApproveAllHigh: () => void;
   busy: boolean;
@@ -494,11 +490,11 @@ function ReviewStep({
         <div className="flex items-center gap-2 flex-wrap">
           <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
             <TabsList>
-              <TabsTrigger value="all">All ({summary.total})</TabsTrigger>
+              <TabsTrigger value="all">{t("import.review.filter.all", { count: summary.total })}</TabsTrigger>
               <TabsTrigger value="needs_review">
-                Needs review ({summary.reviewing})
+                {t("import.review.filter.needsReview", { count: summary.reviewing })}
               </TabsTrigger>
-              <TabsTrigger value="approved">Approved ({summary.approved})</TabsTrigger>
+              <TabsTrigger value="approved">{t("import.review.filter.approved", { count: summary.approved })}</TabsTrigger>
             </TabsList>
           </Tabs>
           <Button
@@ -508,7 +504,7 @@ function ReviewStep({
             onClick={onApproveAllHigh}
             disabled={busy}
           >
-            Approve all high-confidence
+            {t("import.review.approveHigh")}
           </Button>
         </div>
 
@@ -524,7 +520,7 @@ function ReviewStep({
                   checked={c.approved}
                   onChange={() => onToggleApprove(c)}
                   className="mt-1.5 h-4 w-4 rounded border-border accent-primary"
-                  aria-label="Approve block"
+                  aria-label={t("import.review.aria.approve")}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-1 flex-wrap">
@@ -536,9 +532,9 @@ function ReviewStep({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {BLOCK_TYPES.map((t) => (
-                          <SelectItem key={t} value={t} className="text-xs">
-                            {t.replace(/_/g, " ")}
+                        {BLOCK_TYPES.map((bt) => (
+                          <SelectItem key={bt} value={bt} className="text-xs">
+                            {t(`import.blockType.${bt}` as any)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -548,7 +544,7 @@ function ReviewStep({
                       className={`text-[10px] ${CONFIDENCE_COLOR[c.confidence] ?? ""}`}
                       title={c.reason ?? ""}
                     >
-                      {c.confidence}
+                      {t(`import.confidence.${c.confidence}` as any)}
                     </Badge>
                     {c.needs_review && (
                       <Badge
@@ -556,12 +552,12 @@ function ReviewStep({
                         className="text-[10px] bg-amber-500/10 border-amber-500/30 text-amber-200"
                       >
                         <AlertTriangle className="h-2.5 w-2.5 mr-1" />
-                        review
+                        {t("import.review.badge.review")}
                       </Badge>
                     )}
                   </div>
                   <p className="text-xs font-mono whitespace-pre-wrap break-words">
-                    {c.raw_text || <em className="opacity-50">(empty)</em>}
+                    {c.raw_text || <em className="opacity-50">{t("import.review.empty.placeholder")}</em>}
                   </p>
                 </div>
                 <Button
@@ -569,7 +565,7 @@ function ReviewStep({
                   variant="ghost"
                   className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                   onClick={() => onRemove(c)}
-                  aria-label="Remove block"
+                  aria-label={t("import.review.aria.remove")}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
@@ -577,7 +573,7 @@ function ReviewStep({
             ))}
             {visible.length === 0 && (
               <li className="p-10 text-center text-xs text-muted-foreground italic">
-                Nothing in this filter.
+                {t("import.review.empty")}
               </li>
             )}
           </ul>
@@ -585,10 +581,10 @@ function ReviewStep({
 
         <div className="flex justify-between">
           <Button variant="ghost" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t("import.nav.back")}
           </Button>
           <Button onClick={onNext} disabled={busy}>
-            Continue <ArrowRight className="h-4 w-4 ml-2" />
+            {t("import.nav.continue")} <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
       </div>
@@ -596,22 +592,21 @@ function ReviewStep({
       <aside className="space-y-3 text-xs">
         <div className="rounded-md border border-border/50 bg-card/40 p-3 space-y-1">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-            Detected
+            {t("import.review.detected")}
           </p>
+          <p>{t("import.review.scenes", { count: summary.scenes.length })}</p>
+          <p>{t("import.review.characters", { count: summary.characters.length })}</p>
           <p>
-            <strong>{summary.scenes.length}</strong> scenes
-          </p>
-          <p>
-            <strong>{summary.characters.length}</strong> characters
-          </p>
-          <p>
-            <strong>{summary.approved}</strong> / {summary.total} blocks approved
+            {t("import.review.approvedCount", {
+              approved: summary.approved,
+              total: summary.total,
+            })}
           </p>
         </div>
         {summary.characters.length > 0 && (
           <div className="rounded-md border border-border/50 bg-card/40 p-3 space-y-1">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-              Cast
+              {t("import.review.cast")}
             </p>
             <ul className="space-y-0.5">
               {summary.characters.slice(0, 12).map((n) => (
@@ -621,7 +616,7 @@ function ReviewStep({
               ))}
               {summary.characters.length > 12 && (
                 <li className="text-muted-foreground italic">
-                  +{summary.characters.length - 12} more
+                  {t("import.review.castMore", { count: summary.characters.length - 12 })}
                 </li>
               )}
             </ul>
@@ -654,12 +649,16 @@ function CommitStep({
   return (
     <div className="space-y-4">
       <div className="rounded-md border border-border/60 bg-card/40 p-3">
-        <p className="text-sm">
-          Ready to commit <strong>{summary.approved}</strong> blocks.
-        </p>
+        <p
+          className="text-sm"
+          dangerouslySetInnerHTML={{
+            __html: t("import.commit.ready", {
+              count: `<strong>${summary.approved}</strong>`,
+            }),
+          }}
+        />
         <p className="text-[11px] text-muted-foreground mt-1">
-          Your current draft is automatically slated as a Take before any replace — you can roll
-          back any time.
+          {t("import.commit.safetyNote")}
         </p>
       </div>
 
@@ -667,35 +666,33 @@ function CommitStep({
         <Label className="flex gap-3 items-start p-3 border border-border/60 rounded-md cursor-pointer hover:border-primary/40">
           <RadioGroupItem value="replace" className="mt-0.5" />
           <div>
-            <p className="font-medium text-sm">Replace current draft</p>
+            <p className="font-medium text-sm">{t("import.commit.mode.replace.title")}</p>
             <p className="text-[11px] text-muted-foreground">
-              Swap your current screenplay with the imported one. Current draft is captured as a
-              Take first.
+              {t("import.commit.mode.replace.body")}
             </p>
           </div>
         </Label>
         <Label className="flex gap-3 items-start p-3 border border-border/60 rounded-md cursor-pointer hover:border-primary/40">
           <RadioGroupItem value="append" className="mt-0.5" />
           <div>
-            <p className="font-medium text-sm">Append to current draft</p>
+            <p className="font-medium text-sm">{t("import.commit.mode.append.title")}</p>
             <p className="text-[11px] text-muted-foreground">
-              Add the imported blocks at the end of your current screenplay.
+              {t("import.commit.mode.append.body")}
             </p>
           </div>
         </Label>
         <Label className="flex gap-3 items-start p-3 border border-border/60 rounded-md cursor-pointer hover:border-primary/40">
           <RadioGroupItem value="new_project" className="mt-0.5" />
           <div className="flex-1">
-            <p className="font-medium text-sm">Import as a new project</p>
+            <p className="font-medium text-sm">{t("import.commit.mode.new.title")}</p>
             <p className="text-[11px] text-muted-foreground">
-              Create a new project and put the imported screenplay there. Your current project is
-              untouched.
+              {t("import.commit.mode.new.body")}
             </p>
             {mode === "new_project" && (
               <Input
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="New project title"
+                placeholder={t("import.commit.newTitle.placeholder")}
                 className="h-8 text-xs mt-2"
               />
             )}
@@ -705,11 +702,11 @@ function CommitStep({
 
       <div className="flex justify-between">
         <Button variant="ghost" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back
+          <ArrowLeft className="h-4 w-4 mr-2" /> {t("import.nav.back")}
         </Button>
         <Button onClick={onCommit} disabled={busy}>
           {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-          Commit import
+          {t("import.commit.cta")}
         </Button>
       </div>
     </div>
