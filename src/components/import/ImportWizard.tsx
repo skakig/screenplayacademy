@@ -201,7 +201,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
     try {
       await update({ data: { candidateId: c.id, patch: { removed: true, approved: false } } });
     } catch {
-      toast.error("Couldn't save change");
+      toast.error(t("import.error.save"));
     }
   };
 
