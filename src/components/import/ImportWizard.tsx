@@ -794,6 +794,25 @@ function CommitStep({
         </Label>
       </RadioGroup>
 
+      <label className="flex items-start gap-3 p-3 rounded-md border border-border/60 bg-card/30 cursor-pointer hover:border-primary/40">
+        <input
+          type="checkbox"
+          checked={runDiagnostics}
+          onChange={(e) => setRunDiagnostics(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-border accent-primary"
+        />
+        <div className="min-w-0">
+          <p className="text-sm font-medium flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            {t("import.commit.diagnostics.label")}
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            {t("import.commit.diagnostics.hint")}
+          </p>
+        </div>
+      </label>
+
+
       <div className="flex justify-between">
         <Button variant="ghost" onClick={onBack}>
           <ArrowLeft className="h-4 w-4 mr-2" /> {t("import.nav.back")}
