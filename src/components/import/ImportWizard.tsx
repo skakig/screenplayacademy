@@ -490,11 +490,11 @@ function ReviewStep({
         <div className="flex items-center gap-2 flex-wrap">
           <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
             <TabsList>
-              <TabsTrigger value="all">All ({summary.total})</TabsTrigger>
+              <TabsTrigger value="all">{t("import.review.filter.all", { count: summary.total })}</TabsTrigger>
               <TabsTrigger value="needs_review">
-                Needs review ({summary.reviewing})
+                {t("import.review.filter.needsReview", { count: summary.reviewing })}
               </TabsTrigger>
-              <TabsTrigger value="approved">Approved ({summary.approved})</TabsTrigger>
+              <TabsTrigger value="approved">{t("import.review.filter.approved", { count: summary.approved })}</TabsTrigger>
             </TabsList>
           </Tabs>
           <Button
@@ -504,7 +504,7 @@ function ReviewStep({
             onClick={onApproveAllHigh}
             disabled={busy}
           >
-            Approve all high-confidence
+            {t("import.review.approveHigh")}
           </Button>
         </div>
 
