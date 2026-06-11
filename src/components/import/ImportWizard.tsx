@@ -248,11 +248,11 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
   const doCommit = async () => {
     if (!sessionId) return;
     if (summary.approved === 0) {
-      toast.error("Approve at least one block first.");
+      toast.error(t("import.error.approveOne"));
       return;
     }
     if (mode === "new_project" && !newTitle.trim()) {
-      toast.error("Give the new project a title.");
+      toast.error(t("import.error.newTitle"));
       return;
     }
     setBusy(true);
