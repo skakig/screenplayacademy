@@ -579,16 +579,27 @@ export function DraftHistoryPanel({ projectId }: Props) {
               Slate a new take
             </p>
           </div>
-          <div
-            className="flex items-center gap-1 text-[10px] text-muted-foreground"
-            title={syncLabel}
-          >
-            <SyncIcon
-              className={`h-3 w-3 ${syncState === "syncing" ? "animate-spin" : ""} ${
-                syncState === "offline" ? "text-amber-500" : ""
-              }`}
-            />
-            <span className="hidden sm:inline">{syncLabel}</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition"
+              title="Import an existing screenplay"
+            >
+              <Upload className="h-3 w-3" />
+              <span className="hidden sm:inline">Import</span>
+            </button>
+            <div
+              className="flex items-center gap-1 text-[10px] text-muted-foreground"
+              title={syncLabel}
+            >
+              <SyncIcon
+                className={`h-3 w-3 ${syncState === "syncing" ? "animate-spin" : ""} ${
+                  syncState === "offline" ? "text-amber-500" : ""
+                }`}
+              />
+              <span className="hidden sm:inline">{syncLabel}</span>
+            </div>
           </div>
         </div>
         <Input
