@@ -27,6 +27,7 @@ import {
   FileDown,
   Bookmark,
   Upload,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,6 +37,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { TakeDiffViewer } from "./TakeDiffViewer";
 import { downloadPitchKitPdf } from "./pitchKitPdf";
 import { ImportWizard } from "@/components/import/ImportWizard";
+import { ImportDiagnosticsPanel } from "@/components/import/ImportDiagnosticsPanel";
+import { getLatestImportReport } from "@/lib/import/diagnose.functions";
+import { useServerFn } from "@tanstack/react-start";
 
 type Take = {
   id: string;
