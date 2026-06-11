@@ -429,19 +429,47 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
             setNewTitle={setNewTitle}
             summary={summary}
             busy={busy}
+            runDiagnostics={runDiagnostics}
+            setRunDiagnostics={setRunDiagnostics}
             onBack={() => setStep("review")}
             onCommit={doCommit}
           />
         )}
 
         {step === "done" && (
-          <div className="py-12 text-center space-y-3">
+          <div className="py-10 text-center space-y-3">
             <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
             <p className="text-lg font-semibold">{t("import.done.title")}</p>
-            <p className="text-sm text-muted-foreground">{t("import.done.loading")}</p>
+            {runDiagnostics ? (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {diagBusy
+                    ? t("import.done.diagRunning")
+                    : reportId
+                      ? t("import.done.diagReady")
+                      : t("import.done.loading")}
+                </p>
+                {reportId && (
+                  <Button size="sm" onClick={() => setDiagOpen(true)}>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    {t("import.done.viewReport")}
+                  </Button>
+                )}
+                {diagBusy && (
+                  <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t("import.done.loading")}</p>
+            )}
           </div>
         )}
       </DialogContent>
+      <ImportDiagnosticsPanel
+        open={diagOpen}
+        onOpenChange={setDiagOpen}
+        reportId={reportId}
+      />
     </Dialog>
   );
 }
