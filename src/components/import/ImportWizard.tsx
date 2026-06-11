@@ -141,7 +141,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
 
   const startFromText = async (sourceType: SourceType, rawText: string, fileName?: string) => {
     if (!rawText.trim()) {
-      toast.error("Nothing to import yet.");
+      toast.error(t("import.error.empty"));
       return;
     }
     setBusy(true);
