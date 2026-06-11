@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { GraduationCap, BookOpen, ArrowRight, Sparkles, Plus, Upload } from "lucide-react";
 import { useState } from "react";
 import { ImportWizard } from "@/components/import/ImportWizard";
+import { t } from "@/lib/i18n/t";
 
 export function GuidedDashboard() {
   const navigate = useNavigate();
