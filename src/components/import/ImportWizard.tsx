@@ -649,12 +649,16 @@ function CommitStep({
   return (
     <div className="space-y-4">
       <div className="rounded-md border border-border/60 bg-card/40 p-3">
-        <p className="text-sm">
-          Ready to commit <strong>{summary.approved}</strong> blocks.
-        </p>
+        <p
+          className="text-sm"
+          dangerouslySetInnerHTML={{
+            __html: t("import.commit.ready", {
+              count: `<strong>${summary.approved}</strong>`,
+            }),
+          }}
+        />
         <p className="text-[11px] text-muted-foreground mt-1">
-          Your current draft is automatically slated as a Take before any replace — you can roll
-          back any time.
+          {t("import.commit.safetyNote")}
         </p>
       </div>
 
@@ -662,35 +666,33 @@ function CommitStep({
         <Label className="flex gap-3 items-start p-3 border border-border/60 rounded-md cursor-pointer hover:border-primary/40">
           <RadioGroupItem value="replace" className="mt-0.5" />
           <div>
-            <p className="font-medium text-sm">Replace current draft</p>
+            <p className="font-medium text-sm">{t("import.commit.mode.replace.title")}</p>
             <p className="text-[11px] text-muted-foreground">
-              Swap your current screenplay with the imported one. Current draft is captured as a
-              Take first.
+              {t("import.commit.mode.replace.body")}
             </p>
           </div>
         </Label>
         <Label className="flex gap-3 items-start p-3 border border-border/60 rounded-md cursor-pointer hover:border-primary/40">
           <RadioGroupItem value="append" className="mt-0.5" />
           <div>
-            <p className="font-medium text-sm">Append to current draft</p>
+            <p className="font-medium text-sm">{t("import.commit.mode.append.title")}</p>
             <p className="text-[11px] text-muted-foreground">
-              Add the imported blocks at the end of your current screenplay.
+              {t("import.commit.mode.append.body")}
             </p>
           </div>
         </Label>
         <Label className="flex gap-3 items-start p-3 border border-border/60 rounded-md cursor-pointer hover:border-primary/40">
           <RadioGroupItem value="new_project" className="mt-0.5" />
           <div className="flex-1">
-            <p className="font-medium text-sm">Import as a new project</p>
+            <p className="font-medium text-sm">{t("import.commit.mode.new.title")}</p>
             <p className="text-[11px] text-muted-foreground">
-              Create a new project and put the imported screenplay there. Your current project is
-              untouched.
+              {t("import.commit.mode.new.body")}
             </p>
             {mode === "new_project" && (
               <Input
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="New project title"
+                placeholder={t("import.commit.newTitle.placeholder")}
                 className="h-8 text-xs mt-2"
               />
             )}
@@ -700,11 +702,11 @@ function CommitStep({
 
       <div className="flex justify-between">
         <Button variant="ghost" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back
+          <ArrowLeft className="h-4 w-4 mr-2" /> {t("import.nav.back")}
         </Button>
         <Button onClick={onCommit} disabled={busy}>
           {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-          Commit import
+          {t("import.commit.cta")}
         </Button>
       </div>
     </div>
