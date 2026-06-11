@@ -386,8 +386,8 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
         {step === "done" && (
           <div className="py-12 text-center space-y-3">
             <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
-            <p className="text-lg font-semibold">Import complete</p>
-            <p className="text-sm text-muted-foreground">Loading your screenplay…</p>
+            <p className="text-lg font-semibold">{t("import.done.title")}</p>
+            <p className="text-sm text-muted-foreground">{t("import.done.loading")}</p>
           </div>
         )}
       </DialogContent>
