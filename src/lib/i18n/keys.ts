@@ -36,7 +36,7 @@ export const i18nStrings = {
     "Paste your screenplay, treatment, or rough draft here…",
   "import.source.paste.cta": "Parse text",
   "import.source.upload.cta": "Drop a file or click to choose",
-  "import.source.upload.formats": ".txt · .fountain · .md (more formats coming next pass)",
+  "import.source.upload.formats": ".txt · .fountain · .md · .fdx · .docx · .rtf · .pdf",
   "import.source.upload.parsing": "Parsing…",
   "import.error.empty": "Nothing to import yet.",
   "import.error.unsupportedFormat":

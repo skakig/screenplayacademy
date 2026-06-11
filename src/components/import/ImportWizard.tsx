@@ -41,6 +41,7 @@ import {
   bulkApproveCandidates,
 } from "@/lib/import/parse.functions";
 import { commitImport } from "@/lib/import/commit.functions";
+import { extractFileText } from "@/lib/import/extract.functions";
 import { readDraft, writeDraft } from "@/components/editor/draftBackup";
 import { supabase } from "@/integrations/supabase/client";
 import { t } from "@/lib/i18n/t";
@@ -82,13 +83,24 @@ type SourceType =
   | "paste"
   | "txt"
   | "fountain"
-  | "markdown";
+  | "markdown"
+  | "fdx"
+  | "pdf"
+  | "docx"
+  | "rtf";
 
 const TEXT_EXTS: Record<string, SourceType> = {
   txt: "txt",
   fountain: "fountain",
   md: "markdown",
   markdown: "markdown",
+};
+
+const BINARY_EXTS: Record<string, "fdx" | "pdf" | "docx" | "rtf"> = {
+  fdx: "fdx",
+  pdf: "pdf",
+  docx: "docx",
+  rtf: "rtf",
 };
 
 type Props = {
@@ -114,6 +126,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
   const update = useServerFn(updateImportCandidate);
   const bulkApprove = useServerFn(bulkApproveCandidates);
   const commit = useServerFn(commitImport);
+  const extract = useServerFn(extractFileText);
 
   useEffect(() => {
     if (!open) {
@@ -162,14 +175,30 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
 
   const onFileChosen = async (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-    const sourceType = TEXT_EXTS[ext];
-    if (!sourceType) {
-      toast.error(t("import.error.unsupportedFormat"));
+    const textType = TEXT_EXTS[ext];
+    if (textType) {
+      const text = await file.text();
+      await startFromText(textType, text, file.name);
       return;
     }
-    const text = await file.text();
-    await startFromText(sourceType, text, file.name);
+    const binType = BINARY_EXTS[ext];
+    if (binType) {
+      setBusy(true);
+      try {
+        const base64 = await fileToBase64(file);
+        const { rawText } = await extract({
+          data: { sourceType: binType, fileName: file.name, base64 },
+        });
+        await startFromText(binType, rawText, file.name);
+      } catch (e: any) {
+        toast.error(e?.message ?? t("import.error.start"));
+        setBusy(false);
+      }
+      return;
+    }
+    toast.error(t("import.error.unsupportedFormat"));
   };
+
 
   const toggleApprove = async (c: Candidate) => {
     const approved = !c.approved;
@@ -395,6 +424,17 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
   );
 }
 
+async function fileToBase64(file: File): Promise<string> {
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
 function SourceStep({
   pasted,
   setPasted,
@@ -441,7 +481,7 @@ function SourceStep({
           <Input
             id="import-file"
             type="file"
-            accept=".txt,.fountain,.md,.markdown,text/plain"
+            accept=".txt,.fountain,.md,.markdown,.fdx,.docx,.rtf,.pdf,text/plain,application/pdf,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
