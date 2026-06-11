@@ -175,14 +175,30 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
 
   const onFileChosen = async (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-    const sourceType = TEXT_EXTS[ext];
-    if (!sourceType) {
-      toast.error(t("import.error.unsupportedFormat"));
+    const textType = TEXT_EXTS[ext];
+    if (textType) {
+      const text = await file.text();
+      await startFromText(textType, text, file.name);
       return;
     }
-    const text = await file.text();
-    await startFromText(sourceType, text, file.name);
+    const binType = BINARY_EXTS[ext];
+    if (binType) {
+      setBusy(true);
+      try {
+        const base64 = await fileToBase64(file);
+        const { rawText } = await extract({
+          data: { sourceType: binType, fileName: file.name, base64 },
+        });
+        await startFromText(binType, rawText, file.name);
+      } catch (e: any) {
+        toast.error(e?.message ?? t("import.error.start"));
+        setBusy(false);
+      }
+      return;
+    }
+    toast.error(t("import.error.unsupportedFormat"));
   };
+
 
   const toggleApprove = async (c: Candidate) => {
     const approved = !c.approved;
