@@ -146,6 +146,10 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
         setFilter("all");
         setMode("replace");
         setNewTitle("");
+        setRunDiagnostics(true);
+        setReportId(null);
+        setDiagOpen(false);
+        setDiagBusy(false);
         setBusy(false);
       }, 200);
     }
