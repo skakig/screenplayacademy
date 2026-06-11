@@ -157,12 +157,13 @@ export const revertImport = createServerFn({ method: "POST" })
     const payload = match.payload as any;
     const blocks: any[] = Array.isArray(payload?.blocks) ? payload.blocks : [];
 
-    await supabase.from("script_blocks").delete().eq("project_id", session.project_id);
+    const projectId = session.project_id as string;
+    await supabase.from("script_blocks").delete().eq("project_id", projectId);
 
     const inserted: any[] = [];
     if (blocks.length > 0) {
       const rows = blocks.map((b: any, i: number) => ({
-        project_id: session.project_id,
+        project_id: projectId,
         block_type: b.block_type,
         content: b.content ?? "",
         character_id: b.character_id ?? null,
