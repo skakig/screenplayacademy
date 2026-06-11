@@ -82,13 +82,24 @@ type SourceType =
   | "paste"
   | "txt"
   | "fountain"
-  | "markdown";
+  | "markdown"
+  | "fdx"
+  | "pdf"
+  | "docx"
+  | "rtf";
 
 const TEXT_EXTS: Record<string, SourceType> = {
   txt: "txt",
   fountain: "fountain",
   md: "markdown",
   markdown: "markdown",
+};
+
+const BINARY_EXTS: Record<string, "fdx" | "pdf" | "docx" | "rtf"> = {
+  fdx: "fdx",
+  pdf: "pdf",
+  docx: "docx",
+  rtf: "rtf",
 };
 
 type Props = {
