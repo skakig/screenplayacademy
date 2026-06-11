@@ -173,6 +173,7 @@ export function DraftHistoryPanel({ projectId }: Props) {
   const [diffOpen, setDiffOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [comparisons, setComparisons] = useState<SavedComparison[]>([]);
+  const [importOpen, setImportOpen] = useState(false);
 
   // Load comparisons (local + cloud) and backfill local-only entries once their takes have serverIds.
   useEffect(() => {
