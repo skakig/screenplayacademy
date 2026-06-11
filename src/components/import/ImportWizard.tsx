@@ -268,7 +268,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
               await supabase.from("draft_takes").insert({
                 project_id: projectId,
                 user_id: uid,
-                name: `Before import — ${new Date().toLocaleString()}`,
+                name: t("import.commit.takeName", { when: new Date().toLocaleString() }),
                 captured_at: new Date().toISOString(),
                 block_count: current.blocks.length,
                 word_count: current.blocks.reduce(
