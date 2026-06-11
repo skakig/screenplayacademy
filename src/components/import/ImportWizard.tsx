@@ -724,6 +724,8 @@ function CommitStep({
   setNewTitle,
   summary,
   busy,
+  runDiagnostics,
+  setRunDiagnostics,
   onBack,
   onCommit,
 }: {
@@ -733,6 +735,8 @@ function CommitStep({
   setNewTitle: (v: string) => void;
   summary: { approved: number };
   busy: boolean;
+  runDiagnostics: boolean;
+  setRunDiagnostics: (v: boolean) => void;
   onBack: () => void;
   onCommit: () => void;
 }) {
