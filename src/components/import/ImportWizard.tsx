@@ -327,7 +327,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
         setTimeout(() => window.location.reload(), 600);
       }
     } catch (e: any) {
-      toast.error(e?.message ?? "Couldn't commit import");
+      toast.error(e?.message ?? t("import.error.commit"));
     } finally {
       setBusy(false);
     }
