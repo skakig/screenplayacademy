@@ -211,7 +211,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
     try {
       await bulkApprove({ data: { sessionId, confidence: "high" } });
       await reload(sessionId);
-      toast.success("All high-confidence blocks approved");
+      toast.success(t("import.review.approveHigh.toast"));
     } finally {
       setBusy(false);
     }
