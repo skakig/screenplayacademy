@@ -314,7 +314,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
         writeDraft(targetProjectId, draftBlocks as any);
       }
 
-      toast.success(`Imported ${result.blockCount} blocks`);
+      toast.success(t("import.commit.success", { count: result.blockCount }));
       setStep("done");
       onImported?.();
 
