@@ -181,7 +181,7 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
       setCandidates((prev) =>
         prev.map((x) => (x.id === c.id ? { ...x, approved: !approved } : x)),
       );
-      toast.error("Couldn't save change");
+      toast.error(t("import.error.save"));
     }
   };
 
