@@ -606,6 +606,17 @@ export function DraftHistoryPanel({ projectId }: Props) {
               <Upload className="h-3 w-3" />
               <span className="hidden sm:inline">Import</span>
             </button>
+            {latestReportId && (
+              <button
+                type="button"
+                onClick={() => setDiagOpen(true)}
+                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition"
+                title="View last AI import review"
+              >
+                <Sparkles className="h-3 w-3" />
+                <span className="hidden sm:inline">AI review</span>
+              </button>
+            )}
             <div
               className="flex items-center gap-1 text-[10px] text-muted-foreground"
               title={syncLabel}
