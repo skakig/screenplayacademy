@@ -182,6 +182,17 @@ export function GuidedDashboard() {
           <Button asChild size="sm" variant="outline"><Link to="/settings">Studio Settings</Link></Button>
         </Card>
       </div>
+
+      {importProjectId && (
+        <ImportWizard
+          open={importOpen}
+          onOpenChange={(o) => {
+            setImportOpen(o);
+            if (!o) setImportProjectId(null);
+          }}
+          projectId={importProjectId}
+        />
+      )}
     </div>
   );
 }
