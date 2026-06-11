@@ -336,7 +336,13 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
                     n + ((b.content ?? "").trim().split(/\s+/).filter(Boolean).length),
                   0,
                 ),
-                payload: current as any,
+                payload: {
+                  ...(current as any),
+                  metadata: {
+                    ...((current as any)?.metadata ?? {}),
+                    preImportSessionId: sessionId,
+                  },
+                } as any,
               });
             }
           } catch {
