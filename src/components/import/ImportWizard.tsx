@@ -539,6 +539,18 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
             ) : (
               <p className="text-sm text-muted-foreground">{t("import.done.loading")}</p>
             )}
+            <div className="pt-3">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={doRevert}
+                disabled={busy}
+                className="text-muted-foreground hover:text-rose-300"
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                {t("import.revert.cta")}
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>
