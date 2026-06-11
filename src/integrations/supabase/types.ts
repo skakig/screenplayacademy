@@ -836,6 +836,64 @@ export type Database = {
         }
         Relationships: []
       }
+      draft_take_comparisons: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          left_take_id: string
+          project_id: string
+          right_take_id: string
+          saved_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          left_take_id: string
+          project_id: string
+          right_take_id: string
+          saved_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          left_take_id?: string
+          project_id?: string
+          right_take_id?: string
+          saved_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_take_comparisons_left_take_id_fkey"
+            columns: ["left_take_id"]
+            isOneToOne: false
+            referencedRelation: "draft_takes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draft_take_comparisons_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draft_take_comparisons_right_take_id_fkey"
+            columns: ["right_take_id"]
+            isOneToOne: false
+            referencedRelation: "draft_takes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       draft_takes: {
         Row: {
           block_count: number
