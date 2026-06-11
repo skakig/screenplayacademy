@@ -26,6 +26,7 @@ import {
   ArrowLeftRight,
   FileDown,
   Bookmark,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,6 +35,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { TakeDiffViewer } from "./TakeDiffViewer";
 import { downloadPitchKitPdf } from "./pitchKitPdf";
+import { ImportWizard } from "@/components/import/ImportWizard";
 
 type Take = {
   id: string;
@@ -171,6 +173,7 @@ export function DraftHistoryPanel({ projectId }: Props) {
   const [diffOpen, setDiffOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [comparisons, setComparisons] = useState<SavedComparison[]>([]);
+  const [importOpen, setImportOpen] = useState(false);
 
   // Load comparisons (local + cloud) and backfill local-only entries once their takes have serverIds.
   useEffect(() => {
@@ -576,16 +579,27 @@ export function DraftHistoryPanel({ projectId }: Props) {
               Slate a new take
             </p>
           </div>
-          <div
-            className="flex items-center gap-1 text-[10px] text-muted-foreground"
-            title={syncLabel}
-          >
-            <SyncIcon
-              className={`h-3 w-3 ${syncState === "syncing" ? "animate-spin" : ""} ${
-                syncState === "offline" ? "text-amber-500" : ""
-              }`}
-            />
-            <span className="hidden sm:inline">{syncLabel}</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition"
+              title="Import an existing screenplay"
+            >
+              <Upload className="h-3 w-3" />
+              <span className="hidden sm:inline">Import</span>
+            </button>
+            <div
+              className="flex items-center gap-1 text-[10px] text-muted-foreground"
+              title={syncLabel}
+            >
+              <SyncIcon
+                className={`h-3 w-3 ${syncState === "syncing" ? "animate-spin" : ""} ${
+                  syncState === "offline" ? "text-amber-500" : ""
+                }`}
+              />
+              <span className="hidden sm:inline">{syncLabel}</span>
+            </div>
           </div>
         </div>
         <Input
@@ -975,6 +989,12 @@ export function DraftHistoryPanel({ projectId }: Props) {
             : null
         }
         onSave={saveComparison}
+      />
+
+      <ImportWizard
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        projectId={projectId}
       />
     </div>
   );

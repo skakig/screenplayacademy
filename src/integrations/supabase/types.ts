@@ -1025,6 +1025,239 @@ export type Database = {
         }
         Relationships: []
       }
+      import_block_candidates: {
+        Row: {
+          approved: boolean
+          confidence: string
+          created_at: string
+          id: string
+          import_session_id: string
+          needs_review: boolean
+          order_index: number
+          proposed_block_type: string
+          proposed_character_name: string | null
+          proposed_scene_index: number | null
+          raw_text: string
+          reason: string | null
+          removed: boolean
+          updated_at: string
+          user_override_type: string | null
+        }
+        Insert: {
+          approved?: boolean
+          confidence?: string
+          created_at?: string
+          id?: string
+          import_session_id: string
+          needs_review?: boolean
+          order_index: number
+          proposed_block_type?: string
+          proposed_character_name?: string | null
+          proposed_scene_index?: number | null
+          raw_text?: string
+          reason?: string | null
+          removed?: boolean
+          updated_at?: string
+          user_override_type?: string | null
+        }
+        Update: {
+          approved?: boolean
+          confidence?: string
+          created_at?: string
+          id?: string
+          import_session_id?: string
+          needs_review?: boolean
+          order_index?: number
+          proposed_block_type?: string
+          proposed_character_name?: string | null
+          proposed_scene_index?: number | null
+          raw_text?: string
+          reason?: string | null
+          removed?: boolean
+          updated_at?: string
+          user_override_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_block_candidates_import_session_id_fkey"
+            columns: ["import_session_id"]
+            isOneToOne: false
+            referencedRelation: "import_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_recommendations: {
+        Row: {
+          accepted: boolean | null
+          created_at: string
+          id: string
+          kind: string
+          payload: Json
+          report_id: string
+          updated_at: string
+        }
+        Insert: {
+          accepted?: boolean | null
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          report_id: string
+          updated_at?: string
+        }
+        Update: {
+          accepted?: boolean | null
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          report_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_recommendations_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "import_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_reports: {
+        Row: {
+          counts: Json
+          created_at: string
+          id: string
+          import_session_id: string
+          project_id: string | null
+          summary: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          counts?: Json
+          created_at?: string
+          id?: string
+          import_session_id: string
+          project_id?: string | null
+          summary?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          counts?: Json
+          created_at?: string
+          id?: string
+          import_session_id?: string
+          project_id?: string | null
+          summary?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_reports_import_session_id_fkey"
+            columns: ["import_session_id"]
+            isOneToOne: false
+            referencedRelation: "import_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_sessions: {
+        Row: {
+          created_at: string
+          error: string | null
+          file_name: string | null
+          id: string
+          project_id: string | null
+          raw_text: string | null
+          source_type: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          file_name?: string | null
+          id?: string
+          project_id?: string | null
+          raw_text?: string | null
+          source_type: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          file_name?: string | null
+          id?: string
+          project_id?: string | null
+          raw_text?: string | null
+          source_type?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_sessions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_warnings: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          related_candidate_ids: string[]
+          report_id: string
+          severity: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string
+          related_candidate_ids?: string[]
+          report_id: string
+          severity?: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          related_candidate_ids?: string[]
+          report_id?: string
+          severity?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_warnings_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "import_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pitch_packages: {
         Row: {
           budget_tier: string | null

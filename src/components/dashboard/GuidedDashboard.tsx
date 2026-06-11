@@ -4,10 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, BookOpen, ArrowRight, Sparkles, Plus } from "lucide-react";
+import { GraduationCap, BookOpen, ArrowRight, Sparkles, Plus, Upload } from "lucide-react";
+import { useState } from "react";
+import { ImportWizard } from "@/components/import/ImportWizard";
 
 export function GuidedDashboard() {
   const navigate = useNavigate();
+  const [importOpen, setImportOpen] = useState(false);
+  const [importProjectId, setImportProjectId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["guided-dashboard"],
@@ -59,19 +63,51 @@ export function GuidedDashboard() {
       </div>
 
       {!data?.project ? (
-        <Card className="p-8 border-dashed cine-card">
-          <div className="flex flex-col items-center text-center">
-            <BookOpen className="h-12 w-12 mx-auto text-primary mb-3" />
-            <h3 className="font-display text-2xl font-semibold mb-2">Start your first screenplay</h3>
-            <p className="text-sm text-muted-foreground max-w-md mb-5">
-              We'll walk you through 13 focused steps — logline, characters, story arc, scenes, opening pages, draft, table read, and pitch package. Most beginners finish a complete rough draft in 2–4 weeks.
-            </p>
-            <Button size="lg" onClick={() => navigate({ to: "/projects/new" })} className="shadow-lg shadow-primary/20">
-              <Plus className="h-4 w-4 mr-1.5" />Open your first studio
-            </Button>
-            <p className="text-xs text-muted-foreground mt-3 font-mono uppercase tracking-[0.18em]">No experience needed</p>
-          </div>
-        </Card>
+        <div className="grid md:grid-cols-2 gap-4">
+          <Card className="p-8 border-dashed cine-card">
+            <div className="flex flex-col items-center text-center">
+              <BookOpen className="h-12 w-12 mx-auto text-primary mb-3" />
+              <h3 className="font-display text-2xl font-semibold mb-2">Start your first screenplay</h3>
+              <p className="text-sm text-muted-foreground max-w-md mb-5">
+                We'll walk you through 13 focused steps — logline, characters, story arc, scenes, opening pages, draft, table read, and pitch package.
+              </p>
+              <Button size="lg" onClick={() => navigate({ to: "/projects/new" })} className="shadow-lg shadow-primary/20">
+                <Plus className="h-4 w-4 mr-1.5" />Open your first studio
+              </Button>
+              <p className="text-xs text-muted-foreground mt-3 font-mono uppercase tracking-[0.18em]">No experience needed</p>
+            </div>
+          </Card>
+          <Card className="p-8 border-dashed cine-card">
+            <div className="flex flex-col items-center text-center">
+              <Upload className="h-12 w-12 mx-auto text-primary mb-3" />
+              <h3 className="font-display text-2xl font-semibold mb-2">Import an existing screenplay</h3>
+              <p className="text-sm text-muted-foreground max-w-md mb-5">
+                Paste your script or upload a Fountain/text file. SceneSmith parses scenes, characters, and dialogue — and never rewrites a line you didn't approve.
+              </p>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={async () => {
+                  // Create a fresh empty project to import into
+                  const { data: u } = await supabase.auth.getUser();
+                  if (!u.user) return;
+                  const { data: p } = await supabase
+                    .from("projects")
+                    .insert({ title: "Imported screenplay", user_id: u.user.id })
+                    .select("id")
+                    .single();
+                  if (p?.id) {
+                    setImportProjectId(p.id);
+                    setImportOpen(true);
+                  }
+                }}
+              >
+                <Upload className="h-4 w-4 mr-1.5" />Import a screenplay
+              </Button>
+              <p className="text-xs text-muted-foreground mt-3 font-mono uppercase tracking-[0.18em]">Paste · .txt · .fountain · .md</p>
+            </div>
+          </Card>
+        </div>
       ) : (
         <Card className="cine-card p-0 overflow-hidden border-border/60">
           <div className="px-6 pt-6 pb-5 border-b border-border/60"
@@ -146,6 +182,17 @@ export function GuidedDashboard() {
           <Button asChild size="sm" variant="outline"><Link to="/settings">Studio Settings</Link></Button>
         </Card>
       </div>
+
+      {importProjectId && (
+        <ImportWizard
+          open={importOpen}
+          onOpenChange={(o) => {
+            setImportOpen(o);
+            if (!o) setImportProjectId(null);
+          }}
+          projectId={importProjectId}
+        />
+      )}
     </div>
   );
 }
