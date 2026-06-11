@@ -35,6 +35,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { TakeDiffViewer } from "./TakeDiffViewer";
 import { downloadPitchKitPdf } from "./pitchKitPdf";
+import { ImportWizard } from "@/components/import/ImportWizard";
 
 type Take = {
   id: string;
