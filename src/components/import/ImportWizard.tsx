@@ -140,6 +140,20 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
   const commit = useServerFn(commitImport);
   const extract = useServerFn(extractFileText);
   const diagnose = useServerFn(diagnoseImport);
+  const listResumable = useServerFn(listResumableImports);
+  const cancelSession = useServerFn(cancelImportSession);
+  const revert = useServerFn(revertImport);
+
+  const [resumable, setResumable] = useState<
+    { id: string; file_name: string | null; source_type: string; status: string }[]
+  >([]);
+
+  useEffect(() => {
+    if (!open || !projectId || step !== "source") return;
+    listResumable({ data: { projectId } })
+      .then((rows) => setResumable(rows as any))
+      .catch(() => setResumable([]));
+  }, [open, projectId, listResumable, step]);
 
   useEffect(() => {
     if (!open) {
