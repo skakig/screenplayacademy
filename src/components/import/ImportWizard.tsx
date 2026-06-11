@@ -481,7 +481,7 @@ function SourceStep({
           <Input
             id="import-file"
             type="file"
-            accept=".txt,.fountain,.md,.markdown,text/plain"
+            accept=".txt,.fountain,.md,.markdown,.fdx,.docx,.rtf,.pdf,text/plain,application/pdf,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
