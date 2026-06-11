@@ -339,12 +339,9 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-4 w-4 text-primary" />
-            Import existing screenplay
+            {t("import.title")}
           </DialogTitle>
-          <DialogDescription>
-            Bring your work in. SceneSmith parses it, shows you exactly what it found, and never
-            rewrites a line you didn't approve.
-          </DialogDescription>
+          <DialogDescription>{t("import.description")}</DialogDescription>
         </DialogHeader>
 
         {step === "source" && (
