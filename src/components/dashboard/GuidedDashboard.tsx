@@ -10,6 +10,8 @@ import { ImportWizard } from "@/components/import/ImportWizard";
 
 export function GuidedDashboard() {
   const navigate = useNavigate();
+  const [importOpen, setImportOpen] = useState(false);
+  const [importProjectId, setImportProjectId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["guided-dashboard"],
