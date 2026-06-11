@@ -43,6 +43,7 @@ import {
 import { commitImport } from "@/lib/import/commit.functions";
 import { readDraft, writeDraft } from "@/components/editor/draftBackup";
 import { supabase } from "@/integrations/supabase/client";
+import { t } from "@/lib/i18n/t";
 
 const BLOCK_TYPES = [
   "scene_heading",
