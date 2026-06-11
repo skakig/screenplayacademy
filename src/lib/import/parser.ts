@@ -70,13 +70,13 @@ export function parseScreenplayText(raw: string, knownCharacterNames: string[] =
   const candidates: Candidate[] = [];
   let sceneCounter = 0;
   // Holder object so TS doesn't narrow the closure-mutated value to `never`.
-  const state: { lastNonBlank: Candidate | null } = { lastNonBlank: null };
+  const state: { state.lastNonBlank: Candidate | null } = { state.lastNonBlank: null };
   let order = 0;
 
   const push = (c: Omit<Candidate, "order_index">): Candidate => {
     const next: Candidate = { ...c, order_index: order++ };
     candidates.push(next);
-    if (c.raw_text.trim()) state.lastNonBlank = next;
+    if (c.raw_text.trim()) state.state.lastNonBlank = next;
     return next;
   };
 
@@ -144,9 +144,9 @@ export function parseScreenplayText(raw: string, knownCharacterNames: string[] =
     // Parenthetical (between a character/dialogue and dialogue)
     if (
       PARENTHETICAL.test(trimmed) &&
-      lastNonBlank &&
-      (lastNonBlank.proposed_block_type === "character" ||
-        lastNonBlank.proposed_block_type === "dialogue")
+      state.lastNonBlank &&
+      (state.lastNonBlank.proposed_block_type === "character" ||
+        state.lastNonBlank.proposed_block_type === "dialogue")
     ) {
       push({
         raw_text: trimmed,
@@ -197,14 +197,14 @@ export function parseScreenplayText(raw: string, knownCharacterNames: string[] =
 
     // Dialogue: previous non-blank is a character or parenthetical
     if (
-      lastNonBlank &&
-      (lastNonBlank.proposed_block_type === "character" ||
-        lastNonBlank.proposed_block_type === "parenthetical" ||
-        lastNonBlank.proposed_block_type === "dialogue")
+      state.lastNonBlank &&
+      (state.lastNonBlank.proposed_block_type === "character" ||
+        state.lastNonBlank.proposed_block_type === "parenthetical" ||
+        state.lastNonBlank.proposed_block_type === "dialogue")
     ) {
       // If the prior line was dialogue and there's a blank gap, break out to action.
       const priorWasDialogueWithGap =
-        lastNonBlank.proposed_block_type === "dialogue" &&
+        state.lastNonBlank.proposed_block_type === "dialogue" &&
         i > 0 &&
         lines[i - 1].trim() === "";
       if (!priorWasDialogueWithGap) {
