@@ -72,7 +72,7 @@ export function parseScreenplayText(raw: string, knownCharacterNames: string[] =
   let lastNonBlank: Candidate | null = null;
   let order = 0;
 
-  const push = (c: Omit<Candidate, "order_index">) => {
+  const push = (c: Omit<Candidate, "order_index">): Candidate => {
     const next: Candidate = { ...c, order_index: order++ };
     candidates.push(next);
     if (c.raw_text.trim()) lastNonBlank = next;
