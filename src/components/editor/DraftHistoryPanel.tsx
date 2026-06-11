@@ -677,7 +677,18 @@ export function DraftHistoryPanel({ projectId }: Props) {
                         : "Reopen comparison"
                     }
                   >
-                    <p className="text-xs font-medium truncate">{c.label}</p>
+                    <p className="text-xs font-medium truncate flex items-center gap-1">
+                      {c.label}
+                      {(c.syncStatus ?? (c.serverId ? "synced" : "local")) === "pending" && (
+                        <Loader2 className="h-2.5 w-2.5 text-muted-foreground animate-spin" aria-label="Syncing" />
+                      )}
+                      {c.syncStatus === "error" && (
+                        <CloudOff className="h-2.5 w-2.5 text-amber-500" aria-label="Sync failed" />
+                      )}
+                      {c.serverId && (
+                        <Cloud className="h-2.5 w-2.5 text-muted-foreground/60" aria-label="Synced" />
+                      )}
+                    </p>
                     <p className="text-[10px] text-muted-foreground font-mono">
                       {format(c.savedAt, "MMM d · HH:mm")}
                       {missing && (
