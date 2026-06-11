@@ -592,22 +592,21 @@ function ReviewStep({
       <aside className="space-y-3 text-xs">
         <div className="rounded-md border border-border/50 bg-card/40 p-3 space-y-1">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-            Detected
+            {t("import.review.detected")}
           </p>
+          <p>{t("import.review.scenes", { count: summary.scenes.length })}</p>
+          <p>{t("import.review.characters", { count: summary.characters.length })}</p>
           <p>
-            <strong>{summary.scenes.length}</strong> scenes
-          </p>
-          <p>
-            <strong>{summary.characters.length}</strong> characters
-          </p>
-          <p>
-            <strong>{summary.approved}</strong> / {summary.total} blocks approved
+            {t("import.review.approvedCount", {
+              approved: summary.approved,
+              total: summary.total,
+            })}
           </p>
         </div>
         {summary.characters.length > 0 && (
           <div className="rounded-md border border-border/50 bg-card/40 p-3 space-y-1">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-              Cast
+              {t("import.review.cast")}
             </p>
             <ul className="space-y-0.5">
               {summary.characters.slice(0, 12).map((n) => (
@@ -617,7 +616,7 @@ function ReviewStep({
               ))}
               {summary.characters.length > 12 && (
                 <li className="text-muted-foreground italic">
-                  +{summary.characters.length - 12} more
+                  {t("import.review.castMore", { count: summary.characters.length - 12 })}
                 </li>
               )}
             </ul>
