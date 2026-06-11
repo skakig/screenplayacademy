@@ -34,7 +34,13 @@ import {
   Trash2,
   Sparkles,
 } from "lucide-react";
-import { createImportSession, getImportSession } from "@/lib/import/sessions.functions";
+import {
+  createImportSession,
+  getImportSession,
+  listResumableImports,
+  cancelImportSession,
+  revertImport,
+} from "@/lib/import/sessions.functions";
 import {
   parseScreenplay,
   updateImportCandidate,
@@ -134,6 +140,20 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
   const commit = useServerFn(commitImport);
   const extract = useServerFn(extractFileText);
   const diagnose = useServerFn(diagnoseImport);
+  const listResumable = useServerFn(listResumableImports);
+  const cancelSession = useServerFn(cancelImportSession);
+  const revert = useServerFn(revertImport);
+
+  const [resumable, setResumable] = useState<
+    { id: string; file_name: string | null; source_type: string; status: string }[]
+  >([]);
+
+  useEffect(() => {
+    if (!open || !projectId || step !== "source") return;
+    listResumable({ data: { projectId } })
+      .then((rows) => setResumable(rows as any))
+      .catch(() => setResumable([]));
+  }, [open, projectId, listResumable, step]);
 
   useEffect(() => {
     if (!open) {
@@ -179,6 +199,54 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
       setStep("review");
     } catch (e: any) {
       toast.error(e?.message ?? t("import.error.start"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resumeSession = async (sid: string) => {
+    setBusy(true);
+    try {
+      setSessionId(sid);
+      await reload(sid);
+      setStep("review");
+    } catch (e: any) {
+      toast.error(e?.message ?? t("import.error.start"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const dismissResumable = async (sid: string) => {
+    try {
+      await cancelSession({ data: { sessionId: sid } });
+      setResumable((prev) => prev.filter((r) => r.id !== sid));
+    } catch {
+      /* non-blocking */
+    }
+  };
+
+  const doRevert = async () => {
+    if (!sessionId) return;
+    if (typeof window !== "undefined" && !window.confirm(t("import.revert.confirm"))) return;
+    setBusy(true);
+    try {
+      const res = await revert({ data: { sessionId } });
+      // Hydrate editor draft with the restored blocks
+      const draftBlocks = (res.blocks as any[]).map((r, i) => ({
+        id: `local-${Date.now().toString(36)}-${i.toString(36)}`,
+        serverId: r.id,
+        block_type: r.block_type,
+        content: r.content ?? "",
+        order_index: r.order_index,
+        metadata: r.metadata,
+        status: "clean" as const,
+      }));
+      writeDraft(res.projectId as string, draftBlocks as any);
+      toast.success(t("import.revert.success"));
+      setTimeout(() => window.location.reload(), 400);
+    } catch (e: any) {
+      toast.error(e?.message ?? t("import.revert.error"));
     } finally {
       setBusy(false);
     }
@@ -316,7 +384,13 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
                     n + ((b.content ?? "").trim().split(/\s+/).filter(Boolean).length),
                   0,
                 ),
-                payload: current as any,
+                payload: {
+                  ...(current as any),
+                  metadata: {
+                    ...((current as any)?.metadata ?? {}),
+                    preImportSessionId: sessionId,
+                  },
+                } as any,
               });
             }
           } catch {
@@ -402,6 +476,9 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
             onPaste={() => startFromText("paste", pasted)}
             onFile={onFileChosen}
             busy={busy}
+            resumable={resumable}
+            onResume={resumeSession}
+            onDismissResumable={dismissResumable}
           />
         )}
 
@@ -462,6 +539,18 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
             ) : (
               <p className="text-sm text-muted-foreground">{t("import.done.loading")}</p>
             )}
+            <div className="pt-3">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={doRevert}
+                disabled={busy}
+                className="text-muted-foreground hover:text-rose-300"
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                {t("import.revert.cta")}
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>
@@ -491,14 +580,63 @@ function SourceStep({
   onPaste,
   onFile,
   busy,
+  resumable,
+  onResume,
+  onDismissResumable,
 }: {
   pasted: string;
   setPasted: (v: string) => void;
   onPaste: () => void;
   onFile: (file: File) => void;
   busy: boolean;
+  resumable: { id: string; file_name: string | null; source_type: string; status: string }[];
+  onResume: (sid: string) => void;
+  onDismissResumable: (sid: string) => void;
 }) {
   return (
+    <>
+      {resumable.length > 0 && (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 mb-3 space-y-2">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-400 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">{t("import.resume.banner.title")}</p>
+              <p className="text-xs text-muted-foreground">
+                {t("import.resume.banner.body", { count: resumable.length })}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {resumable.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-center gap-2 rounded border border-border/50 bg-card/60 px-2 py-1"
+              >
+                <span className="text-xs truncate max-w-[200px]">
+                  {r.file_name ?? r.source_type}
+                </span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-6 text-[11px]"
+                  disabled={busy}
+                  onClick={() => onResume(r.id)}
+                >
+                  {t("import.resume.cta")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-[11px]"
+                  onClick={() => onDismissResumable(r.id)}
+                >
+                  {t("import.resume.dismiss")}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     <Tabs defaultValue="paste" className="w-full">
       <TabsList>
         <TabsTrigger value="paste">{t("import.source.tab.paste")}</TabsTrigger>
@@ -546,6 +684,7 @@ function SourceStep({
         )}
       </TabsContent>
     </Tabs>
+    </>
   );
 }
 

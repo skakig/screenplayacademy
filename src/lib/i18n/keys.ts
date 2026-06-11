@@ -105,6 +105,48 @@ export const i18nStrings = {
   "import.confidence.high": "high",
   "import.confidence.medium": "medium",
   "import.confidence.low": "low",
+
+  // Resume + Revert
+  "import.resume.banner.title": "Resume your last import?",
+  "import.resume.banner.body":
+    "We found {{count}} screenplay block(s) waiting in a previous import session.",
+  "import.resume.cta": "Resume",
+  "import.resume.dismiss": "Start fresh",
+  "import.revert.cta": "Revert this import",
+  "import.revert.confirm":
+    "Restore your screenplay to its state right before this import? Your imported blocks will be replaced with the auto-slated snapshot.",
+  "import.revert.success": "Import reverted. Your previous draft is back.",
+  "import.revert.error": "Couldn't revert this import",
+
+  // Dashboard cards
+  "dashboard.loading": "Setting the stage…",
+  "dashboard.marquee.eyebrow": "Studio Lobby · Guided Path",
+  "dashboard.marquee.title": "Welcome back to the lot.",
+  "dashboard.marquee.subtitle": "Let's keep building your first screenplay.",
+  "dashboard.start.title": "Start your first screenplay",
+  "dashboard.start.body":
+    "We'll walk you through 13 focused steps — logline, characters, story arc, scenes, opening pages, draft, table read, and pitch package.",
+  "dashboard.start.cta": "Open your first studio",
+  "dashboard.start.hint": "No experience needed",
+  "dashboard.import.title": "Import an existing screenplay",
+  "dashboard.import.body":
+    "Paste your script or upload a Fountain, Final Draft, Word, PDF, or RTF file. SceneSmith parses scenes, characters, and dialogue — and never rewrites a line you didn't approve.",
+  "dashboard.import.cta": "Import a screenplay",
+  "dashboard.import.hint": "Paste · .txt · .fountain · .md · .fdx · .docx · .rtf · .pdf",
+  "dashboard.import.defaultTitle": "Imported screenplay",
+  "dashboard.project.eyebrow": "First Screenplay Path",
+  "dashboard.project.nextScene": "Next scene: {{title}}",
+  "dashboard.project.steps": "steps",
+  "dashboard.project.complete": "{{pct}}% complete",
+  "dashboard.project.continue": "Continue path",
+  "dashboard.project.editor": "Writer's Desk",
+  "dashboard.lesson.title": "Suggested lesson",
+  "dashboard.lesson.school": "Screenplay School",
+  "dashboard.lesson.upToDate": "You're up to date. Nice work.",
+  "dashboard.director.title": "Director's Chair",
+  "dashboard.director.body":
+    "Adjust how present your director is while you write.",
+  "dashboard.director.cta": "Studio Settings",
 } as const;
 
 export type I18nKey = keyof typeof i18nStrings;

@@ -82,3 +82,109 @@ export const listProjectImports = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
+const ResumableInput = z.object({ projectId: z.string().uuid() });
+
+export const listResumableImports = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ResumableInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: rows, error } = await supabase
+      .from("import_sessions")
+      .select("id, source_type, file_name, status, created_at")
+      .eq("project_id", data.projectId)
+      .in("status", ["preview_ready", "parsing"])
+      .order("created_at", { ascending: false })
+      .limit(5);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+const CancelInput = z.object({ sessionId: z.string().uuid() });
+
+export const cancelImportSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => CancelInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase
+      .from("import_sessions")
+      .update({ status: "cancelled" })
+      .eq("id", data.sessionId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+const RevertInput = z.object({ sessionId: z.string().uuid() });
+
+export const revertImport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => RevertInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const { data: session, error: sErr } = await supabase
+      .from("import_sessions")
+      .select("id, project_id, status")
+      .eq("id", data.sessionId)
+      .maybeSingle();
+    if (sErr || !session) throw new Error(sErr?.message ?? "Import session not found");
+    if (!session.project_id) throw new Error("This import has no target project to revert.");
+    if (session.status !== "imported") {
+      throw new Error("Only committed imports can be reverted.");
+    }
+
+    const { data: takes, error: tErr } = await supabase
+      .from("draft_takes")
+      .select("id, payload, captured_at")
+      .eq("project_id", session.project_id)
+      .eq("user_id", userId)
+      .order("captured_at", { ascending: false })
+      .limit(50);
+    if (tErr) throw new Error(tErr.message);
+
+    const match = (takes ?? []).find((tk: any) => {
+      const meta = tk?.payload?.metadata;
+      return meta && meta.preImportSessionId === data.sessionId;
+    });
+    if (!match) {
+      throw new Error(
+        "No pre-import snapshot found. This import cannot be reverted automatically.",
+      );
+    }
+
+    const payload = match.payload as any;
+    const blocks: any[] = Array.isArray(payload?.blocks) ? payload.blocks : [];
+
+    const projectId = session.project_id as string;
+    await supabase.from("script_blocks").delete().eq("project_id", projectId);
+
+    const inserted: any[] = [];
+    if (blocks.length > 0) {
+      const rows = blocks.map((b: any, i: number) => ({
+        project_id: projectId,
+        block_type: b.block_type,
+        content: b.content ?? "",
+        character_id: b.character_id ?? null,
+        order_index: typeof b.order_index === "number" ? b.order_index : i * 1000,
+        metadata: { ...(b.metadata ?? {}), reverted_from_import: data.sessionId },
+      }));
+      const CHUNK = 500;
+      for (let i = 0; i < rows.length; i += CHUNK) {
+        const { data: ins, error: bErr } = await supabase
+          .from("script_blocks")
+          .insert(rows.slice(i, i + CHUNK))
+          .select("id, block_type, content, order_index, metadata");
+        if (bErr) throw new Error(bErr.message);
+        inserted.push(...(ins ?? []));
+      }
+    }
+
+    await supabase
+      .from("import_sessions")
+      .update({ status: "reverted" })
+      .eq("id", session.id);
+
+    return { projectId: session.project_id, blocks: inserted };
+  });

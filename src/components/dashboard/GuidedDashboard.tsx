@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { GraduationCap, BookOpen, ArrowRight, Sparkles, Plus, Upload } from "lucide-react";
 import { useState } from "react";
 import { ImportWizard } from "@/components/import/ImportWizard";
+import { t } from "@/lib/i18n/t";
 
 export function GuidedDashboard() {
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ export function GuidedDashboard() {
     },
   });
 
-  if (isLoading) return <div className="p-10 text-muted-foreground font-script italic">Setting the stage…</div>;
+  if (isLoading) return <div className="p-10 text-muted-foreground font-script italic">{t("dashboard.loading")}</div>;
 
   const pct = data && data.total > 0 ? Math.round((data.done / data.total) * 100) : 0;
 
@@ -56,9 +57,9 @@ export function GuidedDashboard() {
         <div className="absolute inset-0 opacity-[0.07] pointer-events-none"
           style={{ backgroundImage: "radial-gradient(circle at 18% 30%, var(--primary) 0, transparent 40%), radial-gradient(circle at 82% 70%, var(--accent) 0, transparent 42%)" }} />
         <div className="relative">
-          <p className="font-mono uppercase tracking-[0.22em] text-[10px] text-primary/80 mb-2">Studio Lobby · Guided Path</p>
-          <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">Welcome back to the lot.</h1>
-          <p className="font-script italic text-muted-foreground mt-2">Let's keep building your first screenplay.</p>
+          <p className="font-mono uppercase tracking-[0.22em] text-[10px] text-primary/80 mb-2">{t("dashboard.marquee.eyebrow")}</p>
+          <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">{t("dashboard.marquee.title")}</h1>
+          <p className="font-script italic text-muted-foreground mt-2">{t("dashboard.marquee.subtitle")}</p>
         </div>
       </div>
 
@@ -67,33 +68,32 @@ export function GuidedDashboard() {
           <Card className="p-8 border-dashed cine-card">
             <div className="flex flex-col items-center text-center">
               <BookOpen className="h-12 w-12 mx-auto text-primary mb-3" />
-              <h3 className="font-display text-2xl font-semibold mb-2">Start your first screenplay</h3>
+              <h3 className="font-display text-2xl font-semibold mb-2">{t("dashboard.start.title")}</h3>
               <p className="text-sm text-muted-foreground max-w-md mb-5">
-                We'll walk you through 13 focused steps — logline, characters, story arc, scenes, opening pages, draft, table read, and pitch package.
+                {t("dashboard.start.body")}
               </p>
               <Button size="lg" onClick={() => navigate({ to: "/projects/new" })} className="shadow-lg shadow-primary/20">
-                <Plus className="h-4 w-4 mr-1.5" />Open your first studio
+                <Plus className="h-4 w-4 mr-1.5" />{t("dashboard.start.cta")}
               </Button>
-              <p className="text-xs text-muted-foreground mt-3 font-mono uppercase tracking-[0.18em]">No experience needed</p>
+              <p className="text-xs text-muted-foreground mt-3 font-mono uppercase tracking-[0.18em]">{t("dashboard.start.hint")}</p>
             </div>
           </Card>
           <Card className="p-8 border-dashed cine-card">
             <div className="flex flex-col items-center text-center">
               <Upload className="h-12 w-12 mx-auto text-primary mb-3" />
-              <h3 className="font-display text-2xl font-semibold mb-2">Import an existing screenplay</h3>
+              <h3 className="font-display text-2xl font-semibold mb-2">{t("dashboard.import.title")}</h3>
               <p className="text-sm text-muted-foreground max-w-md mb-5">
-                Paste your script or upload a Fountain/text file. SceneSmith parses scenes, characters, and dialogue — and never rewrites a line you didn't approve.
+                {t("dashboard.import.body")}
               </p>
               <Button
                 size="lg"
                 variant="outline"
                 onClick={async () => {
-                  // Create a fresh empty project to import into
                   const { data: u } = await supabase.auth.getUser();
                   if (!u.user) return;
                   const { data: p } = await supabase
                     .from("projects")
-                    .insert({ title: "Imported screenplay", user_id: u.user.id })
+                    .insert({ title: t("dashboard.import.defaultTitle"), user_id: u.user.id })
                     .select("id")
                     .single();
                   if (p?.id) {
@@ -102,9 +102,9 @@ export function GuidedDashboard() {
                   }
                 }}
               >
-                <Upload className="h-4 w-4 mr-1.5" />Import a screenplay
+                <Upload className="h-4 w-4 mr-1.5" />{t("dashboard.import.cta")}
               </Button>
-              <p className="text-xs text-muted-foreground mt-3 font-mono uppercase tracking-[0.18em]">Paste · .txt · .fountain · .md</p>
+              <p className="text-xs text-muted-foreground mt-3 font-mono uppercase tracking-[0.18em]">{t("dashboard.import.hint")}</p>
             </div>
           </Card>
         </div>
@@ -113,20 +113,20 @@ export function GuidedDashboard() {
           <div className="px-6 pt-6 pb-5 border-b border-border/60"
             style={{ background: "linear-gradient(180deg, color-mix(in oklab, var(--primary) 8%, transparent), transparent)" }}>
             <Badge variant="secondary" className="font-mono uppercase tracking-[0.15em] text-[9px] mb-3">
-              First Screenplay Path
+              {t("dashboard.project.eyebrow")}
             </Badge>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="font-display text-2xl font-semibold leading-tight">{data.project.title}</h2>
                 {data.current && (
                   <p className="font-script italic text-sm text-muted-foreground mt-1">
-                    Next scene: {data.current.title}
+                    {t("dashboard.project.nextScene", { title: data.current.title })}
                   </p>
                 )}
               </div>
               <div className="text-right shrink-0">
                 <div className="font-display text-2xl font-semibold text-primary leading-none">{data.done}<span className="text-muted-foreground text-base">/{data.total}</span></div>
-                <div className="font-mono uppercase tracking-[0.18em] text-[10px] text-muted-foreground mt-1">steps</div>
+                <div className="font-mono uppercase tracking-[0.18em] text-[10px] text-muted-foreground mt-1">{t("dashboard.project.steps")}</div>
               </div>
             </div>
           </div>
@@ -137,19 +137,28 @@ export function GuidedDashboard() {
                   <div className="h-full transition-all"
                     style={{ width: `${pct}%`, background: "var(--gradient-gold, var(--primary))" }} />
                 </div>
-                <p className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground mt-2">{pct}% complete</p>
+                <p className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground mt-2">{t("dashboard.project.complete", { pct })}</p>
               </div>
             )}
             <div className="flex flex-wrap gap-2">
               <Button asChild>
                 <Link to="/first-screenplay/$projectId" params={{ projectId: data.project.id }}>
-                  Continue path <ArrowRight className="h-4 w-4 ml-1.5" />
+                  {t("dashboard.project.continue")} <ArrowRight className="h-4 w-4 ml-1.5" />
                 </Link>
               </Button>
               <Button asChild variant="outline">
                 <Link to="/editor/$projectId" params={{ projectId: data.project.id }}>
-                  Writer's Desk
+                  {t("dashboard.project.editor")}
                 </Link>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setImportProjectId(data.project!.id);
+                  setImportOpen(true);
+                }}
+              >
+                <Upload className="h-4 w-4 mr-1.5" />{t("dashboard.import.cta")}
               </Button>
             </div>
           </div>
@@ -160,26 +169,26 @@ export function GuidedDashboard() {
         <Card className="cine-card p-5">
           <div className="flex items-center gap-2 mb-2">
             <GraduationCap className="h-4 w-4 text-primary" />
-            <h3 className="font-display text-base font-semibold">Suggested lesson</h3>
+            <h3 className="font-display text-base font-semibold">{t("dashboard.lesson.title")}</h3>
           </div>
           {data?.suggestedLesson ? (
             <>
               <p className="font-script italic text-sm mb-3">{data.suggestedLesson.title}</p>
               <Button asChild size="sm" variant="outline">
-                <Link to="/academy">Screenplay School <ArrowRight className="h-3.5 w-3.5 ml-1.5" /></Link>
+                <Link to="/academy">{t("dashboard.lesson.school")} <ArrowRight className="h-3.5 w-3.5 ml-1.5" /></Link>
               </Button>
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">You're up to date. Nice work.</p>
+            <p className="text-sm text-muted-foreground">{t("dashboard.lesson.upToDate")}</p>
           )}
         </Card>
         <Card className="cine-card p-5">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            <h3 className="font-display text-base font-semibold">Director's Chair</h3>
+            <h3 className="font-display text-base font-semibold">{t("dashboard.director.title")}</h3>
           </div>
-          <p className="text-sm text-muted-foreground mb-3">Adjust how present your director is while you write.</p>
-          <Button asChild size="sm" variant="outline"><Link to="/settings">Studio Settings</Link></Button>
+          <p className="text-sm text-muted-foreground mb-3">{t("dashboard.director.body")}</p>
+          <Button asChild size="sm" variant="outline"><Link to="/settings">{t("dashboard.director.cta")}</Link></Button>
         </Card>
       </div>
 
