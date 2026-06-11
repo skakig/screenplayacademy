@@ -990,6 +990,12 @@ export function DraftHistoryPanel({ projectId }: Props) {
         }
         onSave={saveComparison}
       />
+
+      <ImportWizard
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        projectId={projectId}
+      />
     </div>
   );
 }
