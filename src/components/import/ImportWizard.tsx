@@ -552,12 +552,12 @@ function ReviewStep({
                         className="text-[10px] bg-amber-500/10 border-amber-500/30 text-amber-200"
                       >
                         <AlertTriangle className="h-2.5 w-2.5 mr-1" />
-                        review
+                        {t("import.review.badge.review")}
                       </Badge>
                     )}
                   </div>
                   <p className="text-xs font-mono whitespace-pre-wrap break-words">
-                    {c.raw_text || <em className="opacity-50">(empty)</em>}
+                    {c.raw_text || <em className="opacity-50">{t("import.review.empty.placeholder")}</em>}
                   </p>
                 </div>
                 <Button
@@ -565,7 +565,7 @@ function ReviewStep({
                   variant="ghost"
                   className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                   onClick={() => onRemove(c)}
-                  aria-label="Remove block"
+                  aria-label={t("import.review.aria.remove")}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
@@ -573,7 +573,7 @@ function ReviewStep({
             ))}
             {visible.length === 0 && (
               <li className="p-10 text-center text-xs text-muted-foreground italic">
-                Nothing in this filter.
+                {t("import.review.empty")}
               </li>
             )}
           </ul>
@@ -581,10 +581,10 @@ function ReviewStep({
 
         <div className="flex justify-between">
           <Button variant="ghost" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t("import.nav.back")}
           </Button>
           <Button onClick={onNext} disabled={busy}>
-            Continue <ArrowRight className="h-4 w-4 ml-2" />
+            {t("import.nav.continue")} <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
       </div>
