@@ -476,6 +476,9 @@ export function ImportWizard({ open, onOpenChange, projectId, onImported }: Prop
             onPaste={() => startFromText("paste", pasted)}
             onFile={onFileChosen}
             busy={busy}
+            resumable={resumable}
+            onResume={resumeSession}
+            onDismissResumable={dismissResumable}
           />
         )}
 
