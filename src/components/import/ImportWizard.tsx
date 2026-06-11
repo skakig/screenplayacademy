@@ -532,9 +532,9 @@ function ReviewStep({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {BLOCK_TYPES.map((t) => (
-                          <SelectItem key={t} value={t} className="text-xs">
-                            {t.replace(/_/g, " ")}
+                        {BLOCK_TYPES.map((bt) => (
+                          <SelectItem key={bt} value={bt} className="text-xs">
+                            {t(`import.blockType.${bt}` as any)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -544,7 +544,7 @@ function ReviewStep({
                       className={`text-[10px] ${CONFIDENCE_COLOR[c.confidence] ?? ""}`}
                       title={c.reason ?? ""}
                     >
-                      {c.confidence}
+                      {t(`import.confidence.${c.confidence}` as any)}
                     </Badge>
                     {c.needs_review && (
                       <Badge
