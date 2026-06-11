@@ -477,7 +477,7 @@ function ReviewStep({
   filter: "all" | "needs_review" | "approved";
   setFilter: (f: "all" | "needs_review" | "approved") => void;
   onToggleApprove: (c: Candidate) => void;
-  onChangeType: (c: Candidate, t: string) => void;
+  onChangeType: (c: Candidate, type: string) => void;
   onRemove: (c: Candidate) => void;
   onApproveAllHigh: () => void;
   busy: boolean;
