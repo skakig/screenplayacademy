@@ -520,7 +520,7 @@ function ReviewStep({
                   checked={c.approved}
                   onChange={() => onToggleApprove(c)}
                   className="mt-1.5 h-4 w-4 rounded border-border accent-primary"
-                  aria-label="Approve block"
+                  aria-label={t("import.review.aria.approve")}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-1 flex-wrap">
