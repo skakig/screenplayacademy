@@ -1,0 +1,11 @@
+# Screenplay Academy
+
+> AI-powered writer's room for screenwriters — write, develop, cast, storyboard, rehearse, and pitch your screenplay end-to-end.
+
+Screenplay Academy is a web app that combines an industry-standard screenplay editor with AI tools for character development, scene outlining, storyboarding, table reads, and pitch decks.
+
+## Pages
+
+- [Home](/): Product overview and entry point to the studio.
+- [Pricing](/pricing): Plans and pricing for Screenplay Academy.
+- [Sign in](/auth): Sign in or create an account to start writing.
