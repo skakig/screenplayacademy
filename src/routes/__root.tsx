@@ -11,6 +11,8 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { BRAND_DESCRIPTION, BRAND_DOMAIN, BRAND_NAME, BRAND_SOCIAL_IMAGE, BRAND_TAGLINE } from "@/lib/brand";
+import scenesmithMarkAsset from "@/assets/scenesmith-mark.png.asset.json";
 
 function NotFoundComponent() {
   return (
@@ -77,29 +79,54 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "SceneSmith Studio" },
-      { name: "description", content: "SceneSmith Studio is the ultimate writing app for screenplays, novels, YouTube scripts, worlds, comedy, audio stories, and pitch decks." },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "SceneSmith Studio" },
-      { property: "og:description", content: "SceneSmith Studio is the ultimate writing app for screenplays, novels, YouTube scripts, worlds, comedy, audio stories, and pitch decks." },
+      { title: BRAND_NAME },
+      { name: "description", content: BRAND_DESCRIPTION },
+      { property: "og:site_name", content: BRAND_NAME },
+      { property: "og:title", content: BRAND_NAME },
+      { property: "og:description", content: BRAND_DESCRIPTION },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "SceneSmith Studio" },
-      { name: "twitter:description", content: "SceneSmith Studio is the ultimate writing app for screenplays, novels, YouTube scripts, worlds, comedy, audio stories, and pitch decks." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/X8KRxlcvyARp2CCH5e8jc9n17Z32/social-images/social-1781294851914-207AE0AC-BE60-4793-AB27-923B69B5C202.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/X8KRxlcvyARp2CCH5e8jc9n17Z32/social-images/social-1781294851914-207AE0AC-BE60-4793-AB27-923B69B5C202.webp" },
+      { property: "og:url", content: BRAND_DOMAIN },
+      { property: "og:image", content: BRAND_SOCIAL_IMAGE },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: BRAND_NAME },
+      { name: "twitter:description", content: BRAND_DESCRIPTION },
+      { name: "twitter:image", content: BRAND_SOCIAL_IMAGE },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Courier+Prime:wght@400;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Courier+Prime:wght@400;700&display=swap",
       },
+      { rel: "icon", href: scenesmithMarkAsset.url, type: "image/png" },
+      { rel: "apple-touch-icon", href: scenesmithMarkAsset.url },
       {
         rel: "stylesheet",
         href: appCss,
+      },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: BRAND_NAME,
+          url: BRAND_DOMAIN,
+          logo: `${BRAND_DOMAIN}${scenesmithMarkAsset.url}`,
+          slogan: BRAND_TAGLINE,
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: BRAND_NAME,
+          url: BRAND_DOMAIN,
+          description: BRAND_DESCRIPTION,
+        }),
       },
     ],
   }),
@@ -128,7 +155,6 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
   );
