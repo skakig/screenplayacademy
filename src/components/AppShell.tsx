@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Film, LogOut, LayoutDashboard, FolderKanban, Settings, Sparkles, GraduationCap } from "lucide-react";
+import { LogOut, LayoutDashboard, FolderKanban, Settings, Sparkles, GraduationCap } from "lucide-react";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,10 +27,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-border/60 bg-card/40 backdrop-blur sticky top-0 z-30">
         <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center justify-between">
-          <Link to="/dashboard" className="flex items-center gap-2 group">
-            <Film className="h-5 w-5 text-primary group-hover:scale-110 transition" />
-            <span className="font-bold tracking-tight">SceneSmith<span className="text-primary"> AI</span></span>
-          </Link>
+          <BrandLogo size="sm" />
+          {/* Override: BrandLogo links to "/" but in the app shell we want /dashboard */}
           <nav className="hidden md:flex items-center gap-1 text-sm">
             {nav.map((n) => (
               <Link
