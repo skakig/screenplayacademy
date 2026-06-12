@@ -224,9 +224,11 @@ function Landing() {
           </div>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <footer className="border-t border-border/40 py-8">
+
         <div className="max-w-6xl mx-auto px-4 flex items-center justify-between text-xs text-muted-foreground">
           <span>© {new Date().getFullYear()} Screenplay Academy</span>
           <div className="flex gap-4">
