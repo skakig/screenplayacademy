@@ -11,7 +11,20 @@ import { Clapperboard } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Enter the Studio — Screenplay Academy" }] }),
+  head: () => ({
+    meta: [
+      { title: "Sign in or sign up — Screenplay Academy" },
+      { name: "description", content: "Sign in or create your Screenplay Academy account to enter the AI-powered writer's room and start developing your next screenplay." },
+      { property: "og:title", content: "Sign in or sign up — Screenplay Academy" },
+      { property: "og:description", content: "Enter the Studio. Sign in or create your Screenplay Academy account to start writing your next screenplay with AI." },
+      { property: "og:url", content: "https://screenplayacademy.lovable.app/auth" },
+      { name: "twitter:title", content: "Sign in or sign up — Screenplay Academy" },
+      { name: "twitter:description", content: "Enter the Studio. Sign in or create your Screenplay Academy account to start writing." },
+    ],
+    links: [
+      { rel: "canonical", href: "https://screenplayacademy.lovable.app/auth" },
+    ],
+  }),
   component: AuthPage,
 });
 
