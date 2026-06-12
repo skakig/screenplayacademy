@@ -7,22 +7,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Clapperboard } from "lucide-react";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Sign in or sign up — Screenplay Academy" },
-      { name: "description", content: "Sign in or create your Screenplay Academy account to enter the AI-powered writer's room and start developing your next screenplay." },
-      { property: "og:title", content: "Sign in or sign up — Screenplay Academy" },
-      { property: "og:description", content: "Enter the Studio. Sign in or create your Screenplay Academy account to start writing your next screenplay with AI." },
-      { property: "og:url", content: "https://screenplayacademy.lovable.app/auth" },
-      { name: "twitter:title", content: "Sign in or sign up — Screenplay Academy" },
-      { name: "twitter:description", content: "Enter the Studio. Sign in or create your Screenplay Academy account to start writing." },
+      { title: "Sign in or sign up — SceneSmith Studio" },
+      { name: "description", content: "Sign in or create your SceneSmith Studio account to enter the AI-powered writer's room for screenplays, novels, worlds, comedy, and audio." },
+      { property: "og:title", content: "Sign in or sign up — SceneSmith Studio" },
+      { property: "og:description", content: "Enter the Studio. Sign in or create your SceneSmith Studio account to start telling your next story." },
+      { property: "og:url", content: "https://scenesmithstudio.com/auth" },
+      { name: "twitter:title", content: "Sign in or sign up — SceneSmith Studio" },
+      { name: "twitter:description", content: "Enter the Studio. Sign in or create your SceneSmith Studio account to start telling your next story." },
     ],
     links: [
-      { rel: "canonical", href: "https://screenplayacademy.lovable.app/auth" },
+      { rel: "canonical", href: "https://scenesmithstudio.com/auth" },
     ],
   }),
   component: AuthPage,
@@ -88,12 +88,11 @@ function AuthPage() {
 
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-3">
-            <Clapperboard className="h-7 w-7 text-primary" />
-            <span className="font-display text-2xl font-semibold tracking-tight">Screenplay<span className="text-primary"> Academy</span></span>
+          <div className="inline-flex items-center mb-4">
+            <BrandLogo size="md" asLink={false} />
           </div>
           <p className="font-script text-base text-muted-foreground italic">
-            {isSignin ? "Welcome back to the studio. Your script is waiting." : "Step inside. The page is yours."}
+            {isSignin ? "Welcome back to the studio. Your story is waiting." : "Step inside. The page is yours."}
           </p>
         </div>
 

@@ -1,21 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { Check, Film, ArrowRight } from "lucide-react";
+import { Check, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "Pricing — Screenplay Academy" },
-      { name: "description", content: "Simple, transparent pricing for screenwriters. Start free, then upgrade as your projects grow — Creator, Pro, and Studio plans with AI assists, table reads, and pitch package exports." },
-      { property: "og:title", content: "Pricing — Screenplay Academy" },
-      { property: "og:description", content: "Start free and upgrade when you're ready to pitch. Compare Creator, Pro, and Studio plans for the AI-powered screenwriting writer's room." },
-      { property: "og:url", content: "https://screenplayacademy.lovable.app/pricing" },
-      { name: "twitter:title", content: "Pricing — Screenplay Academy" },
+      { title: "Pricing — SceneSmith Studio" },
+      { name: "description", content: "Simple, transparent pricing for storytellers. Start free, then upgrade as your projects grow — Creator, Pro, and Studio plans for screenplays, novels, worlds, comedy, and audio." },
+      { property: "og:title", content: "Pricing — SceneSmith Studio" },
+      { property: "og:description", content: "Start free and upgrade when you're ready to pitch. Compare Creator, Pro, and Studio plans across the writer's toolbox." },
+      { property: "og:url", content: "https://scenesmithstudio.com/pricing" },
+      { name: "twitter:title", content: "Pricing — SceneSmith Studio" },
       { name: "twitter:description", content: "Start free and upgrade when you're ready to pitch. Compare Creator, Pro, and Studio plans." },
     ],
     links: [
-      { rel: "canonical", href: "https://screenplayacademy.lovable.app/pricing" },
+      { rel: "canonical", href: "https://scenesmithstudio.com/pricing" },
     ],
   }),
   component: Pricing,
@@ -48,17 +49,15 @@ function Pricing() {
   return (
     <div className="min-h-screen">
       <header className="border-b border-border/60 bg-background/60 backdrop-blur sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <Film className="h-5 w-5 text-primary" />
-            <span className="font-bold tracking-tight">Screenplay<span className="text-primary"> Academy</span></span>
-          </Link>
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <BrandLogo size="sm" />
           <Link to="/auth"><Button size="sm">Sign in</Button></Link>
         </div>
       </header>
       <section className="max-w-6xl mx-auto px-4 py-16">
         <div className="text-center mb-12">
-          <h1 className="font-display text-5xl font-bold tracking-tight">Pricing</h1>
+          <p className="text-[11px] uppercase tracking-[0.32em] text-muted-foreground mb-3">SceneSmith Studio · Pricing</p>
+          <h1 className="font-display text-5xl font-bold tracking-tight">Pricing for every storyteller.</h1>
           <p className="text-muted-foreground mt-3">Write free. Upgrade when you're ready to pitch.</p>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
