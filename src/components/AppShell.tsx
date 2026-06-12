@@ -1,10 +1,11 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Film, LogOut, LayoutDashboard, FolderKanban, Settings, Sparkles, GraduationCap } from "lucide-react";
+import { LogOut, LayoutDashboard, FolderKanban, Settings, Sparkles, GraduationCap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { GuidedReturnBanner } from "@/components/guided/GuidedReturnBanner";
+import { SceneSmithLogo } from "@/components/brand/SceneSmithLogo";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -25,10 +26,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-border/60 bg-card/40 backdrop-blur sticky top-0 z-30">
-        <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center justify-between">
-          <Link to="/dashboard" className="flex items-center gap-2 group">
-            <Film className="h-5 w-5 text-primary group-hover:scale-110 transition" />
-            <span className="font-bold tracking-tight">SceneSmith<span className="text-primary"> AI</span></span>
+        <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center justify-between gap-4">
+          <Link to="/dashboard" className="group transition-opacity hover:opacity-90">
+            <SceneSmithLogo iconClassName="h-8 w-8" wordmarkClassName="hidden sm:block" />
           </Link>
           <nav className="hidden md:flex items-center gap-1 text-sm">
             {nav.map((n) => (
@@ -43,7 +43,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
-          {/* Mobile compact nav: icon-only links */}
           <nav className="flex md:hidden items-center gap-0.5">
             {nav.map((n) => (
               <Link
@@ -65,3 +64,4 @@ export function AppShell({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
