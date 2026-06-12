@@ -206,7 +206,7 @@ function CharacterCard({ c, rels, scenes, selected, onSelect, onOpen, onDelete }
           <h3 className="font-display text-lg font-semibold truncate group-hover:text-primary transition">{c.name || "Untitled"}</h3>
           <p className="text-[11px] text-muted-foreground truncate">{c.role || "—"}{c.archetype ? ` · ${c.archetype}` : ""}</p>
         </div>
-        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+        <Button variant="ghost" size="icon" aria-label="Delete character" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>
