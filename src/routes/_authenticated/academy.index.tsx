@@ -7,7 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { GraduationCap, Clock, ArrowRight, Check } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/academy/")({
-  head: () => ({ meta: [{ title: "Academy — SceneSmith AI" }] }),
+  head: () => ({
+    meta: [
+      { title: "Academy — Screenplay Academy" },
+      { name: "description", content: "Learn screenwriting one module at a time inside Screenplay Academy — structure, character, dialogue, and pitching, with every lesson tied back to your project." },
+      { property: "og:title", content: "Academy — Screenplay Academy" },
+      { property: "og:description", content: "Learn the craft of screenwriting one module at a time. Every lesson connects back to your project." },
+    ],
+  }),
   component: AcademyIndex,
 });
 
