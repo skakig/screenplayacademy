@@ -1,5 +1,12 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LogOut, LayoutDashboard, FolderKanban, Settings, Sparkles, GraduationCap } from "lucide-react";
+import {
+  LogOut,
+  LayoutDashboard,
+  FolderKanban,
+  Settings,
+  Sparkles,
+  GraduationCap,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -36,7 +43,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                 key={n.to}
                 to={n.to}
                 className="px-3 py-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground flex items-center gap-1.5"
-                activeProps={{ className: "px-3 py-1.5 rounded-md bg-secondary text-foreground flex items-center gap-1.5" }}
+                activeProps={{
+                  className:
+                    "px-3 py-1.5 rounded-md bg-secondary text-foreground flex items-center gap-1.5",
+                }}
               >
                 <n.icon className="h-3.5 w-3.5" />
                 {n.label}
@@ -56,7 +66,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
-          <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="h-4 w-4 mr-1.5" />Sign out</Button>
+          <Button variant="ghost" size="sm" onClick={signOut}>
+            <LogOut className="h-4 w-4 mr-1.5" />
+            Sign out
+          </Button>
         </div>
       </header>
       <GuidedReturnBanner />
@@ -64,4 +77,3 @@ export function AppShell({ children }: { children: ReactNode }) {
     </div>
   );
 }
-

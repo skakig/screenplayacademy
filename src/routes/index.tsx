@@ -151,7 +151,10 @@ function Landing() {
             </div>
 
             <div className="relative">
-              <div className="absolute inset-0 rounded-[2rem] bg-primary/10 blur-3xl" aria-hidden="true" />
+              <div
+                className="absolute inset-0 rounded-[2rem] bg-primary/10 blur-3xl"
+                aria-hidden="true"
+              />
               <div className="relative overflow-hidden rounded-[1.75rem] border border-border/70 bg-card shadow-[0_30px_90px_-40px_rgba(15,27,45,0.45)]">
                 <div className="border-b border-border/60 px-6 py-5">
                   <SceneSmithLogo iconClassName="h-14 w-14" />
@@ -159,21 +162,16 @@ function Landing() {
                 <div className="grid gap-0 md:grid-cols-[220px_1fr]">
                   <aside className="border-b border-border/60 bg-secondary/45 p-5 md:border-b-0 md:border-r">
                     <div className="space-y-3 text-sm">
-                      {[
-                        "Projects",
-                        "Scenes",
-                        "Outlines",
-                        "Characters",
-                        "Worlds",
-                        "Audio",
-                      ].map((item, index) => (
-                        <div
-                          key={item}
-                          className={`rounded-md px-3 py-2 ${index === 0 ? "bg-background font-medium text-foreground shadow-sm" : "text-muted-foreground"}`}
-                        >
-                          {item}
-                        </div>
-                      ))}
+                      {["Projects", "Scenes", "Outlines", "Characters", "Worlds", "Audio"].map(
+                        (item, index) => (
+                          <div
+                            key={item}
+                            className={`rounded-md px-3 py-2 ${index === 0 ? "bg-background font-medium text-foreground shadow-sm" : "text-muted-foreground"}`}
+                          >
+                            {item}
+                          </div>
+                        ),
+                      )}
                     </div>
                   </aside>
                   <div className="bg-background p-6">
@@ -195,15 +193,21 @@ function Landing() {
                     </div>
                     <div className="mt-5 grid gap-3 sm:grid-cols-2">
                       <div className="rounded-2xl border border-border/60 bg-secondary/35 p-4">
-                        <div className="text-xs uppercase tracking-[0.18em] text-primary">AI Co-Writer</div>
+                        <div className="text-xs uppercase tracking-[0.18em] text-primary">
+                          AI Co-Writer
+                        </div>
                         <p className="mt-2 text-sm text-muted-foreground">
-                          Reveal character conflict, raise the stakes, and deepen the moment without losing your voice.
+                          Reveal character conflict, raise the stakes, and deepen the moment without
+                          losing your voice.
                         </p>
                       </div>
                       <div className="rounded-2xl border border-border/60 bg-secondary/35 p-4">
-                        <div className="text-xs uppercase tracking-[0.18em] text-primary">Studio Tools</div>
+                        <div className="text-xs uppercase tracking-[0.18em] text-primary">
+                          Studio Tools
+                        </div>
                         <p className="mt-2 text-sm text-muted-foreground">
-                          Format, notes, beat board, and story assists stay close to the page instead of crowding it.
+                          Format, notes, beat board, and story assists stay close to the page
+                          instead of crowding it.
                         </p>
                       </div>
                     </div>
@@ -231,14 +235,19 @@ function Landing() {
         <section className="border-b border-border/50 bg-card/25">
           <div className="mx-auto max-w-5xl px-4 py-16 lg:py-20">
             <div className="mb-12 text-center">
-              <p className="text-xs uppercase tracking-[0.24em] text-primary">A better creative rhythm</p>
+              <p className="text-xs uppercase tracking-[0.24em] text-primary">
+                A better creative rhythm
+              </p>
               <h2 className="mt-3 font-display text-4xl font-semibold md:text-5xl">
                 A storytelling studio, not a generic dashboard.
               </h2>
             </div>
             <div className="grid gap-6 md:grid-cols-3">
               {STEPS.map((step) => (
-                <div key={step.n} className="rounded-[1.5rem] border border-border/60 bg-background p-6 shadow-sm">
+                <div
+                  key={step.n}
+                  className="rounded-[1.5rem] border border-border/60 bg-background p-6 shadow-sm"
+                >
                   <div className="text-sm uppercase tracking-[0.22em] text-primary">{step.n}</div>
                   <h3 className="mt-4 font-display text-2xl font-semibold">{step.t}</h3>
                   <p className="mt-3 text-sm leading-7 text-muted-foreground">{step.d}</p>

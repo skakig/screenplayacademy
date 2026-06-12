@@ -11,7 +11,13 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { BRAND_DESCRIPTION, BRAND_DOMAIN, BRAND_NAME, BRAND_SOCIAL_IMAGE, BRAND_TAGLINE } from "@/lib/brand";
+import {
+  BRAND_DESCRIPTION,
+  BRAND_DOMAIN,
+  BRAND_NAME,
+  BRAND_SOCIAL_IMAGE,
+  BRAND_TAGLINE,
+} from "@/lib/brand";
 import scenesmithMarkAsset from "@/assets/scenesmith-mark.png.asset.json";
 
 function NotFoundComponent() {

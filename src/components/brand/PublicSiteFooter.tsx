@@ -13,8 +13,12 @@ export function PublicSiteFooter() {
         </div>
         <div className="flex flex-col items-start gap-3 text-sm text-muted-foreground md:items-end">
           <div className="flex gap-4">
-            <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
-            <Link to="/auth" className="hover:text-foreground transition-colors">Sign in</Link>
+            <Link to="/pricing" className="hover:text-foreground transition-colors">
+              Pricing
+            </Link>
+            <Link to="/auth" className="hover:text-foreground transition-colors">
+              Sign in
+            </Link>
           </div>
           <span>© {new Date().getFullYear()} SceneSmith Studio</span>
         </div>

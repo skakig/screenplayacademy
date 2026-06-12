@@ -14,7 +14,9 @@ export function SceneSmithLogo({
   stacked = false,
 }: SceneSmithLogoProps) {
   return (
-    <div className={`inline-flex items-center gap-3 ${stacked ? "flex-col items-start gap-2" : ""} ${className}`.trim()}>
+    <div
+      className={`inline-flex items-center gap-3 ${stacked ? "flex-col items-start gap-2" : ""} ${className}`.trim()}
+    >
       <img
         src={scenesmithMarkAsset.url}
         alt="SceneSmith Studio logo"

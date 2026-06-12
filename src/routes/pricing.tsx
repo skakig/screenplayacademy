@@ -111,7 +111,9 @@ function Pricing() {
         <section className="border-b border-border/50 bg-[linear-gradient(180deg,rgba(212,162,58,0.08),transparent_34%)]">
           <div className="mx-auto max-w-6xl px-4 py-16 text-center lg:py-20">
             <p className="text-xs uppercase tracking-[0.24em] text-primary">Pricing</p>
-            <h1 className="mt-3 font-display text-5xl font-semibold md:text-6xl">Choose the studio that fits your practice.</h1>
+            <h1 className="mt-3 font-display text-5xl font-semibold md:text-6xl">
+              Choose the studio that fits your practice.
+            </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
               Start free. Upgrade when you want more room for projects, AI-assisted development,
               storyboards, table reads, and team workflows.
@@ -131,7 +133,9 @@ function Pricing() {
                 }`}
               >
                 {tier.highlight ? (
-                  <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-primary">Most popular</div>
+                  <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-primary">
+                    Most popular
+                  </div>
                 ) : null}
                 <h2 className="font-display text-3xl font-semibold">{tier.name}</h2>
                 <div className="mt-3 mb-5">
@@ -140,7 +144,10 @@ function Pricing() {
                 </div>
                 <ul className="mb-8 flex-1 space-y-3">
                   {tier.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
+                    <li
+                      key={feature}
+                      className="flex items-start gap-2 text-sm leading-6 text-muted-foreground"
+                    >
                       <Check className="mt-1 h-4 w-4 shrink-0 text-primary" />
                       <span>{feature}</span>
                     </li>
@@ -156,7 +163,9 @@ function Pricing() {
                   <Button
                     className="w-full"
                     variant={tier.highlight ? "default" : "outline"}
-                    onClick={() => toast.info("Checkout coming soon — your account is being prepared.")}
+                    onClick={() =>
+                      toast.info("Checkout coming soon — your account is being prepared.")
+                    }
                   >
                     {tier.cta} <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                   </Button>

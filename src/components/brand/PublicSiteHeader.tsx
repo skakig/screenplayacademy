@@ -6,7 +6,11 @@ export function PublicSiteHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        <Link to="/" className="transition-opacity hover:opacity-90" aria-label="SceneSmith Studio home">
+        <Link
+          to="/"
+          className="transition-opacity hover:opacity-90"
+          aria-label="SceneSmith Studio home"
+        >
           <SceneSmithLogo iconClassName="h-10 w-10" wordmarkClassName="hidden sm:block" />
         </Link>
         <nav className="flex items-center gap-2 text-sm">
