@@ -1,130 +1,106 @@
+## Public-pages-first rebrand plan
 
-## Screenplay Import Pipeline — Implementation Plan
+### Goal
+Update the app’s public-facing brand so it consistently presents as **SceneSmith Studio** using the supplied brand system:
+- **Name:** SceneSmith Studio
+- **Palette:** Deep Navy `#0F1B2D`, Warm Gold `#D4A23A`, Soft Gray `#A9ADB3`, Off-White `#F7F5F0`
+- **Type:** Playfair Display for headings, Inter for body
+- **Visual language:** premium, editorial, story-first, with the supplied logo/icon system
 
-Follows `docs/SCREENPLAY_IMPORT_PIPELINE.md` and `AGENTS.md`. Local-first editor stays the source of truth; import is a guided, non-destructive flow that ends by hydrating the editor.
+### Scope for this pass
+Focus on **public pages first**:
+- Home page
+- Pricing page
+- Auth page
+- Shared root metadata / SEO identity
+- Shared public brand assets (logo/app icon/social image touchpoints)
+- Public text files tied to search/share identity
 
-### Architecture
+Exclude for now:
+- Full logged-in app UI redesign
+- Internal tool surfaces and editor chrome beyond obvious brand-name mismatches
+- Social media kits / marketing collateral as separate deliverables
 
-```text
-Upload / Paste
-  → Stage 1  Intake          (import_sessions row)
-  → Stage 2  Text Extraction (client for .txt/.fountain/.md; serverFn for .fdx/.docx/.pdf/.rtf)
-  → Stage 3  Block Parsing   (serverFn — Fountain-style heuristics, confidence-rated)
-  → Stage 4  Preview         (review UI: change type, edit, merge, split, remove, bulk-approve high-confidence)
-  → Stage 5  Commit          (Replace / Append / New project)
-  → Stage 6  Diagnostics     (Lovable AI — formatting / structure / character / world / ITS signals)
-  → Stage 7  Editor hydrate  (local-first: stable local IDs, focus restored, no reload)
-```
+## What needs to change
 
-### Database (one migration, RLS-scoped to `auth.uid() = user_id`)
+### 1) Brand naming cleanup
+Replace legacy and mixed naming so public-facing copy is consistent:
+- Remove **Screenplay Academy** as the primary product/site name where it still appears
+- Remove **SceneSmith AI** where it is used as product branding
+- Standardize to **SceneSmith Studio** in:
+  - app shell/header branding
+  - route titles/descriptions
+  - public CTAs and hero copy where the product name is mentioned
+  - structured data and search-facing text
+  - `llms.txt`, sitemap/robots references where applicable
 
-- `import_sessions` — id, project_id (nullable for "import into new project"), user_id, source_type, file_name, raw_text (snapshot, immutable), status, error, created_at, updated_at
-- `import_block_candidates` — id, import_session_id, order_index, raw_text, proposed_block_type, confidence, reason, needs_review, proposed_scene_index, proposed_character_name, user_override_type, approved (default false)
-- `import_reports` — id, project_id, import_session_id, summary, counts (jsonb), created_at
-- `import_warnings` — id, report_id, severity, type, message, related_candidate_ids (uuid[])
-- `import_recommendations` — id, report_id, kind, payload (jsonb), accepted (default null)
+### 2) Global brand tokens and typography
+Bring shared visual foundations in line with the kit:
+- Update global theme tokens to the official brand colors
+- Replace current display font choice with **Playfair Display** while keeping **Inter** for body copy
+- Preserve the premium editorial feel, but remove remaining mismatches with older cinematic styling where they affect public pages
+- Define reusable brand tokens so later logged-in rebrand work can extend the same system
 
-All tables: `GRANT SELECT/INSERT/UPDATE/DELETE TO authenticated`, `GRANT ALL TO service_role`, RLS via `owns_project()` + `user_id = auth.uid()`, `updated_at` triggers.
+### 3) Public page visual refresh
+Apply the new brand system to the public experience first:
+- **Home page:** align hero, navigation, CTA styling, and section accents to the kit
+- **Pricing page:** update header, plan presentation, and metadata to match SceneSmith Studio
+- **Auth page:** update title, supporting copy, and shared visual treatment so sign-in feels on-brand
+- Use the official mark consistently in headers and public brand moments
 
-### Server functions (`src/lib/import/*.functions.ts`)
+### 4) Brand assets and icons
+Replace or align public brand assets:
+- Add official logo/app icon assets from the branding kit into the app asset flow
+- Update public logo usage in navigation/header/footer areas
+- Replace stale or mismatched social preview imagery if it still reflects the old brand
+- Align favicon/app icon touchpoints to the new mark where those hooks exist
 
-- `createImportSession({ projectId?, sourceType, fileName?, rawText? })` — inserts session row; for binary uploads, accepts the extracted text from the client uploader (or extracts server-side, see below).
-- `extractText({ sessionId, fileBase64, mime })` — for `.docx`/`.fdx`/`.rtf` runs lightweight pure-JS extractors inside the handler (mammoth for docx, fast-xml-parser for fdx, rtf-parser for rtf). `.pdf` uses `pdfjs-dist` legacy build — no native deps; Worker-safe.
-- `parseScreenplay({ sessionId })` — runs heuristics from spec §"Parsing Heuristics" on `raw_text`, writes `import_block_candidates`, updates session status to `preview_ready`. Pure TS, no AI call.
-- `commitImport({ sessionId, mode: "replace"|"append"|"new_project", newProjectTitle? })` — reads approved candidates, writes `script_blocks` ordered with safe gaps, derives `scenes`, upserts `characters`, sets session to `imported`. Auto-slates current draft to a `draft_takes` "Before import — <session name>" entry before replace.
-- `diagnoseImport({ sessionId })` — calls Lovable AI via `createLovableAiGatewayProvider` (`google/gemini-3-flash-preview`) with `Output.object` schema for structured `{ warnings[], recommendations[] }`; writes to `import_reports`/`warnings`/`recommendations`. Surfaces 429/402 cleanly to the UI per gateway error rules.
+### 5) SEO and share identity
+Make search/share identity match the rebrand:
+- Update root and leaf-route metadata to SceneSmith Studio
+- Ensure public route titles/descriptions match the new brand voice
+- Update `og:title`, `og:description`, `twitter:title`, `twitter:description`
+- Ensure canonical and `og:url` point to `https://scenesmithstudio.com`
+- Update Organization/WebSite JSON-LD to SceneSmith Studio
+- Update `llms.txt` and verify sitemap/robots still advertise the correct site identity
 
-All authored server fns use `.middleware([requireSupabaseAuth])`. `supabaseAdmin` is not needed — every read/write is scoped by RLS. Files live in `src/lib/import/` (client-safe path), per the import-graph rule.
+## Implementation order
 
-### Parsing engine (`src/lib/import/parser.ts` — pure TS, server-shared)
+### Phase 1 — Shared brand foundation
+- Add the official logo/icon assets
+- Update shared fonts and global color tokens
+- Create a small reusable public-brand pattern for logo + wordmark usage
 
-Implements the spec's heuristics exactly:
-- **Scene Heading**: `^(INT|EXT|INT\.\/EXT|I\/E)[\.\s]` → high; lowercase `int|ext|inside|outside` → medium (with confidence reason).
-- **Character**: short uppercase line, no trailing `:`, not a transition, followed by non-blank → high. Title-case matching project's existing `characters` list → medium.
-- **Parenthetical**: `^\(.*\)$` between Character and Dialogue → high.
-- **Dialogue**: line after Character/Parenthetical, not a scene heading or transition → high.
-- **Transition**: `^(CUT TO|FADE IN|FADE OUT|SMASH CUT TO|DISSOLVE TO):` → high.
-- **Action**: fallback (never destructive).
-- Each candidate carries `confidence`, `reason`, `needs_review`. Variants `(V.O.)`, `(O.S.)`, `(CONT'D)` preserved; no auto-merge.
+### Phase 2 — Public route identity
+- Fix root metadata
+- Fix homepage metadata and visuals
+- Fix pricing metadata and visuals
+- Fix auth metadata and visuals
+- Update public search/share assets and structured data
 
-Parser is reused by the live preview (instant client-side reparse on text edits) and the serverFn (canonical write).
+### Phase 3 — Cleanup and consistency
+- Sweep remaining public-facing legacy brand strings
+- Verify domain, copy, and asset consistency across public surfaces
+- Leave logged-in UI deeper polish for a separate follow-up pass
 
-### Preview UI (`src/components/import/ImportWizard.tsx`)
+## Deliverables
+- Public-facing app consistently branded as **SceneSmith Studio**
+- Official palette and typography applied to public pages
+- Official logo/app icon used in public brand placements
+- Public SEO/share identity aligned with the new brand and domain
+- A smaller follow-up surface for the logged-in product rebrand
 
-Three-step dialog/sheet:
+## Technical details
+- Update shared head metadata in `src/routes/__root.tsx`
+- Update route-level branding and metadata in public route files such as `src/routes/index.tsx`, `src/routes/pricing.tsx`, and `src/routes/auth.tsx`
+- Update shared header branding in `src/components/AppShell.tsx` only for obvious naming mismatch cleanup; defer full internal-app redesign
+- Update global tokens and font imports in `src/styles.css` and root font links so the design system matches the kit
+- Replace stale public text/SEO files like `public/llms.txt` and verify sitemap/robots remain consistent with `scenesmithstudio.com`
+- Move official uploaded brand assets into the app asset pipeline so logos/icons are used as real app assets rather than as reference files
 
-1. **Source** — tabs for Paste / Upload. Upload accepts `.txt .fountain .md .fdx .docx .pdf .rtf`. Shows session creation + extraction progress.
-2. **Review** — virtualized list of candidate rows with:
-   - Block-type pill with dropdown (8 types)
-   - Inline editable text
-   - Confidence badge (green/amber/red) + tooltip reason
-   - Merge-up / split-here / remove actions
-   - Filter chips: All · Needs review · Characters · Scenes · Action · Dialogue
-   - "Approve all high-confidence" bulk action
-   - Right rail summary: scene count, character roster (with merge candidates flagged), location list, unknown-term candidates → "Add to Project Dictionary"
-3. **Commit** — radio: **Replace current draft** (default; auto-slates first), **Append to current draft**, **Import as new project** (asks for title). Includes "Run AI diagnostics after import" toggle (default on). After commit: route to editor with imported blocks hydrated; diagnostics surface in CoachPane as reviewable suggestions (never auto-applied — per AI Behavior Rule).
-
-A persistent **Import** session can be resumed: opening the wizard while a `preview_ready` session exists for the project offers "Resume previous import".
-
-### Entry points
-
-- Editor: small `Upload` icon-button in `DraftHistoryPanel` header next to the sync chip → opens wizard with current projectId.
-- Dashboard: prominent "Import existing screenplay" card on `/dashboard` and on `projects.new` → wizard in "new project" mode.
-
-### Editor hydration
-
-`commitImport` returns the new `script_blocks` rows. Client maps them to `LocalBlock` (`id = local-<uuid>`, `serverId = row.id`, `status: "clean"`), writes to `scenesmith.draft.v1.<projectId>` localStorage, and dispatches an editor-refresh event so the open editor swaps in place without a `window.location.reload()` (avoiding the existing reload pattern in `performRestore`). Focus restored to first block.
-
-### Non-destructive guarantees
-
-- `import_sessions.raw_text` is the immutable snapshot.
-- Pre-replace auto-slate goes to `draft_takes` → user can roll back from the existing Takes panel.
-- `commitImport` writes inside a single SQL transaction (`rpc('commit_import', ...)`) so a partial failure leaves no orphans.
-- "Revert this import" action on the session reads `raw_text` back into a new session.
-
-### Acceptance tests covered
-
-Maps 1:1 to spec §"Acceptance Tests" 1–14. Each gets a checklist item verified before closing the pass.
-
-### Files (new)
-
-```text
-supabase/migrations/<ts>_import_pipeline.sql
-
-src/lib/import/parser.ts                     # pure TS heuristics
-src/lib/import/extractors.ts                 # docx/fdx/rtf/pdf/fountain
-src/lib/import/sessions.functions.ts         # create / list / get / revert
-src/lib/import/parse.functions.ts            # parseScreenplay
-src/lib/import/commit.functions.ts           # commitImport (+ DB rpc)
-src/lib/import/diagnose.functions.ts         # AI diagnostics
-
-src/components/import/ImportWizard.tsx       # 3-step shell
-src/components/import/ImportSourceStep.tsx
-src/components/import/ImportReviewStep.tsx
-src/components/import/ImportCommitStep.tsx
-src/components/import/CandidateRow.tsx
-src/components/import/ImportDiagnosticsPanel.tsx
-
-src/routes/_authenticated/import.$projectId.tsx   # optional full-page route
-```
-
-### Files (touched)
-
-- `src/components/editor/DraftHistoryPanel.tsx` — add Import entry button.
-- `src/components/dashboard/GuidedDashboard.tsx` — Import card.
-- `src/routes/_authenticated/projects.new.tsx` — "Start from an existing script" option.
-- `src/components/editor/CoachPane.tsx` — surface latest diagnostic recommendations.
-- `src/lib/i18n/keys.ts` + `t.ts` — i18n keys for every visible string (no hardcoded strings per AGENTS.md).
-
-### Dependencies
-
-`mammoth` (.docx), `fast-xml-parser` (.fdx), `rtf-parser` (.rtf), `pdfjs-dist` legacy build (.pdf). All pure JS, Worker-compatible.
-
-### Pass sequencing (so the pass is reviewable)
-
-1. **A** — Migration + Paste/.txt/.fountain/.md + parser + Preview + Commit (Replace/Append). Acceptance tests 1–12.
-2. **B** — `.fdx`, `.docx`, `.rtf`, `.pdf` extractors + "Import as new project" mode.
-3. **C** — Lovable AI diagnostics + CoachPane surfacing + recommendation accept/dismiss.
-4. **D** — Revert import + resume-session UX + dashboard card + i18n sweep.
-
-Each sub-pass ends with the spec's acceptance checklist re-verified.
+## Follow-up after this pass
+A second pass can cover the **logged-in product UI**:
+- dashboard/editor shell branding
+- internal iconography and empty states
+- deeper component-level visual alignment
+- remaining legacy naming across authenticated routes
