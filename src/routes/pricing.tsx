@@ -51,7 +51,7 @@ function Pricing() {
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <Film className="h-5 w-5 text-primary" />
-            <span className="font-bold tracking-tight">SceneSmith<span className="text-primary"> AI</span></span>
+            <span className="font-bold tracking-tight">Screenplay<span className="text-primary"> Academy</span></span>
           </Link>
           <Link to="/auth"><Button size="sm">Sign in</Button></Link>
         </div>
