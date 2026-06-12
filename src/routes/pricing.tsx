@@ -6,8 +6,16 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "Pricing — SceneSmith AI" },
-      { name: "description", content: "Simple pricing for screenwriters. Start free." },
+      { title: "Pricing — Screenplay Academy" },
+      { name: "description", content: "Simple, transparent pricing for screenwriters. Start free, then upgrade as your projects grow — Creator, Pro, and Studio plans with AI assists, table reads, and pitch package exports." },
+      { property: "og:title", content: "Pricing — Screenplay Academy" },
+      { property: "og:description", content: "Start free and upgrade when you're ready to pitch. Compare Creator, Pro, and Studio plans for the AI-powered screenwriting writer's room." },
+      { property: "og:url", content: "https://screenplayacademy.lovable.app/pricing" },
+      { name: "twitter:title", content: "Pricing — Screenplay Academy" },
+      { name: "twitter:description", content: "Start free and upgrade when you're ready to pitch. Compare Creator, Pro, and Studio plans." },
+    ],
+    links: [
+      { rel: "canonical", href: "https://screenplayacademy.lovable.app/pricing" },
     ],
   }),
   component: Pricing,
