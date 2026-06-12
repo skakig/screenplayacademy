@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://screenplayacademy.lovable.app/sitemap.xml
+Sitemap: https://scenesmithstudio.com/sitemap.xml
