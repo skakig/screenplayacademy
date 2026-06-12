@@ -27,8 +27,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-border/60 bg-card/40 backdrop-blur sticky top-0 z-30">
         <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center justify-between">
-          <BrandLogo size="sm" />
-          {/* Override: BrandLogo links to "/" but in the app shell we want /dashboard */}
+          <Link to="/dashboard" aria-label="SceneSmith Studio — Studio Lobby">
+            <BrandLogo size="sm" asLink={false} />
+          </Link>
           <nav className="hidden md:flex items-center gap-1 text-sm">
             {nav.map((n) => (
               <Link
