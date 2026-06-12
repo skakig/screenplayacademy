@@ -1,11 +1,10 @@
-# Screenplay Academy
+# SceneSmith Studio
 
-> AI-powered writer's room for screenwriters — write, develop, cast, storyboard, rehearse, and pitch your screenplay end-to-end.
+> The AI-powered writer's room for screenplays, novels, worldbuilding, comedy, and audio storytelling — from first spark to final pitch.
 
-Screenplay Academy is a web app that combines an industry-standard screenplay editor with AI tools for character development, scene outlining, storyboarding, table reads, and pitch decks.
+SceneSmith Studio is one studio for five storytelling crafts. Writers use the Writer's Desk for industry-standard formatting, the Casting Wall for character bibles, the Scene Board for outlines, the Shot Wall for visual planning, the Rehearsal Room for AI table reads, and the Producer Room for pitch packaging.
 
 ## Pages
-
-- [Home](/): Product overview and entry point to the studio.
-- [Pricing](/pricing): Plans and pricing for Screenplay Academy.
-- [Sign in](/auth): Sign in or create an account to start writing.
+- [Home](/): Overview of the writer's toolbox and the five storytelling pillars.
+- [Pricing](/pricing): Plans and pricing for SceneSmith Studio.
+- [Sign in](/auth): Sign in or create a SceneSmith Studio account.

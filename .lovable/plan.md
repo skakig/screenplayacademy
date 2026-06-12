@@ -1,130 +1,68 @@
+# SceneSmith Studio Rebrand — Pass v2
 
-## Screenplay Import Pipeline — Implementation Plan
+Keep the existing navy/brass palette and Cormorant/Inter typography. Fix the brand mark, normalize all copy to "SceneSmith Studio", and reposition the product as a full writer's toolbox (5 pillars), not screenplay-only.
 
-Follows `docs/SCREENPLAY_IMPORT_PIPELINE.md` and `AGENTS.md`. Local-first editor stays the source of truth; import is a guided, non-destructive flow that ends by hydrating the editor.
+## 1. Brand mark asset
 
-### Architecture
+- Upload the attached logo (`71997A4C-...png`) via `lovable-assets` → `src/assets/scenesmith-mark.png.asset.json`.
+- Create a small `<BrandLogo />` component (`src/components/brand/BrandLogo.tsx`) rendering the mark + "SceneSmith" (Cormorant) over a small "STUDIO" tracked-out label in brass. Sizes: `sm` (header), `md` (auth/pricing), `lg` (landing hero).
 
-```text
-Upload / Paste
-  → Stage 1  Intake          (import_sessions row)
-  → Stage 2  Text Extraction (client for .txt/.fountain/.md; serverFn for .fdx/.docx/.pdf/.rtf)
-  → Stage 3  Block Parsing   (serverFn — Fountain-style heuristics, confidence-rated)
-  → Stage 4  Preview         (review UI: change type, edit, merge, split, remove, bulk-approve high-confidence)
-  → Stage 5  Commit          (Replace / Append / New project)
-  → Stage 6  Diagnostics     (Lovable AI — formatting / structure / character / world / ITS signals)
-  → Stage 7  Editor hydrate  (local-first: stable local IDs, focus restored, no reload)
-```
+## 2. Replace `Film` icon and "SceneSmith AI" wordmark
 
-### Database (one migration, RLS-scoped to `auth.uid() = user_id`)
+- `src/components/AppShell.tsx` header → use `<BrandLogo size="sm" />` instead of the `Film` icon + "SceneSmith AI" text. (Matches the red-circled fix in the screenshot.)
+- Landing `src/routes/index.tsx` hero, pricing header, auth header → use `<BrandLogo>`.
 
-- `import_sessions` — id, project_id (nullable for "import into new project"), user_id, source_type, file_name, raw_text (snapshot, immutable), status, error, created_at, updated_at
-- `import_block_candidates` — id, import_session_id, order_index, raw_text, proposed_block_type, confidence, reason, needs_review, proposed_scene_index, proposed_character_name, user_override_type, approved (default false)
-- `import_reports` — id, project_id, import_session_id, summary, counts (jsonb), created_at
-- `import_warnings` — id, report_id, severity, type, message, related_candidate_ids (uuid[])
-- `import_recommendations` — id, report_id, kind, payload (jsonb), accepted (default null)
+## 3. Reframe to writer's toolbox (5 pillars)
 
-All tables: `GRANT SELECT/INSERT/UPDATE/DELETE TO authenticated`, `GRANT ALL TO service_role`, RLS via `owns_project()` + `user_id = auth.uid()`, `updated_at` triggers.
+Update positioning copy on landing, pricing, auth, and root meta to reflect: **Screenplays · Novels · Worldbuilding · Comedy · Audio Storytelling** (drop "screenwriter"-only language).
 
-### Server functions (`src/lib/import/*.functions.ts`)
+- Landing hero subhead: "Write, develop, and perform your stories inside an AI-powered writer's studio — screenplays, novels, worlds, comedy, audio."
+- "Everything a screenwriter needs" → "Everything a storyteller needs."
+- Root meta description already mentions multi-format — keep, tighten.
+- Pricing tagline + auth tagline updated to the toolbox framing.
 
-- `createImportSession({ projectId?, sourceType, fileName?, rawText? })` — inserts session row; for binary uploads, accepts the extracted text from the client uploader (or extracts server-side, see below).
-- `extractText({ sessionId, fileBase64, mime })` — for `.docx`/`.fdx`/`.rtf` runs lightweight pure-JS extractors inside the handler (mammoth for docx, fast-xml-parser for fdx, rtf-parser for rtf). `.pdf` uses `pdfjs-dist` legacy build — no native deps; Worker-safe.
-- `parseScreenplay({ sessionId })` — runs heuristics from spec §"Parsing Heuristics" on `raw_text`, writes `import_block_candidates`, updates session status to `preview_ready`. Pure TS, no AI call.
-- `commitImport({ sessionId, mode: "replace"|"append"|"new_project", newProjectTitle? })` — reads approved candidates, writes `script_blocks` ordered with safe gaps, derives `scenes`, upserts `characters`, sets session to `imported`. Auto-slates current draft to a `draft_takes` "Before import — <session name>" entry before replace.
-- `diagnoseImport({ sessionId })` — calls Lovable AI via `createLovableAiGatewayProvider` (`google/gemini-3-flash-preview`) with `Output.object` schema for structured `{ warnings[], recommendations[] }`; writes to `import_reports`/`warnings`/`recommendations`. Surfaces 429/402 cleanly to the UI per gateway error rules.
+## 4. Pillar strip (new section on landing)
 
-All authored server fns use `.middleware([requireSupabaseAuth])`. `supabaseAdmin` is not needed — every read/write is scoped by RLS. Files live in `src/lib/import/` (client-safe path), per the import-graph rule.
+Below the hero, add a horizontal pillar strip mirroring the promo kit (icon + label), 5 items:
 
-### Parsing engine (`src/lib/import/parser.ts` — pure TS, server-shared)
+| Pillar | Lucide icon |
+|---|---|
+| Screenplays | `FileText` |
+| Novels | `BookOpen` |
+| Worldbuilding | `Globe2` |
+| Comedy | `Drama` (or `Theater`) |
+| Audio Storytelling | `Mic` |
 
-Implements the spec's heuristics exactly:
-- **Scene Heading**: `^(INT|EXT|INT\.\/EXT|I\/E)[\.\s]` → high; lowercase `int|ext|inside|outside` → medium (with confidence reason).
-- **Character**: short uppercase line, no trailing `:`, not a transition, followed by non-blank → high. Title-case matching project's existing `characters` list → medium.
-- **Parenthetical**: `^\(.*\)$` between Character and Dialogue → high.
-- **Dialogue**: line after Character/Parenthetical, not a scene heading or transition → high.
-- **Transition**: `^(CUT TO|FADE IN|FADE OUT|SMASH CUT TO|DISSOLVE TO):` → high.
-- **Action**: fallback (never destructive).
-- Each candidate carries `confidence`, `reason`, `needs_review`. Variants `(V.O.)`, `(O.S.)`, `(CONT'D)` preserved; no auto-merge.
+Style: navy panel card, brass icon in a soft `accent-glow` ring, Cormorant label, thin brass divider, subtle hover lift. No emoji, no gradient blobs.
 
-Parser is reused by the live preview (instant client-side reparse on text edits) and the serverFn (canonical write).
+## 5. Pro-level feature cards (replace current 3 cards)
 
-### Preview UI (`src/components/import/ImportWizard.tsx`)
+Keep the three deep-workspace cards (Writer's Desk, Casting Wall, Scene Board) but redesign to match promo-kit polish:
 
-Three-step dialog/sheet:
+- Navy `--bg-panel` background, brass icon block top-left in a rounded square with `--accent-glow` halo.
+- Cormorant title, Inter body, thin brass underline accent.
+- Hairline `--border-subtle` border, `--shadow-cinematic` on hover, scale 1.01.
+- Add a 4th "Producer Room" card row OR keep grid as 3 — keep 3 to preserve scope; pillars cover the breadth.
 
-1. **Source** — tabs for Paste / Upload. Upload accepts `.txt .fountain .md .fdx .docx .pdf .rtf`. Shows session creation + extraction progress.
-2. **Review** — virtualized list of candidate rows with:
-   - Block-type pill with dropdown (8 types)
-   - Inline editable text
-   - Confidence badge (green/amber/red) + tooltip reason
-   - Merge-up / split-here / remove actions
-   - Filter chips: All · Needs review · Characters · Scenes · Action · Dialogue
-   - "Approve all high-confidence" bulk action
-   - Right rail summary: scene count, character roster (with merge candidates flagged), location list, unknown-term candidates → "Add to Project Dictionary"
-3. **Commit** — radio: **Replace current draft** (default; auto-slates first), **Append to current draft**, **Import as new project** (asks for title). Includes "Run AI diagnostics after import" toggle (default on). After commit: route to editor with imported blocks hydrated; diagnostics surface in CoachPane as reviewable suggestions (never auto-applied — per AI Behavior Rule).
+## 6. SEO / meta consistency
 
-A persistent **Import** session can be resumed: opening the wizard while a `preview_ready` session exists for the project offers "Resume previous import".
+- Normalize titles to "SceneSmith Studio" across `__root.tsx`, `index.tsx`, `pricing.tsx`, `auth.tsx` (remove lingering "Screenplay Academy" strings on public marketing surfaces — leave authenticated `/academy` route alone since that's the in-app Screenplay School module).
+- Footer copyright → "© {year} SceneSmith Studio".
+- JSON-LD Organization name → "SceneSmith Studio", url stays current published domain.
 
-### Entry points
+## 7. Files changed
 
-- Editor: small `Upload` icon-button in `DraftHistoryPanel` header next to the sync chip → opens wizard with current projectId.
-- Dashboard: prominent "Import existing screenplay" card on `/dashboard` and on `projects.new` → wizard in "new project" mode.
+- new: `src/assets/scenesmith-mark.png.asset.json`
+- new: `src/components/brand/BrandLogo.tsx`
+- new: `src/components/landing/PillarStrip.tsx`
+- edit: `src/components/AppShell.tsx` (logo swap)
+- edit: `src/routes/index.tsx` (hero logo, copy, pillar strip, redesigned feature cards, footer)
+- edit: `src/routes/__root.tsx` (meta copy normalization, JSON-LD name)
+- edit: `src/routes/pricing.tsx` (header logo + copy)
+- edit: `src/routes/auth.tsx` (header logo + copy)
 
-### Editor hydration
+## Out of scope
 
-`commitImport` returns the new `script_blocks` rows. Client maps them to `LocalBlock` (`id = local-<uuid>`, `serverId = row.id`, `status: "clean"`), writes to `scenesmith.draft.v1.<projectId>` localStorage, and dispatches an editor-refresh event so the open editor swaps in place without a `window.location.reload()` (avoiding the existing reload pattern in `performRestore`). Focus restored to first block.
-
-### Non-destructive guarantees
-
-- `import_sessions.raw_text` is the immutable snapshot.
-- Pre-replace auto-slate goes to `draft_takes` → user can roll back from the existing Takes panel.
-- `commitImport` writes inside a single SQL transaction (`rpc('commit_import', ...)`) so a partial failure leaves no orphans.
-- "Revert this import" action on the session reads `raw_text` back into a new session.
-
-### Acceptance tests covered
-
-Maps 1:1 to spec §"Acceptance Tests" 1–14. Each gets a checklist item verified before closing the pass.
-
-### Files (new)
-
-```text
-supabase/migrations/<ts>_import_pipeline.sql
-
-src/lib/import/parser.ts                     # pure TS heuristics
-src/lib/import/extractors.ts                 # docx/fdx/rtf/pdf/fountain
-src/lib/import/sessions.functions.ts         # create / list / get / revert
-src/lib/import/parse.functions.ts            # parseScreenplay
-src/lib/import/commit.functions.ts           # commitImport (+ DB rpc)
-src/lib/import/diagnose.functions.ts         # AI diagnostics
-
-src/components/import/ImportWizard.tsx       # 3-step shell
-src/components/import/ImportSourceStep.tsx
-src/components/import/ImportReviewStep.tsx
-src/components/import/ImportCommitStep.tsx
-src/components/import/CandidateRow.tsx
-src/components/import/ImportDiagnosticsPanel.tsx
-
-src/routes/_authenticated/import.$projectId.tsx   # optional full-page route
-```
-
-### Files (touched)
-
-- `src/components/editor/DraftHistoryPanel.tsx` — add Import entry button.
-- `src/components/dashboard/GuidedDashboard.tsx` — Import card.
-- `src/routes/_authenticated/projects.new.tsx` — "Start from an existing script" option.
-- `src/components/editor/CoachPane.tsx` — surface latest diagnostic recommendations.
-- `src/lib/i18n/keys.ts` + `t.ts` — i18n keys for every visible string (no hardcoded strings per AGENTS.md).
-
-### Dependencies
-
-`mammoth` (.docx), `fast-xml-parser` (.fdx), `rtf-parser` (.rtf), `pdfjs-dist` legacy build (.pdf). All pure JS, Worker-compatible.
-
-### Pass sequencing (so the pass is reviewable)
-
-1. **A** — Migration + Paste/.txt/.fountain/.md + parser + Preview + Commit (Replace/Append). Acceptance tests 1–12.
-2. **B** — `.fdx`, `.docx`, `.rtf`, `.pdf` extractors + "Import as new project" mode.
-3. **C** — Lovable AI diagnostics + CoachPane surfacing + recommendation accept/dismiss.
-4. **D** — Revert import + resume-session UX + dashboard card + i18n sweep.
-
-Each sub-pass ends with the spec's acceptance checklist re-verified.
+- AppShell nav labels, dashboard, editor, in-app surfaces — untouched (per "Landing + all marketing surfaces").
+- No palette change, no font change — only the mark, layout polish, and toolbox copy.
+- No new routes.
