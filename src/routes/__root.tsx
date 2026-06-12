@@ -77,19 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Screenplay Academy — Your Writer's Room, Open 24/7" },
-      { name: "description", content: "Screenplay Academy is an AI-powered writer's room for screenwriters — write, develop, cast, storyboard, rehearse, and pitch your screenplay end-to-end." },
-      { name: "author", content: "Screenplay Academy" },
-      { property: "og:site_name", content: "Screenplay Academy" },
-      { property: "og:title", content: "Screenplay Academy — Your Writer's Room, Open 24/7" },
-      { property: "og:description", content: "Screenplay Academy is an AI-powered writer's room for screenwriters — write, develop, cast, storyboard, rehearse, and pitch your screenplay end-to-end." },
+      { title: "SceneSmith Studio" },
+      { name: "description", content: "SceneSmith Studio is the ultimate writing app for screenplays, novels, YouTube scripts, worlds, comedy, audio stories, and pitch decks." },
+      { name: "author", content: "Lovable" },
+      { property: "og:title", content: "SceneSmith Studio" },
+      { property: "og:description", content: "SceneSmith Studio is the ultimate writing app for screenplays, novels, YouTube scripts, worlds, comedy, audio stories, and pitch decks." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "Screenplay Academy — Your Writer's Room, Open 24/7" },
-      { name: "twitter:description", content: "Screenplay Academy is an AI-powered writer's room for screenwriters — write, develop, cast, storyboard, rehearse, and pitch your screenplay end-to-end." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7bb38f26-f7db-48b4-b1aa-2a52852fbf9a/id-preview-d3fbbb47--1487be5f-d610-4a3e-b318-265c0247991c.lovable.app-1780891751723.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7bb38f26-f7db-48b4-b1aa-2a52852fbf9a/id-preview-d3fbbb47--1487be5f-d610-4a3e-b318-265c0247991c.lovable.app-1780891751723.png" },
+      { name: "twitter:title", content: "SceneSmith Studio" },
+      { name: "twitter:description", content: "SceneSmith Studio is the ultimate writing app for screenplays, novels, YouTube scripts, worlds, comedy, audio stories, and pitch decks." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/X8KRxlcvyARp2CCH5e8jc9n17Z32/social-images/social-1781294851914-207AE0AC-BE60-4793-AB27-923B69B5C202.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/X8KRxlcvyARp2CCH5e8jc9n17Z32/social-images/social-1781294851914-207AE0AC-BE60-4793-AB27-923B69B5C202.webp" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -101,28 +100,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: appCss,
-      },
-    ],
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@graph": [
-            {
-              "@type": "Organization",
-              name: "Screenplay Academy",
-              url: "https://screenplayacademy.lovable.app",
-              description: "AI-powered writer's room for screenwriters — write, develop, cast, storyboard, rehearse, and pitch your screenplay end-to-end.",
-            },
-            {
-              "@type": "WebSite",
-              name: "Screenplay Academy",
-              url: "https://screenplayacademy.lovable.app",
-              description: "AI-powered writer's room for screenwriters — write, develop, cast, storyboard, rehearse, and pitch your screenplay end-to-end.",
-            },
-          ],
-        }),
       },
     ],
   }),
