@@ -101,8 +101,10 @@ function Landing() {
         </div>
       </header>
 
+      <main>
       {/* Hero */}
       <section className="relative overflow-hidden">
+
         <div className="max-w-5xl mx-auto px-4 py-24 lg:py-32 text-center">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs text-primary mb-6">
             <Sparkles className="h-3 w-3" /> AI-native writer's room
@@ -222,9 +224,11 @@ function Landing() {
           </div>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <footer className="border-t border-border/40 py-8">
+
         <div className="max-w-6xl mx-auto px-4 flex items-center justify-between text-xs text-muted-foreground">
           <span>© {new Date().getFullYear()} Screenplay Academy</span>
           <div className="flex gap-4">
