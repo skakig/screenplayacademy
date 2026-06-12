@@ -7,36 +7,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { SceneSmithLogo } from "@/components/brand/SceneSmithLogo";
-import { BRAND_DOMAIN, BRAND_NAME, BRAND_SOCIAL_IMAGE } from "@/lib/brand";
+import { Clapperboard } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: `Sign in or sign up — ${BRAND_NAME}` },
-      {
-        name: "description",
-        content:
-          "Sign in or create your SceneSmith Studio account to enter a premium storytelling workspace and start writing.",
-      },
-      { property: "og:title", content: `Sign in or sign up — ${BRAND_NAME}` },
-      {
-        property: "og:description",
-        content:
-          "Enter the studio, pick up the page, and continue building better stories scene by scene.",
-      },
-      { property: "og:url", content: `${BRAND_DOMAIN}/auth` },
-      { property: "og:image", content: BRAND_SOCIAL_IMAGE },
-      { name: "twitter:title", content: `Sign in or sign up — ${BRAND_NAME}` },
-      {
-        name: "twitter:description",
-        content:
-          "Enter the studio, pick up the page, and continue building better stories scene by scene.",
-      },
-      { name: "twitter:image", content: BRAND_SOCIAL_IMAGE },
+      { title: "Sign in or sign up — Screenplay Academy" },
+      { name: "description", content: "Sign in or create your Screenplay Academy account to enter the AI-powered writer's room and start developing your next screenplay." },
+      { property: "og:title", content: "Sign in or sign up — Screenplay Academy" },
+      { property: "og:description", content: "Enter the Studio. Sign in or create your Screenplay Academy account to start writing your next screenplay with AI." },
+      { property: "og:url", content: "https://screenplayacademy.lovable.app/auth" },
+      { name: "twitter:title", content: "Sign in or sign up — Screenplay Academy" },
+      { name: "twitter:description", content: "Enter the Studio. Sign in or create your Screenplay Academy account to start writing." },
     ],
-    links: [{ rel: "canonical", href: `${BRAND_DOMAIN}/auth` }],
+    links: [
+      { rel: "canonical", href: "https://screenplayacademy.lovable.app/auth" },
+    ],
   }),
   component: AuthPage,
 });
@@ -54,10 +41,9 @@ function AuthPage() {
     supabase.auth.getUser().then(({ data }) => {
       if (!cancelled && data.user) navigate({ to: "/dashboard", replace: true });
     });
-    return () => {
-      cancelled = true;
-    };
-  }, [navigate]);
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,8 +51,7 @@ function AuthPage() {
     try {
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
-          email,
-          password,
+          email, password,
           options: { emailRedirectTo: window.location.origin, data: { full_name: fullName } },
         });
         if (error) throw error;
@@ -86,14 +71,8 @@ function AuthPage() {
 
   const handleGoogle = async () => {
     setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: `${window.location.origin}/dashboard`,
-    });
-    if (result.error) {
-      toast.error("Google sign-in failed");
-      setLoading(false);
-      return;
-    }
+    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/dashboard` });
+    if (result.error) { toast.error("Google sign-in failed"); setLoading(false); return; }
     if (result.redirected) return;
     navigate({ to: "/dashboard" });
   };
@@ -101,136 +80,73 @@ function AuthPage() {
   const isSignin = mode === "signin";
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto grid min-h-screen max-w-6xl gap-10 px-4 py-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:py-12">
-        <section className="relative overflow-hidden rounded-[2rem] border border-border/60 bg-[linear-gradient(180deg,rgba(247,245,240,0.95),rgba(247,245,240,1))] p-8 shadow-[0_30px_90px_-40px_rgba(15,27,45,0.3)] lg:p-12">
-          <div className="pointer-events-none absolute -right-10 top-0 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
-          <div className="pointer-events-none absolute -left-8 bottom-0 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
-          <SceneSmithLogo iconClassName="h-16 w-16" />
-          <p className="mt-10 text-xs uppercase tracking-[0.24em] text-primary">
-            AI-powered storytelling studio
-          </p>
-          <h1 className="mt-4 max-w-xl font-display text-5xl font-semibold leading-[1.02] text-foreground md:text-6xl">
-            The page is yours.
-            <br />
-            The studio is waiting.
-          </h1>
-          <p className="mt-6 max-w-xl text-lg leading-8 text-foreground/75">
-            Write, develop, and refine your work inside a storytelling studio built for screenplays,
-            novels, worldbuilding, comedy, and audio storytelling.
-          </p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2">
-            {[
-              "Professional writing workspace",
-              "Story-first AI assistance",
-              "Scene-by-scene development",
-              "Pitch and rehearsal tools",
-            ].map((item) => (
-              <div
-                key={item}
-                className="rounded-2xl border border-border/60 bg-background/80 px-4 py-3 text-sm text-muted-foreground shadow-sm"
-              >
-                {item}
-              </div>
-            ))}
+    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
+      {/* Atmospheric backdrop */}
+      <div className="absolute inset-0 -z-10" style={{ background: "var(--gradient-cinematic)" }} />
+      <div className="absolute inset-0 -z-10 opacity-[0.08] pointer-events-none"
+        style={{ backgroundImage: "radial-gradient(circle at 20% 30%, var(--primary) 0, transparent 40%), radial-gradient(circle at 80% 70%, var(--accent) 0, transparent 45%)" }} />
+
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 mb-3">
+            <Clapperboard className="h-7 w-7 text-primary" />
+            <span className="font-display text-2xl font-semibold tracking-tight">Screenplay<span className="text-primary"> Academy</span></span>
           </div>
-        </section>
-
-        <div className="w-full max-w-md justify-self-center lg:justify-self-end">
-          <Card className="border-border/60 bg-card/85 p-6 shadow-[0_24px_80px_-36px_rgba(15,27,45,0.45)] backdrop-blur-sm">
-            <h2 className="font-display text-3xl font-semibold mb-1">
-              {isSignin ? "Welcome back" : "Open your studio"}
-            </h2>
-            <p className="mb-6 text-sm text-muted-foreground">
-              {isSignin
-                ? "Pick up the scene right where you left off."
-                : "Start free and begin building better stories scene by scene."}
-            </p>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="mb-4 w-full"
-              onClick={handleGoogle}
-              disabled={loading}
-            >
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  fill="currentColor"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
-              </svg>
-              Continue with Google
-            </Button>
-
-            <div className="relative my-4 text-center">
-              <span className="relative z-10 bg-card px-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                or with email
-              </span>
-              <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
-            </div>
-
-            <form onSubmit={handleEmail} className="space-y-3">
-              {mode === "signup" && (
-                <div>
-                  <Label htmlFor="name">Your name</Label>
-                  <Input
-                    id="name"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Jane Writer"
-                  />
-                </div>
-              )}
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Opening…" : isSignin ? "Enter the Studio" : "Start Writing"}
-              </Button>
-            </form>
-
-            <p className="mt-4 text-center text-sm text-muted-foreground">
-              {isSignin ? "New to SceneSmith Studio?" : "Already have an account?"}{" "}
-              <button
-                className="text-primary hover:underline"
-                onClick={() => setMode(isSignin ? "signup" : "signin")}
-              >
-                {isSignin ? "Create one" : "Sign in"}
-              </button>
-            </p>
-          </Card>
+          <p className="font-script text-base text-muted-foreground italic">
+            {isSignin ? "Welcome back to the studio. Your script is waiting." : "Step inside. The page is yours."}
+          </p>
         </div>
+
+        <Card className="p-6 border-border/60 backdrop-blur-sm cine-card"
+          style={{ boxShadow: "var(--shadow-cinematic)" }}>
+          <h1 className="font-display text-2xl font-semibold mb-1">
+            {isSignin ? "Sign back in" : "Open your studio"}
+          </h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            {isSignin ? "Pick up the scene right where you left off." : "Free forever to start. No credit card. No fade-out."}
+          </p>
+
+          <Button type="button" variant="outline" className="w-full mb-4" onClick={handleGoogle} disabled={loading}>
+            <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Continue with Google
+          </Button>
+
+          <div className="relative my-4 text-center">
+            <span className="bg-card px-2 text-xs uppercase tracking-[0.18em] text-muted-foreground relative z-10">or with email</span>
+            <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
+          </div>
+
+          <form onSubmit={handleEmail} className="space-y-3">
+            {mode === "signup" && (
+              <div>
+                <Label htmlFor="name">Writer's name</Label>
+                <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Writer" />
+              </div>
+            )}
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Rolling…" : isSignin ? "Enter the Studio" : "Start your Studio"}
+            </Button>
+          </form>
+
+          <p className="text-center text-sm text-muted-foreground mt-4">
+            {isSignin ? "New to the lot?" : "Already on the call sheet?"}{" "}
+            <button className="text-primary hover:underline" onClick={() => setMode(isSignin ? "signup" : "signin")}>
+              {isSignin ? "Open a studio" : "Sign back in"}
+            </button>
+          </p>
+        </Card>
+
+        <p className="text-center text-xs text-muted-foreground/70 mt-6 font-mono uppercase tracking-[0.2em]">
+          Fade in.
+        </p>
       </div>
     </div>
   );

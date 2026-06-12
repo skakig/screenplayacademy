@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import {
+  Film,
   Sparkles,
   Users,
   LayoutGrid,
@@ -9,45 +10,29 @@ import {
   FileText,
   ArrowRight,
   Check,
-  Globe,
-  PenTool,
 } from "lucide-react";
-import { PublicSiteHeader } from "@/components/brand/PublicSiteHeader";
-import { PublicSiteFooter } from "@/components/brand/PublicSiteFooter";
-import { SceneSmithLogo } from "@/components/brand/SceneSmithLogo";
-import { BRAND_DOMAIN, BRAND_NAME, BRAND_SOCIAL_IMAGE, BRAND_TAGLINE } from "@/lib/brand";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       {
-        title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
+        title: "Screenplay Academy — Your Writer's Room, Open 24/7",
       },
       {
         name: "description",
         content:
-          "SceneSmith Studio is the AI-powered storytelling studio for screenwriters, novelists, worldbuilders, comedians, and audio storytellers.",
+          "From logline to pitch deck — write, develop, and perform your screenplay inside an AI-powered writer's room.",
       },
       {
         property: "og:title",
-        content: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
+        content: "Screenplay Academy — Your Writer's Room, Open 24/7",
       },
       {
         property: "og:description",
         content:
-          "Write, develop, and shape better stories inside a premium storytelling studio built for scene-by-scene work.",
+          "Write on the Writer's Desk. Cast on the Casting Wall. Rehearse in the Rehearsal Room. Pitch in the Producer Room.",
       },
-      { property: "og:url", content: BRAND_DOMAIN },
-      { property: "og:image", content: BRAND_SOCIAL_IMAGE },
-      { name: "twitter:title", content: `${BRAND_NAME} — ${BRAND_TAGLINE}` },
-      {
-        name: "twitter:description",
-        content:
-          "Write, develop, and shape better stories inside a premium storytelling studio built for scene-by-scene work.",
-      },
-      { name: "twitter:image", content: BRAND_SOCIAL_IMAGE },
     ],
-    links: [{ rel: "canonical", href: BRAND_DOMAIN }],
   }),
   component: Landing,
 });
@@ -55,236 +40,203 @@ export const Route = createFileRoute("/")({
 const FEATURES = [
   {
     icon: FileText,
-    title: "Screenplays",
-    desc: "Write with professional screenplay structure, clean formatting, and a workspace built for scene-by-scene momentum.",
-  },
-  {
-    icon: PenTool,
-    title: "Novels",
-    desc: "Develop long-form fiction with character arcs, scene planning, and creative support that stays close to the page.",
-  },
-  {
-    icon: Globe,
-    title: "Worldbuilding",
-    desc: "Track lore, settings, and story logic so every choice feels grounded inside the world you are building.",
+    title: "Writer's Desk",
+    desc: "Industry-standard formatting with structured script blocks. Click the page and type.",
   },
   {
     icon: Users,
-    title: "Character work",
-    desc: "Shape living characters with contradiction, desire, and emotional pressure instead of flat profiles.",
+    title: "Casting Wall",
+    desc: "Wounds, secrets, contradictions, arcs. Build living characters with AI.",
+  },
+  {
+    icon: LayoutGrid,
+    title: "Scene Board",
+    desc: "Outline beat by beat with purpose, conflict, and reversal.",
   },
   {
     icon: ImageIcon,
-    title: "Storyboards",
-    desc: "Visualize key moments, references, and scene intent when you want to think in images as well as words.",
+    title: "Shot Wall",
+    desc: "Visualize key frames with AI-generated storyboard panels.",
   },
   {
     icon: Mic,
-    title: "Audio storytelling",
-    desc: "Hear pacing, rhythm, and performance through table reads and voice-led review tools.",
-  },
-];
-
-const STEPS = [
-  {
-    n: "01",
-    t: "Start with the page",
-    d: "Write without friction inside a studio designed to keep creative focus on the story, not the software.",
+    title: "Rehearsal Room",
+    desc: "Hear your screenplay performed with AI voices and pacing.",
   },
   {
-    n: "02",
-    t: "Develop scene by scene",
-    d: "Refine characters, tension, structure, and story logic with tools that support the work instead of taking it over.",
-  },
-  {
-    n: "03",
-    t: "Move toward pitch",
-    d: "Shape materials, visual references, and rehearsal-ready outputs when the story is ready to leave the desk.",
+    icon: Sparkles,
+    title: "Producer Room",
+    desc: "Logline, synopsis, treatment, and pitch deck — one click.",
   },
 ];
 
 function Landing() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <PublicSiteHeader />
+    <div className="min-h-screen">
+      {/* Sticky nav */}
+      <header className="border-b border-border/60 bg-background/60 backdrop-blur sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <Film className="h-5 w-5 text-primary" />
+            <span className="font-bold tracking-tight">
+              Screenplay<span className="text-primary"> Academy</span>
+            </span>
+          </Link>
+          <nav className="flex items-center gap-2 text-sm">
+            <Link
+              to="/pricing"
+              className="px-3 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Pricing
+            </Link>
+            <Link to="/auth">
+              <Button variant="ghost" size="sm">
+                Sign in
+              </Button>
+            </Link>
+            <Link to="/auth">
+              <Button size="sm">Enter the Studio</Button>
+            </Link>
+          </nav>
+        </div>
+      </header>
 
       <main>
-        <section className="border-b border-border/50 bg-[linear-gradient(180deg,rgba(212,162,58,0.08),transparent_28%),linear-gradient(135deg,rgba(15,27,45,0.02),rgba(15,27,45,0.08))]">
-          <div className="mx-auto grid max-w-6xl gap-12 px-4 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-24">
-            <div>
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-primary">
-                <Sparkles className="h-3.5 w-3.5" />
-                AI-assisted storytelling
-              </div>
-              <h1 className="max-w-3xl font-display text-5xl font-semibold leading-[0.98] text-foreground md:text-7xl">
-                Build better stories,
-                <br />
-                scene by scene.
-              </h1>
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground md:text-xl">
-                SceneSmith Studio is your intelligent creative partner for screenplays, novels,
-                worldbuilding, comedy, and audio storytelling.
-              </p>
-              <div className="mt-10 flex flex-wrap items-center gap-3">
-                <Link to="/auth">
-                  <Button size="lg" className="h-12 px-6 text-base shadow-lg shadow-primary/20">
-                    Start Writing <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link to="/pricing">
-                  <Button variant="outline" size="lg" className="h-12 px-6 text-base">
-                    Explore Pricing
-                  </Button>
-                </Link>
-              </div>
-              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-muted-foreground">
-                <span className="inline-flex items-center gap-2">
-                  <Check className="h-4 w-4 text-primary" /> Professional writing workspace
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <Check className="h-4 w-4 text-primary" /> Story-first AI assistance
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <Check className="h-4 w-4 text-primary" /> Scene-by-scene development
-                </span>
-              </div>
-            </div>
+      {/* Hero */}
+      <section className="relative overflow-hidden">
 
-            <div className="relative">
+        <div className="max-w-5xl mx-auto px-4 py-24 lg:py-32 text-center">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs text-primary mb-6">
+            <Sparkles className="h-3 w-3" /> AI-native writer's room
+          </div>
+          <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tight leading-[1.05]">
+            The page is yours.
+            <br />
+            <span className="text-primary">The studio is waiting.</span>
+          </h1>
+          <p className="text-lg md:text-xl text-muted-foreground mt-8 max-w-2xl mx-auto">
+            Write, develop, and perform your screenplay inside an AI-powered
+            writer's room — from first spark to final pitch.
+          </p>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+            <Link to="/auth">
+              <Button
+                size="lg"
+                className="shadow-lg shadow-primary/30 text-base h-12 px-6"
+              >
+                Enter the Studio <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </Link>
+            <Link to="/pricing">
+              <Button variant="outline" size="lg" className="h-12">
+                See pricing
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="border-t border-border/40">
+        <div className="max-w-6xl mx-auto px-4 py-20">
+          <h2 className="text-3xl font-bold text-center mb-12">
+            Everything a screenwriter needs.
+          </h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {FEATURES.map((f) => (
               <div
-                className="absolute inset-0 rounded-[2rem] bg-primary/10 blur-3xl"
-                aria-hidden="true"
-              />
-              <div className="relative overflow-hidden rounded-[1.75rem] border border-border/70 bg-card shadow-[0_30px_90px_-40px_rgba(15,27,45,0.45)]">
-                <div className="border-b border-border/60 px-6 py-5">
-                  <SceneSmithLogo iconClassName="h-14 w-14" />
-                </div>
-                <div className="grid gap-0 md:grid-cols-[220px_1fr]">
-                  <aside className="border-b border-border/60 bg-secondary/45 p-5 md:border-b-0 md:border-r">
-                    <div className="space-y-3 text-sm">
-                      {["Projects", "Scenes", "Outlines", "Characters", "Worlds", "Audio"].map(
-                        (item, index) => (
-                          <div
-                            key={item}
-                            className={`rounded-md px-3 py-2 ${index === 0 ? "bg-background font-medium text-foreground shadow-sm" : "text-muted-foreground"}`}
-                          >
-                            {item}
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  </aside>
-                  <div className="bg-background p-6">
-                    <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm">
-                      <div className="mb-4 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                        Last Light
-                      </div>
-                      <div className="space-y-4 font-mono text-sm leading-7 text-foreground/90">
-                        <p>INT. OBSERVATORY — NIGHT</p>
-                        <p>The telescope hums softly.</p>
-                        <p>MIRA adjusts the focus.</p>
-                        <div className="pt-2 text-center">
-                          <p>MIRA</p>
-                          <p>(whisper)</p>
-                          <p>There it is.</p>
-                        </div>
-                        <p>A comet breaks through the clouds.</p>
-                      </div>
-                    </div>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-border/60 bg-secondary/35 p-4">
-                        <div className="text-xs uppercase tracking-[0.18em] text-primary">
-                          AI Co-Writer
-                        </div>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          Reveal character conflict, raise the stakes, and deepen the moment without
-                          losing your voice.
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-border/60 bg-secondary/35 p-4">
-                        <div className="text-xs uppercase tracking-[0.18em] text-primary">
-                          Studio Tools
-                        </div>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          Format, notes, beat board, and story assists stay close to the page
-                          instead of crowding it.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                key={f.title}
+                className="p-6 rounded-xl bg-card/40 border border-border/60 hover:border-primary/40 transition"
+              >
+                <f.icon className="h-6 w-6 text-primary mb-3" />
+                <h3 className="font-semibold text-lg mb-1">{f.title}</h3>
+                <p className="text-sm text-muted-foreground">{f.desc}</p>
               </div>
-            </div>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="border-b border-border/50 bg-background">
-          <div className="mx-auto max-w-6xl px-4 py-16 lg:py-20">
-            <div className="grid gap-px overflow-hidden rounded-[1.5rem] border border-border/60 bg-border/40 lg:grid-cols-3">
-              {FEATURES.map((feature) => (
-                <div key={feature.title} className="bg-background p-6">
-                  <feature.icon className="mb-4 h-7 w-7 text-primary" />
-                  <h2 className="font-display text-2xl font-semibold">{feature.title}</h2>
-                  <p className="mt-3 text-sm leading-7 text-muted-foreground">{feature.desc}</p>
+      {/* Three steps */}
+      <section className="border-t border-border/40 bg-card/20">
+        <div className="max-w-5xl mx-auto px-4 py-20">
+          <h2 className="text-3xl font-bold text-center mb-12">
+            From spark to screen in three acts.
+          </h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                n: "1",
+                t: "Develop",
+                d: "Drop in your premise. AI builds loglines, characters, and a beat sheet on the Scene Board.",
+              },
+              {
+                n: "2",
+                t: "Write",
+                d: "Format-perfect screenplay editor with the Director's Chair sidebar of studio tools.",
+              },
+              {
+                n: "3",
+                t: "Pitch",
+                d: "Generate a pitch package, Shot Wall, and Rehearsal Room table read in seconds.",
+              },
+            ].map((s) => (
+              <div key={s.n} className="text-center">
+                <div className="mx-auto h-12 w-12 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center font-display text-xl text-primary mb-3">
+                  {s.n}
                 </div>
-              ))}
-            </div>
+                <h3 className="font-semibold text-lg mb-1">{s.t}</h3>
+                <p className="text-sm text-muted-foreground">{s.d}</p>
+              </div>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="border-b border-border/50 bg-card/25">
-          <div className="mx-auto max-w-5xl px-4 py-16 lg:py-20">
-            <div className="mb-12 text-center">
-              <p className="text-xs uppercase tracking-[0.24em] text-primary">
-                A better creative rhythm
-              </p>
-              <h2 className="mt-3 font-display text-4xl font-semibold md:text-5xl">
-                A storytelling studio, not a generic dashboard.
-              </h2>
-            </div>
-            <div className="grid gap-6 md:grid-cols-3">
-              {STEPS.map((step) => (
-                <div
-                  key={step.n}
-                  className="rounded-[1.5rem] border border-border/60 bg-background p-6 shadow-sm"
-                >
-                  <div className="text-sm uppercase tracking-[0.22em] text-primary">{step.n}</div>
-                  <h3 className="mt-4 font-display text-2xl font-semibold">{step.t}</h3>
-                  <p className="mt-3 text-sm leading-7 text-muted-foreground">{step.d}</p>
-                </div>
-              ))}
-            </div>
+      {/* CTA */}
+      <section className="border-t border-border/40">
+        <div className="max-w-3xl mx-auto px-4 py-24 text-center">
+          <h2 className="font-display text-4xl md:text-5xl font-bold">
+            Your blank page awaits.
+          </h2>
+          <p className="text-muted-foreground mt-4 mb-8">
+            Free forever to start. No credit card required.
+          </p>
+          <Link to="/auth">
+            <Button
+              size="lg"
+              className="text-base h-12 px-6 shadow-lg shadow-primary/30"
+            >
+              Enter the Studio <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </Link>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <Check className="h-3 w-3 text-primary" /> Industry formatting
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Check className="h-3 w-3 text-primary" /> Director's Chair AI
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Check className="h-3 w-3 text-primary" /> Producer Room pitch
+              deck
+            </span>
           </div>
-        </section>
-
-        <section className="bg-background">
-          <div className="mx-auto max-w-4xl px-4 py-16 text-center lg:py-24">
-            <p className="text-xs uppercase tracking-[0.24em] text-primary">SceneSmith Studio</p>
-            <h2 className="mt-3 font-display text-4xl font-semibold md:text-6xl">
-              The page is yours.
-              <br />
-              The studio is waiting.
-            </h2>
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
-              Start free, write with momentum, and shape the work with tools built for storytellers.
-            </p>
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-              <Link to="/auth">
-                <Button size="lg" className="h-12 px-6 text-base shadow-lg shadow-primary/20">
-                  Enter the Studio <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/pricing">
-                <Button variant="outline" size="lg" className="h-12 px-6 text-base">
-                  View pricing
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </section>
+        </div>
+      </section>
       </main>
 
-      <PublicSiteFooter />
+      {/* Footer */}
+      <footer className="border-t border-border/40 py-8">
+
+        <div className="max-w-6xl mx-auto px-4 flex items-center justify-between text-xs text-muted-foreground">
+          <span>© {new Date().getFullYear()} Screenplay Academy</span>
+          <div className="flex gap-4">
+            <Link to="/pricing">Pricing</Link>
+            <Link to="/auth">Sign in</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
