@@ -247,19 +247,20 @@ function Landing() {
                 height={1080}
                 className="absolute inset-0 w-full h-full object-cover object-left select-none pointer-events-none"
               />
-              {/* Atmosphere overlays */}
+              {/* Atmosphere overlay — keeps the writer/window visible on the left,
+                  fades to darker navy on the right for legible text */}
               <div
                 className="absolute inset-0 pointer-events-none"
                 style={{
                   background:
-                    "linear-gradient(90deg, oklch(0.18 0.04 260 / 0.55) 0%, oklch(0.14 0.04 260 / 0.45) 30%, oklch(0.12 0.04 260 / 0.78) 62%, oklch(0.10 0.04 260 / 0.92) 100%)",
+                    "linear-gradient(90deg, transparent 0%, transparent 28%, oklch(0.16 0.04 260 / 0.55) 55%, oklch(0.12 0.04 260 / 0.82) 100%)",
                 }}
               />
               <div
                 className="absolute inset-0 pointer-events-none"
                 style={{
                   background:
-                    "radial-gradient(120% 80% at 85% 60%, oklch(0.78 0.13 78 / 0.08), transparent 60%)",
+                    "linear-gradient(180deg, transparent 60%, oklch(0.10 0.04 260 / 0.55) 100%)",
                 }}
               />
               {/* Brass spark accent */}
