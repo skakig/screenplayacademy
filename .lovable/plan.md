@@ -1,68 +1,62 @@
-# SceneSmith Studio Rebrand — Pass v2
+## Goal
 
-Keep the existing navy/brass palette and Cormorant/Inter typography. Fix the brand mark, normalize all copy to "SceneSmith Studio", and reposition the product as a full writer's toolbox (5 pillars), not screenplay-only.
+Turn the flat "Your blank page awaits" CTA into a cinematic, framed scene — the kind of polished hero treatment a senior brand designer would ship. Borrow the silhouetted-writer-at-the-window motif from the promo kit's flyer ("Build better stories, scene by scene") and integrate it tastefully into the CTA section on the landing page.
 
-## 1. Brand mark asset
+## Approach
 
-- Upload the attached logo (`71997A4C-...png`) via `lovable-assets` → `src/assets/scenesmith-mark.png.asset.json`.
-- Create a small `<BrandLogo />` component (`src/components/brand/BrandLogo.tsx`) rendering the mark + "SceneSmith" (Cormorant) over a small "STUDIO" tracked-out label in brass. Sizes: `sm` (header), `md` (auth/pricing), `lg` (landing hero).
+The CTA stops feeling like a card because it has no edges, no contrast, no art. The promo kit solves this by pairing the silhouette of a writer at a lamp-lit desk against a deep navy cityscape with a small brass star — a self-contained scene. We bring that scene in as a real piece of art, then build the CTA around it.
 
-## 2. Replace `Film` icon and "SceneSmith AI" wordmark
+### 1. Generate the CTA artwork (single new asset)
 
-- `src/components/AppShell.tsx` header → use `<BrandLogo size="sm" />` instead of the `Film` icon + "SceneSmith AI" text. (Matches the red-circled fix in the screenshot.)
-- Landing `src/routes/index.tsx` hero, pricing header, auth header → use `<BrandLogo>`.
+Use `imagegen` (premium) to produce one wide hero illustration that matches the promo kit's exact style:
+- Deep navy → near-black gradient sky, soft moon glow.
+- Silhouette of a writer at a desk with a small warm-amber desk lamp, facing right (toward the headline + CTA).
+- Distant silhouetted city/castle skyline along the bottom.
+- One small brass spark/star top-right (echoes the logo's spark).
+- Painterly, editorial, not cartoonish. No text in the image.
+- Aspect ratio 21:9 so it can sit as a full-bleed band.
 
-## 3. Reframe to writer's toolbox (5 pillars)
+Upload via `lovable-assets` to `src/assets/cta-writer-scene.jpg.asset.json`.
 
-Update positioning copy on landing, pricing, auth, and root meta to reflect: **Screenplays · Novels · Worldbuilding · Comedy · Audio Storytelling** (drop "screenwriter"-only language).
+### 2. Redesign the final CTA section in `src/routes/index.tsx`
 
-- Landing hero subhead: "Write, develop, and perform your stories inside an AI-powered writer's studio — screenplays, novels, worlds, comedy, audio."
-- "Everything a screenwriter needs" → "Everything a storyteller needs."
-- Root meta description already mentions multi-format — keep, tighten.
-- Pricing tagline + auth tagline updated to the toolbox framing.
+Replace the current flat block with a contained, framed "scene card":
 
-## 4. Pillar strip (new section on landing)
+- Wrapper: max-w-6xl, rounded-2xl, `border border-primary/15`, `--shadow-cinematic`, overflow hidden, mx-auto. This gives the section actual edges so it stops dissolving into the page.
+- Background layer: the new illustration as a full-cover image, positioned so the writer silhouette sits on the **left third** and the right two-thirds are darker sky (room for text).
+- Atmosphere layers on top of the image:
+  - A left→right navy gradient (`from-[--bg-base]/95 via-[--bg-base]/70 to-[--bg-base]/40`) so the writer reads but the right side stays legible.
+  - A subtle bottom navy fade so the CTA button area is calm.
+  - A 1px inner brass hairline (`shadow-[inset_0_0_0_1px_oklch(...)]`) for the editorial frame feel.
+- Foreground content (right-aligned on desktop, centered on mobile):
+  - Tiny uppercase brass eyebrow: "Your story · Your world · Our craft" (lifted from the promo flyer).
+  - `font-display` headline "Your blank page awaits." — kept.
+  - Subhead reworked slightly: "Free to start. No credit card. Just the page, and everything you need to fill it."
+  - Primary `Enter the Studio` button (unchanged styling).
+  - The 3 check-rows (Industry formatting / Director's Chair AI / Producer Room pitch deck) become a thin brass-divided inline row at the bottom of the card, not floating under it.
+- Add a small brass star SVG/icon (Lucide `Sparkle`) absolutely positioned top-right inside the card to echo the logo and the promo kit.
 
-Below the hero, add a horizontal pillar strip mirroring the promo kit (icon + label), 5 items:
+Section padding outside the card stays so the card breathes on the page.
 
-| Pillar | Lucide icon |
-|---|---|
-| Screenplays | `FileText` |
-| Novels | `BookOpen` |
-| Worldbuilding | `Globe2` |
-| Comedy | `Drama` (or `Theater`) |
-| Audio Storytelling | `Mic` |
+### 3. Reuse the same scene as a subtle backdrop accent in the hero (optional, low-risk)
 
-Style: navy panel card, brass icon in a soft `accent-glow` ring, Cormorant label, thin brass divider, subtle hover lift. No emoji, no gradient blobs.
+Not doing this in v1 — keeping scope to the CTA card so the change is focused and obviously better. Mention only if user wants a second pass.
 
-## 5. Pro-level feature cards (replace current 3 cards)
+## Files
 
-Keep the three deep-workspace cards (Writer's Desk, Casting Wall, Scene Board) but redesign to match promo-kit polish:
-
-- Navy `--bg-panel` background, brass icon block top-left in a rounded square with `--accent-glow` halo.
-- Cormorant title, Inter body, thin brass underline accent.
-- Hairline `--border-subtle` border, `--shadow-cinematic` on hover, scale 1.01.
-- Add a 4th "Producer Room" card row OR keep grid as 3 — keep 3 to preserve scope; pillars cover the breadth.
-
-## 6. SEO / meta consistency
-
-- Normalize titles to "SceneSmith Studio" across `__root.tsx`, `index.tsx`, `pricing.tsx`, `auth.tsx` (remove lingering "Screenplay Academy" strings on public marketing surfaces — leave authenticated `/academy` route alone since that's the in-app Screenplay School module).
-- Footer copyright → "© {year} SceneSmith Studio".
-- JSON-LD Organization name → "SceneSmith Studio", url stays current published domain.
-
-## 7. Files changed
-
-- new: `src/assets/scenesmith-mark.png.asset.json`
-- new: `src/components/brand/BrandLogo.tsx`
-- new: `src/components/landing/PillarStrip.tsx`
-- edit: `src/components/AppShell.tsx` (logo swap)
-- edit: `src/routes/index.tsx` (hero logo, copy, pillar strip, redesigned feature cards, footer)
-- edit: `src/routes/__root.tsx` (meta copy normalization, JSON-LD name)
-- edit: `src/routes/pricing.tsx` (header logo + copy)
-- edit: `src/routes/auth.tsx` (header logo + copy)
+- new: `src/assets/cta-writer-scene.jpg.asset.json` (via `lovable-assets`, premium image)
+- edit: `src/routes/index.tsx` — replace the final CTA `<section>` only. Hero, pillars, features, three-acts, footer untouched.
 
 ## Out of scope
 
-- AppShell nav labels, dashboard, editor, in-app surfaces — untouched (per "Landing + all marketing surfaces").
-- No palette change, no font change — only the mark, layout polish, and toolbox copy.
-- No new routes.
+- No palette change, no font change, no logo change.
+- No new routes, no copy rewrite elsewhere.
+- No AppShell / pricing / auth changes.
+- No animation beyond a gentle hover/scale on the CTA button (already there).
+
+## Acceptance
+
+- CTA section reads as a single, framed cinematic card — clear edges, clear contrast against the page.
+- Writer silhouette + city + spark visible on the left; headline, subhead, button, and check-row sit cleanly on the right with no contrast issues.
+- Mobile: image stays as background with stronger overlay so text remains readable; layout stacks centered.
+- No regressions to hero, pillars, features, three-acts, footer.
