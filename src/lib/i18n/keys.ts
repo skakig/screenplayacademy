@@ -214,6 +214,50 @@ export const i18nStrings = {
   "collab.accessRules.upcoming.locks": "Scene locks",
   "collab.accessRules.upcoming.live": "Live co-writing",
   "collab.accessRules.upcoming.presence": "Presence",
+
+  // Writers' Room — Comments / Review Notes (Pass 3)
+  "collab.tabs.team": "Team",
+  "collab.tabs.notes": "Review Notes",
+  "collab.comments.title": "Review Notes",
+  "collab.comments.subtitle":
+    "Capture feedback without changing the draft. Notes live alongside the script — never inside it.",
+  "collab.comments.open": "Open notes",
+  "collab.comments.resolved": "Resolved notes",
+  "collab.comments.emptyOpen":
+    "No notes yet. Invite your collaborators to leave thoughtful feedback when the draft is ready.",
+  "collab.comments.emptyResolved": "Nothing resolved yet.",
+  "collab.comments.add": "Add note",
+  "collab.comments.addProjectNote": "Add project note",
+  "collab.comments.addSceneNote": "Add scene note",
+  "collab.comments.addBlockNote": "Add line note",
+  "collab.comments.reply": "Reply",
+  "collab.comments.resolve": "Resolve",
+  "collab.comments.reopen": "Reopen",
+  "collab.comments.archive": "Archive",
+  "collab.comments.placeholder": "Share a thought, a question, a flag…",
+  "collab.comments.submit": "Post note",
+  "collab.comments.submitReply": "Post reply",
+  "collab.comments.cancel": "Cancel",
+  "collab.comments.saving": "Saving…",
+  "collab.comments.errorLoad": "Couldn't load notes.",
+  "collab.comments.errorSave": "Couldn't save note.",
+  "collab.comments.errorPermission":
+    "Your current role doesn't allow leaving notes on this project.",
+  "collab.comments.projectAnchor": "Project note",
+  "collab.comments.sceneAnchor": "Scene note",
+  "collab.comments.blockAnchor": "Line note",
+  "collab.comments.lineAnchor": "Line note",
+  "collab.comments.replyCount_one": "{{count}} reply",
+  "collab.comments.replyCount_other": "{{count}} replies",
+  "collab.comments.resolvedBy": "Resolved",
+  "collab.comments.anchorChoose": "Where should this note live?",
+  "collab.comments.anchorProject": "Whole project",
+  "collab.comments.anchorScene": "Specific scene",
+  "collab.comments.sceneSelectPlaceholder": "Choose a scene…",
+  "collab.comments.readOnlyHint":
+    "You can read notes here. Ask the owner for a commenting role to leave feedback.",
+  "collab.comments.countLabel_one": "{{count}} open note",
+  "collab.comments.countLabel_other": "{{count}} open notes",
 } as const;
 
 export type I18nKey = keyof typeof i18nStrings;
