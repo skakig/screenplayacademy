@@ -1,102 +1,123 @@
-# Pass 6 — Presence Indicators
+# Pass 7 — Live Scene Collaboration Experiment
 
-Adds project-scoped presence awareness to Writers' Room using Supabase Realtime presence. No DB tables for heartbeats. No editor changes. No live cursors or text sync.
+Final, highest-risk pass. Strictly experimental, off by default, scene-scoped, additive only.
 
-## Architecture
+## Guardrails (non-negotiable)
 
-- **Channel:** `project-presence:{projectId}` via `supabase.channel(..., { config: { presence: { key: userId } } })`.
-- **Access gate:** subscribe only after `project_role(_project_id)` resolves to a non-null role. Non-members never join.
-- **Cleanup:** untrack + `removeChannel` on unmount, route change, sign-out, or permission loss.
-- **State boundary:** presence lives in its own hook/context, completely separate from editor state. Editor files are not touched.
+- Flag `collaboration_live_scene_editing_enabled` defaults **false**. No UI surfaces unless on.
+- Zero changes to `src/components/editor/**` typing/keymap/parser/persistence. Live layer reads/writes through a thin adapter that observes block state — it does NOT replace the local-first path.
+- Realtime payloads carry single-block deltas only. No screenplay/project blobs.
+- No live cursors. Text-update only in 7A (insert/delete/move deferred and documented).
+- All gates re-checked client-side AND backed by RLS / security-definer helpers server-side.
 
-## Presence Payload
+## Feature flag
 
-```ts
-type ProjectPresenceState = {
-  user_id: string;
-  display_name?: string | null;
-  email?: string | null;
-  avatar_url?: string | null;
-  role?: string | null;
-  project_id: string;
-  active_area: "script" | "writers_room" | "comments" | "assignments"
-             | "suggestions" | "pitch" | "settings" | "unknown";
-  active_scene_id?: string | null;
-  active_scene_label?: string | null;   // e.g. "Scene 12" — never raw UUID
-  is_typing_scene_id?: string | null;
-  last_active_at: string;               // ISO
-};
+New file `src/lib/featureFlags.ts`:
+- Reads `import.meta.env.VITE_COLLAB_LIVE_SCENE_EDITING` (string `"true"` → on).
+- Exports `isLiveSceneCollabEnabled()` + `useFeatureFlag("collaboration_live_scene_editing_enabled")`.
+- `.env.development` gets the flag commented out; `.env`/`.env.production` untouched (stays off in prod).
+
+## Database (single migration)
+
+1. `ALTER TABLE public.script_blocks ADD COLUMN IF NOT EXISTS revision integer NOT NULL DEFAULT 1, ADD COLUMN IF NOT EXISTS updated_by uuid REFERENCES auth.users(id);`
+2. Trigger `bump_script_block_revision` on `BEFORE UPDATE` of `content`/`block_type` → `NEW.revision = OLD.revision + 1; NEW.updated_at = now();`
+3. `CREATE TABLE public.live_scene_sessions (id, project_id, scene_id, started_by, status text default 'active', started_at, ended_at, metadata jsonb)` — with GRANT to authenticated + service_role, RLS, policies using `is_project_member` / `can_edit_project`.
+4. Skip `live_scene_events` table for this pass — events ride realtime + (optional) existing change_events log entries: `live_session.started/joined/left`, `live_edit.conflict_detected`. No per-keystroke rows.
+5. `ALTER PUBLICATION supabase_realtime ADD TABLE public.live_scene_sessions;` so participant lists update.
+
+## Realtime channel
+
+- Name: `scene-collab:{projectId}:{sceneId}`
+- Subscribe only after: authed + `project_role` ≠ null + role in `{owner, co_writer, editor}` + flag on + scene not hard-locked by another (Pass 4) OR current user holds lock.
+- Two message types broadcast on the channel:
+  - `presence` (track) — `{user_id, display_name, avatar_url, role}`
+  - `broadcast: "block_update"` — payload `LiveBlockUpdateEvent` (only `operation:"update_text"` in 7A; `update_type` behind sub-flag check, deferred otherwise).
+- Origin tag `origin: "local"` set before send; receiver ignores own `user_id` to prevent echo loops.
+
+## New files
+
+```text
+src/lib/featureFlags.ts
+src/lib/live-collab/types.ts                  # event + held-conflict types
+src/lib/live-collab/useLiveSceneSession.ts    # subscribe/track/emit/receive
+src/lib/live-collab/useLiveBlockBridge.ts     # adapter: observe local block, debounce-emit; apply safe remote
+src/lib/live-collab/conflictQueue.ts          # in-memory store hook
+src/lib/live-collab/permissions.ts            # canStartLiveSession / canJoin / lock checks
+src/components/writers-room/live/LiveCollabLabPanel.tsx
+src/components/writers-room/live/LiveSessionControls.tsx   # Start / Join / Leave
+src/components/writers-room/live/LiveParticipants.tsx
+src/components/writers-room/live/LiveConnectionBadge.tsx
+src/components/writers-room/live/LiveConflictsPanel.tsx
+src/components/writers-room/live/LiveConflictCard.tsx      # Keep mine / Use theirs / Resolve later
+src/components/writers-room/live/ExperimentalBadge.tsx
+supabase/migrations/<ts>_live_scene_collab.sql
 ```
 
-No script text, no selection, no AI/prompt data.
+## Edited files (small, surgical)
 
-## New Files
+- `src/components/writers-room/permissions.ts` — add `canStartLiveSession`, `canJoinLiveSession`.
+- `src/routes/_authenticated/writers-room.$projectId.tsx` — add 5th tab **Live Lab** (only when flag on), routes to `LiveCollabLabPanel`. Tab hidden entirely when flag off.
+- `src/lib/i18n/keys.ts` — add `collab.live.*` keys listed in the spec.
+- `src/integrations/supabase/types.ts` — regenerated after migration.
+- `src/components/writers-room/board/SceneRow.tsx` — add small "Live Lab" link (flag-gated) opening the lab scoped to that scene.
 
-- `src/lib/presence/types.ts` — `ProjectPresenceState`, area enum, helpers.
-- `src/lib/presence/usePresenceChannel.ts` — core hook: gates on role, subscribes, tracks self, exposes `peers`, `setActiveArea`, `setActiveScene(id, label)`, `pingTyping(sceneId)`. Throttles updates (~1.5s), debounces typing-clear (~7s), clears typing on scene change/unmount.
-- `src/lib/presence/PresenceProvider.tsx` — React context wrapping the hook so multiple UI surfaces share one channel per project.
-- `src/components/writers-room/presence/PresenceAvatarStack.tsx` — small overlapping avatar stack (max ~5 + "+N"), tooltip/hover card per peer (name, role badge, active area label, last active relative time).
-- `src/components/writers-room/presence/PresenceAvatar.tsx` — single avatar with subtle online status dot.
-- `src/components/writers-room/presence/PresencePanel.tsx` — "In the Room" panel for the Writers' Room header area with subtitle copy from spec and empty state.
-- `src/components/writers-room/presence/ActiveAreaLabel.tsx` — i18n label for `active_area` (+ scene label when present).
-- `src/components/writers-room/presence/ScenePresenceBadge.tsx` — optional "Maya is viewing this scene" / "Alex is editing this scene" badge used in the Production Board scene row.
-- `src/lib/presence/displayName.ts` — name fallback chain: display_name → email → `t("collab.presence.collaborator")`. Never UUIDs.
+**Not edited**: any file under `src/components/editor/**`. The bridge reads the script-blocks query cache + applies remote updates by patching the cached rows; the editor reacts via its existing query subscription, no new wiring inside the editor.
 
-## Edited Files
+## Live session lifecycle
 
-- `src/routes/_authenticated/writers-room.$projectId.tsx` — wrap body in `PresenceProvider`; render `PresencePanel` above tabs; call `setActiveArea("writers_room")` and switch to `"comments" | "assignments" | "suggestions"` based on active tab via a small effect.
-- `src/components/writers-room/board/ProductionBoardPanel.tsx` — pass scene id/label into `ScenePresenceBadge` per row (read-only; no row remounts on presence change — memoized).
-- `src/components/writers-room/board/SceneRow.tsx` — render `ScenePresenceBadge` next to lock badge.
-- `src/components/ProjectNav.tsx` — render small `PresenceAvatarStack` on the right side of the project top bar (only when a presence context is mounted; degrade silently when not).
-- `src/lib/i18n/keys.ts` — add all `collab.presence.*` keys from spec.
+1. **Start**: permission + lock check → insert row into `live_scene_sessions` → subscribe channel → `track()` presence → log `live_session.started`.
+2. **Join**: same checks; no new row, just subscribe + track.
+3. **Local edit emit**: bridge watches `script_blocks` cache for the active scene; on changed `content`, debounce 500ms → broadcast `{operation:"update_text", script_block_id, base_revision, text, client_timestamp}`. Skip if user lacks edit role, scene locked by other, value unchanged.
+4. **Remote apply**:
+   - Drop if `actor_id === self`.
+   - Drop if flag off, channel scene mismatch, op unsupported.
+   - Look up block in cache. Missing → hold (`missing_block`).
+   - Block focused locally OR marked dirty → hold (`local_dirty`).
+   - `base_revision !== cached.revision` → hold (`revision_mismatch`).
+   - Else patch cache: `{...block, content: text, revision: base_revision+1}` via `queryClient.setQueryData`. No editor remount (stable keys preserved).
+5. **Leave / unmount**: flush pending debounce, `untrack`, `removeChannel`, mark session row `ended`. Best-effort.
+6. **Reconnect**: on `CHANNEL_ERROR`/`CLOSED`, flip badge to "Reconnecting", retry once; on success refetch scene blocks via React Query invalidation (preserving any dirty local state by checking editor's dirty map first) and emit `live_edit.recovered`.
 
-## Editor Safety
+## Conflict UI
 
-- Editor files (`src/components/editor/**`, `src/routes/_authenticated/editor.$projectId.tsx`) are not modified in this pass. The avatar stack in `ProjectNav` is presence-context-aware and only renders when a `PresenceProvider` is mounted above it — i.e. on the Writers' Room route. The editor route is unchanged, so no remount risk, no key changes, no keystroke broadcasting.
-- A follow-up pass can add an editor-route `PresenceProvider` once we are confident; deferred here to keep this pass minimal and safe.
+`LiveConflictsPanel` shows held items with:
+- "View incoming" (read-only preview of remote text)
+- "Keep mine" → drop held item
+- "Use theirs" → apply to cache + bump revision
+- "Resolve later" → no-op
+- Banner copy from i18n; calm card styling per visualdesign.md (paper surface, warm border, restrained "Experimental" badge).
 
-## Scene-Level Features
+## Scene-lock interaction
 
-- **Active scene tracking:** implemented at the Production Board level (we already have scene ids + ordinal labels there). The board calls `setActiveScene` on row hover/focus only inside the board context; deferred for the editor surface.
-- **Typing indicator:** deferred. The editor is not yet wrapped in `PresenceProvider`, and we will not touch keystroke paths. Scene presence shows "viewing" only this pass.
+- Pre-start: refuse if `scene_locks` row exists for another user without override role.
+- Mid-session: subscribe to `scene_locks` postgres_changes filtered by scene; if another lock appears, pause apply (`paused` state) and hold incoming until resolved.
 
-## Last-Seen
+## Presence interaction
 
-- Lightweight `update_my_project_last_seen(project_id uuid)` RPC (security definer), called once on channel subscribe and on unmount. Updates only the caller's row when `status = 'active'`. No table changes — uses existing `project_members.last_seen_at`.
-- Migration: create the RPC + `GRANT EXECUTE ... TO authenticated`. No new tables, no RLS changes to existing ones.
+If `PresenceProvider` is mounted (Writers' Room route), set `active_area="script"` + `active_scene_id` when live session starts. Presence remains awareness-only; no text in presence payloads.
 
-## RLS / Security
+## Visual design
 
-- Presence channel is ephemeral; access gated client-side by `project_role` check before `subscribe()`. Non-members never receive a tracked payload.
-- `update_my_project_last_seen` is the only DB write; hard-scoped to `auth.uid()` and active membership.
-- Removed/suspended members are excluded by the membership check before subscribe; on permission loss the hook untracks and removes the channel.
-- Pending invitees (no `project_members` row) cannot subscribe.
+LiveCollabLabPanel: paper-tone card, Playfair Display title "Live Collaboration Lab", small amber "Experimental" pill, two-column layout — left = controls + participants + connection badge, right = conflicts panel. Mirrors `PresencePanel` styling. No flashy multiplayer chrome.
 
-## i18n Keys (added to `src/lib/i18n/keys.ts`)
+## Testing checklist (manual, 2 sessions)
 
-`collab.presence.title`, `.subtitle`, `.onlineNow`, `.noOneOnline`, `.inWritersRoom`, `.viewingScript`, `.viewingScene`, `.reviewingComments`, `.reviewingSuggestions`, `.viewingAssignments`, `.inSettings`, `.unknownArea`, `.typingInScene`, `.workingNearby`, `.you`, `.lastSeen`, `.connectionLost`, `.collaborator`.
+- Flag off → no Live Lab tab, no scene-row link, editor unchanged.
+- Flag on, non-member → tab hidden / access denied card.
+- Owner + co_writer same scene → text edits propagate, caret stable, no remount.
+- Both edit same block → second arrival lands in conflicts panel, no overwrite.
+- Other user holds lock → Start blocked with `collab.live.errorLocked`.
+- Kill network → badge "Disconnected", typing continues, autosave continues; restore → "Reconnected".
+- Refresh → canonical content intact, no duplicate blocks.
 
-## Visual Design
+## Deferred (documented in PR summary)
 
-- Small overlapping circular avatars (28px) with 2px surface ring, soft online dot in accent color.
-- Hover card: warm off-white surface in light mode / midnight surface in dark, subtle border, name + role chip + active area line + relative last-active. Playfair display for the panel title, Inter for body. Matches existing Writers' Room cards.
-- "In the Room" panel: muted card with title, subtitle, avatar stack, empty state copy from spec. No flashing, no loud colors.
+- `update_type`, `insert_block_after`, `delete_block`, `move_block` — structural ops require deeper editor coordination; not safe yet.
+- Live cursors / selections.
+- `live_scene_events` audit table — using ephemeral broadcast + sparse change_events instead.
+- Snapshot-before-apply (Pass 5 already covers heavy mutations).
+- Production rollout / default-on.
 
-## What This Pass Does NOT Do
+## Acceptance
 
-- No live cursors, no text sync, no multiplayer editing.
-- No keystroke broadcasting.
-- No editor file changes.
-- No `change_events` writes for presence.
-- No presence in the screenplay editor route (deferred).
-- No typing indicator (deferred).
-- No per-keystroke realtime events.
-
-## Acceptance Checks
-
-- Two browser sessions on the same project see each other's avatars in the Writers' Room.
-- Switching tabs (Notes / Board / Suggestions) updates the active area label for peers.
-- Hovering scene rows on the board shows "viewing this scene" for the other session.
-- Leaving the route removes the avatar for peers within a few seconds.
-- Non-member loading the route sees the existing access-denied card; no presence subscription happens.
-- Editor route + typing flow unchanged. `bunx tsc --noEmit` clean.
+Build passes (`bunx tsc --noEmit`), lint clean, editor acceptance test still passes with flag off AND with flag on solo, two-session smoke test shows safe text propagation + conflict hold.
