@@ -19,8 +19,10 @@ import { useProjectComments } from "@/components/writers-room/comments/useProjec
 import { ProductionBoardPanel } from "@/components/writers-room/board/ProductionBoardPanel";
 import { SuggestionsPanel } from "@/components/writers-room/suggestions/SuggestionsPanel";
 import { useProjectSuggestions } from "@/components/writers-room/suggestions/useProjectSuggestions";
+import { LiveCollabLabPanel } from "@/components/writers-room/live/LiveCollabLabPanel";
 import { PresenceProvider, usePresence } from "@/lib/presence/PresenceProvider";
 import { PresencePanel } from "@/components/writers-room/presence/PresencePanel";
+import { isLiveSceneCollabEnabled } from "@/lib/featureFlags";
 import { fetchProjectRole, wrKeys } from "@/lib/collab";
 import { t } from "@/lib/i18n/t";
 
