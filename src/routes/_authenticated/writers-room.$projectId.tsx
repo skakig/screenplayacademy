@@ -129,77 +129,114 @@ function WritersRoomBody({
   role,
   onInvite,
 }: BodyProps) {
+  return (
+    <PresenceProvider projectId={projectId} role={role}>
+      <WritersRoomTabs
+        projectId={projectId}
+        userId={userId}
+        isOwner={isOwner}
+        role={role}
+        onInvite={onInvite}
+      />
+    </PresenceProvider>
+  );
+}
+
+function WritersRoomTabs({
+  projectId,
+  userId,
+  isOwner,
+  role,
+  onInvite,
+}: BodyProps) {
   const openNotes = useProjectComments(projectId, "open");
   const openCount = openNotes.threads.length;
   const openSuggestions = useProjectSuggestions(projectId, "open");
   const openSuggestionCount = openSuggestions.data?.length ?? 0;
+  const [tab, setTab] = useState("team");
+
+  const { setActiveArea } = usePresence();
+  useEffect(() => {
+    const area =
+      tab === "notes"
+        ? "comments"
+        : tab === "board"
+          ? "assignments"
+          : tab === "suggestions"
+            ? "suggestions"
+            : "writers_room";
+    setActiveArea(area);
+  }, [tab, setActiveArea]);
 
   return (
-    <Tabs defaultValue="team" className="space-y-6">
-      <TabsList>
-        <TabsTrigger value="team">{t("collab.tabs.team")}</TabsTrigger>
-        <TabsTrigger value="notes" className="gap-2">
-          {t("collab.tabs.notes")}
-          {openCount > 0 && (
-            <span className="rounded-full bg-primary/15 text-primary text-[10px] px-1.5 py-0.5 leading-none">
-              {openCount}
-            </span>
-          )}
-        </TabsTrigger>
-        <TabsTrigger value="board">{t("collab.tabs.board")}</TabsTrigger>
-        <TabsTrigger value="suggestions" className="gap-2">
-          {t("collab.tabs.suggestions")}
-          {openSuggestionCount > 0 && (
-            <span className="rounded-full bg-primary/15 text-primary text-[10px] px-1.5 py-0.5 leading-none">
-              {openSuggestionCount}
-            </span>
-          )}
-        </TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="team" className="space-y-6 mt-0">
-        <Card className="p-6 bg-card/60">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <h2 className="font-display text-xl font-semibold">
-              {t("collab.members.title")}
-            </h2>
-            {isOwner && (
-              <Button onClick={onInvite} size="sm">
-                <UserPlus className="h-4 w-4 mr-1.5" />
-                {t("collab.invite.button")}
-              </Button>
+    <div className="space-y-6">
+      <PresencePanel />
+      <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="team">{t("collab.tabs.team")}</TabsTrigger>
+          <TabsTrigger value="notes" className="gap-2">
+            {t("collab.tabs.notes")}
+            {openCount > 0 && (
+              <span className="rounded-full bg-primary/15 text-primary text-[10px] px-1.5 py-0.5 leading-none">
+                {openCount}
+              </span>
             )}
-          </div>
-          <MembersList
-            projectId={projectId}
-            currentUserId={userId}
-            isOwner={isOwner}
-          />
-        </Card>
+          </TabsTrigger>
+          <TabsTrigger value="board">{t("collab.tabs.board")}</TabsTrigger>
+          <TabsTrigger value="suggestions" className="gap-2">
+            {t("collab.tabs.suggestions")}
+            {openSuggestionCount > 0 && (
+              <span className="rounded-full bg-primary/15 text-primary text-[10px] px-1.5 py-0.5 leading-none">
+                {openSuggestionCount}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-        {isOwner && (
+        <TabsContent value="team" className="space-y-6 mt-0">
           <Card className="p-6 bg-card/60">
-            <h2 className="font-display text-xl font-semibold mb-4">
-              {t("collab.invites.title")}
-            </h2>
-            <InvitesList projectId={projectId} />
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <h2 className="font-display text-xl font-semibold">
+                {t("collab.members.title")}
+              </h2>
+              {isOwner && (
+                <Button onClick={onInvite} size="sm">
+                  <UserPlus className="h-4 w-4 mr-1.5" />
+                  {t("collab.invite.button")}
+                </Button>
+              )}
+            </div>
+            <MembersList
+              projectId={projectId}
+              currentUserId={userId}
+              isOwner={isOwner}
+            />
           </Card>
-        )}
 
-        <AccessRulesPanel />
-      </TabsContent>
+          {isOwner && (
+            <Card className="p-6 bg-card/60">
+              <h2 className="font-display text-xl font-semibold mb-4">
+                {t("collab.invites.title")}
+              </h2>
+              <InvitesList projectId={projectId} />
+            </Card>
+          )}
 
-      <TabsContent value="notes" className="mt-0">
-        <ReviewNotesPanel projectId={projectId} role={role} />
-      </TabsContent>
+          <AccessRulesPanel />
+        </TabsContent>
 
-      <TabsContent value="board" className="mt-0">
-        <ProductionBoardPanel projectId={projectId} role={role} />
-      </TabsContent>
+        <TabsContent value="notes" className="mt-0">
+          <ReviewNotesPanel projectId={projectId} role={role} />
+        </TabsContent>
 
-      <TabsContent value="suggestions" className="mt-0">
-        <SuggestionsPanel projectId={projectId} role={role} />
-      </TabsContent>
-    </Tabs>
+        <TabsContent value="board" className="mt-0">
+          <ProductionBoardPanel projectId={projectId} role={role} />
+        </TabsContent>
+
+        <TabsContent value="suggestions" className="mt-0">
+          <SuggestionsPanel projectId={projectId} role={role} />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
