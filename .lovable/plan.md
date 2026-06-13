@@ -1,110 +1,123 @@
-# Writers' Room — Pass 1: Membership Foundation
+# Writers' Room — Pass 2: Members & Invites UI
 
-Backend-only foundation. No collaboration UI. No changes to the screenplay editor, typing flow, keymap, or block rendering.
+Build the first visible collaboration surface. Backend tables/RLS from Pass 1 are assumed present. Editor files are off-limits.
 
-## Scope
+## Placement
 
-- Two new tables: `project_members`, `project_invites`.
-- Three new SECURITY DEFINER helpers: `is_project_member`, `project_role`, `can_edit_project`.
-- RLS policies for the two new tables.
-- Idempotent backfill of an `active` `owner` row in `project_members` for every existing `projects.user_id`.
-- Optional small TypeScript permission helper file mirroring the SQL helpers.
-- Existing `projects` ownership policy stays untouched. `owns_project()` stays untouched. No other table policies are rewritten.
+New route: `src/routes/_authenticated/writers-room.$projectId.tsx` → URL `/writers-room/:projectId`. Reached from the project header/nav (small "Writers' Room" link added to `src/components/ProjectNav.tsx`). Project-route pattern mirrors `editor.$projectId.tsx`, `pitch.$projectId.tsx`, etc. — smallest fit for the existing architecture.
 
-## Out of Scope (explicitly deferred)
+## UI Composition
 
-Invites UI/flow, comments, scene assignments, scene locks, suggestions, change_events, presence, realtime, role-change UI, editor changes.
+Single page wrapped in `AppShell`, max-width container, three stacked cards (paper-feel, subtle border, restrained shadow per `visualdesign.md`):
 
-## Migration 1 — `project_members`
+1. **Header** — "Writers' Room" title (Playfair), subtitle copy. Permission-denied state replaces the page body when `is_project_member` is false.
+2. **Members card** — list of active `project_members` for this project.
+3. **Pending Invites card** — owner-only; hidden for non-owners.
+4. **Invite Collaborator** — primary button in Members card header → opens `InviteCollaboratorDialog` (shadcn Dialog).
+5. **Project Access Rules** — small read-only panel listing what's enabled vs. not enabled yet.
 
-Single migration containing CREATE TABLE → GRANT → ENABLE RLS → POLICIES → trigger → indexes.
+No collaboration UI is added inside `editor.$projectId.tsx` or any `src/components/editor/**` file.
 
-Columns: `id`, `project_id` (FK projects, ON DELETE CASCADE), `user_id` (FK auth.users, ON DELETE CASCADE), `role text not null default 'viewer'`, `status text not null default 'active'`, `invited_by` (FK auth.users, ON DELETE SET NULL), `joined_at timestamptz`, `last_seen_at timestamptz`, `created_at`, `updated_at`, `UNIQUE(project_id, user_id)`.
+## New Files
 
-CHECK constraints restrict values to the documented role set (`owner, co_writer, editor, producer, commenter, viewer, actor_reader, assistant`) and status set (`invited, active, suspended, left, removed`).
+- `src/routes/_authenticated/writers-room.$projectId.tsx` — route + page shell, permission gate, data loading, layout.
+- `src/components/writers-room/MembersList.tsx` — renders members, row actions.
+- `src/components/writers-room/InvitesList.tsx` — renders pending invites, revoke action.
+- `src/components/writers-room/InviteCollaboratorDialog.tsx` — invite form (Dialog + form + role select).
+- `src/components/writers-room/RoleSelect.tsx` — shared shadcn Select with labels + descriptions; accepts an `excludeOwner` prop.
+- `src/components/writers-room/AccessRulesPanel.tsx` — static "what's enabled" panel.
+- `src/components/writers-room/roles.ts` — single source of truth: `ROLES`, labels, descriptions, ordered list, helpers (`roleLabel`, `roleDescription`).
+- `src/lib/collab.ts` — data-access helpers (small wrappers over `supabase.from(...)`); colocates query keys.
 
-Indexes on `project_id`, `user_id`, `(project_id, status)`.
+## Edits to Existing Files
 
-GRANT `SELECT, INSERT, UPDATE, DELETE` to `authenticated`; `ALL` to `service_role`. No `anon`.
+- `src/components/ProjectNav.tsx` — add a "Writers' Room" link (only if file already builds nav for a project context; otherwise add link from `dashboard.tsx`/`projects.tsx` project cards). No structural rework.
+- `src/lib/i18n/keys.ts` — add the `collab.*` keys listed in the request (room/members/invites/invite form/roles/permissions/access-rules). Existing `t()` helper covers it.
 
-Trigger `update_updated_at_column` on update.
+Nothing under `src/components/editor/**`, `src/routes/_authenticated/editor.$projectId.tsx`, or `src/hooks/use*` is touched.
 
-## Migration 2 — `project_invites`
+## Data Access
 
-Same four-step structure.
+Uses the existing pattern: `@tanstack/react-query` + `supabase` client (matches `projects.tsx`). No new architecture.
 
-Columns: `id`, `project_id` (cascade), `email text not null` (stored lowercased via trigger or `lower()` default), `role text not null default 'viewer'`, `token_hash text not null` (raw tokens never stored), `invited_by` (FK auth.users, NOT NULL, cascade), `status text not null default 'pending'`, `expires_at timestamptz not null`, `accepted_by` (FK auth.users, ON DELETE SET NULL), `accepted_at timestamptz`, `created_at`, `updated_at`.
+Query keys:
 
-CHECK constraints for role set and invite status set (`pending, accepted, revoked, expired`).
+- `["wr","members", projectId]` → `select * from project_members where project_id = … order by role,created_at`. Joined display name/email comes from a left join to `profiles` (id, full_name, avatar_url, email) — already exists.
+- `["wr","invites", projectId]` → `select * from project_invites where project_id = … and status = 'pending' order by created_at desc`. RLS already restricts this to the owner; non-owner reads return `[]` and we render the empty/owner-only path accordingly.
+- `["wr","role", projectId]` → `supabase.rpc("project_role", { _project_id })` to drive UI gating (`owner` / `co_writer` / etc. / null).
+- `["wr","canView", projectId]` → `supabase.rpc("is_project_member", …)` for the permission-denied page state.
 
-Index on `(project_id, status)`, unique on `token_hash`.
+Mutations (all RLS-protected on the server, so failures surface as toast errors regardless of client gating):
 
-GRANT same as above. No `anon`.
+- **Create invite** — `insert into project_invites { project_id, email: email.toLowerCase().trim(), role, token_hash, invited_by: auth.uid(), expires_at: now()+7d, status: 'pending' }`. Token generated client-side via `crypto.getRandomValues` → URL-safe base64 (32 bytes), hashed with `crypto.subtle.digest("SHA-256", …)` → hex. Raw token is shown once in the success state with a copy-to-clipboard ("Send this invite link" — actual email delivery deferred), then discarded. Only the hash is persisted.
+- **Revoke invite** — `update project_invites set status='revoked' where id=…`. Confirm dialog.
+- **Change role** — `update project_members set role=… where id=…`. Confirm dialog for high-impact moves (anything to/from `editor`/`co_writer`). Owner row is read-only — owner transfer is explicitly deferred.
+- **Remove member** — `delete from project_members where id=…`. Confirm dialog. Owner row's remove button is disabled with tooltip "Owner cannot be removed yet — ownership transfer arrives in a later pass."
 
-## Migration 3 — Helpers + Policies + Backfill
+## Validation
 
-Single migration that:
+`src/components/writers-room/InviteCollaboratorDialog.tsx` uses zod:
 
-1. Creates SECURITY DEFINER, STABLE helpers in `public`:
+```ts
+const inviteSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(255),
+  role: z.enum(['co_writer','editor','producer','commenter','viewer','actor_reader','assistant']),
+});
+```
 
-   - `is_project_member(_project_id uuid) returns boolean` — true if `auth.uid()` owns the project (via `projects.user_id`) OR has a `project_members` row with `status='active'`.
-   - `project_role(_project_id uuid) returns text` — returns `'owner'` for the owner; else the `role` from the active `project_members` row; else NULL.
-   - `can_edit_project(_project_id uuid) returns boolean` — true for owner; true for active members whose role is in (`co_writer`, `editor`). (Producer/commenter/viewer/etc. excluded from edit by default; matches Pass-1 default permission matrix.)
+`owner` is excluded from the invite role enum. Client errors → inline form messages; server errors → sonner `toast.error`.
 
-   All three: `LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public`.
+## Permission Gating (UI layer; RLS is authoritative)
 
-2. Adds RLS policies on the two new tables (kept minimal and owner-centric for Pass 1):
+Driven by `project_role` RPC result:
 
-   **`project_members`**
-   - `SELECT`: project owner OR the row's own `user_id = auth.uid()`.
-   - `INSERT` / `UPDATE` / `DELETE`: project owner only (`public.owns_project(project_id)`).
+- `null` → render full-page "You don't have access to this Writers' Room" state with a link back to dashboard.
+- `'owner'` → all actions visible.
+- anything else → Members list visible (read-only), invites card hidden, no action buttons, access-rules panel visible.
 
-   **`project_invites`**
-   - `SELECT`: project owner only.
-   - `INSERT` / `UPDATE` / `DELETE`: project owner only.
-   - (Invitee-side acceptance flow is deferred to a later pass.)
+Last-owner protection: client checks `members.filter(m => m.role === 'owner').length`; remove/role-change buttons on the only owner are disabled with tooltip. Server-side enforcement of last-owner is out of scope for Pass 2 (no role-change to/from owner is exposed in the UI at all).
 
-3. Idempotent owner backfill:
+## Role Labels & Descriptions (single source)
 
-   ```sql
-   INSERT INTO public.project_members (project_id, user_id, role, status, joined_at)
-   SELECT p.id, p.user_id, 'owner', 'active', now()
-   FROM public.projects p
-   ON CONFLICT (project_id, user_id) DO NOTHING;
-   ```
+`src/components/writers-room/roles.ts` exports:
 
-   Safe to re-run.
+```ts
+export const ROLE_ORDER = ['owner','co_writer','editor','producer','commenter','viewer','actor_reader','assistant'] as const;
+export const INVITABLE_ROLES = ROLE_ORDER.filter(r => r !== 'owner');
+```
 
-## Why no edit to existing policies
+Labels and descriptions are looked up via `t('collab.role.<camel>')` + `t('collab.role.<camel>.desc')` keys added to `keys.ts`.
 
-The existing `projects` policy is `auth.uid() = user_id`. Owners keep full access through ownership. Membership-based access for non-owners on existing tables (scenes, script_blocks, characters, etc.) is intentionally deferred — Pass 1 only proves membership can be recognized. Touching those policies now would risk the editor and break the "no editor behavior changes" guardrail.
+## UI States Covered
 
-## TypeScript helpers (small, additive)
+- Loading skeleton rows (members + invites cards).
+- Empty members ("Just you in the room so far.").
+- Empty invites ("No pending invites.").
+- Permission denied (full-page calm message).
+- Mutation success → sonner `toast.success`; invite success additionally surfaces the one-time invite link with copy button inside the dialog.
+- Mutation error → sonner `toast.error(message)`.
+- Confirm destructive actions via shadcn `AlertDialog`.
 
-New file: `src/lib/permissions.ts` exporting thin wrappers that call the SQL helpers via `supabase.rpc(...)`:
+## Visual Design
 
-- `getProjectRole(projectId)` → calls `project_role`.
-- `canViewProject(projectId)` → calls `is_project_member`.
-- `canEditProject(projectId)` → calls `can_edit_project`.
-- `canManageProjectMembers(projectId)` → owner check via existing `owns_project` RPC.
+Per `visualdesign.md`:
 
-Not wired into any UI. No imports added elsewhere. Pure scaffolding for later passes.
+- Warm paper background on cards (`bg-card` token already maps to warm paper in light; midnight surface in dark).
+- Playfair Display for the "Writers' Room" title; Inter body.
+- Subtle 1px borders, small shadow, generous whitespace.
+- Role badges use muted/secondary tones — no neon role colors.
+- Copy avoids SaaS jargon: "Invite collaborators into your Writers' Room. Control who can write, review, comment, or simply read."
 
-`src/integrations/supabase/types.ts` regenerates automatically after migrations run — no manual edit.
+## Acceptance Verification
 
-## Verification Plan
+- Manually walk: open `/writers-room/:projectId` as owner → see self in Members, no invites; create an invite → appears in Pending Invites; revoke it → row disappears; remove member confirmation flow exists; owner row protected.
+- Read `src/components/editor/**` git status: must be unchanged. Read `editor.$projectId.tsx`: must be unchanged.
+- Build runs automatically; verify no errors.
 
-- Confirm no files under `src/components/editor/**`, `src/routes/_authenticated/editor.*`, or `src/hooks/use*Editor*` are modified.
-- After migrations: `supabase--read_query` to confirm every existing project has exactly one `('owner','active')` row, and re-running the backfill SQL produces zero new rows.
-- App build runs automatically; check that build/lint pass.
-- Spot-check: owner can still SELECT their project (RLS unchanged on `projects`); a second user cannot SELECT rows from `project_members` for a project they don't own and aren't in.
+## Files Changed Summary
 
-## Files Changed
+New: 7 files (1 route + 6 components/utilities).
+Edited: 2 files (`ProjectNav.tsx`, `i18n/keys.ts`).
+Untouched: editor, screenplay typing, block rendering, autosave, formatter — all guard files.
 
-- `supabase/migrations/<ts>_project_members.sql` (new)
-- `supabase/migrations/<ts>_project_invites.sql` (new)
-- `supabase/migrations/<ts>_collab_helpers_and_backfill.sql` (new)
-- `src/lib/permissions.ts` (new, additive, unused by UI)
-- `src/integrations/supabase/types.ts` (auto-regenerated)
-
-Stop after Pass 1.
+Stop after Pass 2. No comments, locks, suggestions, presence, or live editing.

@@ -147,6 +147,73 @@ export const i18nStrings = {
   "dashboard.director.body":
     "Adjust how present your director is while you write.",
   "dashboard.director.cta": "Studio Settings",
+
+  // Writers' Room (collaboration)
+  "collab.room.title": "Writers' Room",
+  "collab.room.subtitle":
+    "Invite collaborators into your Writers' Room. Control who can write, review, comment, or simply read.",
+  "collab.members.title": "Members",
+  "collab.members.empty": "Just you in the room so far.",
+  "collab.invites.title": "Pending invites",
+  "collab.invites.empty": "No pending invites.",
+  "collab.invite.button": "Invite collaborator",
+  "collab.invite.emailLabel": "Email",
+  "collab.invite.emailPlaceholder": "person@studio.com",
+  "collab.invite.roleLabel": "Role",
+  "collab.invite.send": "Create invite",
+  "collab.invite.success": "Invite created",
+  "collab.invite.error": "Couldn't create invite",
+  "collab.invite.revoke": "Revoke",
+  "collab.invite.revoke.confirm.title": "Revoke this invite?",
+  "collab.invite.revoke.confirm.body":
+    "The invite link will stop working immediately. You can always send a new one.",
+  "collab.invite.linkTitle": "One-time invite link",
+  "collab.invite.linkBody":
+    "Copy and send this link. We only store a hash — you won't see it again.",
+  "collab.invite.copy": "Copy link",
+  "collab.invite.copied": "Copied",
+  "collab.invite.done": "Done",
+  "collab.role.owner": "Owner",
+  "collab.role.coWriter": "Co-writer",
+  "collab.role.editor": "Editor",
+  "collab.role.producer": "Producer",
+  "collab.role.commenter": "Commenter",
+  "collab.role.viewer": "Viewer",
+  "collab.role.actorReader": "Actor Reader",
+  "collab.role.assistant": "Assistant",
+  "collab.role.owner.desc": "Full project control.",
+  "collab.role.coWriter.desc": "Can help write and shape the script.",
+  "collab.role.editor.desc": "Can review, revise, and suggest improvements.",
+  "collab.role.producer.desc":
+    "Can review the project and provide production notes.",
+  "collab.role.commenter.desc": "Can leave notes and feedback.",
+  "collab.role.viewer.desc": "Can read only.",
+  "collab.role.actorReader.desc":
+    "Can view assigned read-through material later.",
+  "collab.role.assistant.desc": "Can help organize notes and tasks later.",
+  "collab.permissions.denied": "You don't have access to this Writers' Room.",
+  "collab.permissions.denied.body": "Ask the project owner to invite you.",
+  "collab.member.remove": "Remove",
+  "collab.member.remove.confirm.title": "Remove this member?",
+  "collab.member.remove.confirm.body":
+    "They will lose access to this project. You can re-invite them later.",
+  "collab.member.changeRole": "Change role",
+  "collab.member.ownerLocked":
+    "Owner cannot be removed yet — ownership transfer arrives in a later pass.",
+  "collab.member.joined": "Joined {{when}}",
+  "collab.member.you": "(you)",
+  "collab.accessRules.title": "What Writers' Room can do today",
+  "collab.accessRules.enabled.title": "Working now",
+  "collab.accessRules.enabled.invite": "Invite collaborators",
+  "collab.accessRules.enabled.roles": "Manage project roles",
+  "collab.accessRules.enabled.prep":
+    "Prepare for comments and review workflows",
+  "collab.accessRules.upcoming.title": "Not enabled yet",
+  "collab.accessRules.upcoming.comments": "Comments",
+  "collab.accessRules.upcoming.suggestions": "Suggestions",
+  "collab.accessRules.upcoming.locks": "Scene locks",
+  "collab.accessRules.upcoming.live": "Live co-writing",
+  "collab.accessRules.upcoming.presence": "Presence",
 } as const;
 
 export type I18nKey = keyof typeof i18nStrings;
