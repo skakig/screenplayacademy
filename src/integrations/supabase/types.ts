@@ -836,6 +836,92 @@ export type Database = {
         }
         Relationships: []
       }
+      comments: {
+        Row: {
+          anchor_offset_end: number | null
+          anchor_offset_start: number | null
+          anchor_text: string | null
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          metadata: Json
+          parent_comment_id: string | null
+          project_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          scene_id: string | null
+          script_block_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          anchor_offset_end?: number | null
+          anchor_offset_start?: number | null
+          anchor_text?: string | null
+          author_id: string
+          body: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          parent_comment_id?: string | null
+          project_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          scene_id?: string | null
+          script_block_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          anchor_offset_end?: number | null
+          anchor_offset_start?: number | null
+          anchor_text?: string | null
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          parent_comment_id?: string | null
+          project_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          scene_id?: string | null
+          script_block_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_script_block_id_fkey"
+            columns: ["script_block_id"]
+            isOneToOne: false
+            referencedRelation: "script_blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       draft_take_comparisons: {
         Row: {
           created_at: string
@@ -2168,7 +2254,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_comment_on_project: {
+        Args: { _project_id: string }
+        Returns: boolean
+      }
       can_edit_project: { Args: { _project_id: string }; Returns: boolean }
+      can_resolve_project_comments: {
+        Args: { _project_id: string }
+        Returns: boolean
+      }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
