@@ -17,6 +17,8 @@ import { AccessRulesPanel } from "@/components/writers-room/AccessRulesPanel";
 import { ReviewNotesPanel } from "@/components/writers-room/comments/ReviewNotesPanel";
 import { useProjectComments } from "@/components/writers-room/comments/useProjectComments";
 import { ProductionBoardPanel } from "@/components/writers-room/board/ProductionBoardPanel";
+import { SuggestionsPanel } from "@/components/writers-room/suggestions/SuggestionsPanel";
+import { useProjectSuggestions } from "@/components/writers-room/suggestions/useProjectSuggestions";
 import { fetchProjectRole, wrKeys } from "@/lib/collab";
 import { t } from "@/lib/i18n/t";
 
@@ -127,6 +129,8 @@ function WritersRoomBody({
 }: BodyProps) {
   const openNotes = useProjectComments(projectId, "open");
   const openCount = openNotes.threads.length;
+  const openSuggestions = useProjectSuggestions(projectId, "open");
+  const openSuggestionCount = openSuggestions.data?.length ?? 0;
 
   return (
     <Tabs defaultValue="team" className="space-y-6">
@@ -141,6 +145,14 @@ function WritersRoomBody({
           )}
         </TabsTrigger>
         <TabsTrigger value="board">{t("collab.tabs.board")}</TabsTrigger>
+        <TabsTrigger value="suggestions" className="gap-2">
+          {t("collab.tabs.suggestions")}
+          {openSuggestionCount > 0 && (
+            <span className="rounded-full bg-primary/15 text-primary text-[10px] px-1.5 py-0.5 leading-none">
+              {openSuggestionCount}
+            </span>
+          )}
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="team" className="space-y-6 mt-0">
@@ -181,6 +193,10 @@ function WritersRoomBody({
 
       <TabsContent value="board" className="mt-0">
         <ProductionBoardPanel projectId={projectId} role={role} />
+      </TabsContent>
+
+      <TabsContent value="suggestions" className="mt-0">
+        <SuggestionsPanel projectId={projectId} role={role} />
       </TabsContent>
     </Tabs>
   );

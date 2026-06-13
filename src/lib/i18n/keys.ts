@@ -330,6 +330,109 @@ export const i18nStrings = {
     "Your current role can view locks but not claim or release them.",
   "collab.board.lockedByLabel": "Locked by",
   "collab.board.sceneFallback": "Scene {{n}}",
+
+  // --- Pass 5 — Suggestions & Review Mode -------------------------------
+  "collab.tabs.suggestions": "Suggestions",
+  "collab.suggestions.title": "Suggestions",
+  "collab.suggestions.subtitle":
+    "Propose changes without rewriting the draft. Review Mode lets collaborators shape the story while the owner protects what becomes canon.",
+  "collab.suggestions.open": "Open suggestions",
+  "collab.suggestions.accepted": "Accepted suggestions",
+  "collab.suggestions.rejected": "Rejected suggestions",
+  "collab.suggestions.emptyOpen":
+    "No suggestions yet. Invite collaborators to propose changes when the draft is ready for review.",
+  "collab.suggestions.emptyAccepted": "Nothing accepted yet.",
+  "collab.suggestions.emptyRejected": "Nothing rejected yet.",
+  "collab.suggestions.create": "Create suggestion",
+  "collab.suggestions.type": "Type",
+  "collab.suggestions.source": "Source",
+  "collab.suggestions.status": "Status",
+  "collab.suggestions.titleLabel": "Title",
+  "collab.suggestions.titlePlaceholder": "A short, clear headline",
+  "collab.suggestions.rationale": "Rationale",
+  "collab.suggestions.rationalePlaceholder":
+    "Why does this change make the story stronger?",
+  "collab.suggestions.suggestedText": "Suggested text",
+  "collab.suggestions.suggestedTextPlaceholder":
+    "Write the proposed replacement or note.",
+  "collab.suggestions.currentText": "Current text",
+  "collab.suggestions.currentTextPlaceholder":
+    "Paste the line you want to replace (optional).",
+  "collab.suggestions.current": "Current",
+  "collab.suggestions.suggested": "Suggested",
+  "collab.suggestions.reason": "Reason",
+  "collab.suggestions.impact": "Impact",
+  "collab.suggestions.accept": "Accept",
+  "collab.suggestions.reject": "Reject",
+  "collab.suggestions.archive": "Archive",
+  "collab.suggestions.acceptedBy": "Accepted",
+  "collab.suggestions.rejectedBy": "Rejected",
+  "collab.suggestions.projectAnchor": "Project suggestion",
+  "collab.suggestions.sceneAnchor": "Scene suggestion",
+  "collab.suggestions.blockAnchor": "Line suggestion",
+  "collab.suggestions.errorLoad": "Couldn't load suggestions.",
+  "collab.suggestions.errorSave": "Couldn't save suggestion.",
+  "collab.suggestions.errorPermission":
+    "Your current role can't take that action.",
+  "collab.suggestions.errorLocked":
+    "This scene is currently locked by {{name}}. Release or override the lock before applying changes.",
+  "collab.suggestions.readOnlyHint":
+    "Your current role can read suggestions but can't propose changes.",
+  "collab.suggestions.anchorChoose": "Where does this suggestion apply?",
+  "collab.suggestions.anchorProject": "Whole project",
+  "collab.suggestions.anchorScene": "Specific scene",
+  "collab.suggestions.sceneSelectPlaceholder": "Choose a scene…",
+  "collab.suggestions.submit": "Propose change",
+  "collab.suggestions.cancel": "Cancel",
+  "collab.suggestions.saving": "Saving…",
+  "collab.suggestions.savedToast": "Suggestion proposed",
+  "collab.suggestions.acceptedToast": "Suggestion accepted",
+  "collab.suggestions.rejectedToast": "Suggestion rejected",
+  "collab.suggestions.archivedToast": "Suggestion archived",
+  "collab.suggestions.notAppliedNotice":
+    "Accepted for planning. This suggestion type isn't applied to the script automatically yet.",
+  "collab.suggestions.appliedNotice":
+    "Applied to the screenplay. The previous text is captured in this suggestion's history.",
+  "collab.suggestions.acceptConfirm.title": "Accept this suggestion?",
+  "collab.suggestions.acceptConfirm.body":
+    "Review the change carefully. Accepting may update the screenplay.",
+  "collab.suggestions.rejectConfirm.title": "Reject this suggestion?",
+  "collab.suggestions.rejectConfirm.body":
+    "The script will not change. The suggestion stays in the rejected list for the record.",
+  "collab.suggestions.archiveConfirm.title": "Archive this suggestion?",
+  "collab.suggestions.archiveConfirm.body":
+    "It will be hidden from the active queues. Only the project owner can do this.",
+  "collab.suggestions.lockedSceneTitle": "Scene locked",
+  "collab.suggestions.lockedSceneBody":
+    "This scene is currently locked. Release the lock or have an editor override it before applying changes.",
+  "collab.suggestions.viewDetails": "View details",
+  "collab.suggestions.detailsTitle": "Suggestion details",
+  "collab.suggestions.noTitle": "Untitled suggestion",
+  "collab.suggestions.noRationale": "No rationale provided.",
+  "collab.suggestions.byLine": "by {{author}} · {{source}} · {{when}}",
+  "collab.suggestions.targetMissing":
+    "The original scene or line was removed. This suggestion can no longer be applied.",
+  "collab.suggestionType.replaceBlockText": "Replace line text",
+  "collab.suggestionType.insertBlockAfter": "Insert new line",
+  "collab.suggestionType.deleteBlock": "Delete line",
+  "collab.suggestionType.changeBlockType": "Change line type",
+  "collab.suggestionType.rewriteScene": "Rewrite scene",
+  "collab.suggestionType.characterNote": "Character note",
+  "collab.suggestionType.structureNote": "Structure note",
+  "collab.suggestionType.continuityFix": "Continuity fix",
+  "collab.suggestionType.pitchDeckNote": "Pitch deck note",
+  "collab.suggestionSource.human": "Human",
+  "collab.suggestionSource.ai": "AI",
+  "collab.suggestionSource.import_diagnostic": "Import diagnostic",
+  "collab.suggestionSource.script_brain": "Script Brain",
+  "collab.suggestionSource.table_read": "Table Read",
+  "collab.suggestionStatus.open": "Open",
+  "collab.suggestionStatus.accepted": "Accepted",
+  "collab.suggestionStatus.rejected": "Rejected",
+  "collab.suggestionStatus.archived": "Archived",
+  "collab.reviewMode.title": "Review Mode",
+  "collab.reviewMode.subtitle":
+    "Collaborators shape the story through suggestions. Canonical content stays protected until an authorized writer accepts.",
 } as const;
 
 export type I18nKey = keyof typeof i18nStrings;

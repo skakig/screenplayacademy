@@ -1,212 +1,131 @@
-# Writers' Room — Pass 4: Scene Assignments & Scene Locks
+# Pass 5 — Suggestions and Review Mode
 
-Add the "who owns this scene right now?" layer. Everything lives inside Writers' Room. No editor changes, no presence, no live cursors, no suggestions. Editor-level lock enforcement is **deferred** (rationale below).
+Adds a propose/review/approve layer to Writers' Room. Collaborators draft changes; authorized users accept or reject them. Canonical script content is never silently overwritten.
 
-## Database — single migration
+## 1. Database migration
 
-Two new tables + helpers. CREATE → GRANT → ENABLE RLS → POLICIES → trigger → indexes per house style.
+New table `public.suggestions` matching the spec (project/scene/script_block anchors, source, suggestion_type, status, before/after jsonb, accept/reject metadata, timestamps). Plus:
 
-### `scene_assignments`
+- Indexes on project_id, scene_id, script_block_id, author_id, source, status, suggestion_type, created_at.
+- `updated_at` trigger using existing `update_updated_at_column`.
+- GRANTs to `authenticated` and `service_role` (no `anon`).
+- RLS enabled.
 
-```sql
-CREATE TABLE public.scene_assignments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
-  scene_id UUID NOT NULL REFERENCES public.scenes(id) ON DELETE CASCADE,
-  assignee_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  assigned_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-  status TEXT NOT NULL DEFAULT 'assigned'
-    CHECK (status IN ('assigned','in_progress','ready_for_review','approved','blocked','unassigned')),
-  due_at TIMESTAMPTZ,
-  note TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (scene_id, assignee_id)
-);
-```
+SQL security-definer helpers (mirroring Pass 3/4 style):
 
-Indexes: `project_id`, `scene_id`, `assignee_id`, `status`, `due_at`. `updated_at` trigger.
+- `can_view_suggestions(_project_id)` — any active member or owner.
+- `can_create_suggestion(_project_id)` — owner, co_writer, editor, producer, commenter, assistant.
+- `can_accept_suggestion(_project_id)` — owner, co_writer, editor.
+- `can_reject_suggestion(_project_id)` — owner, co_writer, editor, producer.
+- `can_archive_suggestion(_project_id)` — owner only.
 
-A scene can be assigned to multiple collaborators (the `UNIQUE(scene_id, assignee_id)` matches the blueprint and lets you have, say, a writer + an editor on the same scene with different statuses). "Clear assignment" deletes the row; "Unassigned" status is reserved for soft hand-back.
+RLS policies:
 
-### `scene_locks`
+- SELECT: `can_view_suggestions(project_id)`.
+- INSERT: `can_create_suggestion(project_id)` AND `author_id = auth.uid()` AND status = 'open'.
+- UPDATE: `can_accept_suggestion` OR `can_reject_suggestion` OR `can_archive_suggestion` OR (`author_id = auth.uid()` AND status = 'open' for self-reject).
+- No DELETE policy (archive instead).
 
-```sql
-CREATE TABLE public.scene_locks (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
-  scene_id UUID NOT NULL REFERENCES public.scenes(id) ON DELETE CASCADE,
-  locked_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  lock_type TEXT NOT NULL DEFAULT 'soft'
-    CHECK (lock_type IN ('soft','hard','session','review')),
-  reason TEXT,
-  expires_at TIMESTAMPTZ,
-  released_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE UNIQUE INDEX scene_locks_one_active_per_scene
-  ON public.scene_locks (scene_id) WHERE released_at IS NULL;
-```
-
-Indexes: `project_id`, `scene_id`, `locked_by`, `released_at`, `expires_at`. Released locks stay in history.
-
-### Permission helpers (security definer)
-
-- `public.can_manage_scene_assignments(_project_id)` → owner OR active member ∈ (`co_writer`,`editor`,`producer`).
-- `public.can_claim_scene(_project_id)` → owner OR active member ∈ (`co_writer`,`editor`).
-- `public.can_override_scene_lock(_project_id)` → owner OR active member ∈ (`editor`).
-
-All `STABLE SECURITY DEFINER SET search_path = public`. `EXECUTE` revoked from `anon`, granted to `authenticated, service_role` (matches Pass 1/3 baseline; the same expected `0028/0029` warnings will surface and are inherent).
-
-### RLS
-
-`scene_assignments`:
-- SELECT — `is_project_member(project_id)`.
-- INSERT — `can_manage_scene_assignments(project_id) AND assigned_by = auth.uid()` AND assignee must be an active project member (enforced via subquery in WITH CHECK).
-- UPDATE — `can_manage_scene_assignments(project_id)`.
-- DELETE — `can_manage_scene_assignments(project_id)`.
-
-`scene_locks`:
-- SELECT — `is_project_member(project_id)`.
-- INSERT — `can_claim_scene(project_id) AND locked_by = auth.uid()`.
-- UPDATE — `locked_by = auth.uid()` OR `can_override_scene_lock(project_id)`. (UI only ever PATCHes `released_at`; we don't expose lock body editing.)
-- DELETE — none (no policy). Locks are never hard-deleted; release sets `released_at`.
-
-The `UNIQUE` partial index gives us atomic "only one active lock per scene" semantics — a second claim hits a 23505 violation we translate into "already locked" in the client.
-
-## TS permission helpers
+## 2. Permission helpers
 
 Extend `src/components/writers-room/permissions.ts`:
 
-```ts
-const ASSIGN_MANAGERS: ProjectRole[] = ['owner','co_writer','editor','producer'];
-const CLAIMERS:        ProjectRole[] = ['owner','co_writer','editor'];
-const LOCK_OVERRIDERS: ProjectRole[] = ['owner','editor'];
+- `canViewSuggestions(role)`
+- `canCreateSuggestion(role)`
+- `canAcceptSuggestion(role)`
+- `canRejectSuggestion(role, suggestion, userId)` (allow author to reject own open suggestion)
+- `canArchiveSuggestion(role)`
+- `canApplySuggestionToCanonicalContent(role)` (= accept + not viewer)
 
-canViewSceneAssignments(role)       // any member
-canManageSceneAssignments(role)
-canClaimScene(role)
-canReleaseOwnSceneLock(role)        // any claimer-eligible role
-canOverrideSceneLock(role)
-canEditLockedScene(role, lock, userId)  // true when no active lock OR lock.locked_by === userId
-```
+## 3. Data layer
 
-UI never inlines a role list.
+New `src/lib/suggestions.ts`:
 
-## Data access
+- Types for `Suggestion`, `SuggestionType`, `SuggestionStatus`, `SuggestionSource`, payload shapes.
+- `suggestionKeys` for TanStack Query.
+- `fetchSuggestions(projectId, status)`.
+- `createSuggestion(input)` — trims, validates lengths (title 160, rationale 5000, suggested text 10000).
+- `rejectSuggestion(id)` — sets status, rejected_by, rejected_at.
+- `archiveSuggestion(id)`.
+- `acceptSuggestion(suggestion)` — orchestrates:
+  1. Re-fetch suggestion to confirm still open.
+  2. For `replace_block_text`: verify block exists, verify scene not locked by someone else (query `scene_locks` active row), update `script_blocks.content` if safe; mark accepted.
+  3. For `character_note`, `structure_note`, `continuity_fix`, `pitch_deck_note`: mark accepted without script mutation (note-only).
+  4. For `insert_block_after`, `delete_block`, `change_block_type`, `rewrite_scene`: mark accepted as "accepted for planning" — UI surfaces the deferred-application banner.
+- Snapshot-before-accept: deferred (no snapshot infra wired for arbitrary content changes); documented in summary.
 
-New `src/lib/assignments.ts`:
+## 4. UI — Suggestions tab in Writers' Room
 
-- `fetchSceneAssignments(projectId)` — joined to scenes for ordering; returns assignment rows + scene meta.
-- `fetchActiveLocks(projectId)` — `released_at IS NULL`, returns lock rows.
-- `fetchActiveProjectMembers(projectId)` — small wrapper used by the assignee picker; reuses the same `project_members` select pattern as Pass 2.
-- `assignScene({ projectId, sceneId, assigneeId, status, dueAt?, note? })` — upserts on `(scene_id, assignee_id)`.
-- `updateAssignment(id, patch)`, `clearAssignment(id)`.
-- `claimScene({ projectId, sceneId, expiresInMinutes = 30 })` — inserts a lock with `lock_type='session'`; surfaces a friendly error when the partial unique index trips.
-- `releaseLock(lockId)` — patches `released_at = now()`. The RLS policy decides whether the caller is the original locker (own release) or an override.
-- `overrideLock(lockId, reason)` — same patch + `reason` text; RLS gates on `can_override_scene_lock`.
+Add 4th tab "Suggestions" to `src/routes/_authenticated/writers-room.$projectId.tsx` with open-count badge (mirrors notes badge).
 
-Query keys under `["wr","assignments",projectId]`, `["wr","locks",projectId]`, `["wr","activeMembers",projectId]`. All mutations invalidate the relevant keys; toasts via sonner.
+New folder `src/components/writers-room/suggestions/`:
 
-`change_events` still doesn't exist — TODO markers placed at the five event sites (`scene_assignment.{created,updated,cleared}`, `scene_lock.{created,released,overridden,expired_detected}`).
+- `SuggestionsPanel.tsx` — header copy from spec, three filtered sections (Open / Accepted / Rejected), "Create suggestion" button (gated by `canCreateSuggestion`), read-only banner otherwise.
+- `useProjectSuggestions.ts` — query hook per status.
+- `SuggestionList.tsx` — empty states from i18n.
+- `SuggestionCard.tsx` — author, source pill, timestamp, anchor label, type label, title, rationale preview, status, actions.
+- `SuggestionDetail.tsx` (dialog) — full rationale, before/after panels (Current / Suggested), accept/reject/archive controls, lock warning if relevant, "accepted for planning" notice for risky types.
+- `SuggestionDiff.tsx` — clean text before/after comparison (two cards, no GitHub-style red/green washes; use subtle muted/accent surfaces).
+- `CreateSuggestionDialog.tsx` — anchor scope selector (Project / Scene; Block omitted this pass to protect editor), suggestion type, title, rationale, suggested text; client-side validation.
+- `AnchorLabel.tsx` — "Project suggestion" / "Scene suggestion: INT. DINER — NIGHT" using existing scene fetch pattern from Pass 3/4.
+- `SourceBadge.tsx`, `StatusBadge.tsx`, `SuggestionTypeLabel.tsx` — restrained labels.
 
-## UI
+Block-level anchoring deferred: spec explicitly says "only add block-level suggestions if existing block IDs and UI hooks are stable" — current editor has no in-script "suggest this line" affordance and adding one risks the editor. Schema and accept-path still support `replace_block_text` so AI sources can create them.
 
-### Placement — third tab inside Writers' Room
+Update `AccessRulesPanel.tsx` to mark suggestions as active.
 
-`Tabs`: **Team** (Pass 2) · **Review Notes** (Pass 3) · **Production Board** (new).
+## 5. i18n
 
-No edits to the editor route. No edits to `scenes.$projectId.tsx` (Scene Board) — adding a column there would risk touching unrelated state; scope stays in Writers' Room for this pass.
+Add all `collab.suggestions.*`, `collab.suggestionType.*`, `collab.reviewMode.*`, and `collab.tabs.suggestions` keys listed in the spec to `src/lib/i18n/keys.ts`.
 
-### New components (`src/components/writers-room/board/`)
+## 6. Visual design
 
-- `ProductionBoardPanel.tsx` — header copy ("Give each scene a clear steward."), permission-gated empty/error/denied states, list of `SceneRow`s ordered by scene `order_index`.
-- `SceneRow.tsx` — one row per scene. Shows scene heading (or `Scene {n}`), current assignees as chips (each with status badge), lock status badge, due-date badge if set, and an action menu:
-  - **Assign / Change assignee** (owner + assign-managers) → `AssignSceneDialog`.
-  - **Status** select inline (assign-managers).
-  - **Clear assignment** (assign-managers) → `AlertDialog` confirm.
-  - **Claim scene / Release / Override** (per-role).
-- `AssignSceneDialog.tsx` — pick assignee from `fetchActiveProjectMembers`, status default `assigned`, optional due date (shadcn `Calendar` in a `Popover`), optional note (`Textarea`, 500 chars). Client validation: assignee must be present and an active member.
-- `AssignmentStatusSelect.tsx` — shadcn `Select` with `roleLabel`-style i18n labels for the six statuses.
-- `LockStatusBadge.tsx` — derives one of `Unlocked` / `Locked by you` / `Locked by Member abcdef` / `Lock expired` from the lock + current user id. Subtle ring, no traffic-light colors.
-- `LockActions.tsx` — small inline buttons: Claim / Release / Override. Override is gated to `canOverrideSceneLock` and opens an `AlertDialog` explaining whose lock will be released; the confirm posts with `reason='owner_override'` (or `editor_override`).
-- `useProductionBoard.ts` — combines the three queries (scenes, assignments, locks) and folds them into `Array<{ scene, assignments[], activeLock|null }>`, also exposing `isLoading` / `isError`.
+Warm paper card surfaces (`bg-card/60`), Playfair Display headings, Inter body, subtle borders, status pills using existing tokens (no raw red). Calm empty states with single-sentence copy from spec. No modal storms — one detail dialog and one create dialog.
 
-### Stale lock handling
+## 7. Guardrails / what's NOT touched
 
-`activeLock` is decorated client-side with `isStale = expires_at && new Date(expires_at) < new Date()`. UI:
+- No files under `src/components/editor/**`.
+- No presence, cursors, realtime, or multiplayer.
+- No edits to screenplay parser, formatter, keymap, persistence, key handling.
+- No auto-apply of risky suggestion types.
+- No bypass of scene locks (active lock check before applying `replace_block_text`).
+- AI suggestions supported via `source='ai'` rows; same review queue, same accept/reject path. No AI generator built in this pass.
+- `change_events` table doesn't exist → logging deferred with TODO comments (mirrors Pass 3/4).
 
-- Stale lock → badge reads `Lock expired`.
-- Owner/editor → Override action available, button text "Clear expired lock".
-- Anyone else → button disabled with tooltip "Ask an editor to clear the expired lock." We do **not** auto-release on client claim; release happens explicitly through `releaseLock` / `overrideLock` so the audit trail in `released_at` is honest.
+## 8. Acceptance checks
 
-### Editor enforcement — deferred (with rationale documented)
-
-The editor route renders blocks directly out of `useScreenplayDocument` with a single autosave-debounce path. Adding a "scene locked by another user → make blocks non-editable" gate would require:
-
-1. resolving the active lock for every visible block's `scene_id` inside the editor render path,
-2. flipping `contentEditable` per block live as locks change,
-3. preventing keymap mutations for locked scenes.
-
-That work crosses the explicit guardrail "Do not change editor keyboard behavior / block key handling / local-first state". The plan therefore ships **indicators only** for Pass 4 (visible in Writers' Room) and a documented next step: an editor-side enforcement pass that can be done in isolation once the lock model is proven. This matches the spec's escape hatch:
-
-> if enforcement cannot be safely added without editor refactor, add lock indicators and document enforcement as a required next step.
-
-### Visual
-
-Warm `bg-card/60` paper cards, Playfair section heads, restrained badges (assignments = secondary, locks = outline, expired = outline + dashed border, "locked by you" = primary-toned ring), generous spacing, no notification reds. Studio copy:
-
-- "Production Board"
-- "Give each scene a clear steward."
-- "Scene locks protect active work before live co-writing arrives. A lock does not mean ownership forever — it tells the room someone is working here right now."
-
-### Safety dialogs
-
-- Override another user's lock → `AlertDialog` naming the locker and noting it's recorded.
-- Clear assignment → `AlertDialog` ("This removes the assignment but doesn't delete the scene.").
-- Claim that hits unique-index conflict → toast "Already claimed by another collaborator. Refreshing." + invalidate locks query.
-
-## i18n
-
-Append the `collab.assignments.*`, `collab.assignmentStatus.*`, `collab.locks.*`, `collab.tabs.board` keys from the spec to `src/lib/i18n/keys.ts`. All visible strings flow through `t()`.
+- Owner can create, accept, reject, archive.
+- Commenter can create + self-reject own open suggestions; cannot accept.
+- Viewer sees read-only list.
+- Non-member: RLS blocks read.
+- Accepting `replace_block_text` on an unlocked scene updates `script_blocks.content`; locked-by-other shows protected message.
+- Accepting note-type suggestions marks accepted without script change and UI says so.
+- Editor still passes typing acceptance (no editor files modified).
+- Build + lint pass.
 
 ## Files
 
-**Migration (1)**
-- `supabase/migrations/<ts>_scene_assignments_and_locks.sql` — both tables + grants + RLS + three helper functions + indexes + trigger.
+**Migration:** `supabase/migrations/<ts>_suggestions.sql`
 
-**New TS (8)**
-- `src/lib/assignments.ts`
-- `src/components/writers-room/board/ProductionBoardPanel.tsx`
-- `src/components/writers-room/board/SceneRow.tsx`
-- `src/components/writers-room/board/AssignSceneDialog.tsx`
-- `src/components/writers-room/board/AssignmentStatusSelect.tsx`
-- `src/components/writers-room/board/LockStatusBadge.tsx`
-- `src/components/writers-room/board/LockActions.tsx`
-- `src/components/writers-room/board/useProductionBoard.ts`
+**New:**
+- `src/lib/suggestions.ts`
+- `src/components/writers-room/suggestions/SuggestionsPanel.tsx`
+- `src/components/writers-room/suggestions/useProjectSuggestions.ts`
+- `src/components/writers-room/suggestions/SuggestionList.tsx`
+- `src/components/writers-room/suggestions/SuggestionCard.tsx`
+- `src/components/writers-room/suggestions/SuggestionDetail.tsx`
+- `src/components/writers-room/suggestions/SuggestionDiff.tsx`
+- `src/components/writers-room/suggestions/CreateSuggestionDialog.tsx`
+- `src/components/writers-room/suggestions/AnchorLabel.tsx`
+- `src/components/writers-room/suggestions/SourceBadge.tsx`
+- `src/components/writers-room/suggestions/StatusBadge.tsx`
+- `src/components/writers-room/suggestions/SuggestionTypeLabel.tsx`
 
-**Edited (3)**
-- `src/components/writers-room/permissions.ts` — add the five new helpers.
-- `src/routes/_authenticated/writers-room.$projectId.tsx` — add third `Tabs` trigger + content.
-- `src/lib/i18n/keys.ts` — add the new key set; move "Scene locks" out of `collab.accessRules.upcoming` into `enabled`.
-- `src/components/writers-room/AccessRulesPanel.tsx` — reflect the move.
+**Edited:**
+- `src/components/writers-room/permissions.ts`
+- `src/components/writers-room/AccessRulesPanel.tsx`
+- `src/routes/_authenticated/writers-room.$projectId.tsx`
+- `src/lib/i18n/keys.ts`
+- `src/integrations/supabase/types.ts` (auto-regenerated after migration)
 
-`src/integrations/supabase/types.ts` regenerates automatically.
-
-## Verification
-
-- After migration approval, exercise as owner: assign a scene to self, change status, clear it. Claim a scene, see "Locked by you", release. Manually expire (`update scene_locks set expires_at = now() - interval '1 hour'`) to see "Lock expired" + override flow.
-- Confirm a viewer-role user sees the board read-only with disabled actions.
-- `git diff --stat src/components/editor src/hooks/use-autosave* src/routes/_authenticated/editor.\$projectId.tsx src/routes/_authenticated/scenes.\$projectId.tsx` must be empty — editor + Scene Board untouched.
-
-## Out of scope
-
-- Editor-side lock enforcement (deferred — see rationale above).
-- Heartbeat / auto-extend of locks.
-- Scene Board column changes.
-- Presence, live cursors, suggestions, real-time merging.
-- `change_events` table (deferred — TODOs flagged).
-- Per-assignee notifications.
-
-Stop after Pass 4.
+Stops after Pass 5. No Pass 6 work (presence, cursors, live editing).
