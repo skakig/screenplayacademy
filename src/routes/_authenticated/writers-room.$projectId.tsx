@@ -88,37 +88,13 @@ function WritersRoomPage() {
             </Button>
           </Card>
         ) : (
-          <div className="space-y-6">
-            <Card className="p-6 bg-card/60">
-              <div className="flex items-center justify-between gap-4 mb-4">
-                <h2 className="font-display text-xl font-semibold">
-                  {t("collab.members.title")}
-                </h2>
-                {isOwner && (
-                  <Button onClick={() => setInviteOpen(true)} size="sm">
-                    <UserPlus className="h-4 w-4 mr-1.5" />
-                    {t("collab.invite.button")}
-                  </Button>
-                )}
-              </div>
-              <MembersList
-                projectId={projectId}
-                currentUserId={userId}
-                isOwner={isOwner}
-              />
-            </Card>
-
-            {isOwner && (
-              <Card className="p-6 bg-card/60">
-                <h2 className="font-display text-xl font-semibold mb-4">
-                  {t("collab.invites.title")}
-                </h2>
-                <InvitesList projectId={projectId} />
-              </Card>
-            )}
-
-            <AccessRulesPanel />
-          </div>
+          <WritersRoomBody
+            projectId={projectId}
+            userId={userId}
+            isOwner={isOwner}
+            role={role ?? null}
+            onInvite={() => setInviteOpen(true)}
+          />
         )}
       </div>
 
