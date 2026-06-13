@@ -140,6 +140,7 @@ function WritersRoomBody({
             </span>
           )}
         </TabsTrigger>
+        <TabsTrigger value="board">{t("collab.tabs.board")}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="team" className="space-y-6 mt-0">
