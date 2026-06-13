@@ -16,6 +16,7 @@ import { InviteCollaboratorDialog } from "@/components/writers-room/InviteCollab
 import { AccessRulesPanel } from "@/components/writers-room/AccessRulesPanel";
 import { ReviewNotesPanel } from "@/components/writers-room/comments/ReviewNotesPanel";
 import { useProjectComments } from "@/components/writers-room/comments/useProjectComments";
+import { ProductionBoardPanel } from "@/components/writers-room/board/ProductionBoardPanel";
 import { fetchProjectRole, wrKeys } from "@/lib/collab";
 import { t } from "@/lib/i18n/t";
 
@@ -139,6 +140,7 @@ function WritersRoomBody({
             </span>
           )}
         </TabsTrigger>
+        <TabsTrigger value="board">{t("collab.tabs.board")}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="team" className="space-y-6 mt-0">
@@ -175,6 +177,10 @@ function WritersRoomBody({
 
       <TabsContent value="notes" className="mt-0">
         <ReviewNotesPanel projectId={projectId} role={role} />
+      </TabsContent>
+
+      <TabsContent value="board" className="mt-0">
+        <ProductionBoardPanel projectId={projectId} role={role} />
       </TabsContent>
     </Tabs>
   );

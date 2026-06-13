@@ -1776,6 +1776,111 @@ export type Database = {
         }
         Relationships: []
       }
+      scene_assignments: {
+        Row: {
+          assigned_by: string | null
+          assignee_id: string
+          created_at: string
+          due_at: string | null
+          id: string
+          note: string | null
+          project_id: string
+          scene_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          assignee_id: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          note?: string | null
+          project_id: string
+          scene_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          assignee_id?: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          note?: string | null
+          project_id?: string
+          scene_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_assignments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_assignments_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scene_locks: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          lock_type: string
+          locked_by: string
+          project_id: string
+          reason: string | null
+          released_at: string | null
+          scene_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          lock_type?: string
+          locked_by: string
+          project_id: string
+          reason?: string | null
+          released_at?: string | null
+          scene_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          lock_type?: string
+          locked_by?: string
+          project_id?: string
+          reason?: string | null
+          released_at?: string | null
+          scene_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_locks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_locks_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scene_patterns: {
         Row: {
           capability_type: string | null
@@ -2254,11 +2359,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_claim_scene: { Args: { _project_id: string }; Returns: boolean }
       can_comment_on_project: {
         Args: { _project_id: string }
         Returns: boolean
       }
       can_edit_project: { Args: { _project_id: string }; Returns: boolean }
+      can_manage_scene_assignments: {
+        Args: { _project_id: string }
+        Returns: boolean
+      }
+      can_override_scene_lock: {
+        Args: { _project_id: string }
+        Returns: boolean
+      }
       can_resolve_project_comments: {
         Args: { _project_id: string }
         Returns: boolean
