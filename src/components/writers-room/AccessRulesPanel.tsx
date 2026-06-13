@@ -5,10 +5,9 @@ export function AccessRulesPanel() {
   const enabled = [
     t("collab.accessRules.enabled.invite"),
     t("collab.accessRules.enabled.roles"),
-    t("collab.accessRules.enabled.prep"),
+    t("collab.accessRules.upcoming.comments"),
   ];
   const upcoming = [
-    t("collab.accessRules.upcoming.comments"),
     t("collab.accessRules.upcoming.suggestions"),
     t("collab.accessRules.upcoming.locks"),
     t("collab.accessRules.upcoming.live"),

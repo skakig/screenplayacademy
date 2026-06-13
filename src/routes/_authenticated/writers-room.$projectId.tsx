@@ -9,10 +9,13 @@ import { ProjectNav } from "@/components/ProjectNav";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MembersList } from "@/components/writers-room/MembersList";
 import { InvitesList } from "@/components/writers-room/InvitesList";
 import { InviteCollaboratorDialog } from "@/components/writers-room/InviteCollaboratorDialog";
 import { AccessRulesPanel } from "@/components/writers-room/AccessRulesPanel";
+import { ReviewNotesPanel } from "@/components/writers-room/comments/ReviewNotesPanel";
+import { useProjectComments } from "@/components/writers-room/comments/useProjectComments";
 import { fetchProjectRole, wrKeys } from "@/lib/collab";
 import { t } from "@/lib/i18n/t";
 
@@ -85,37 +88,13 @@ function WritersRoomPage() {
             </Button>
           </Card>
         ) : (
-          <div className="space-y-6">
-            <Card className="p-6 bg-card/60">
-              <div className="flex items-center justify-between gap-4 mb-4">
-                <h2 className="font-display text-xl font-semibold">
-                  {t("collab.members.title")}
-                </h2>
-                {isOwner && (
-                  <Button onClick={() => setInviteOpen(true)} size="sm">
-                    <UserPlus className="h-4 w-4 mr-1.5" />
-                    {t("collab.invite.button")}
-                  </Button>
-                )}
-              </div>
-              <MembersList
-                projectId={projectId}
-                currentUserId={userId}
-                isOwner={isOwner}
-              />
-            </Card>
-
-            {isOwner && (
-              <Card className="p-6 bg-card/60">
-                <h2 className="font-display text-xl font-semibold mb-4">
-                  {t("collab.invites.title")}
-                </h2>
-                <InvitesList projectId={projectId} />
-              </Card>
-            )}
-
-            <AccessRulesPanel />
-          </div>
+          <WritersRoomBody
+            projectId={projectId}
+            userId={userId}
+            isOwner={isOwner}
+            role={role ?? null}
+            onInvite={() => setInviteOpen(true)}
+          />
         )}
       </div>
 
@@ -127,5 +106,76 @@ function WritersRoomPage() {
         />
       )}
     </AppShell>
+  );
+}
+
+interface BodyProps {
+  projectId: string;
+  userId: string | null;
+  isOwner: boolean;
+  role: import("@/components/writers-room/roles").ProjectRole | null;
+  onInvite: () => void;
+}
+
+function WritersRoomBody({
+  projectId,
+  userId,
+  isOwner,
+  role,
+  onInvite,
+}: BodyProps) {
+  const openNotes = useProjectComments(projectId, "open");
+  const openCount = openNotes.threads.length;
+
+  return (
+    <Tabs defaultValue="team" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="team">{t("collab.tabs.team")}</TabsTrigger>
+        <TabsTrigger value="notes" className="gap-2">
+          {t("collab.tabs.notes")}
+          {openCount > 0 && (
+            <span className="rounded-full bg-primary/15 text-primary text-[10px] px-1.5 py-0.5 leading-none">
+              {openCount}
+            </span>
+          )}
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="team" className="space-y-6 mt-0">
+        <Card className="p-6 bg-card/60">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <h2 className="font-display text-xl font-semibold">
+              {t("collab.members.title")}
+            </h2>
+            {isOwner && (
+              <Button onClick={onInvite} size="sm">
+                <UserPlus className="h-4 w-4 mr-1.5" />
+                {t("collab.invite.button")}
+              </Button>
+            )}
+          </div>
+          <MembersList
+            projectId={projectId}
+            currentUserId={userId}
+            isOwner={isOwner}
+          />
+        </Card>
+
+        {isOwner && (
+          <Card className="p-6 bg-card/60">
+            <h2 className="font-display text-xl font-semibold mb-4">
+              {t("collab.invites.title")}
+            </h2>
+            <InvitesList projectId={projectId} />
+          </Card>
+        )}
+
+        <AccessRulesPanel />
+      </TabsContent>
+
+      <TabsContent value="notes" className="mt-0">
+        <ReviewNotesPanel projectId={projectId} role={role} />
+      </TabsContent>
+    </Tabs>
   );
 }
