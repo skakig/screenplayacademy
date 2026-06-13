@@ -178,6 +178,10 @@ function WritersRoomBody({
       <TabsContent value="notes" className="mt-0">
         <ReviewNotesPanel projectId={projectId} role={role} />
       </TabsContent>
+
+      <TabsContent value="board" className="mt-0">
+        <ProductionBoardPanel projectId={projectId} role={role} />
+      </TabsContent>
     </Tabs>
   );
 }
