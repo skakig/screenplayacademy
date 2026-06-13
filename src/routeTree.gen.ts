@@ -15,6 +15,7 @@ import { Route as EditorLabRouteImport } from './routes/editor-lab'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
@@ -31,6 +32,7 @@ import { Route as AuthenticatedEditorProjectIdRouteImport } from './routes/_auth
 import { Route as AuthenticatedCharactersProjectIdRouteImport } from './routes/_authenticated/characters.$projectId'
 import { Route as AuthenticatedArcTimelineProjectIdRouteImport } from './routes/_authenticated/arc-timeline.$projectId'
 import { Route as AuthenticatedAcademyModuleSlugRouteImport } from './routes/_authenticated/academy.$moduleSlug'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as AuthenticatedAcademyModuleSlugLessonSlugRouteImport } from './routes/_authenticated/academy.$moduleSlug.$lessonSlug'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -60,6 +62,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
+  id: '/checkout/success',
+  path: '/checkout/success',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
@@ -154,6 +161,12 @@ const AuthenticatedAcademyModuleSlugRoute =
     path: '/academy/$moduleSlug',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedAcademyModuleSlugLessonSlugRoute =
   AuthenticatedAcademyModuleSlugLessonSlugRouteImport.update({
     id: '/$lessonSlug',
@@ -171,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
+  '/checkout/success': typeof CheckoutSuccessRoute
   '/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
@@ -184,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
   '/academy/': typeof AuthenticatedAcademyIndexRoute
   '/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -195,6 +210,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
+  '/checkout/success': typeof CheckoutSuccessRoute
   '/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
@@ -208,6 +224,7 @@ export interface FileRoutesByTo {
   '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
   '/academy': typeof AuthenticatedAcademyIndexRoute
   '/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -221,6 +238,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/checkout/success': typeof CheckoutSuccessRoute
   '/_authenticated/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   '/_authenticated/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/_authenticated/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
@@ -234,6 +252,7 @@ export interface FileRoutesById {
   '/_authenticated/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
   '/_authenticated/academy/': typeof AuthenticatedAcademyIndexRoute
   '/_authenticated/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -247,6 +266,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/projects'
     | '/settings'
+    | '/checkout/success'
     | '/academy/$moduleSlug'
     | '/arc-timeline/$projectId'
     | '/characters/$projectId'
@@ -260,6 +280,7 @@ export interface FileRouteTypes {
     | '/tableread/$projectId'
     | '/academy/'
     | '/academy/$moduleSlug/$lessonSlug'
+    | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -271,6 +292,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/projects'
     | '/settings'
+    | '/checkout/success'
     | '/academy/$moduleSlug'
     | '/arc-timeline/$projectId'
     | '/characters/$projectId'
@@ -284,6 +306,7 @@ export interface FileRouteTypes {
     | '/tableread/$projectId'
     | '/academy'
     | '/academy/$moduleSlug/$lessonSlug'
+    | '/api/public/payments/webhook'
   id:
     | '__root__'
     | '/'
@@ -296,6 +319,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/_authenticated/projects'
     | '/_authenticated/settings'
+    | '/checkout/success'
     | '/_authenticated/academy/$moduleSlug'
     | '/_authenticated/arc-timeline/$projectId'
     | '/_authenticated/characters/$projectId'
@@ -309,6 +333,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tableread/$projectId'
     | '/_authenticated/academy/'
     | '/_authenticated/academy/$moduleSlug/$lessonSlug'
+    | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -318,6 +343,8 @@ export interface RootRouteChildren {
   EditorLabRoute: typeof EditorLabRoute
   PricingRoute: typeof PricingRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  CheckoutSuccessRoute: typeof CheckoutSuccessRoute
+  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -362,6 +389,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout/success': {
+      id: '/checkout/success'
+      path: '/checkout/success'
+      fullPath: '/checkout/success'
+      preLoaderRoute: typeof CheckoutSuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/settings': {
@@ -476,6 +510,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAcademyModuleSlugRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/academy/$moduleSlug/$lessonSlug': {
       id: '/_authenticated/academy/$moduleSlug/$lessonSlug'
       path: '/$lessonSlug'
@@ -563,17 +604,9 @@ const rootRouteChildren: RootRouteChildren = {
   EditorLabRoute: EditorLabRoute,
   PricingRoute: PricingRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  CheckoutSuccessRoute: CheckoutSuccessRoute,
+  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
