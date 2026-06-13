@@ -37,6 +37,9 @@ export function ProjectNav({ projectId, title }: { projectId: string; title?: st
             </Link>
           ))}
         </nav>
+        <div className="ml-auto pl-3">
+          <PresenceAvatarStack />
+        </div>
       </div>
     </div>
   );
