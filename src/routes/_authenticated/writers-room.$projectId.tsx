@@ -249,6 +249,12 @@ function WritersRoomTabs({
         <TabsContent value="suggestions" className="mt-0">
           <SuggestionsPanel projectId={projectId} role={role} />
         </TabsContent>
+
+        {liveEnabled && (
+          <TabsContent value="live" className="mt-0">
+            <LiveCollabLabPanel projectId={projectId} role={role} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
