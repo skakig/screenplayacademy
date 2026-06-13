@@ -38,6 +38,8 @@ import {
 import { LockStatusBadge } from "./LockStatusBadge";
 import { LockActions } from "./LockActions";
 import { AssignSceneDialog } from "./AssignSceneDialog";
+import { ScenePresenceBadge } from "@/components/writers-room/presence/ScenePresenceBadge";
+import { useOptionalPresence } from "@/lib/presence/PresenceProvider";
 
 interface Props {
   projectId: string;
