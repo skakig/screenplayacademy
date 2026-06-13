@@ -323,7 +323,9 @@ function Landing() {
                   </span>
                 </div>
               </div>
+            </div>
           </div>
+
 
         </section>
       </main>
