@@ -196,6 +196,14 @@ function WritersRoomTabs({
               </span>
             )}
           </TabsTrigger>
+          {liveEnabled && (
+            <TabsTrigger value="live" className="gap-2">
+              {t("collab.tabs.live")}
+              <span className="rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] px-1.5 py-0.5 leading-none uppercase tracking-wider">
+                {t("collab.live.experimental")}
+              </span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="team" className="space-y-6 mt-0">
