@@ -9,10 +9,13 @@ import { ProjectNav } from "@/components/ProjectNav";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MembersList } from "@/components/writers-room/MembersList";
 import { InvitesList } from "@/components/writers-room/InvitesList";
 import { InviteCollaboratorDialog } from "@/components/writers-room/InviteCollaboratorDialog";
 import { AccessRulesPanel } from "@/components/writers-room/AccessRulesPanel";
+import { ReviewNotesPanel } from "@/components/writers-room/comments/ReviewNotesPanel";
+import { useProjectComments } from "@/components/writers-room/comments/useProjectComments";
 import { fetchProjectRole, wrKeys } from "@/lib/collab";
 import { t } from "@/lib/i18n/t";
 
