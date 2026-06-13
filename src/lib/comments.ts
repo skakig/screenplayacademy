@@ -116,7 +116,11 @@ export async function setCommentStatus(
   status: CommentStatus,
 ) {
   const { data: userResp } = await supabase.auth.getUser();
-  const patch: Partial<CommentRow> = { status };
+  const patch: {
+    status: CommentStatus;
+    resolved_by?: string | null;
+    resolved_at?: string | null;
+  } = { status };
   if (status === "resolved") {
     patch.resolved_by = userResp?.user?.id ?? null;
     patch.resolved_at = new Date().toISOString();
