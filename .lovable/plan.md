@@ -1,62 +1,110 @@
-## Goal
+# Writers' Room — Pass 1: Membership Foundation
 
-Turn the flat "Your blank page awaits" CTA into a cinematic, framed scene — the kind of polished hero treatment a senior brand designer would ship. Borrow the silhouetted-writer-at-the-window motif from the promo kit's flyer ("Build better stories, scene by scene") and integrate it tastefully into the CTA section on the landing page.
+Backend-only foundation. No collaboration UI. No changes to the screenplay editor, typing flow, keymap, or block rendering.
 
-## Approach
+## Scope
 
-The CTA stops feeling like a card because it has no edges, no contrast, no art. The promo kit solves this by pairing the silhouette of a writer at a lamp-lit desk against a deep navy cityscape with a small brass star — a self-contained scene. We bring that scene in as a real piece of art, then build the CTA around it.
+- Two new tables: `project_members`, `project_invites`.
+- Three new SECURITY DEFINER helpers: `is_project_member`, `project_role`, `can_edit_project`.
+- RLS policies for the two new tables.
+- Idempotent backfill of an `active` `owner` row in `project_members` for every existing `projects.user_id`.
+- Optional small TypeScript permission helper file mirroring the SQL helpers.
+- Existing `projects` ownership policy stays untouched. `owns_project()` stays untouched. No other table policies are rewritten.
 
-### 1. Generate the CTA artwork (single new asset)
+## Out of Scope (explicitly deferred)
 
-Use `imagegen` (premium) to produce one wide hero illustration that matches the promo kit's exact style:
-- Deep navy → near-black gradient sky, soft moon glow.
-- Silhouette of a writer at a desk with a small warm-amber desk lamp, facing right (toward the headline + CTA).
-- Distant silhouetted city/castle skyline along the bottom.
-- One small brass spark/star top-right (echoes the logo's spark).
-- Painterly, editorial, not cartoonish. No text in the image.
-- Aspect ratio 21:9 so it can sit as a full-bleed band.
+Invites UI/flow, comments, scene assignments, scene locks, suggestions, change_events, presence, realtime, role-change UI, editor changes.
 
-Upload via `lovable-assets` to `src/assets/cta-writer-scene.jpg.asset.json`.
+## Migration 1 — `project_members`
 
-### 2. Redesign the final CTA section in `src/routes/index.tsx`
+Single migration containing CREATE TABLE → GRANT → ENABLE RLS → POLICIES → trigger → indexes.
 
-Replace the current flat block with a contained, framed "scene card":
+Columns: `id`, `project_id` (FK projects, ON DELETE CASCADE), `user_id` (FK auth.users, ON DELETE CASCADE), `role text not null default 'viewer'`, `status text not null default 'active'`, `invited_by` (FK auth.users, ON DELETE SET NULL), `joined_at timestamptz`, `last_seen_at timestamptz`, `created_at`, `updated_at`, `UNIQUE(project_id, user_id)`.
 
-- Wrapper: max-w-6xl, rounded-2xl, `border border-primary/15`, `--shadow-cinematic`, overflow hidden, mx-auto. This gives the section actual edges so it stops dissolving into the page.
-- Background layer: the new illustration as a full-cover image, positioned so the writer silhouette sits on the **left third** and the right two-thirds are darker sky (room for text).
-- Atmosphere layers on top of the image:
-  - A left→right navy gradient (`from-[--bg-base]/95 via-[--bg-base]/70 to-[--bg-base]/40`) so the writer reads but the right side stays legible.
-  - A subtle bottom navy fade so the CTA button area is calm.
-  - A 1px inner brass hairline (`shadow-[inset_0_0_0_1px_oklch(...)]`) for the editorial frame feel.
-- Foreground content (right-aligned on desktop, centered on mobile):
-  - Tiny uppercase brass eyebrow: "Your story · Your world · Our craft" (lifted from the promo flyer).
-  - `font-display` headline "Your blank page awaits." — kept.
-  - Subhead reworked slightly: "Free to start. No credit card. Just the page, and everything you need to fill it."
-  - Primary `Enter the Studio` button (unchanged styling).
-  - The 3 check-rows (Industry formatting / Director's Chair AI / Producer Room pitch deck) become a thin brass-divided inline row at the bottom of the card, not floating under it.
-- Add a small brass star SVG/icon (Lucide `Sparkle`) absolutely positioned top-right inside the card to echo the logo and the promo kit.
+CHECK constraints restrict values to the documented role set (`owner, co_writer, editor, producer, commenter, viewer, actor_reader, assistant`) and status set (`invited, active, suspended, left, removed`).
 
-Section padding outside the card stays so the card breathes on the page.
+Indexes on `project_id`, `user_id`, `(project_id, status)`.
 
-### 3. Reuse the same scene as a subtle backdrop accent in the hero (optional, low-risk)
+GRANT `SELECT, INSERT, UPDATE, DELETE` to `authenticated`; `ALL` to `service_role`. No `anon`.
 
-Not doing this in v1 — keeping scope to the CTA card so the change is focused and obviously better. Mention only if user wants a second pass.
+Trigger `update_updated_at_column` on update.
 
-## Files
+## Migration 2 — `project_invites`
 
-- new: `src/assets/cta-writer-scene.jpg.asset.json` (via `lovable-assets`, premium image)
-- edit: `src/routes/index.tsx` — replace the final CTA `<section>` only. Hero, pillars, features, three-acts, footer untouched.
+Same four-step structure.
 
-## Out of scope
+Columns: `id`, `project_id` (cascade), `email text not null` (stored lowercased via trigger or `lower()` default), `role text not null default 'viewer'`, `token_hash text not null` (raw tokens never stored), `invited_by` (FK auth.users, NOT NULL, cascade), `status text not null default 'pending'`, `expires_at timestamptz not null`, `accepted_by` (FK auth.users, ON DELETE SET NULL), `accepted_at timestamptz`, `created_at`, `updated_at`.
 
-- No palette change, no font change, no logo change.
-- No new routes, no copy rewrite elsewhere.
-- No AppShell / pricing / auth changes.
-- No animation beyond a gentle hover/scale on the CTA button (already there).
+CHECK constraints for role set and invite status set (`pending, accepted, revoked, expired`).
 
-## Acceptance
+Index on `(project_id, status)`, unique on `token_hash`.
 
-- CTA section reads as a single, framed cinematic card — clear edges, clear contrast against the page.
-- Writer silhouette + city + spark visible on the left; headline, subhead, button, and check-row sit cleanly on the right with no contrast issues.
-- Mobile: image stays as background with stronger overlay so text remains readable; layout stacks centered.
-- No regressions to hero, pillars, features, three-acts, footer.
+GRANT same as above. No `anon`.
+
+## Migration 3 — Helpers + Policies + Backfill
+
+Single migration that:
+
+1. Creates SECURITY DEFINER, STABLE helpers in `public`:
+
+   - `is_project_member(_project_id uuid) returns boolean` — true if `auth.uid()` owns the project (via `projects.user_id`) OR has a `project_members` row with `status='active'`.
+   - `project_role(_project_id uuid) returns text` — returns `'owner'` for the owner; else the `role` from the active `project_members` row; else NULL.
+   - `can_edit_project(_project_id uuid) returns boolean` — true for owner; true for active members whose role is in (`co_writer`, `editor`). (Producer/commenter/viewer/etc. excluded from edit by default; matches Pass-1 default permission matrix.)
+
+   All three: `LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public`.
+
+2. Adds RLS policies on the two new tables (kept minimal and owner-centric for Pass 1):
+
+   **`project_members`**
+   - `SELECT`: project owner OR the row's own `user_id = auth.uid()`.
+   - `INSERT` / `UPDATE` / `DELETE`: project owner only (`public.owns_project(project_id)`).
+
+   **`project_invites`**
+   - `SELECT`: project owner only.
+   - `INSERT` / `UPDATE` / `DELETE`: project owner only.
+   - (Invitee-side acceptance flow is deferred to a later pass.)
+
+3. Idempotent owner backfill:
+
+   ```sql
+   INSERT INTO public.project_members (project_id, user_id, role, status, joined_at)
+   SELECT p.id, p.user_id, 'owner', 'active', now()
+   FROM public.projects p
+   ON CONFLICT (project_id, user_id) DO NOTHING;
+   ```
+
+   Safe to re-run.
+
+## Why no edit to existing policies
+
+The existing `projects` policy is `auth.uid() = user_id`. Owners keep full access through ownership. Membership-based access for non-owners on existing tables (scenes, script_blocks, characters, etc.) is intentionally deferred — Pass 1 only proves membership can be recognized. Touching those policies now would risk the editor and break the "no editor behavior changes" guardrail.
+
+## TypeScript helpers (small, additive)
+
+New file: `src/lib/permissions.ts` exporting thin wrappers that call the SQL helpers via `supabase.rpc(...)`:
+
+- `getProjectRole(projectId)` → calls `project_role`.
+- `canViewProject(projectId)` → calls `is_project_member`.
+- `canEditProject(projectId)` → calls `can_edit_project`.
+- `canManageProjectMembers(projectId)` → owner check via existing `owns_project` RPC.
+
+Not wired into any UI. No imports added elsewhere. Pure scaffolding for later passes.
+
+`src/integrations/supabase/types.ts` regenerates automatically after migrations run — no manual edit.
+
+## Verification Plan
+
+- Confirm no files under `src/components/editor/**`, `src/routes/_authenticated/editor.*`, or `src/hooks/use*Editor*` are modified.
+- After migrations: `supabase--read_query` to confirm every existing project has exactly one `('owner','active')` row, and re-running the backfill SQL produces zero new rows.
+- App build runs automatically; check that build/lint pass.
+- Spot-check: owner can still SELECT their project (RLS unchanged on `projects`); a second user cannot SELECT rows from `project_members` for a project they don't own and aren't in.
+
+## Files Changed
+
+- `supabase/migrations/<ts>_project_members.sql` (new)
+- `supabase/migrations/<ts>_project_invites.sql` (new)
+- `supabase/migrations/<ts>_collab_helpers_and_backfill.sql` (new)
+- `src/lib/permissions.ts` (new, additive, unused by UI)
+- `src/integrations/supabase/types.ts` (auto-regenerated)
+
+Stop after Pass 1.
