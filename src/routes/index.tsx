@@ -231,37 +231,21 @@ function Landing() {
         <section className="border-t border-border/40">
           <div className="max-w-6xl mx-auto px-4 py-20">
             <div
-              className="relative overflow-hidden rounded-2xl border border-primary/20"
+              className="relative overflow-hidden rounded-2xl border border-primary/20 bg-[--bg-base]"
               style={{
                 boxShadow:
                   "var(--shadow-cinematic, 0 30px 80px -20px oklch(0 0 0 / 0.6)), inset 0 0 0 1px oklch(0.78 0.13 78 / 0.12)",
               }}
             >
-              {/* Background artwork */}
-              <img
-                src={ctaScene.url}
-                alt=""
-                aria-hidden="true"
-                width={1792}
-                height={768}
-                className="absolute inset-0 w-full h-full object-cover object-left select-none pointer-events-none"
-              />
-              {/* Atmosphere overlay — keeps the writer/window visible on the left,
-                  fades to darker navy on the right for legible text */}
+              {/* Subtle radial brass glow */}
               <div
-                className="absolute inset-0 pointer-events-none"
+                className="absolute inset-0 pointer-events-none opacity-60"
                 style={{
                   background:
-                    "linear-gradient(90deg, transparent 0%, transparent 28%, oklch(0.16 0.04 260 / 0.55) 55%, oklch(0.12 0.04 260 / 0.82) 100%)",
+                    "radial-gradient(60% 80% at 85% 20%, oklch(0.78 0.13 78 / 0.10), transparent 60%), radial-gradient(50% 70% at 10% 90%, oklch(0.30 0.06 260 / 0.55), transparent 70%)",
                 }}
               />
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background:
-                    "linear-gradient(180deg, transparent 60%, oklch(0.10 0.04 260 / 0.55) 100%)",
-                }}
-              />
+
               {/* Brass spark accent */}
               <Sparkle
                 className="absolute top-6 right-8 h-5 w-5 text-primary/70 hidden sm:block"
@@ -270,54 +254,79 @@ function Landing() {
               />
 
               {/* Foreground content */}
-              <div className="relative grid md:grid-cols-12 gap-6 px-6 sm:px-10 md:px-14 py-16 md:py-24">
-                <div className="md:col-span-7 md:col-start-6 text-center md:text-left">
-                  <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.36em] text-primary/90 mb-5">
-                    Your story · Your world · Our craft
-                  </p>
-                  <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] text-foreground">
-                    Your blank page awaits.
-                  </h2>
-                  <p className="text-muted-foreground mt-5 mb-8 max-w-xl mx-auto md:mx-0">
-                    Free to start. No credit card. Just the page — and
-                    everything you need to fill it.
-                  </p>
-                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-                    <Link to="/auth">
-                      <Button
-                        size="lg"
-                        className="text-base h-12 px-6 shadow-lg shadow-primary/30"
-                      >
-                        Enter the Studio{" "}
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    </Link>
-                    <Link to="/pricing">
-                      <Button variant="ghost" size="lg" className="h-12">
-                        See pricing
-                      </Button>
-                    </Link>
-                  </div>
-                  <div className="mt-8 pt-6 border-t border-primary/15 flex flex-wrap items-center justify-center md:justify-start gap-x-5 gap-y-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground/90">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Check className="h-3 w-3 text-primary" /> Industry
-                      formatting
-                    </span>
-                    <span className="h-3 w-px bg-primary/30 hidden sm:inline-block" />
-                    <span className="inline-flex items-center gap-1.5">
-                      <Check className="h-3 w-3 text-primary" /> Director's
-                      Chair AI
-                    </span>
-                    <span className="h-3 w-px bg-primary/30 hidden sm:inline-block" />
-                    <span className="inline-flex items-center gap-1.5">
-                      <Check className="h-3 w-3 text-primary" /> Producer Room
-                      pitch deck
-                    </span>
-                  </div>
+              <div className="relative px-6 sm:px-10 md:px-14 py-16 md:py-20 text-center max-w-3xl mx-auto">
+                {/* Small framed vignette — design element, not the feature */}
+                <div
+                  className="mx-auto mb-8 relative h-20 w-32 sm:h-24 sm:w-40 rounded-md overflow-hidden border border-primary/25"
+                  style={{
+                    boxShadow:
+                      "0 10px 30px -12px oklch(0 0 0 / 0.6), inset 0 0 0 1px oklch(0.78 0.13 78 / 0.18)",
+                  }}
+                  aria-hidden="true"
+                >
+                  <img
+                    src={ctaScene.url}
+                    alt=""
+                    width={1792}
+                    height={768}
+                    className="absolute inset-0 w-full h-full object-cover object-left select-none pointer-events-none"
+                  />
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        "linear-gradient(180deg, transparent 50%, oklch(0.10 0.04 260 / 0.55) 100%)",
+                    }}
+                  />
+                </div>
+
+                <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.36em] text-primary/90 mb-5">
+                  Your story · Your world · Our craft
+                </p>
+                <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] text-foreground">
+                  Your blank page awaits.
+                </h2>
+                <p className="text-muted-foreground mt-5 mb-8 max-w-xl mx-auto">
+                  Free to start. No credit card. Just the page — and
+                  everything you need to fill it.
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <Link to="/auth">
+                    <Button
+                      size="lg"
+                      className="text-base h-12 px-6 shadow-lg shadow-primary/30"
+                    >
+                      Enter the Studio{" "}
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                  <Link to="/pricing">
+                    <Button variant="ghost" size="lg" className="h-12">
+                      See pricing
+                    </Button>
+                  </Link>
+                </div>
+                <div className="mt-8 pt-6 border-t border-primary/15 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground/90">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Check className="h-3 w-3 text-primary" /> Industry
+                    formatting
+                  </span>
+                  <span className="h-3 w-px bg-primary/30 hidden sm:inline-block" />
+                  <span className="inline-flex items-center gap-1.5">
+                    <Check className="h-3 w-3 text-primary" /> Director's
+                    Chair AI
+                  </span>
+                  <span className="h-3 w-px bg-primary/30 hidden sm:inline-block" />
+                  <span className="inline-flex items-center gap-1.5">
+                    <Check className="h-3 w-3 text-primary" /> Producer Room
+                    pitch deck
+                  </span>
                 </div>
               </div>
             </div>
           </div>
+
+
         </section>
       </main>
 
