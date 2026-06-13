@@ -151,8 +151,7 @@ export function LiveCollabLabPanel({ projectId, role }: Props) {
           </div>
 
           <p className="text-xs text-muted-foreground italic border-t border-border/40 pt-3">
-            Live Collaboration is experimental. It is scene-scoped and protected
-            by revisions, locks, and conflict review.
+            {t("collab.live.notWiredNotice")}
           </p>
         </Card>
 

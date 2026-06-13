@@ -158,7 +158,18 @@ function WritersRoomTabs({
   const openSuggestions = useProjectSuggestions(projectId, "open");
   const openSuggestionCount = openSuggestions.data?.length ?? 0;
   const [tab, setTab] = useState("team");
-  const liveEnabled = isLiveSceneCollabEnabled();
+  const liveEnabled = useLiveSceneCollabEnabled();
+  const prevLiveEnabled = useRef(liveEnabled);
+
+  // If the experimental switch flips off mid-session, leave the Live tab
+  // gracefully so the panel unmounts (which tears down any active session).
+  useEffect(() => {
+    if (prevLiveEnabled.current && !liveEnabled) {
+      if (tab === "live") setTab("team");
+      toast(t("collab.live.disabledToast"));
+    }
+    prevLiveEnabled.current = liveEnabled;
+  }, [liveEnabled, tab]);
 
   const { setActiveArea } = usePresence();
   useEffect(() => {
@@ -238,6 +249,8 @@ function WritersRoomTabs({
           )}
 
           <AccessRulesPanel />
+
+          <ExperimentalFeaturesCard />
         </TabsContent>
 
         <TabsContent value="notes" className="mt-0">
