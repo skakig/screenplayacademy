@@ -16,6 +16,7 @@ import { InviteCollaboratorDialog } from "@/components/writers-room/InviteCollab
 import { AccessRulesPanel } from "@/components/writers-room/AccessRulesPanel";
 import { ReviewNotesPanel } from "@/components/writers-room/comments/ReviewNotesPanel";
 import { useProjectComments } from "@/components/writers-room/comments/useProjectComments";
+import { ProductionBoardPanel } from "@/components/writers-room/board/ProductionBoardPanel";
 import { fetchProjectRole, wrKeys } from "@/lib/collab";
 import { t } from "@/lib/i18n/t";
 
