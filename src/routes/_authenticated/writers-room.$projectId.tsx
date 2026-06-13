@@ -156,6 +156,7 @@ function WritersRoomTabs({
   const openSuggestions = useProjectSuggestions(projectId, "open");
   const openSuggestionCount = openSuggestions.data?.length ?? 0;
   const [tab, setTab] = useState("team");
+  const liveEnabled = isLiveSceneCollabEnabled();
 
   const { setActiveArea } = usePresence();
   useEffect(() => {
@@ -166,7 +167,9 @@ function WritersRoomTabs({
           ? "assignments"
           : tab === "suggestions"
             ? "suggestions"
-            : "writers_room";
+            : tab === "live"
+              ? "script"
+              : "writers_room";
     setActiveArea(area);
   }, [tab, setActiveArea]);
 
