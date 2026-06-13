@@ -258,6 +258,78 @@ export const i18nStrings = {
     "You can read notes here. Ask the owner for a commenting role to leave feedback.",
   "collab.comments.countLabel_one": "{{count}} open note",
   "collab.comments.countLabel_other": "{{count}} open notes",
+
+  // Writers' Room — Production Board (Pass 4)
+  "collab.tabs.board": "Production Board",
+  "collab.assignments.title": "Scene Assignments",
+  "collab.assignments.subtitle":
+    "Give each scene a clear steward. Assignments let the room know who is carrying which part of the story.",
+  "collab.assignments.empty":
+    "No scenes yet. Sketch a scene list to start assigning the work.",
+  "collab.assignments.errorLoad": "Couldn't load the production board.",
+  "collab.assignments.assign": "Assign",
+  "collab.assignments.changeAssignee": "Change assignee",
+  "collab.assignments.clear": "Clear assignment",
+  "collab.assignments.clear.confirm.title": "Clear this assignment?",
+  "collab.assignments.clear.confirm.body":
+    "This removes the assignment but doesn't delete the scene or any notes.",
+  "collab.assignments.status": "Status",
+  "collab.assignments.dueDate": "Due",
+  "collab.assignments.note": "Note",
+  "collab.assignments.noteOptional": "Note (optional)",
+  "collab.assignments.notePlaceholder":
+    "A short brief, a deadline, a tone reminder…",
+  "collab.assignments.unassigned": "Unassigned",
+  "collab.assignments.assignedTo": "Assigned to",
+  "collab.assignments.assignee": "Assignee",
+  "collab.assignments.assigneePlaceholder": "Choose a collaborator…",
+  "collab.assignments.dueOptional": "Due date (optional)",
+  "collab.assignments.dueClear": "No due date",
+  "collab.assignments.save": "Save assignment",
+  "collab.assignments.saving": "Saving…",
+  "collab.assignments.savedToast": "Assignment saved",
+  "collab.assignments.clearedToast": "Assignment cleared",
+  "collab.assignments.errorSave": "Couldn't save assignment.",
+  "collab.assignments.readOnlyHint":
+    "Your current role can view assignments but not change them.",
+  "collab.assignmentStatus.assigned": "Assigned",
+  "collab.assignmentStatus.inProgress": "In Progress",
+  "collab.assignmentStatus.readyForReview": "Ready for Review",
+  "collab.assignmentStatus.approved": "Approved",
+  "collab.assignmentStatus.blocked": "Blocked",
+  "collab.assignmentStatus.unassigned": "Unassigned",
+  "collab.locks.title": "Scene Locks",
+  "collab.locks.subtitle":
+    "Protect active work before live co-writing arrives. A lock does not mean ownership forever — it tells the room someone is working here right now.",
+  "collab.locks.claimScene": "Claim scene",
+  "collab.locks.release": "Release",
+  "collab.locks.override": "Override lock",
+  "collab.locks.overrideExpired": "Clear expired lock",
+  "collab.locks.unlocked": "Unlocked",
+  "collab.locks.lockedByYou": "Locked by you",
+  "collab.locks.lockedByUser": "Locked by {{name}}",
+  "collab.locks.expired": "Lock expired",
+  "collab.locks.protectedMessage":
+    "This scene is currently locked by {{name}}. You can read and comment, but editing is protected until the lock is released.",
+  "collab.locks.errorClaim": "Couldn't claim this scene.",
+  "collab.locks.alreadyLocked":
+    "Already claimed by another collaborator. Refreshing.",
+  "collab.locks.errorRelease": "Couldn't release the lock.",
+  "collab.locks.errorOverride": "Couldn't override the lock.",
+  "collab.locks.confirmOverride.title": "Override this lock?",
+  "collab.locks.confirmOverride.body":
+    "{{name}} currently has this scene locked. Overriding will release their lock immediately — this action is recorded.",
+  "collab.locks.confirmOverrideExpired.body":
+    "This lock expired and is no longer protecting the scene. Clearing it frees the scene for anyone allowed to claim it.",
+  "collab.locks.expiredOverrideHint":
+    "Ask an editor to clear the expired lock so the scene can be claimed again.",
+  "collab.locks.claimedToast": "Scene claimed",
+  "collab.locks.releasedToast": "Lock released",
+  "collab.locks.overriddenToast": "Lock overridden",
+  "collab.locks.readOnlyHint":
+    "Your current role can view locks but not claim or release them.",
+  "collab.board.lockedByLabel": "Locked by",
+  "collab.board.sceneFallback": "Scene {{n}}",
 } as const;
 
 export type I18nKey = keyof typeof i18nStrings;
