@@ -19,8 +19,10 @@ import { useProjectComments } from "@/components/writers-room/comments/useProjec
 import { ProductionBoardPanel } from "@/components/writers-room/board/ProductionBoardPanel";
 import { SuggestionsPanel } from "@/components/writers-room/suggestions/SuggestionsPanel";
 import { useProjectSuggestions } from "@/components/writers-room/suggestions/useProjectSuggestions";
+import { LiveCollabLabPanel } from "@/components/writers-room/live/LiveCollabLabPanel";
 import { PresenceProvider, usePresence } from "@/lib/presence/PresenceProvider";
 import { PresencePanel } from "@/components/writers-room/presence/PresencePanel";
+import { isLiveSceneCollabEnabled } from "@/lib/featureFlags";
 import { fetchProjectRole, wrKeys } from "@/lib/collab";
 import { t } from "@/lib/i18n/t";
 
@@ -154,6 +156,7 @@ function WritersRoomTabs({
   const openSuggestions = useProjectSuggestions(projectId, "open");
   const openSuggestionCount = openSuggestions.data?.length ?? 0;
   const [tab, setTab] = useState("team");
+  const liveEnabled = isLiveSceneCollabEnabled();
 
   const { setActiveArea } = usePresence();
   useEffect(() => {
@@ -164,7 +167,9 @@ function WritersRoomTabs({
           ? "assignments"
           : tab === "suggestions"
             ? "suggestions"
-            : "writers_room";
+            : tab === "live"
+              ? "script"
+              : "writers_room";
     setActiveArea(area);
   }, [tab, setActiveArea]);
 
@@ -191,6 +196,14 @@ function WritersRoomTabs({
               </span>
             )}
           </TabsTrigger>
+          {liveEnabled && (
+            <TabsTrigger value="live" className="gap-2">
+              {t("collab.tabs.live")}
+              <span className="rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] px-1.5 py-0.5 leading-none uppercase tracking-wider">
+                {t("collab.live.experimental")}
+              </span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="team" className="space-y-6 mt-0">
@@ -236,6 +249,12 @@ function WritersRoomTabs({
         <TabsContent value="suggestions" className="mt-0">
           <SuggestionsPanel projectId={projectId} role={role} />
         </TabsContent>
+
+        {liveEnabled && (
+          <TabsContent value="live" className="mt-0">
+            <LiveCollabLabPanel projectId={projectId} role={role} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

@@ -454,6 +454,40 @@ export const i18nStrings = {
   "collab.presence.lastSeen": "Last active {{when}}",
   "collab.presence.connectionLost": "Presence connection lost",
   "collab.presence.collaborator": "Collaborator",
+
+  // Pass 7 — Live Scene Collaboration (experimental)
+  "collab.tabs.live": "Live Lab",
+  "collab.live.title": "Live Collaboration Lab",
+  "collab.live.subtitle":
+    "Co-write a single scene in real time while SceneSmith protects the draft.",
+  "collab.live.experimental": "Experimental",
+  "collab.live.start": "Start Live Session",
+  "collab.live.join": "Join Live Session",
+  "collab.live.leave": "Leave Live Session",
+  "collab.live.active": "Live session active",
+  "collab.live.connected": "Connected",
+  "collab.live.reconnecting": "Reconnecting…",
+  "collab.live.disconnected": "Disconnected",
+  "collab.live.paused": "Live updates paused",
+  "collab.live.sessionScene": "Scene",
+  "collab.live.collaborators": "Collaborators in session",
+  "collab.live.noCollaborators": "No one else in this session yet.",
+  "collab.live.conflictsTitle": "Live Conflicts",
+  "collab.live.conflictHeld": "Remote change held for review",
+  "collab.live.keepMine": "Keep mine",
+  "collab.live.useTheirs": "Use theirs",
+  "collab.live.compare": "Compare",
+  "collab.live.resolveLater": "Resolve later",
+  "collab.live.remoteChange": "Incoming",
+  "collab.live.localChange": "Yours",
+  "collab.live.errorPermission":
+    "You don't have permission to co-write this scene right now.",
+  "collab.live.errorLocked": "This scene is locked by another collaborator.",
+  "collab.live.errorUnsupported":
+    "Live Collaboration isn't available here yet.",
+  "collab.live.reconnected": "Reconnected.",
+  "collab.live.unsavedPreserved":
+    "Your unsaved local changes were preserved.",
 } as const;
 
 export type I18nKey = keyof typeof i18nStrings;
