@@ -242,9 +242,8 @@ function Landing() {
                 src={ctaScene.url}
                 alt=""
                 aria-hidden="true"
-                loading="lazy"
-                width={1920}
-                height={1080}
+                width={1792}
+                height={768}
                 className="absolute inset-0 w-full h-full object-cover object-left select-none pointer-events-none"
               />
               {/* Atmosphere overlay — keeps the writer/window visible on the left,
