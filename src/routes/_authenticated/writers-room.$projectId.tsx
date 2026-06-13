@@ -17,6 +17,8 @@ import { AccessRulesPanel } from "@/components/writers-room/AccessRulesPanel";
 import { ReviewNotesPanel } from "@/components/writers-room/comments/ReviewNotesPanel";
 import { useProjectComments } from "@/components/writers-room/comments/useProjectComments";
 import { ProductionBoardPanel } from "@/components/writers-room/board/ProductionBoardPanel";
+import { SuggestionsPanel } from "@/components/writers-room/suggestions/SuggestionsPanel";
+import { useProjectSuggestions } from "@/components/writers-room/suggestions/useProjectSuggestions";
 import { fetchProjectRole, wrKeys } from "@/lib/collab";
 import { t } from "@/lib/i18n/t";
 

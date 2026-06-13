@@ -161,9 +161,10 @@ export async function createSuggestion(input: CreateSuggestionInput) {
       status: "open",
       title,
       rationale,
-      before: input.before ?? null,
-      after: input.after,
-      metadata: input.metadata ?? null,
+      // jsonb columns: cast through unknown to satisfy generated Json type.
+      before: (input.before ?? null) as unknown as never,
+      after: input.after as unknown as never,
+      metadata: (input.metadata ?? null) as unknown as never,
     })
     .select(SUGGESTION_COLUMNS)
     .single();
