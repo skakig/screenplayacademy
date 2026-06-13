@@ -8,6 +8,26 @@ The collaboration feature is called **Writers' Room**.
 
 The future sync/versioning engine may be called **ScriptSync**.
 
+## Canonical Build Blueprint
+
+Read `docs/lovable/collaboration.md` before implementing any Writers' Room work.
+
+That document is the master collaboration plan for:
+
+- roles
+- permissions
+- project membership
+- invite flow
+- comments
+- scene assignments
+- scene locks
+- change attribution
+- suggestions
+- presence
+- safe live collaboration
+- RLS expectations
+- Lovable pass sequencing
+
 ## Purpose
 
 Writers' Room allows multiple people to work on the same screenplay project while preserving authorship, permissions, revision history, and script integrity.
@@ -27,6 +47,8 @@ editor
 producer
 commenter
 viewer
+actor_reader
+assistant
 ```
 
 ## Permissions
@@ -34,15 +56,29 @@ viewer
 Future permissions:
 
 ```text
+can_view_project
+can_view_script
 can_edit_script
+can_edit_assigned_scenes
 can_edit_characters
+can_edit_world_lore
 can_comment
+can_resolve_comments
+can_suggest_changes
+can_accept_suggestions
 can_invite
-can_export
-can_manage_billing
-can_run_ai
-can_generate_table_read
+can_manage_members
+can_manage_roles
+can_lock_scenes
+can_override_locks
+can_create_snapshots
+can_restore_snapshots
+can_export_pdf
+can_export_fountain
 can_generate_pitch_deck
+can_generate_table_read
+can_run_ai
+can_manage_billing
 ```
 
 ## Stage Order
@@ -56,10 +92,11 @@ Build collaboration in this order:
 5. scene assignment
 6. scene locking
 7. change attribution
-8. revision comparison
-9. presence indicators
-10. live cursors
-11. full multiplayer editing
+8. suggestions and review mode
+9. revision comparison
+10. presence indicators
+11. live cursors
+12. full multiplayer editing
 
 ## Scene Locking First
 
