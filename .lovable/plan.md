@@ -1,123 +1,137 @@
-# Pass 7 — Live Scene Collaboration Experiment
+## Pass 8 — QA & Hardening for Writers' Room
 
-Final, highest-risk pass. Strictly experimental, off by default, scene-scoped, additive only.
+Five focused changes. No edits to the screenplay editor typing path, keys, formatting, or keymap. No live cursors. No screenplay-content broadcast. No editor bridge wired in this pass — Live Lab stays coordination-only and the copy will say so.
 
-## Guardrails (non-negotiable)
+---
 
-- Flag `collaboration_live_scene_editing_enabled` defaults **false**. No UI surfaces unless on.
-- Zero changes to `src/components/editor/**` typing/keymap/parser/persistence. Live layer reads/writes through a thin adapter that observes block state — it does NOT replace the local-first path.
-- Realtime payloads carry single-block deltas only. No screenplay/project blobs.
-- No live cursors. Text-update only in 7A (insert/delete/move deferred and documented).
-- All gates re-checked client-side AND backed by RLS / security-definer helpers server-side.
+### 1. Double-gated feature flag (`src/lib/featureFlags.ts`)
 
-## Feature flag
+Keep the build-time env gate, add a per-browser local switch on top.
 
-New file `src/lib/featureFlags.ts`:
-- Reads `import.meta.env.VITE_COLLAB_LIVE_SCENE_EDITING` (string `"true"` → on).
-- Exports `isLiveSceneCollabEnabled()` + `useFeatureFlag("collaboration_live_scene_editing_enabled")`.
-- `.env.development` gets the flag commented out; `.env`/`.env.production` untouched (stays off in prod).
+- `isLiveSceneCollabAvailable()` — reads `VITE_COLLAB_LIVE_SCENE_EDITING` (current behavior).
+- `isLiveSceneCollabUserEnabled()` — reads `localStorage["scenesmith.experimental.liveCollab.enabled"] === "1"`, guarded with `typeof window !== "undefined"` (false during SSR).
+- `setLiveSceneCollabUserEnabled(enabled)` — writes the key, dispatches a `window` CustomEvent `scenesmith:experimental-flags-changed` so listeners refresh without a reload.
+- `isLiveSceneCollabEnabled()` — `available && userEnabled` (replaces current env-only impl; all existing call sites keep working).
+- `useLiveSceneCollabEnabled()` React hook — subscribes to the custom event + `storage` event, returns the current effective value. Used by Writers' Room to re-render the tab.
 
-## Database (single migration)
+Defaults: both gates false. Off-by-default preserved.
 
-1. `ALTER TABLE public.script_blocks ADD COLUMN IF NOT EXISTS revision integer NOT NULL DEFAULT 1, ADD COLUMN IF NOT EXISTS updated_by uuid REFERENCES auth.users(id);`
-2. Trigger `bump_script_block_revision` on `BEFORE UPDATE` of `content`/`block_type` → `NEW.revision = OLD.revision + 1; NEW.updated_at = now();`
-3. `CREATE TABLE public.live_scene_sessions (id, project_id, scene_id, started_by, status text default 'active', started_at, ended_at, metadata jsonb)` — with GRANT to authenticated + service_role, RLS, policies using `is_project_member` / `can_edit_project`.
-4. Skip `live_scene_events` table for this pass — events ride realtime + (optional) existing change_events log entries: `live_session.started/joined/left`, `live_edit.conflict_detected`. No per-keystroke rows.
-5. `ALTER PUBLICATION supabase_realtime ADD TABLE public.live_scene_sessions;` so participant lists update.
+### 2. In-app Experimental Features card
 
-## Realtime channel
+New component `src/components/writers-room/ExperimentalFeaturesCard.tsx`, rendered inside the existing **Access** tab in `writers-room.$projectId.tsx` (below `AccessRulesPanel`). Visible to project members only (route is already member-gated).
 
-- Name: `scene-collab:{projectId}:{sceneId}`
-- Subscribe only after: authed + `project_role` ≠ null + role in `{owner, co_writer, editor}` + flag on + scene not hard-locked by another (Pass 4) OR current user holds lock.
-- Two message types broadcast on the channel:
-  - `presence` (track) — `{user_id, display_name, avatar_url, role}`
-  - `broadcast: "block_update"` — payload `LiveBlockUpdateEvent` (only `operation:"update_text"` in 7A; `update_type` behind sub-flag check, deferred otherwise).
-- Origin tag `origin: "local"` set before send; receiver ignores own `user_id` to prevent echo loops.
+- If env gate off: small muted note "Live Collaboration Lab is disabled for this build."
+- If env gate on: shadcn `Switch` (`src/components/ui/switch.tsx`), label "Live Collaboration Lab", description matching the spec ("Turn on experimental scene-scoped co-writing tools for this browser. This does not enable production live co-writing. It only exposes the testing lab."), bound to `setLiveSceneCollabUserEnabled`.
 
-## New files
+No DB writes. Per-browser only.
 
-```text
-src/lib/featureFlags.ts
-src/lib/live-collab/types.ts                  # event + held-conflict types
-src/lib/live-collab/useLiveSceneSession.ts    # subscribe/track/emit/receive
-src/lib/live-collab/useLiveBlockBridge.ts     # adapter: observe local block, debounce-emit; apply safe remote
-src/lib/live-collab/conflictQueue.ts          # in-memory store hook
-src/lib/live-collab/permissions.ts            # canStartLiveSession / canJoin / lock checks
-src/components/writers-room/live/LiveCollabLabPanel.tsx
-src/components/writers-room/live/LiveSessionControls.tsx   # Start / Join / Leave
-src/components/writers-room/live/LiveParticipants.tsx
-src/components/writers-room/live/LiveConnectionBadge.tsx
-src/components/writers-room/live/LiveConflictsPanel.tsx
-src/components/writers-room/live/LiveConflictCard.tsx      # Keep mine / Use theirs / Resolve later
-src/components/writers-room/live/ExperimentalBadge.tsx
-supabase/migrations/<ts>_live_scene_collab.sql
+### 3. Live tab visibility + graceful teardown
+
+In `writers-room.$projectId.tsx`:
+
+- Replace `isLiveSceneCollabEnabled()` call with `useLiveSceneCollabEnabled()` so toggling refreshes the tab list immediately.
+- When the hook flips from true → false while the user is on the Live tab: switch active tab back to "Access", show a sonner toast ("Live Collaboration Lab disabled. Your normal writing flow is unchanged.").
+- Session teardown: `LiveCollabLabPanel` unmounts when the tab disappears, which already triggers `useLiveSceneSession`'s cleanup (channel unsubscribe + presence leave). Add an explicit `useEffect` cleanup check in `LiveCollabLabPanel` that calls `session.leave()` on unmount if `session.active`, so an in-progress session is left cleanly rather than just dropped.
+
+### 4. Honest Live Lab copy
+
+In `LiveCollabLabPanel.tsx` and i18n keys:
+
+- Subtitle changes to: "Live Collaboration Lab is currently a scene-session coordination test. Real co-editing is not connected to the Writer's Desk yet."
+- Remove/avoid any "Co-write in real time" phrasing in panel and i18n.
+- Keep the existing "experimental" badge.
+
+No editor bridge work in this pass (deferred — would require safe integration with `useScreenplayDocument`, dirty/focused-block guards, real query keys, two-browser verification; out of scope).
+
+### 5. Real `/accept-invite` route
+
+Approach: SECURITY DEFINER RPC + thin client route, so token hashing + member upsert + invite update happen atomically server-side under the caller's `auth.uid()`.
+
+**Migration** (`supabase/migrations/<ts>_accept_invite_rpc.sql`):
+
+```sql
+create or replace function public.accept_project_invite(_token text)
+returns table(project_id uuid, status text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_email text := lower(coalesce(auth.jwt() ->> 'email', ''));
+  v_hash text;
+  v_invite public.project_invites%rowtype;
+begin
+  if v_uid is null then
+    return query select null::uuid, 'unauthenticated'::text; return;
+  end if;
+  v_hash := encode(digest(_token, 'sha256'), 'hex');
+  select * into v_invite from public.project_invites
+    where token_hash = v_hash limit 1;
+  if not found then
+    return query select null::uuid, 'invalid'::text; return;
+  end if;
+  if v_invite.status <> 'pending' then
+    return query select v_invite.project_id, v_invite.status; return;
+  end if;
+  if v_invite.expires_at is not null and v_invite.expires_at < now() then
+    update public.project_invites set status='expired' where id=v_invite.id;
+    return query select v_invite.project_id, 'expired'::text; return;
+  end if;
+  if lower(v_invite.email) <> v_email then
+    return query select v_invite.project_id, 'email_mismatch'::text; return;
+  end if;
+
+  insert into public.project_members
+    (project_id, user_id, role, status, invited_by, joined_at)
+  values
+    (v_invite.project_id, v_uid, v_invite.role, 'active', v_invite.invited_by, now())
+  on conflict (project_id, user_id) do update
+    set role = excluded.role, status = 'active', joined_at = coalesce(public.project_members.joined_at, now());
+
+  update public.project_invites
+     set status='accepted', accepted_by=v_uid, accepted_at=now()
+   where id=v_invite.id;
+
+  return query select v_invite.project_id, 'accepted'::text;
+end $$;
+
+revoke execute on function public.accept_project_invite(text) from public, anon;
+grant  execute on function public.accept_project_invite(text) to authenticated;
 ```
 
-## Edited files (small, surgical)
+(Relies on the existing `pgcrypto` `digest()` — already used elsewhere; falls back to a JS hash + parameter if the linter flags it.)
 
-- `src/components/writers-room/permissions.ts` — add `canStartLiveSession`, `canJoinLiveSession`.
-- `src/routes/_authenticated/writers-room.$projectId.tsx` — add 5th tab **Live Lab** (only when flag on), routes to `LiveCollabLabPanel`. Tab hidden entirely when flag off.
-- `src/lib/i18n/keys.ts` — add `collab.live.*` keys listed in the spec.
-- `src/integrations/supabase/types.ts` — regenerated after migration.
-- `src/components/writers-room/board/SceneRow.tsx` — add small "Live Lab" link (flag-gated) opening the lab scoped to that scene.
+**Route** `src/routes/_authenticated/accept-invite.tsx`:
 
-**Not edited**: any file under `src/components/editor/**`. The bridge reads the script-blocks query cache + applies remote updates by patching the cached rows; the editor reacts via its existing query subscription, no new wiring inside the editor.
+- Lives under `_authenticated/` so the auth gate redirects unauthenticated users to `/auth` and back (using existing `redirect` query support if present, otherwise a sessionStorage stash of the token before redirect).
+- Reads `?token=` via `Route.useSearch()` with a Zod validator.
+- Calls `supabase.rpc("accept_project_invite", { _token })`.
+- Maps status → calm UI:
+  - `accepted` / already-active: redirect to `/writers-room/$projectId`.
+  - `email_mismatch`: explain the invite was sent to a different email; offer sign-out.
+  - `expired` / `revoked` / `invalid`: friendly message + link to dashboard.
+- Uses `Card`/`Button` and existing brand tokens. New i18n keys under `collab.invite.accept.*`.
 
-## Live session lifecycle
+`buildInviteUrl` already produces `/accept-invite?token=...` — no change.
 
-1. **Start**: permission + lock check → insert row into `live_scene_sessions` → subscribe channel → `track()` presence → log `live_session.started`.
-2. **Join**: same checks; no new row, just subscribe + track.
-3. **Local edit emit**: bridge watches `script_blocks` cache for the active scene; on changed `content`, debounce 500ms → broadcast `{operation:"update_text", script_block_id, base_revision, text, client_timestamp}`. Skip if user lacks edit role, scene locked by other, value unchanged.
-4. **Remote apply**:
-   - Drop if `actor_id === self`.
-   - Drop if flag off, channel scene mismatch, op unsupported.
-   - Look up block in cache. Missing → hold (`missing_block`).
-   - Block focused locally OR marked dirty → hold (`local_dirty`).
-   - `base_revision !== cached.revision` → hold (`revision_mismatch`).
-   - Else patch cache: `{...block, content: text, revision: base_revision+1}` via `queryClient.setQueryData`. No editor remount (stable keys preserved).
-5. **Leave / unmount**: flush pending debounce, `untrack`, `removeChannel`, mark session row `ended`. Best-effort.
-6. **Reconnect**: on `CHANNEL_ERROR`/`CLOSED`, flip badge to "Reconnecting", retry once; on success refetch scene blocks via React Query invalidation (preserving any dirty local state by checking editor's dirty map first) and emit `live_edit.recovered`.
+### Acceptance & verification
 
-## Conflict UI
+- Typecheck after edits (no manual build, harness handles it).
+- Manual flow: toggle switch off → Live tab disappears, active session leaves; toggle on → tab reappears. Generate invite → open link in second session → membership added, redirect to Writers' Room.
 
-`LiveConflictsPanel` shows held items with:
-- "View incoming" (read-only preview of remote text)
-- "Keep mine" → drop held item
-- "Use theirs" → apply to cache + bump revision
-- "Resolve later" → no-op
-- Banner copy from i18n; calm card styling per visualdesign.md (paper surface, warm border, restrained "Experimental" badge).
+### Deferred
 
-## Scene-lock interaction
+- Real editor bridge from live session into `useScreenplayDocument` (explicitly out of scope; copy now reflects this).
+- Cross-email invite acceptance / owner override.
+- Server-issued invite emails.
 
-- Pre-start: refuse if `scene_locks` row exists for another user without override role.
-- Mid-session: subscribe to `scene_locks` postgres_changes filtered by scene; if another lock appears, pause apply (`paused` state) and hold incoming until resolved.
+### Files
 
-## Presence interaction
-
-If `PresenceProvider` is mounted (Writers' Room route), set `active_area="script"` + `active_scene_id` when live session starts. Presence remains awareness-only; no text in presence payloads.
-
-## Visual design
-
-LiveCollabLabPanel: paper-tone card, Playfair Display title "Live Collaboration Lab", small amber "Experimental" pill, two-column layout — left = controls + participants + connection badge, right = conflicts panel. Mirrors `PresencePanel` styling. No flashy multiplayer chrome.
-
-## Testing checklist (manual, 2 sessions)
-
-- Flag off → no Live Lab tab, no scene-row link, editor unchanged.
-- Flag on, non-member → tab hidden / access denied card.
-- Owner + co_writer same scene → text edits propagate, caret stable, no remount.
-- Both edit same block → second arrival lands in conflicts panel, no overwrite.
-- Other user holds lock → Start blocked with `collab.live.errorLocked`.
-- Kill network → badge "Disconnected", typing continues, autosave continues; restore → "Reconnected".
-- Refresh → canonical content intact, no duplicate blocks.
-
-## Deferred (documented in PR summary)
-
-- `update_type`, `insert_block_after`, `delete_block`, `move_block` — structural ops require deeper editor coordination; not safe yet.
-- Live cursors / selections.
-- `live_scene_events` audit table — using ephemeral broadcast + sparse change_events instead.
-- Snapshot-before-apply (Pass 5 already covers heavy mutations).
-- Production rollout / default-on.
-
-## Acceptance
-
-Build passes (`bunx tsc --noEmit`), lint clean, editor acceptance test still passes with flag off AND with flag on solo, two-session smoke test shows safe text propagation + conflict hold.
+- edit `src/lib/featureFlags.ts`
+- new  `src/components/writers-room/ExperimentalFeaturesCard.tsx`
+- edit `src/routes/_authenticated/writers-room.$projectId.tsx`
+- edit `src/components/writers-room/live/LiveCollabLabPanel.tsx`
+- edit `src/lib/i18n/keys.ts`
+- new  `src/routes/_authenticated/accept-invite.tsx`
+- new  migration `supabase/migrations/<ts>_accept_invite_rpc.sql`
