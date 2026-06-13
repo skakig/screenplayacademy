@@ -9,7 +9,9 @@ import {
   FileText,
   ArrowRight,
   Check,
+  Sparkle,
 } from "lucide-react";
+import ctaScene from "@/assets/cta-writer-scene.jpg.asset.json";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { PillarStrip } from "@/components/landing/PillarStrip";
 
