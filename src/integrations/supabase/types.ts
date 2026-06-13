@@ -2184,6 +2184,97 @@ export type Database = {
         }
         Relationships: []
       }
+      suggestions: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          after: Json
+          applied_to_canonical: boolean
+          author_id: string | null
+          before: Json | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          project_id: string
+          rationale: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          scene_id: string | null
+          script_block_id: string | null
+          source: string
+          status: string
+          suggestion_type: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          after: Json
+          applied_to_canonical?: boolean
+          author_id?: string | null
+          before?: Json | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          project_id: string
+          rationale?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          scene_id?: string | null
+          script_block_id?: string | null
+          source?: string
+          status?: string
+          suggestion_type: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          after?: Json
+          applied_to_canonical?: boolean
+          author_id?: string | null
+          before?: Json | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          project_id?: string
+          rationale?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          scene_id?: string | null
+          script_block_id?: string | null
+          source?: string
+          status?: string
+          suggestion_type?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suggestions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggestions_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggestions_script_block_id_fkey"
+            columns: ["script_block_id"]
+            isOneToOne: false
+            referencedRelation: "script_blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_lesson_progress: {
         Row: {
           completed_at: string | null
@@ -2359,11 +2450,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_accept_suggestion: { Args: { _project_id: string }; Returns: boolean }
+      can_archive_suggestion: {
+        Args: { _project_id: string }
+        Returns: boolean
+      }
       can_claim_scene: { Args: { _project_id: string }; Returns: boolean }
       can_comment_on_project: {
         Args: { _project_id: string }
         Returns: boolean
       }
+      can_create_suggestion: { Args: { _project_id: string }; Returns: boolean }
       can_edit_project: { Args: { _project_id: string }; Returns: boolean }
       can_manage_scene_assignments: {
         Args: { _project_id: string }
@@ -2373,10 +2470,12 @@ export type Database = {
         Args: { _project_id: string }
         Returns: boolean
       }
+      can_reject_suggestion: { Args: { _project_id: string }; Returns: boolean }
       can_resolve_project_comments: {
         Args: { _project_id: string }
         Returns: boolean
       }
+      can_view_suggestions: { Args: { _project_id: string }; Returns: boolean }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
