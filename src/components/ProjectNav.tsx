@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { FileText, Users, LayoutGrid, Image as ImageIcon, Mic, Sparkles, Activity, GitBranch, BookOpen } from "lucide-react";
+import { FileText, Users, LayoutGrid, Image as ImageIcon, Mic, Sparkles, Activity, GitBranch, BookOpen, UsersRound } from "lucide-react";
 import { useOnboarding } from "@/hooks/use-onboarding";
 
 export function ProjectNav({ projectId, title }: { projectId: string; title?: string }) {
@@ -16,6 +16,7 @@ export function ProjectNav({ projectId, title }: { projectId: string; title?: st
     { to: "/storyboard/$projectId" as const, label: "Shot Wall", icon: ImageIcon },
     { to: "/tableread/$projectId" as const, label: "Rehearsal Room", icon: Mic },
     { to: "/pitch/$projectId" as const, label: "Producer Room", icon: Sparkles },
+    { to: "/writers-room/$projectId" as const, label: "Writers' Room", icon: UsersRound },
   ];
   return (
     <div className="border-b border-border/60 bg-card/30 backdrop-blur">
