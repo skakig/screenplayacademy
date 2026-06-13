@@ -459,7 +459,7 @@ export const i18nStrings = {
   "collab.tabs.live": "Live Lab",
   "collab.live.title": "Live Collaboration Lab",
   "collab.live.subtitle":
-    "Co-write a single scene in real time while SceneSmith protects the draft.",
+    "Live Collaboration Lab is currently a scene-session coordination test. Real co-editing is not connected to the Writer's Desk yet.",
   "collab.live.experimental": "Experimental",
   "collab.live.start": "Start Live Session",
   "collab.live.join": "Join Live Session",
@@ -488,6 +488,53 @@ export const i18nStrings = {
   "collab.live.reconnected": "Reconnected.",
   "collab.live.unsavedPreserved":
     "Your unsaved local changes were preserved.",
+  "collab.live.notWiredNotice":
+    "Coordination only — this lab tracks sessions, presence, and conflict review. The Writer's Desk editor is not yet wired to receive remote block updates.",
+  "collab.live.disabledToast":
+    "Live Collaboration Lab disabled. Your normal writing flow is unchanged.",
+
+  // Pass 8 — Experimental Features card
+  "collab.experimental.title": "Experimental Features",
+  "collab.experimental.subtitle":
+    "Opt-in test switches for SceneSmith experiments. Local to this browser only — toggling here never affects other collaborators or production behavior.",
+  "collab.experimental.unavailable":
+    "Live Collaboration Lab is disabled for this build.",
+  "collab.experimental.liveCollab.title": "Live Collaboration Lab",
+  "collab.experimental.liveCollab.body":
+    "Turn on experimental scene-scoped co-writing tools for this browser. This does not enable production live co-writing. It only exposes the testing lab.",
+
+  // Pass 8 — Invite acceptance
+  "collab.acceptInvite.title": "Accept invite",
+  "collab.acceptInvite.checking": "Checking your invite…",
+  "collab.acceptInvite.acceptedTitle": "You're in.",
+  "collab.acceptInvite.acceptedBody":
+    "Taking you to the Writers' Room…",
+  "collab.acceptInvite.openRoom": "Open Writers' Room",
+  "collab.acceptInvite.invalidTitle": "We couldn't find that invite",
+  "collab.acceptInvite.invalidBody":
+    "The link may be mistyped or no longer valid. Ask the project owner to send a fresh invite.",
+  "collab.acceptInvite.expiredTitle": "This invite has expired",
+  "collab.acceptInvite.expiredBody":
+    "Invites are valid for seven days. Ask the project owner to send a new one.",
+  "collab.acceptInvite.revokedTitle": "This invite was revoked",
+  "collab.acceptInvite.revokedBody":
+    "The project owner cancelled this invite. Get in touch if you think this is a mistake.",
+  "collab.acceptInvite.acceptedAlreadyTitle":
+    "This invite has already been accepted",
+  "collab.acceptInvite.acceptedAlreadyBody":
+    "If you're already a collaborator, head to the Writers' Room directly.",
+  "collab.acceptInvite.emailMismatchTitle":
+    "Signed in as a different email",
+  "collab.acceptInvite.emailMismatchBody":
+    "This invite was sent to a different email address. Sign out and sign in with the invited address to accept it.",
+  "collab.acceptInvite.signOut": "Sign out",
+  "collab.acceptInvite.backToDashboard": "Back to Studio Lobby",
+  "collab.acceptInvite.unknownTitle": "Couldn't accept this invite",
+  "collab.acceptInvite.unknownBody":
+    "Something went wrong on our end. Try again, or ask the project owner to resend the invite.",
+  "collab.acceptInvite.missingTokenTitle": "Invite link is missing a token",
+  "collab.acceptInvite.missingTokenBody":
+    "Open the full link you were sent — the token at the end is required.",
 } as const;
 
 export type I18nKey = keyof typeof i18nStrings;
