@@ -108,3 +108,74 @@ function WritersRoomPage() {
     </AppShell>
   );
 }
+
+interface BodyProps {
+  projectId: string;
+  userId: string | null;
+  isOwner: boolean;
+  role: import("@/components/writers-room/roles").ProjectRole | null;
+  onInvite: () => void;
+}
+
+function WritersRoomBody({
+  projectId,
+  userId,
+  isOwner,
+  role,
+  onInvite,
+}: BodyProps) {
+  const openNotes = useProjectComments(projectId, "open");
+  const openCount = openNotes.threads.length;
+
+  return (
+    <Tabs defaultValue="team" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="team">{t("collab.tabs.team")}</TabsTrigger>
+        <TabsTrigger value="notes" className="gap-2">
+          {t("collab.tabs.notes")}
+          {openCount > 0 && (
+            <span className="rounded-full bg-primary/15 text-primary text-[10px] px-1.5 py-0.5 leading-none">
+              {openCount}
+            </span>
+          )}
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="team" className="space-y-6 mt-0">
+        <Card className="p-6 bg-card/60">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <h2 className="font-display text-xl font-semibold">
+              {t("collab.members.title")}
+            </h2>
+            {isOwner && (
+              <Button onClick={onInvite} size="sm">
+                <UserPlus className="h-4 w-4 mr-1.5" />
+                {t("collab.invite.button")}
+              </Button>
+            )}
+          </div>
+          <MembersList
+            projectId={projectId}
+            currentUserId={userId}
+            isOwner={isOwner}
+          />
+        </Card>
+
+        {isOwner && (
+          <Card className="p-6 bg-card/60">
+            <h2 className="font-display text-xl font-semibold mb-4">
+              {t("collab.invites.title")}
+            </h2>
+            <InvitesList projectId={projectId} />
+          </Card>
+        )}
+
+        <AccessRulesPanel />
+      </TabsContent>
+
+      <TabsContent value="notes" className="mt-0">
+        <ReviewNotesPanel projectId={projectId} role={role} />
+      </TabsContent>
+    </Tabs>
+  );
+}
