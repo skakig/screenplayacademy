@@ -20,6 +20,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAcceptInviteRouteImport } from './routes/_authenticated/accept-invite'
 import { Route as AuthenticatedAcademyIndexRouteImport } from './routes/_authenticated/academy.index'
 import { Route as AuthenticatedWritersRoomProjectIdRouteImport } from './routes/_authenticated/writers-room.$projectId'
 import { Route as AuthenticatedTablereadProjectIdRouteImport } from './routes/_authenticated/tableread.$projectId'
@@ -90,6 +91,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAcceptInviteRoute =
+  AuthenticatedAcceptInviteRouteImport.update({
+    id: '/accept-invite',
+    path: '/accept-invite',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAcademyIndexRoute =
   AuthenticatedAcademyIndexRouteImport.update({
     id: '/academy/',
@@ -187,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/editor-lab': typeof EditorLabRoute
   '/pricing': typeof PricingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/accept-invite': typeof AuthenticatedAcceptInviteRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
@@ -214,6 +222,7 @@ export interface FileRoutesByTo {
   '/editor-lab': typeof EditorLabRoute
   '/pricing': typeof PricingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/accept-invite': typeof AuthenticatedAcceptInviteRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
@@ -243,6 +252,7 @@ export interface FileRoutesById {
   '/editor-lab': typeof EditorLabRoute
   '/pricing': typeof PricingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_authenticated/accept-invite': typeof AuthenticatedAcceptInviteRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRouteWithChildren
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/editor-lab'
     | '/pricing'
     | '/sitemap.xml'
+    | '/accept-invite'
     | '/dashboard'
     | '/onboarding'
     | '/projects'
@@ -299,6 +310,7 @@ export interface FileRouteTypes {
     | '/editor-lab'
     | '/pricing'
     | '/sitemap.xml'
+    | '/accept-invite'
     | '/dashboard'
     | '/onboarding'
     | '/projects'
@@ -327,6 +339,7 @@ export interface FileRouteTypes {
     | '/editor-lab'
     | '/pricing'
     | '/sitemap.xml'
+    | '/_authenticated/accept-invite'
     | '/_authenticated/dashboard'
     | '/_authenticated/onboarding'
     | '/_authenticated/projects'
@@ -437,6 +450,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/accept-invite': {
+      id: '/_authenticated/accept-invite'
+      path: '/accept-invite'
+      fullPath: '/accept-invite'
+      preLoaderRoute: typeof AuthenticatedAcceptInviteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/academy/': {
@@ -576,6 +596,7 @@ const AuthenticatedAcademyModuleSlugRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAcceptInviteRoute: typeof AuthenticatedAcceptInviteRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRouteWithChildren
@@ -595,6 +616,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAcceptInviteRoute: AuthenticatedAcceptInviteRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRouteWithChildren,
@@ -633,13 +655,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

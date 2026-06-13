@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { UserPlus } from "lucide-react";
+import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
@@ -14,6 +15,7 @@ import { MembersList } from "@/components/writers-room/MembersList";
 import { InvitesList } from "@/components/writers-room/InvitesList";
 import { InviteCollaboratorDialog } from "@/components/writers-room/InviteCollaboratorDialog";
 import { AccessRulesPanel } from "@/components/writers-room/AccessRulesPanel";
+import { ExperimentalFeaturesCard } from "@/components/writers-room/ExperimentalFeaturesCard";
 import { ReviewNotesPanel } from "@/components/writers-room/comments/ReviewNotesPanel";
 import { useProjectComments } from "@/components/writers-room/comments/useProjectComments";
 import { ProductionBoardPanel } from "@/components/writers-room/board/ProductionBoardPanel";
@@ -22,7 +24,7 @@ import { useProjectSuggestions } from "@/components/writers-room/suggestions/use
 import { LiveCollabLabPanel } from "@/components/writers-room/live/LiveCollabLabPanel";
 import { PresenceProvider, usePresence } from "@/lib/presence/PresenceProvider";
 import { PresencePanel } from "@/components/writers-room/presence/PresencePanel";
-import { isLiveSceneCollabEnabled } from "@/lib/featureFlags";
+import { useLiveSceneCollabEnabled } from "@/lib/featureFlags";
 import { fetchProjectRole, wrKeys } from "@/lib/collab";
 import { t } from "@/lib/i18n/t";
 
@@ -156,7 +158,18 @@ function WritersRoomTabs({
   const openSuggestions = useProjectSuggestions(projectId, "open");
   const openSuggestionCount = openSuggestions.data?.length ?? 0;
   const [tab, setTab] = useState("team");
-  const liveEnabled = isLiveSceneCollabEnabled();
+  const liveEnabled = useLiveSceneCollabEnabled();
+  const prevLiveEnabled = useRef(liveEnabled);
+
+  // If the experimental switch flips off mid-session, leave the Live tab
+  // gracefully so the panel unmounts (which tears down any active session).
+  useEffect(() => {
+    if (prevLiveEnabled.current && !liveEnabled) {
+      if (tab === "live") setTab("team");
+      toast(t("collab.live.disabledToast"));
+    }
+    prevLiveEnabled.current = liveEnabled;
+  }, [liveEnabled, tab]);
 
   const { setActiveArea } = usePresence();
   useEffect(() => {
@@ -236,6 +249,8 @@ function WritersRoomTabs({
           )}
 
           <AccessRulesPanel />
+
+          <ExperimentalFeaturesCard />
         </TabsContent>
 
         <TabsContent value="notes" className="mt-0">

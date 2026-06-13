@@ -78,6 +78,18 @@ export function LiveCollabLabPanel({ projectId, role }: Props) {
     activeLock: selectedRow?.activeLock ?? null,
   });
 
+  // Explicit graceful leave on unmount when active — covers the case where
+  // the user flips the Experimental switch off mid-session and the Live tab
+  // is removed.
+  useEffect(() => {
+    return () => {
+      if (session.active) void session.leave();
+    };
+    // We deliberately only depend on the leave/active references — running
+    // this effect on each render would defeat the point of an unmount hook.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (!flagOn) {
     // Defensive — the tab is hidden, but if rendered directly, show nothing.
     return null;
@@ -151,8 +163,7 @@ export function LiveCollabLabPanel({ projectId, role }: Props) {
           </div>
 
           <p className="text-xs text-muted-foreground italic border-t border-border/40 pt-3">
-            Live Collaboration is experimental. It is scene-scoped and protected
-            by revisions, locks, and conflict review.
+            {t("collab.live.notWiredNotice")}
           </p>
         </Card>
 

@@ -2504,6 +2504,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_project_invite: {
+        Args: { _token: string }
+        Returns: {
+          project_id: string
+          status: string
+        }[]
+      }
       can_accept_suggestion: { Args: { _project_id: string }; Returns: boolean }
       can_archive_suggestion: {
         Args: { _project_id: string }
