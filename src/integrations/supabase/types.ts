@@ -1344,6 +1344,54 @@ export type Database = {
           },
         ]
       }
+      live_scene_sessions: {
+        Row: {
+          ended_at: string | null
+          id: string
+          metadata: Json
+          project_id: string
+          scene_id: string
+          started_at: string
+          started_by: string
+          status: string
+        }
+        Insert: {
+          ended_at?: string | null
+          id?: string
+          metadata?: Json
+          project_id: string
+          scene_id: string
+          started_at?: string
+          started_by: string
+          status?: string
+        }
+        Update: {
+          ended_at?: string | null
+          id?: string
+          metadata?: Json
+          project_id?: string
+          scene_id?: string
+          started_at?: string
+          started_by?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_scene_sessions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_scene_sessions_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pitch_packages: {
         Row: {
           budget_tier: string | null
@@ -1996,8 +2044,10 @@ export type Database = {
           metadata: Json
           order_index: number
           project_id: string
+          revision: number
           scene_id: string | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           block_type?: string
@@ -2009,8 +2059,10 @@ export type Database = {
           metadata?: Json
           order_index?: number
           project_id: string
+          revision?: number
           scene_id?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           block_type?: string
@@ -2022,8 +2074,10 @@ export type Database = {
           metadata?: Json
           order_index?: number
           project_id?: string
+          revision?: number
           scene_id?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
