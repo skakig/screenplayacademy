@@ -2483,6 +2483,10 @@ export type Database = {
       is_project_member: { Args: { _project_id: string }; Returns: boolean }
       owns_project: { Args: { _project_id: string }; Returns: boolean }
       project_role: { Args: { _project_id: string }; Returns: string }
+      update_my_project_last_seen: {
+        Args: { _project_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

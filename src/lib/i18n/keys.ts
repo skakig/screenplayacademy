@@ -433,6 +433,27 @@ export const i18nStrings = {
   "collab.reviewMode.title": "Review Mode",
   "collab.reviewMode.subtitle":
     "Collaborators shape the story through suggestions. Canonical content stays protected until an authorized writer accepts.",
+
+  // --- Presence (Pass 6) ---
+  "collab.presence.title": "In the Room",
+  "collab.presence.subtitle":
+    "See who is here without interrupting the page. Presence is awareness only — script changes still flow through safe writing, comments, locks, and suggestions.",
+  "collab.presence.onlineNow": "Online now",
+  "collab.presence.noOneOnline": "No other collaborators are active right now.",
+  "collab.presence.inWritersRoom": "In Writers' Room",
+  "collab.presence.viewingScript": "Viewing script",
+  "collab.presence.viewingScene": "Viewing {{scene}}",
+  "collab.presence.reviewingComments": "Reviewing comments",
+  "collab.presence.reviewingSuggestions": "Reviewing suggestions",
+  "collab.presence.viewingAssignments": "Viewing assignments",
+  "collab.presence.inSettings": "In settings",
+  "collab.presence.unknownArea": "In project",
+  "collab.presence.typingInScene": "{{name}} is editing this scene",
+  "collab.presence.workingNearby": "Working nearby",
+  "collab.presence.you": "you",
+  "collab.presence.lastSeen": "Last active {{when}}",
+  "collab.presence.connectionLost": "Presence connection lost",
+  "collab.presence.collaborator": "Collaborator",
 } as const;
 
 export type I18nKey = keyof typeof i18nStrings;

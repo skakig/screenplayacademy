@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { FileText, Users, LayoutGrid, Image as ImageIcon, Mic, Sparkles, Activity, GitBranch, BookOpen, UsersRound } from "lucide-react";
 import { useOnboarding } from "@/hooks/use-onboarding";
+import { PresenceAvatarStack } from "@/components/writers-room/presence/PresenceAvatarStack";
 
 export function ProjectNav({ projectId, title }: { projectId: string; title?: string }) {
   const { data: onboarding } = useOnboarding();
@@ -36,6 +37,9 @@ export function ProjectNav({ projectId, title }: { projectId: string; title?: st
             </Link>
           ))}
         </nav>
+        <div className="ml-auto pl-3">
+          <PresenceAvatarStack />
+        </div>
       </div>
     </div>
   );

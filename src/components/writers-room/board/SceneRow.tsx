@@ -38,6 +38,8 @@ import {
 import { LockStatusBadge } from "./LockStatusBadge";
 import { LockActions } from "./LockActions";
 import { AssignSceneDialog } from "./AssignSceneDialog";
+import { ScenePresenceBadge } from "@/components/writers-room/presence/ScenePresenceBadge";
+import { useOptionalPresence } from "@/lib/presence/PresenceProvider";
 
 interface Props {
   projectId: string;
@@ -87,8 +89,17 @@ export function SceneRow({ projectId, row, role, currentUserId }: Props) {
       ),
   });
 
+  const presence = useOptionalPresence();
+  const handleEnter = () => presence?.setActiveScene(scene.id, sceneLabel);
+  const handleLeave = () => presence?.setActiveScene(null, null);
+
   return (
-    <div className="rounded-md border border-border/60 bg-card/40 p-4 space-y-3">
+    <div
+      className="rounded-md border border-border/60 bg-card/40 p-4 space-y-3"
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+      onFocusCapture={handleEnter}
+    >
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <h4 className="font-display text-base font-medium leading-tight">
@@ -100,6 +111,7 @@ export function SceneRow({ projectId, row, role, currentUserId }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <ScenePresenceBadge sceneId={scene.id} />
           <LockStatusBadge lock={activeLock} currentUserId={currentUserId} />
           {userCanInteract && (
             <LockActions
