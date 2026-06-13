@@ -229,32 +229,93 @@ function Landing() {
 
         {/* CTA */}
         <section className="border-t border-border/40">
-          <div className="max-w-3xl mx-auto px-4 py-24 text-center">
-            <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tight">
-              Your blank page awaits.
-            </h2>
-            <p className="text-muted-foreground mt-4 mb-8">
-              Free forever to start. No credit card required.
-            </p>
-            <Link to="/auth">
-              <Button
-                size="lg"
-                className="text-base h-12 px-6 shadow-lg shadow-primary/30"
-              >
-                Enter the Studio <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </Link>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1">
-                <Check className="h-3 w-3 text-primary" /> Industry formatting
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Check className="h-3 w-3 text-primary" /> Director's Chair AI
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Check className="h-3 w-3 text-primary" /> Producer Room pitch
-                deck
-              </span>
+          <div className="max-w-6xl mx-auto px-4 py-20">
+            <div
+              className="relative overflow-hidden rounded-2xl border border-primary/20"
+              style={{
+                boxShadow:
+                  "var(--shadow-cinematic, 0 30px 80px -20px oklch(0 0 0 / 0.6)), inset 0 0 0 1px oklch(0.78 0.13 78 / 0.12)",
+              }}
+            >
+              {/* Background artwork */}
+              <img
+                src={ctaScene.url}
+                alt=""
+                aria-hidden="true"
+                loading="lazy"
+                width={1920}
+                height={1080}
+                className="absolute inset-0 w-full h-full object-cover object-left select-none pointer-events-none"
+              />
+              {/* Atmosphere overlays */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(90deg, oklch(0.18 0.04 260 / 0.55) 0%, oklch(0.14 0.04 260 / 0.45) 30%, oklch(0.12 0.04 260 / 0.78) 62%, oklch(0.10 0.04 260 / 0.92) 100%)",
+                }}
+              />
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    "radial-gradient(120% 80% at 85% 60%, oklch(0.78 0.13 78 / 0.08), transparent 60%)",
+                }}
+              />
+              {/* Brass spark accent */}
+              <Sparkle
+                className="absolute top-6 right-8 h-5 w-5 text-primary/70 hidden sm:block"
+                strokeWidth={1.4}
+                aria-hidden="true"
+              />
+
+              {/* Foreground content */}
+              <div className="relative grid md:grid-cols-12 gap-6 px-6 sm:px-10 md:px-14 py-16 md:py-24">
+                <div className="md:col-span-7 md:col-start-6 text-center md:text-left">
+                  <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.36em] text-primary/90 mb-5">
+                    Your story · Your world · Our craft
+                  </p>
+                  <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] text-foreground">
+                    Your blank page awaits.
+                  </h2>
+                  <p className="text-muted-foreground mt-5 mb-8 max-w-xl mx-auto md:mx-0">
+                    Free to start. No credit card. Just the page — and
+                    everything you need to fill it.
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                    <Link to="/auth">
+                      <Button
+                        size="lg"
+                        className="text-base h-12 px-6 shadow-lg shadow-primary/30"
+                      >
+                        Enter the Studio{" "}
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </Link>
+                    <Link to="/pricing">
+                      <Button variant="ghost" size="lg" className="h-12">
+                        See pricing
+                      </Button>
+                    </Link>
+                  </div>
+                  <div className="mt-8 pt-6 border-t border-primary/15 flex flex-wrap items-center justify-center md:justify-start gap-x-5 gap-y-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground/90">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Check className="h-3 w-3 text-primary" /> Industry
+                      formatting
+                    </span>
+                    <span className="h-3 w-px bg-primary/30 hidden sm:inline-block" />
+                    <span className="inline-flex items-center gap-1.5">
+                      <Check className="h-3 w-3 text-primary" /> Director's
+                      Chair AI
+                    </span>
+                    <span className="h-3 w-px bg-primary/30 hidden sm:inline-block" />
+                    <span className="inline-flex items-center gap-1.5">
+                      <Check className="h-3 w-3 text-primary" /> Producer Room
+                      pitch deck
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
