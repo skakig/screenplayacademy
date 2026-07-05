@@ -173,8 +173,15 @@ export function CharacterProfileDialog({
           </div>
         </DialogHeader>
 
-        <Tabs defaultValue="overview" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="mx-6 mt-3 grid grid-cols-9 h-auto">
+        {(() => {
+          const filledCount = local ? [
+            "role","external_goal","internal_need","wound","core_lie","secret","voice_summary","visual_description","character_arc",
+          ].filter((k) => local[k] && String(local[k]).trim()).length : 0;
+          const initialTab = filledCount < 3 ? "build" : "overview";
+          return (
+        <Tabs defaultValue={initialTab} className="flex-1 overflow-hidden flex flex-col">
+          <TabsList className="mx-6 mt-3 grid grid-cols-10 h-auto">
+            <TabsTrigger value="build" className="text-[11px]"><Sparkles className="h-3 w-3 mr-1" />Build</TabsTrigger>
             <TabsTrigger value="overview" className="text-[11px]">Overview</TabsTrigger>
             <TabsTrigger value="backstory" className="text-[11px]"><BookOpen className="h-3 w-3 mr-1" />Backstory</TabsTrigger>
             <TabsTrigger value="personality" className="text-[11px]"><Brain className="h-3 w-3 mr-1" />Personality</TabsTrigger>
@@ -191,6 +198,14 @@ export function CharacterProfileDialog({
               <div className="flex items-center justify-center py-20"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
             ) : (
               <>
+                {/* BUILD (guided) */}
+                <TabsContent value="build" className="mt-0">
+                  <GuidedCharacterBuilder
+                    characterId={characterId!}
+                    projectId={projectId}
+                    character={local}
+                  />
+                </TabsContent>
                 {/* OVERVIEW */}
                 <TabsContent value="overview" className="space-y-3 mt-0">
                   <div className="grid grid-cols-2 gap-3">
