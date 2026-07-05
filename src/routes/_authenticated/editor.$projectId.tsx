@@ -536,12 +536,18 @@ function Editor() {
     ),
   );
 
+  const headerExtras = (
+    <div className="flex items-center gap-2">
+      {!focus && <PresenceAvatarStack />}
+      <WriterDeskModeToggle />
+      <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
+    </div>
+  );
+
   return (
-    <AppShell>
-      <ProjectNav projectId={projectId} title={project?.title} />
-      {!focus && <GuidedRail projectId={projectId} />}
-      <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3 flex items-center justify-between gap-3 flex-wrap">
-        {fromGuided ? (
+    <AppShell focus={focus} title={project?.title} headerExtras={headerExtras}>
+      {!focus && fromGuided && (
+        <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3">
           <Link
             to="/first-screenplay/$projectId"
             params={{ projectId }}
@@ -551,111 +557,29 @@ function Editor() {
             <ArrowLeft className="h-3 w-3" />
             Back to guided path{guidedStep ? ` · ${guidedStep.replace(/_/g, " ")}` : ""}
           </Link>
-        ) : <span />}
-        <div className="flex items-center gap-3 flex-wrap">
-          <WriterDeskModeToggle />
-          {!focus && (
-          <Sheet open={leftDrawerOpen} onOpenChange={setLeftDrawerOpen}>
-            <SheetTrigger asChild>
-              <button className="lg:hidden inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition rounded-md border border-border/60 px-2 py-1" title="Script Map">
-                <PanelLeft className="h-3.5 w-3.5" /> Script Map
-              </button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] p-4 overflow-auto">
-              <div className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground mb-3 flex items-center gap-1.5">
-                <MapIcon className="h-3 w-3" /> Script Map
-              </div>
-              <StoryNavigatorPane
-                projectId={projectId}
-                projectTitle={project?.title}
-                projectType={project?.project_type}
-                genre={project?.genre ?? undefined}
-                blocks={blocks as any}
-                activeBlockId={activeBlockId}
-                onJumpToBlock={(id) => { jumpToBlock(id); setLeftDrawerOpen(false); }}
-                onAddScene={() => { addSceneAtEnd(); setLeftDrawerOpen(false); }}
-              />
-            </SheetContent>
-          </Sheet>
-          )}
-          {!focus && (
-          <Sheet open={rightDrawerOpen} onOpenChange={setRightDrawerOpen}>
-            <SheetTrigger asChild>
-              <button className="xl:hidden inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition rounded-md border border-border/60 px-2 py-1" title="Director's Chair">
-                <PanelRight className="h-3.5 w-3.5" /> Director
-              </button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[360px] p-0 overflow-auto">
-              <CoachPane
-                projectId={projectId}
-                blocks={blocks as any}
-                activeBlockId={activeBlockId}
-                activeBlockType={activeBlockType}
-                defaultTab={coachDefaultTab}
-                onOpenStoryBuilder={() => { setStoryBuilderOpen(true); setRightDrawerOpen(false); }}
-                aiTools={AI_TOOLS}
-                aiTool={aiTool}
-                setAiTool={setAiTool}
-                aiPrompt={aiPrompt}
-                setAiPrompt={setAiPrompt}
-                aiOutput={aiOutput}
-                aiLoading={aiLoading}
-                onRunAi={runAi}
-              />
-            </SheetContent>
-          </Sheet>
-          )}
-          {!focus && (
-          <button
-            onClick={tour.start}
-            className="hidden md:inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
-            title="Replay the editor tour"
-          >
-            <HelpCircle className="h-3.5 w-3.5" />
-            Replay tour
-          </button>
-          )}
-          <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
         </div>
-      </div>
-      {!focus && onboarding?.preferred_mode === "guided" && (
-        <GuidedStepStrip
-          projectId={projectId}
-          currentStep={guidedStep ?? null}
-          completedCount={0}
-        />
       )}
-      <div
-        className={`grid grid-cols-1 max-w-[1600px] mx-auto ${
-          writeMode.on
-            ? "lg:grid-cols-1"
-            : "lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_300px]"
-        }`}
-      >
 
-        {!writeMode.on && (
-        <aside
-          data-tour="block-toolbar"
-          aria-label="Script Map"
-          className="hidden lg:block border-r border-border/40 p-4 min-h-[calc(100vh-104px)] sticky top-0 self-start max-h-[calc(100vh-104px)] overflow-auto bg-card/10"
-        >
-          <div className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground mb-3 flex items-center gap-1.5">
-            <MapIcon className="h-3 w-3" /> Script Map
-          </div>
-          <StoryNavigatorPane
-            projectId={projectId}
-            projectTitle={project?.title}
-            projectType={project?.project_type}
-            genre={project?.genre ?? undefined}
-            blocks={blocks as any}
-            activeBlockId={activeBlockId}
-            onJumpToBlock={jumpToBlock}
-            onAddScene={addSceneAtEnd}
-          />
-        </aside>
-        )}
+      {/* Basic Mode gets a compact progress pill, not a full curriculum strip. */}
+      {!focus && isBasic && (
+        <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3 flex items-center gap-3">
+          <BasicProgressPill projectId={projectId} currentStep={guidedStep ?? null} />
+          {!focus && (
+            <button
+              onClick={tour.start}
+              className="ml-auto hidden md:inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
+              title="Replay the editor tour"
+            >
+              <HelpCircle className="h-3.5 w-3.5" />
+              Replay tour
+            </button>
+          )}
+        </div>
+      )}
 
-        <section className="h-[calc(100vh-104px)] min-w-0 flex flex-col p-4 sm:p-6 lg:p-6 xl:p-8 screenplay-canvas overflow-hidden">
+      {/* Advanced Mode: manuscript is single-column; panels are summoned. */}
+      <div className="grid grid-cols-1 max-w-[1600px] mx-auto">
+        <section className="min-h-[calc(100vh-64px)] min-w-0 flex flex-col p-4 sm:p-6 lg:p-8 screenplay-canvas">
           {isLoglineStep ? (
             <div className="max-w-[760px] mx-auto pt-4">
               <div className="mb-3 text-center">
@@ -680,23 +604,56 @@ function Editor() {
               </div>
             </div>
           ) : (
-          <>
-          {!focus && (guidedStep || redirect) && (
-            <details className="max-w-[760px] mx-auto mb-4 group font-sans" open>
-              <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-border/60 bg-card/40 text-xs text-muted-foreground hover:bg-card/60">
-                <span className="flex items-center gap-2">
-                  <BookOpen className="h-3.5 w-3.5" />
-                  <span>
-                    Guided step{guidedStep ? `: ${guidedStep.replace(/_/g, " ")}` : ""}
-                  </span>
-                </span>
-                <span className="text-[10px] uppercase tracking-wider opacity-60 group-open:opacity-100">
-                  Click to collapse
-                </span>
-              </summary>
-              <div className="mt-3 space-y-3">
+            <>
+              {/* Basic Mode next-step card: page + one clear thing to do next. */}
+              {!focus && isBasic && guidedStep && (
                 <div data-tour="step-coach">
-                  {guidedStep && (
+                  <StepCoach
+                    projectId={projectId}
+                    stepKey={guidedStep}
+                    progress={stepProgress}
+                    onPrimary={handleCoachPrimary}
+                    onMarkComplete={handleMarkComplete}
+                    primaryBusy={primaryBusy || insertTemplate.isPending}
+                    markBusy={markStepComplete.isPending}
+                  />
+                  {redirect && (
+                    <div className="max-w-[680px] mx-auto mb-4 rounded-lg border border-border bg-card/50 p-3 flex items-center gap-3 flex-wrap font-sans">
+                      <p className="text-xs flex-1">
+                        This step has a dedicated page: <strong>{redirect.destination}</strong>.
+                      </p>
+                      <Button asChild size="sm" variant="outline">
+                        <Link
+                          to={
+                            redirect.destination === "characters" ? "/characters/$projectId" :
+                            redirect.destination === "story-arc" ? "/story-arc/$projectId" :
+                            redirect.destination === "scenes" ? "/scenes/$projectId" :
+                            redirect.destination === "pitch" ? "/pitch/$projectId" :
+                            "/tableread/$projectId"
+                          }
+                          params={{ projectId }}
+                        >
+                          Open {redirect.destination} <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Advanced-only: subtle inline guided-step details block if guided is active but not Basic. */}
+              {!focus && !isBasic && guidedStep && (
+                <details className="max-w-[760px] mx-auto mb-4 group font-sans">
+                  <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-border/60 bg-card/40 text-xs text-muted-foreground hover:bg-card/60">
+                    <span className="flex items-center gap-2">
+                      <BookOpen className="h-3.5 w-3.5" />
+                      <span>Guided step: {guidedStep.replace(/_/g, " ")}</span>
+                    </span>
+                    <span className="text-[10px] uppercase tracking-wider opacity-60 group-open:opacity-100">
+                      Click to open
+                    </span>
+                  </summary>
+                  <div className="mt-3">
                     <StepCoach
                       projectId={projectId}
                       stepKey={guidedStep}
@@ -706,203 +663,185 @@ function Editor() {
                       primaryBusy={primaryBusy || insertTemplate.isPending}
                       markBusy={markStepComplete.isPending}
                     />
-                  )}
-                </div>
-                {redirect && (
-                  <div className="rounded-lg border border-border bg-card/50 p-3 flex items-center gap-3 flex-wrap">
-                    <p className="text-xs flex-1">
-                      This step has a dedicated page: <strong>{redirect.destination}</strong>.
-                    </p>
-                    <Button asChild size="sm" variant="outline">
-                      <Link
-                        to={
-                          redirect.destination === "characters" ? "/characters/$projectId" :
-                          redirect.destination === "story-arc" ? "/story-arc/$projectId" :
-                          redirect.destination === "scenes" ? "/scenes/$projectId" :
-                          redirect.destination === "pitch" ? "/pitch/$projectId" :
-                          "/tableread/$projectId"
-                        }
-                        params={{ projectId }}
-                      >
-                        Open {redirect.destination} <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
-                      </Link>
-                    </Button>
                   </div>
-                )}
+                </details>
+              )}
+
+              {/* Advanced-only: quiet Story Builder / add-scene affordance. Kept lightweight. */}
+              {!focus && !isBasic && (
+                <div className="max-w-[680px] mx-auto mb-3 flex items-center justify-end gap-2 font-sans px-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-xs"
+                    onClick={() => setStoryBuilderOpen(true)}
+                    title="Generate logline, outline, and starter characters"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Story Builder
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={addSceneAtEnd}
+                    title="Add a new scene heading at the end"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Scene
+                  </Button>
+                </div>
+              )}
+
+              <SaveStatusBanner
+                visible={saveStatus === "error" || failedCount > 0}
+                failedCount={failedCount}
+                onRetry={retryFailed}
+                onCopyAll={copyAllText}
+              />
+
+              <div className="flex-1 min-h-0">
+                <ScreenplayDocumentEditor
+                  ref={editorRef}
+                  projectId={projectId}
+                  initialBlocks={blocks as any[]}
+                  blocksLoading={blocksLoading}
+                  characters={characters as CharacterHit[]}
+                  onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
+                  onActiveBlockChange={setActiveMeta}
+                  onBlockCreated={handleBlockCreated}
+                  onDraftRestored={handleDraftRestored}
+                  onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
+                  onDraftWithAi={draftOpeningWithAi}
+                  onInsertTemplate={() => void insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
+                  primaryBusy={primaryBusy || insertTemplate.isPending}
+                  persistence={persistence}
+                  projectDictionary={dictionary.termSet}
+                  rejectedFixes={rejectedFixes}
+                  screenplayLanguage={screenplayLanguage}
+                  knownLanguages={knownLanguages}
+                  onAddDictionaryTerm={(term, category) => {
+                    dictionary.addTerm({
+                      term,
+                      category: (category ?? "custom") as never,
+                      createdFrom: "script_detection",
+                    });
+                    toast.success(`Added "${term}" to project dictionary`, { duration: 1500 });
+                  }}
+                  onRejectFormatSuggestion={(original) => {
+                    import("@/components/editor/formatOverrideMemory").then((m) =>
+                      m.markFixRejected(projectId, original),
+                    );
+                  }}
+                />
               </div>
-            </details>
-          )}
 
-          {!focus && (
-          <div className="max-w-[680px] mx-auto mb-3 flex items-center justify-between gap-3 font-sans px-1">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <BookOpen className="h-3.5 w-3.5" />
-              <span className="font-mono tabular-nums">
-                Page {currentPage} of {pageCount}
-              </span>
-              {activeScene && (
-                <>
-                  <span className="opacity-40">·</span>
-                  <span>Act {activeScene.act === 1 ? "I" : activeScene.act === 2 ? "II" : "III"} · Scene {activeScene.index + 1} of {outline.length}</span>
-                </>
+              <EditorCommandBar
+                currentBlockType={activeBlockType}
+                hasFocus={!!activeMeta}
+                onCycleType={cmdCycleType}
+                onNewLine={cmdNewLine}
+                onAiContinue={cmdAiContinue}
+                aiBusy={aiContinueBusy}
+              />
+              {(blocks as any[]).length > 0 && !focus && (
+                <div className="max-w-[680px] mx-auto mt-4 flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => {
+                    const local = editorRef.current?.getBlocks() ?? (blocks as any[]);
+                    const text = local.filter((b: any) => b.block_type !== "note").map(formatExport).join("\n\n");
+                    navigator.clipboard.writeText(text);
+                    toast.success("Screenplay copied to clipboard");
+                  }}><Copy className="h-3.5 w-3.5 mr-1.5" />Copy</Button>
+                  <Button variant="outline" size="sm" onClick={() => {
+                    const local = editorRef.current?.getBlocks() ?? (blocks as any[]);
+                    const text = local.filter((b: any) => b.block_type !== "note").map(formatExport).join("\n\n");
+                    const blob = new Blob([text], { type: "text/plain" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `${(project?.title || "screenplay").replace(/[^a-z0-9]+/gi, "_")}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}>Download .txt</Button>
+                </div>
               )}
-              {!activeScene && outline.length > 0 && (
-                <>
-                  <span className="opacity-40">·</span>
-                  <span>{outline.length} scene{outline.length === 1 ? "" : "s"}</span>
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                className="h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90 shadow-md font-semibold"
-                onClick={() => setStoryBuilderOpen(true)}
-                title="Generate logline, outline, and starter characters"
-              >
-                <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Story Builder
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs"
-                onClick={addSceneAtEnd}
-                title="Add a new scene heading at the end"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" /> Scene
-              </Button>
-            </div>
-          </div>
-          )}
-
-          {!focus && (
-          <CanvasToolbar
-            blockType={activeBlockType}
-            onChangeType={(t) => editorRef.current?.changeActiveType(t)}
-            pageCount={pageCount}
-            currentPage={currentPage}
-            wordCount={(blocks as any[]).reduce((n: number, b: any) => n + (b.content?.trim().split(/\s+/).filter(Boolean).length ?? 0), 0)}
-            sceneCount={outline.length}
-          />
-          )}
-
-          {!focus && (
-          <div className="max-w-[760px] mx-auto mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-mono text-muted-foreground/70 px-1">
-            <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">Enter</kbd> next block</span>
-            <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">Tab</kbd> change type</span>
-            <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">/</kbd> menu</span>
-            <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">⌘↵</kbd> AI continue</span>
-          </div>
-          )}
-
-
-          <SaveStatusBanner
-            visible={saveStatus === "error" || failedCount > 0}
-            failedCount={failedCount}
-            onRetry={retryFailed}
-            onCopyAll={copyAllText}
-          />
-
-          <div className="flex-1 min-h-0">
-            <ScreenplayDocumentEditor
-              ref={editorRef}
-              projectId={projectId}
-              initialBlocks={blocks as any[]}
-              blocksLoading={blocksLoading}
-              characters={characters as CharacterHit[]}
-              onCreateCharacter={(name) => createCharacter.mutateAsync(name) as Promise<any>}
-              onActiveBlockChange={setActiveMeta}
-              onBlockCreated={handleBlockCreated}
-              onDraftRestored={handleDraftRestored}
-              onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
-              onDraftWithAi={draftOpeningWithAi}
-              onInsertTemplate={() => void insertTemplate.mutateAsync(OPENING_SCENE_TEMPLATE)}
-              primaryBusy={primaryBusy || insertTemplate.isPending}
-              persistence={persistence}
-              projectDictionary={dictionary.termSet}
-              rejectedFixes={rejectedFixes}
-              screenplayLanguage={screenplayLanguage}
-              knownLanguages={knownLanguages}
-              onAddDictionaryTerm={(term, category) => {
-                dictionary.addTerm({
-                  term,
-                  category: (category ?? "custom") as never,
-                  createdFrom: "script_detection",
-                });
-                toast.success(`Added "${term}" to project dictionary`, { duration: 1500 });
-              }}
-              onRejectFormatSuggestion={(original) => {
-                import("@/components/editor/formatOverrideMemory").then((m) =>
-                  m.markFixRejected(projectId, original),
-                );
-              }}
-            />
-
-          </div>
-
-          <EditorCommandBar
-            currentBlockType={activeBlockType}
-            hasFocus={!!activeMeta}
-            onCycleType={cmdCycleType}
-            onNewLine={cmdNewLine}
-            onAiContinue={cmdAiContinue}
-            aiBusy={aiContinueBusy}
-          />
-          {(blocks as any[]).length > 0 && (
-            <div className="max-w-[680px] mx-auto mt-4 flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => {
-                const local = editorRef.current?.getBlocks() ?? (blocks as any[]);
-                const text = local.filter((b: any) => b.block_type !== "note").map(formatExport).join("\n\n");
-                navigator.clipboard.writeText(text);
-                toast.success("Screenplay copied to clipboard");
-              }}><Copy className="h-3.5 w-3.5 mr-1.5" />Copy</Button>
-              <Button variant="outline" size="sm" onClick={() => {
-                const local = editorRef.current?.getBlocks() ?? (blocks as any[]);
-                const text = local.filter((b: any) => b.block_type !== "note").map(formatExport).join("\n\n");
-                const blob = new Blob([text], { type: "text/plain" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `${(project?.title || "screenplay").replace(/[^a-z0-9]+/gi, "_")}.txt`;
-                a.click();
-                URL.revokeObjectURL(url);
-              }}>Download .txt</Button>
-            </div>
-          )}
-          </>
+            </>
           )}
         </section>
-
-        {!writeMode.on && (
-        <aside
-          data-tour="coach-panel"
-          aria-label="Director's Chair"
-          className="hidden xl:block border-l border-border/40 min-h-[calc(100vh-104px)] bg-card/10 max-h-[calc(100vh-104px)] overflow-auto sticky top-0 self-start"
-        >
-          <div className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground px-4 pt-4 pb-2 flex items-center gap-1.5 border-b border-border/30">
-            <Clapperboard className="h-3 w-3" /> Director's Chair
-          </div>
-          <CoachPane
-            projectId={projectId}
-            blocks={blocks as any}
-            activeBlockId={activeBlockId}
-            activeBlockType={activeBlockType}
-            defaultTab={coachDefaultTab}
-            onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
-            aiTools={AI_TOOLS}
-            aiTool={aiTool}
-            setAiTool={setAiTool}
-            aiPrompt={aiPrompt}
-            setAiPrompt={setAiPrompt}
-            aiOutput={aiOutput}
-            aiLoading={aiLoading}
-            onRunAi={runAi}
-          />
-        </aside>
-        )}
-
       </div>
-      {!focus && !isBasic && <FeatureDock projectId={projectId} />}
+
+      {/* Summoned panels: Script Map & Director's Chair as right-side drawers. */}
+      {!focus && (
+        <Sheet open={leftDrawerOpen} onOpenChange={setLeftDrawerOpen}>
+          <SheetContent side="left" className="w-[320px] p-4 overflow-auto">
+            <div className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground mb-3 flex items-center gap-1.5">
+              <MapIcon className="h-3 w-3" /> Script Map
+            </div>
+            <StoryNavigatorPane
+              projectId={projectId}
+              projectTitle={project?.title}
+              projectType={project?.project_type}
+              genre={project?.genre ?? undefined}
+              blocks={blocks as any}
+              activeBlockId={activeBlockId}
+              onJumpToBlock={(id) => { jumpToBlock(id); setLeftDrawerOpen(false); }}
+              onAddScene={() => { addSceneAtEnd(); setLeftDrawerOpen(false); }}
+            />
+          </SheetContent>
+        </Sheet>
+      )}
+      {!focus && (
+        <Sheet open={rightDrawerOpen} onOpenChange={setRightDrawerOpen}>
+          <SheetContent side="right" className="w-[380px] p-0 overflow-auto">
+            <CoachPane
+              projectId={projectId}
+              blocks={blocks as any}
+              activeBlockId={activeBlockId}
+              activeBlockType={activeBlockType}
+              defaultTab={coachDefaultTab}
+              onOpenStoryBuilder={() => { setStoryBuilderOpen(true); setRightDrawerOpen(false); }}
+              aiTools={AI_TOOLS}
+              aiTool={aiTool}
+              setAiTool={setAiTool}
+              aiPrompt={aiPrompt}
+              setAiPrompt={setAiPrompt}
+              aiOutput={aiOutput}
+              aiLoading={aiLoading}
+              onRunAi={runAi}
+            />
+          </SheetContent>
+        </Sheet>
+      )}
+      {/* Tools drawer: reuse FeatureDock content in a bottom sheet. */}
+      {!focus && (
+        <Sheet open={toolsDrawerOpen} onOpenChange={setToolsDrawerOpen}>
+          <SheetContent side="bottom" className="p-0 max-h-[70vh] overflow-auto">
+            <div className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground px-4 pt-4 flex items-center gap-1.5">
+              <Clapperboard className="h-3 w-3" /> Tools
+            </div>
+            <FeatureDock projectId={projectId} />
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {/* Floating summoner cluster — page-first, tools on demand. */}
+      {!focus && !isLoglineStep && (
+        <EditorSummonBar
+          onOpenScriptMap={() => setLeftDrawerOpen(true)}
+          onOpenDirector={() => setRightDrawerOpen(true)}
+          onOpenTools={isBasic ? undefined : () => setToolsDrawerOpen(true)}
+          formatContent={
+            <CanvasToolbar
+              blockType={activeBlockType}
+              onChangeType={(t) => editorRef.current?.changeActiveType(t)}
+              pageCount={pageCount}
+              currentPage={currentPage}
+              wordCount={(blocks as any[]).reduce((n: number, b: any) => n + (b.content?.trim().split(/\s+/).filter(Boolean).length ?? 0), 0)}
+              sceneCount={outline.length}
+            />
+          }
+        />
+      )}
+
+      {!focus && <GuidedRail projectId={projectId} />}
       <EditorTour isOpen={tour.isOpen} onClose={tour.stop} />
       <StoryBuilder
         projectId={projectId}
@@ -914,6 +853,7 @@ function Editor() {
     </AppShell>
   );
 }
+
 
 
 function formatExport(b: any): string {
