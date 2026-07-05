@@ -28,9 +28,10 @@ import { useAutosave } from "@/hooks/use-autosave";
 import {
   upsertCharacter, generateFullCharacter, generateBackstory, generateTMHProfile,
   generateDialogueVoice, generateVisualPrompt, runMoralPressureTest, analyzeCharacterArc,
-  testDialogue, findContradictions, suggestSceneUse, generatePortrait,
+  testDialogue, findContradictions, suggestSceneUse, generatePortrait, getImageGenStatus,
 } from "@/lib/characters.functions";
 import { listElevenLabsVoices } from "@/lib/elevenlabs-voices.functions";
+import { GuidedCharacterBuilder } from "./GuidedCharacterBuilder";
 
 const TextField = ({ label, value, onChange, multiline, rows = 2, placeholder }: any) => (
   <div>
