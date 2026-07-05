@@ -42,6 +42,10 @@ export const aiAssist = createServerFn({ method: "POST" })
       .from("projects").select("id").eq("id", data.projectId).maybeSingle();
     if (pe || !p) throw new Error("Project not found");
 
+    // Meter monthly AI assists. Throws USAGE_LIMIT when the tier cap is reached.
+    await consumeUsage(context.supabase, "ai_assists", 1);
+
+
     const gateway = createLovableAiGatewayProvider(key);
     const toolGuidance = TOOL_PROMPTS[data.tool] ?? "";
     const prompt = [
