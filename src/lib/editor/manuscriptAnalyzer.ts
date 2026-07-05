@@ -207,7 +207,12 @@ export function tallyCharacters(blocks: Block[]): CharacterTally[] {
     }
   }
 
-  return [...map.values()].sort((a, b) => b.lineCount - a.lineCount);
+  // Only surface speakers that actually spoke at least once. Prevents stray
+  // character blocks (or misclassified structural lines that slipped past the
+  // filter) from polluting the Detected Speakers list.
+  return [...map.values()]
+    .filter((c) => c.lineCount > 0)
+    .sort((a, b) => b.lineCount - a.lineCount);
 }
 
 /** Rough page count using the industry rule of ~55 lines per page. */
