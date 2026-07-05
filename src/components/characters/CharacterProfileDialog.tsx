@@ -86,6 +86,8 @@ export function CharacterProfileDialog({
   });
 
   const [local, setLocal] = useState<any>(null);
+  const { on: focusOn } = useWriteMode();
+  const showTruthTab = !focusOn; // Focus mode hides the tab entirely.
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [pressureOut, setPressureOut] = useState<string>("");
   const [dialogueOut, setDialogueOut] = useState<string>("");
