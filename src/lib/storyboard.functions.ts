@@ -21,9 +21,12 @@ export const generateStoryboardPanel = createServerFn({ method: "POST" })
     if (!key) throw new Error("AI not configured");
 
     await requireFeature(context.supabase, context.userId, "storyboard");
+    // Meter each storyboard panel against the tier's monthly cap.
+    await consumeUsage(context.supabase, "storyboard_panels", 1);
 
     const { data: p } = await context.supabase.from("projects").select("id").eq("id", data.projectId).maybeSingle();
     if (!p) throw new Error("Project not found");
+
 
 
     const fullPrompt = `${data.prompt}${data.style ? `. Visual style: ${data.style}` : ""}. Cinematic, 16:9, dramatic lighting.`;
