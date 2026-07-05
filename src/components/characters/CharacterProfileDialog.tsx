@@ -266,7 +266,15 @@ export function CharacterProfileDialog({
                   </div>
                 </TabsContent>
 
+                {/* TRUTH CHECK — Would They Do This? */}
+                {showTruthTab && (
+                  <TabsContent value="truth" className="mt-0">
+                    <WouldTheyDoThisTab projectId={projectId} character={local} />
+                  </TabsContent>
+                )}
+
                 {/* TMH */}
+
                 <TabsContent value="tmh" className="space-y-4 mt-0">
                   <TMHInfoPanel />
                   <AiBar label="Generate TMH Profile" busy={aiBusy === "tmh"} onClick={() => runAi("tmh", () => callTMH({ data: { characterId } }))} />
