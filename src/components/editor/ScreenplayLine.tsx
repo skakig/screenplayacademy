@@ -571,7 +571,9 @@ export function ScreenplayLine({
         />
       )}
 
-      {isSceneHeading && (focused || beat) && (
+      {isSceneHeading && annotationMode !== "silent" && (
+        (annotationMode === "full" ? (focused || beat) : focused)
+      ) && (
         <div className="absolute right-0 -bottom-7 z-10 font-sans opacity-70 hover:opacity-100 focus-within:opacity-100 transition-opacity">
           <SceneBeatPicker
             value={beat}
