@@ -300,7 +300,7 @@ export function ScreenplayLine({
       }
     }, 600);
     return () => clearTimeout(id);
-  }, [block.content, block.block_type, focused, prevBlockType, languageContext?.characterNames, dismissedSuggestions]);
+  }, [block.content, block.block_type, focused, prevBlockType, languageContext?.characterNames, dismissedSuggestions, annotationMode]);
 
   const acceptSuggestion = () => {
     if (!suggestion) return;
