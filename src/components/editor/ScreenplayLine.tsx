@@ -242,6 +242,7 @@ export function ScreenplayLine({
   useEffect(() => {
     // Re-scan only when block content settles (debounced) and the line is
     // not actively being typed. Never per keystroke.
+    if (annotationMode === "silent") { setUnknownTerms([]); return; }
     if (!languageContext) return;
     if (focused) return;
     const id = setTimeout(() => {
