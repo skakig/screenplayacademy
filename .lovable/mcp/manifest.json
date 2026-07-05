@@ -138,43 +138,83 @@
             },
             "scene_heading": {
               "description": "Slugline, e.g. 'INT. WAREHOUSE - NIGHT'.",
-              "type": "string",
-              "maxLength": 500
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "title": {
-              "description": "Optional short scene title.",
-              "type": "string",
-              "maxLength": 300
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "location": {
-              "type": "string",
-              "maxLength": 200
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "time_of_day": {
-              "description": "e.g. DAY, NIGHT, MORNING.",
-              "type": "string",
-              "maxLength": 60
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "emotional_purpose": {
-              "type": "string",
-              "maxLength": 2000
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "plot_purpose": {
-              "type": "string",
-              "maxLength": 2000
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "conflict": {
-              "type": "string",
-              "maxLength": 2000
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "order_index": {
               "type": "integer",
               "minimum": 0,
-              "maximum": 9007199254740991
+              "maximum": 100000
             },
             "initial_blocks": {
-              "description": "Optional initial screenplay blocks written into the new scene.",
-              "maxItems": 200,
+              "description": "Optional initial screenplay blocks written into the new scene (max 50).",
+              "maxItems": 50,
               "type": "array",
               "items": {
                 "type": "object",
@@ -193,8 +233,7 @@
                     ]
                   },
                   "content": {
-                    "type": "string",
-                    "maxLength": 8000
+                    "type": "string"
                   }
                 },
                 "required": [
