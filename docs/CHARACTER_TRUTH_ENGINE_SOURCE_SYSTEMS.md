@@ -87,11 +87,9 @@ Do not copy VerbBros UI, lesson routes, language drills, CEFR mechanics, or unre
 
 ### PfHU / Profile for Human Understanding
 
-PfHU is not a separate visible product title in every workspace view, but the relevant prior work may live in projects such as:
+PfHU is not a separate visible product title in every workspace view, the relevant prior work  lives in:
 
 - `@VerbBros Academy`
-- `@personality-insight-analyzer`
-- `@Persona Insights`
 
 Use these as source references for adaptive human-understanding patterns.
 
@@ -112,22 +110,6 @@ In SceneSmith:
 - It should never get in the way of writing.
 
 Do not expose raw PfHU logs as a user-facing panel in the first pass.
-
----
-
-## Secondary Workspace References
-
-The following visible Lovable projects may contain reusable patterns, but they are not primary source systems for the first Character Truth Engine pass:
-
-- `@Hermes Forge Console`
-- `@SeedVault Hub & Store`
-- `@Emerald Edge`
-- `@Cyber Canvas Studio`
-- `@story-voyage-ai`
-- `@Vector Art Studio`
-- `@dice-strategy-oracle`
-
-Only reference these if a specific implementation task requires a pattern they contain. Do not broaden the Character Truth Engine scope by pulling in unrelated product ideas.
 
 ---
 
@@ -174,7 +156,7 @@ VerbBros Academy
 → ITS / adaptive tutoring / repair loops
 → SceneSmith screenplay craft coaching
 
-PfHU / Persona-style insight systems
+PfHU / VerbBros Academy
 → user understanding and adaptive guidance
 → SceneSmith writer-specific coaching level
 
