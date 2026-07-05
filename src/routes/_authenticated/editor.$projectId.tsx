@@ -392,6 +392,7 @@ function Editor() {
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const [toolsDrawerOpen, setToolsDrawerOpen] = useState(false);
+  const writeMode = useWriteMode();
   const focus = writeMode.on;
 
   const { data: onboarding } = useOnboarding();
