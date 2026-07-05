@@ -14,6 +14,7 @@ import {
   evaluateDialogueFit,
   type CharacterTruthResult,
 } from "@/lib/story-intelligence/characterTruthEngine";
+import { normalizeSceneStateForTruthEngine } from "@/lib/story-intelligence/sceneStateAdapter";
 
 type Mode = "basic" | "advanced";
 
@@ -70,6 +71,18 @@ export function WouldTheyDoThisTab({
         .maybeSingle()).data ?? null,
   });
 
+  const { data: sceneBeat = null } = useQuery<any>({
+    enabled: !!sceneId,
+    queryKey: ["truth-scene-beat", sceneId],
+    queryFn: async () =>
+      (await supabase
+        .from("scene_arc_beats")
+        .select("*")
+        .eq("scene_id", sceneId)
+        .limit(1)
+        .maybeSingle()).data ?? null,
+  });
+
   const sceneState = useMemo(
     () => (sceneId ? sceneStates.find((s: any) => s.scene_id === sceneId) : null),
     [sceneId, sceneStates],
@@ -77,7 +90,8 @@ export function WouldTheyDoThisTab({
 
   const analyze = () => {
     if (!character) return;
-    const ctx = { sceneState, relationships, arc };
+    const normalized = normalizeSceneStateForTruthEngine(sceneState, sceneBeat);
+    const ctx = { sceneState: normalized, relationships, arc };
     const r = kind === "action"
       ? evaluateActionFit(character, text, ctx)
       : evaluateDialogueFit(character, text, ctx);

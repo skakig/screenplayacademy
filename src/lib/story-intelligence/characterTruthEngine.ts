@@ -364,6 +364,13 @@ export function evaluateActionFit(
   // Scene pressure.
   const pressureText = nonEmpty(ctx.sceneState?.moral_pressure) ? String(ctx.sceneState!.moral_pressure) : "";
   if (pressureText) evidence.push({ source: "scene", field: "moral_pressure", value: pressureText.slice(0, 80) });
+  // Additional scene context — evidence-only, no scoring change.
+  if (ctx.sceneState) {
+    for (const f of ["scene_goal", "scene_turn", "stakes_change", "character_choice"] as const) {
+      const v = (ctx.sceneState as any)[f];
+      if (nonEmpty(v)) evidence.push({ source: "scene", field: f, value: String(v).slice(0, 80) });
+    }
+  }
 
   // Wound-based sensitivity — betrayal wound + betrayal action = high pressure.
   const woundText = String(character.wound ?? "").toLowerCase();
