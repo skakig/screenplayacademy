@@ -1,6 +1,13 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-import { assertSceneWritable, fail, ok, unauth, userClient } from "./_shared";
+import {
+  assertSceneWritable,
+  blockContent,
+  fail,
+  ok,
+  unauth,
+  userClient,
+} from "./_shared";
 
 const BLOCK_TYPES = [
   "scene_heading",
@@ -13,11 +20,14 @@ const BLOCK_TYPES = [
   "note",
 ] as const;
 
+// Batch cap — external assistants should stream in chunks, not dump manuscripts.
+const MAX_BLOCKS_PER_CALL = 50;
+
 export default defineTool({
   name: "append_script_blocks",
   title: "Append screenplay blocks to a scene",
   description:
-    "Append one or more screenplay blocks (action, character, dialogue, parenthetical, transition, shot, note, scene_heading) to the end of a scene. Refuses if another collaborator holds an active lock on the scene. Respects RLS.",
+    `Append up to ${MAX_BLOCKS_PER_CALL} screenplay blocks (action, character, dialogue, parenthetical, transition, shot, note, scene_heading) to the end of a scene. Refuses if another collaborator holds an active lock on the scene. Respects RLS.`,
   inputSchema: {
     project_id: z.string().uuid(),
     scene_id: z.string().uuid(),
@@ -25,12 +35,12 @@ export default defineTool({
       .array(
         z.object({
           block_type: z.enum(BLOCK_TYPES),
-          content: z.string().max(8000),
+          content: blockContent,
           character_id: z.string().uuid().nullable().optional(),
         }),
       )
       .min(1)
-      .max(200),
+      .max(MAX_BLOCKS_PER_CALL),
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   handler: async ({ project_id, scene_id, blocks }, ctx) => {
@@ -38,6 +48,19 @@ export default defineTool({
     const userId = ctx.getUserId();
     if (!userId) return unauth();
     const supabase = userClient(ctx);
+
+    // Verify scene belongs to project — prevents cross-project injection even
+    // under permissive RLS.
+    const { data: scene, error: sceneErr } = await supabase
+      .from("scenes")
+      .select("id, project_id")
+      .eq("id", scene_id)
+      .maybeSingle();
+    if (sceneErr) return fail(sceneErr.message);
+    if (!scene) return fail("Scene not found.");
+    if (scene.project_id !== project_id) {
+      return fail("scene_id does not belong to the given project_id.");
+    }
 
     const gate = await assertSceneWritable(supabase, scene_id, userId);
     if (!gate.ok) return fail(gate.message);

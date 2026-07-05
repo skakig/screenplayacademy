@@ -1,6 +1,14 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-import { fail, ok, unauth, userClient } from "./_shared";
+import {
+  blockContent,
+  fail,
+  longTextNullable,
+  ok,
+  shortTextNullable,
+  unauth,
+  userClient,
+} from "./_shared";
 
 const BLOCK_TYPES = [
   "scene_heading",
@@ -13,6 +21,10 @@ const BLOCK_TYPES = [
   "note",
 ] as const;
 
+// Cap initial payload aggressively — a fresh scene doesn't need 200 blocks.
+const MAX_INITIAL_BLOCKS = 50;
+const MAX_ORDER_INDEX = 100_000;
+
 export default defineTool({
   name: "create_scene",
   title: "Create a scene",
@@ -20,28 +32,28 @@ export default defineTool({
     "Create a new scene in a screenplay project. Order is appended to the end of the project unless order_index is provided. Respects project RLS — only the project owner can create scenes.",
   inputSchema: {
     project_id: z.string().uuid().describe("The project's UUID."),
-    scene_heading: z
-      .string()
-      .max(500)
-      .optional()
-      .describe("Slugline, e.g. 'INT. WAREHOUSE - NIGHT'."),
-    title: z.string().max(300).optional().describe("Optional short scene title."),
-    location: z.string().max(200).optional(),
-    time_of_day: z.string().max(60).optional().describe("e.g. DAY, NIGHT, MORNING."),
-    emotional_purpose: z.string().max(2000).optional(),
-    plot_purpose: z.string().max(2000).optional(),
-    conflict: z.string().max(2000).optional(),
-    order_index: z.number().int().min(0).optional(),
+    scene_heading: shortTextNullable(300).optional().describe(
+      "Slugline, e.g. 'INT. WAREHOUSE - NIGHT'.",
+    ),
+    title: shortTextNullable(200).optional(),
+    location: shortTextNullable(200).optional(),
+    time_of_day: shortTextNullable(60).optional(),
+    emotional_purpose: longTextNullable(2000).optional(),
+    plot_purpose: longTextNullable(2000).optional(),
+    conflict: longTextNullable(2000).optional(),
+    order_index: z.number().int().min(0).max(MAX_ORDER_INDEX).optional(),
     initial_blocks: z
       .array(
         z.object({
           block_type: z.enum(BLOCK_TYPES),
-          content: z.string().max(8000),
+          content: blockContent,
         }),
       )
-      .max(200)
+      .max(MAX_INITIAL_BLOCKS)
       .optional()
-      .describe("Optional initial screenplay blocks written into the new scene."),
+      .describe(
+        `Optional initial screenplay blocks written into the new scene (max ${MAX_INITIAL_BLOCKS}).`,
+      ),
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   handler: async (input, ctx) => {

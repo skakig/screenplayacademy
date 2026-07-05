@@ -138,43 +138,83 @@
             },
             "scene_heading": {
               "description": "Slugline, e.g. 'INT. WAREHOUSE - NIGHT'.",
-              "type": "string",
-              "maxLength": 500
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "title": {
-              "description": "Optional short scene title.",
-              "type": "string",
-              "maxLength": 300
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "location": {
-              "type": "string",
-              "maxLength": 200
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "time_of_day": {
-              "description": "e.g. DAY, NIGHT, MORNING.",
-              "type": "string",
-              "maxLength": 60
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "emotional_purpose": {
-              "type": "string",
-              "maxLength": 2000
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "plot_purpose": {
-              "type": "string",
-              "maxLength": 2000
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "conflict": {
-              "type": "string",
-              "maxLength": 2000
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "order_index": {
               "type": "integer",
               "minimum": 0,
-              "maximum": 9007199254740991
+              "maximum": 100000
             },
             "initial_blocks": {
-              "description": "Optional initial screenplay blocks written into the new scene.",
-              "maxItems": 200,
+              "description": "Optional initial screenplay blocks written into the new scene (max 50).",
+              "maxItems": 50,
               "type": "array",
               "items": {
                 "type": "object",
@@ -193,8 +233,7 @@
                     ]
                   },
                   "content": {
-                    "type": "string",
-                    "maxLength": 8000
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -231,8 +270,7 @@
             "scene_heading": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 500
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -242,8 +280,7 @@
             "title": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 300
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -253,8 +290,7 @@
             "location": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 200
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -264,8 +300,7 @@
             "time_of_day": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 60
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -275,8 +310,7 @@
             "emotional_purpose": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 2000
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -286,8 +320,7 @@
             "plot_purpose": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 2000
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -297,8 +330,7 @@
             "conflict": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 2000
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -308,8 +340,7 @@
             "reversal": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 2000
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -318,7 +349,14 @@
             },
             "status": {
               "type": "string",
-              "maxLength": 40
+              "enum": [
+                "draft",
+                "in_progress",
+                "needs_review",
+                "locked",
+                "final",
+                "archived"
+              ]
             }
           },
           "required": [
@@ -355,15 +393,12 @@
               "type": "object",
               "properties": {
                 "name": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 200
+                  "type": "string"
                 },
                 "alias": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 200
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -373,8 +408,7 @@
                 "age": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 60
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -384,8 +418,7 @@
                 "character_type": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 60
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -395,8 +428,7 @@
                 "archetype": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 200
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -406,8 +438,7 @@
                 "external_goal": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 2000
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -417,8 +448,7 @@
                 "internal_need": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 2000
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -428,8 +458,7 @@
                 "defining_wound": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 2000
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -439,8 +468,7 @@
                 "fear": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 2000
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -450,8 +478,7 @@
                 "contradiction": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 2000
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -461,8 +488,7 @@
                 "character_arc": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 4000
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -472,8 +498,7 @@
                 "color_palette": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 500
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -483,8 +508,7 @@
                 "costume_notes": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 2000
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -494,8 +518,7 @@
                 "favorite_phrases": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 2000
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -515,7 +538,7 @@
       {
         "name": "append_script_blocks",
         "title": "Append screenplay blocks to a scene",
-        "description": "Append one or more screenplay blocks (action, character, dialogue, parenthetical, transition, shot, note, scene_heading) to the end of a scene. Refuses if another collaborator holds an active lock on the scene. Respects RLS.",
+        "description": "Append up to 50 screenplay blocks (action, character, dialogue, parenthetical, transition, shot, note, scene_heading) to the end of a scene. Refuses if another collaborator holds an active lock on the scene. Respects RLS.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -537,7 +560,7 @@
             },
             "blocks": {
               "minItems": 1,
-              "maxItems": 200,
+              "maxItems": 50,
               "type": "array",
               "items": {
                 "type": "object",
@@ -556,8 +579,7 @@
                     ]
                   },
                   "content": {
-                    "type": "string",
-                    "maxLength": 8000
+                    "type": "string"
                   },
                   "character_id": {
                     "anyOf": [
@@ -606,8 +628,7 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             },
             "content": {
-              "type": "string",
-              "maxLength": 8000
+              "type": "string"
             },
             "block_type": {
               "type": "string",

@@ -1,5 +1,66 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { ToolContext } from "@lovable.dev/mcp-js";
+import { z } from "zod";
+
+// ---------- Shared validation primitives ----------
+// Payload caps are intentionally conservative. MCP callers are external
+// assistants; keeping bounds tight prevents accidental large writes,
+// denial-of-service via oversized inserts, and DB row-size surprises.
+
+/** Trim, collapse interior whitespace runs, strip control chars except \n and \t. */
+export function sanitizeText(input: string): string {
+  return input
+    // Strip C0 control chars other than \t (\x09) and \n (\x0A), and DEL.
+    .replace(/[\x00-\x08\x0B-\x1F\x7F]/g, "")
+    .replace(/\r\n?/g, "\n")
+    .trim();
+}
+
+/** Short, single-line field (headings, titles, locations). No newlines. */
+export const shortText = (max: number) =>
+  z
+    .string()
+    .transform(sanitizeText)
+    .refine((v) => !v.includes("\n"), { message: "Must be a single line." })
+    .refine((v) => v.length <= max, { message: `Must be ≤ ${max} chars.` });
+
+/** Optional short text; empty string becomes null. */
+export const shortTextNullable = (max: number) =>
+  z
+    .string()
+    .transform(sanitizeText)
+    .transform((v) => (v.length === 0 ? null : v))
+    .refine((v) => v === null || !v.includes("\n"), { message: "Must be a single line." })
+    .refine((v) => v === null || v.length <= max, { message: `Must be ≤ ${max} chars.` })
+    .nullable();
+
+/** Multi-line prose (purpose, arc, notes). */
+export const longText = (max: number) =>
+  z
+    .string()
+    .transform(sanitizeText)
+    .refine((v) => v.length <= max, { message: `Must be ≤ ${max} chars.` });
+
+export const longTextNullable = (max: number) =>
+  z
+    .string()
+    .transform(sanitizeText)
+    .transform((v) => (v.length === 0 ? null : v))
+    .refine((v) => v === null || v.length <= max, { message: `Must be ≤ ${max} chars.` })
+    .nullable();
+
+/** Screenplay block content: multi-line allowed, tighter cap than free prose. */
+export const blockContent = longText(4000);
+
+/** Allowed scene status values — anything else is rejected. */
+export const SCENE_STATUS = [
+  "draft",
+  "in_progress",
+  "needs_review",
+  "locked",
+  "final",
+  "archived",
+] as const;
 
 /** Build a Supabase client that acts as the signed-in MCP user (RLS applies). */
 export function userClient(ctx: ToolContext): SupabaseClient {

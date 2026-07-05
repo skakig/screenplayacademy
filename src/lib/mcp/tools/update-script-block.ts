@@ -1,6 +1,13 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-import { assertSceneWritable, fail, ok, unauth, userClient } from "./_shared";
+import {
+  assertSceneWritable,
+  blockContent,
+  fail,
+  ok,
+  unauth,
+  userClient,
+} from "./_shared";
 
 const BLOCK_TYPES = [
   "scene_heading",
@@ -20,7 +27,7 @@ export default defineTool({
     "Update the content and/or block_type of an existing screenplay block. Refuses if another collaborator holds an active lock on the block's scene. Respects RLS.",
   inputSchema: {
     block_id: z.string().uuid(),
-    content: z.string().max(8000).optional(),
+    content: blockContent.optional(),
     block_type: z.enum(BLOCK_TYPES).optional(),
     character_id: z.string().uuid().nullable().optional(),
   },
@@ -29,6 +36,11 @@ export default defineTool({
     if (!ctx.isAuthenticated()) return unauth();
     const userId = ctx.getUserId();
     if (!userId) return unauth();
+
+    if (content === undefined && block_type === undefined && character_id === undefined) {
+      return fail("No fields to update. Provide content, block_type, or character_id.");
+    }
+
     const supabase = userClient(ctx);
 
     const { data: current, error: readErr } = await supabase
@@ -48,7 +60,6 @@ export default defineTool({
     if (content !== undefined) patch.content = content;
     if (block_type !== undefined) patch.block_type = block_type;
     if (character_id !== undefined) patch.character_id = character_id;
-    if (Object.keys(patch).length === 1) return fail("No fields to update.");
 
     const { data, error } = await supabase
       .from("script_blocks")
