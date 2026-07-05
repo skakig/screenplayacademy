@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -38,7 +38,7 @@ function safeNext(next: string): string {
 }
 
 function AuthPage() {
-  const navigate = useNavigate();
+  // Post-auth redirect derived from ?next=… (see safeNext).
   const { next } = Route.useSearch();
   const target = safeNext(next);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
