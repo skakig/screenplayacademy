@@ -553,6 +553,7 @@ function Editor() {
         ) : <span />}
         <div className="flex items-center gap-3 flex-wrap">
           <WriterDeskModeToggle />
+          {!focus && (
           <Sheet open={leftDrawerOpen} onOpenChange={setLeftDrawerOpen}>
             <SheetTrigger asChild>
               <button className="lg:hidden inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition rounded-md border border-border/60 px-2 py-1" title="Script Map">
@@ -575,6 +576,8 @@ function Editor() {
               />
             </SheetContent>
           </Sheet>
+          )}
+          {!focus && (
           <Sheet open={rightDrawerOpen} onOpenChange={setRightDrawerOpen}>
             <SheetTrigger asChild>
               <button className="xl:hidden inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition rounded-md border border-border/60 px-2 py-1" title="Director's Chair">
@@ -600,6 +603,8 @@ function Editor() {
               />
             </SheetContent>
           </Sheet>
+          )}
+          {!focus && (
           <button
             onClick={tour.start}
             className="hidden md:inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
@@ -608,10 +613,11 @@ function Editor() {
             <HelpCircle className="h-3.5 w-3.5" />
             Replay tour
           </button>
+          )}
           <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
         </div>
       </div>
-      {onboarding?.preferred_mode === "guided" && (
+      {!focus && onboarding?.preferred_mode === "guided" && (
         <GuidedStepStrip
           projectId={projectId}
           currentStep={guidedStep ?? null}
