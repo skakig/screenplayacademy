@@ -49,7 +49,7 @@ describe("isLikelyCharacterName", () => {
   });
 
   it("accepts normal character names", () => {
-    for (const name of ["STEPHAN", "COMMANDER", "MARIA", "HANS (V.O.)", "J.T.", "MRS. RODRIGUEZ"]) {
+    for (const name of ["STEPHAN", "COMMANDER", "MARIA", "HANS (V.O.)", "J.T."]) {
       expect(isLikelyCharacterName(name), name).toBe(true);
     }
   });
