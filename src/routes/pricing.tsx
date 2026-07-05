@@ -164,6 +164,8 @@ function Pricing() {
                   >
                     {isPending ? (
                       <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Opening checkout…</>
+                    ) : checkoutBlocked ? (
+                      <>Join the waitlist <ArrowRight className="h-3.5 w-3.5 ml-1.5" /></>
                     ) : (
                       <>{t.cta} <ArrowRight className="h-3.5 w-3.5 ml-1.5" /></>
                     )}
