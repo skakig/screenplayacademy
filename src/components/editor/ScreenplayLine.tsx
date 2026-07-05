@@ -412,7 +412,7 @@ export function ScreenplayLine({
       />
 
       {/* Subtle margin indicators — chips summoned on demand. */}
-      {(visibleUnknowns.length > 0 || suggestion) && !focused && (
+      {annotationMode !== "silent" && (visibleUnknowns.length > 0 || suggestion) && !focused && (
         <div className="absolute -left-5 top-2 flex flex-col gap-1 z-10">
           {visibleUnknowns.length > 0 && (
             <Popover>
