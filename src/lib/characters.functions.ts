@@ -427,49 +427,51 @@ export const generatePortrait = createServerFn({ method: "POST" })
     const c = await loadOwnedCharacter(context, data.characterId);
     const key = process.env.LOVABLE_API_KEY;
     if (!key) {
-      // No-op demo: just stamp a placeholder URL we can show as “coming soon”
-      return { row: c, demo: true, message: "AI image not configured — connect Lovable AI to generate portraits." };
+      throw new Error("Portrait generation is not configured in this preview. Connect Lovable AI to enable image generation.");
     }
-    const prompt = c.image_prompt || demoVisualPrompt(c);
-    try {
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image-preview",
-          prompt,
-          n: 1,
-        }),
-      });
-      if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        throw new Error(`Image gen failed (${res.status}): ${t.slice(0, 160)}`);
-      }
-      const json: any = await res.json();
-      const b64 = json?.data?.[0]?.b64_json;
-      const url = json?.data?.[0]?.url;
-      let portraitUrl: string | null = null;
-      if (b64) {
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-        const path = `${c.project_id}/characters/${c.id}.png`;
-        const { error: upErr } = await supabaseAdmin.storage
-          .from("storyboards")
-          .upload(path, bytes, { contentType: "image/png", upsert: true });
-        if (upErr) throw new Error(upErr.message);
-        const { data: signed } = await supabaseAdmin.storage
-          .from("storyboards").createSignedUrl(path, 60 * 60 * 24 * 30);
-        portraitUrl = signed?.signedUrl ?? null;
-      } else if (url) {
-        portraitUrl = url;
-      }
-      const { data: row } = await context.supabase
-        .from("characters").update({ portrait_url: portraitUrl, image_prompt: prompt })
-        .eq("id", c.id).select().single();
-      return { row, demo: false };
-    } catch (e: any) {
-      throw new Error(e?.message ?? "Portrait generation failed");
+    // Ensure we always have a prompt before calling the image API.
+    let prompt = (c.image_prompt || "").trim();
+    if (!prompt) {
+      prompt = demoVisualPrompt(c);
+      await context.supabase.from("characters").update({ image_prompt: prompt }).eq("id", c.id);
     }
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "google/gemini-2.5-flash-image-preview", prompt, n: 1 }),
+    });
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      throw new Error(`Portrait generation failed (${res.status}): ${t.slice(0, 200) || res.statusText}`);
+    }
+    const json: any = await res.json().catch(() => ({}));
+    const b64 = json?.data?.[0]?.b64_json;
+    const url = json?.data?.[0]?.url;
+    if (!b64 && !url) {
+      throw new Error("Portrait generation returned no image data. Try again or refine the visual prompt.");
+    }
+    let portraitUrl: string | null = null;
+    if (b64) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+      const path = `${c.project_id}/characters/${c.id}.png`;
+      const { error: upErr } = await supabaseAdmin.storage
+        .from("storyboards")
+        .upload(path, bytes, { contentType: "image/png", upsert: true });
+      if (upErr) throw new Error(`Portrait upload failed: ${upErr.message}`);
+      const { data: signed } = await supabaseAdmin.storage
+        .from("storyboards").createSignedUrl(path, 60 * 60 * 24 * 30);
+      portraitUrl = signed?.signedUrl ?? null;
+    } else if (url) {
+      portraitUrl = url;
+    }
+    if (!portraitUrl) {
+      throw new Error("Portrait was generated but could not be stored. Please retry.");
+    }
+    const { data: row } = await context.supabase
+      .from("characters").update({ portrait_url: portraitUrl, image_prompt: prompt })
+      .eq("id", c.id).select().single();
+    return { row, demo: false };
   });
 
 // ============= List characters for a project (for autocomplete) =============
