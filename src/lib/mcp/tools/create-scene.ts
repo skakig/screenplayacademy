@@ -5,6 +5,7 @@ import {
   fail,
   longTextNullable,
   ok,
+  requireMcpWrites,
   shortTextNullable,
   unauth,
   userClient,
@@ -58,7 +59,13 @@ export default defineTool({
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   handler: async (input, ctx) => {
     if (!ctx.isAuthenticated()) return unauth();
+    const userId = ctx.getUserId();
+    if (!userId) return unauth();
     const supabase = userClient(ctx);
+
+    const gate = await requireMcpWrites(supabase, userId);
+    if (!gate.ok) return fail(gate.message);
+
 
     let orderIndex = input.order_index;
     if (orderIndex === undefined) {

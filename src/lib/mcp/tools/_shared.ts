@@ -87,6 +87,52 @@ export function ok<T>(payload: T, structuredKey: string) {
   };
 }
 
+// ---------- Entitlement gate for MCP write tools ----------
+// MCP writes are a Pro-tier feature. This check runs server-side, using the
+// user-scoped Supabase client (RLS respects the caller). Callers should:
+//     const gate = await requireMcpWrites(supabase, ctx.getUserId());
+//     if (!gate.ok) return fail(gate.message);
+export async function requireMcpWrites(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const { data: row } = await supabase
+    .from("subscriptions")
+    .select("price_id, status, current_period_end")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let tier: "free" | "creator" | "pro" | "studio" = "free";
+  if (row) {
+    const periodOk =
+      !row.current_period_end ||
+      new Date(row.current_period_end as string).getTime() > Date.now();
+    const isActive =
+      (["active", "trialing", "past_due"].includes(row.status as string) && periodOk) ||
+      (row.status === "canceled" && periodOk);
+    if (isActive) {
+      switch (row.price_id) {
+        case "studio_monthly": tier = "studio"; break;
+        case "pro_monthly": tier = "pro"; break;
+        case "creator_monthly": tier = "creator"; break;
+      }
+    }
+  }
+
+  const RANK = { free: 0, creator: 1, pro: 2, studio: 3 } as const;
+  if (RANK[tier] < RANK.pro) {
+    return {
+      ok: false,
+      message:
+        "MCP write tools require the Pro plan or higher. Upgrade at " +
+        "https://www.scenesmithstudio.com/pricing to unlock write access.",
+    };
+  }
+  return { ok: true };
+}
+
 /**
  * Refuse writes when a scene has an active lock held by another user.
  * The owner/editor override is still available via the app UI — the MCP path

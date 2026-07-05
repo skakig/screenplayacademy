@@ -6,6 +6,7 @@ import {
   fail,
   longTextNullable,
   ok,
+  requireMcpWrites,
   shortTextNullable,
   unauth,
   userClient,
@@ -34,6 +35,10 @@ export default defineTool({
     const supabase = userClient(ctx);
     const userId = ctx.getUserId();
     if (!userId) return unauth();
+
+    const feat = await requireMcpWrites(supabase, userId);
+    if (!feat.ok) return fail(feat.message);
+
 
     const gate = await assertSceneWritable(supabase, input.scene_id, userId);
     if (!gate.ok) return fail(gate.message);

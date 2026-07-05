@@ -5,6 +5,7 @@ import {
   blockContent,
   fail,
   ok,
+  requireMcpWrites,
   unauth,
   userClient,
 } from "./_shared";
@@ -48,6 +49,10 @@ export default defineTool({
     const userId = ctx.getUserId();
     if (!userId) return unauth();
     const supabase = userClient(ctx);
+
+    const feat = await requireMcpWrites(supabase, userId);
+    if (!feat.ok) return fail(feat.message);
+
 
     // Verify scene belongs to project — prevents cross-project injection even
     // under permissive RLS.
