@@ -37,6 +37,11 @@ export type ResolvedWriterGuidance = {
 };
 
 const BEGINNER_TOKENS = [
+  // SceneSmith native onboarding values
+  "first",
+  "guided",
+  "adapting",
+  // Legacy / defensive tokens
   "beginner",
   "new",
   "new_writer",
@@ -51,11 +56,14 @@ const BEGINNER_TOKENS = [
 ];
 
 const ADVANCED_TOKENS = [
+  // SceneSmith native onboarding values
+  "experienced",
+  "pitching",
+  // Legacy / defensive tokens
   "advanced",
   "professional",
   "pro",
   "expert",
-  "experienced",
   "working_writer",
   "workingwriter",
   "produced",
