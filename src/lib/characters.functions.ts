@@ -101,10 +101,43 @@ export const deleteCharacter = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => IdInput.parse(d))
   .handler(async ({ data, context }) => {
+    // Cascade: remove dependent rows first (RLS-scoped; safe even if DB has
+    // its own ON DELETE CASCADE — this is idempotent).
+    await context.supabase.from("character_relationships").delete().eq("character_id", data.id);
+    await context.supabase.from("character_relationships").delete().eq("related_character_id", data.id);
+    await context.supabase.from("character_scene_states").delete().eq("character_id", data.id);
+    await context.supabase.from("character_scene_arc_states").delete().eq("character_id", data.id);
+    await context.supabase.from("character_arcs").delete().eq("character_id", data.id);
+    await context.supabase.from("character_evidence_events").delete().eq("character_id", data.id);
+    await context.supabase.from("character_snapshots").delete().eq("character_id", data.id);
     const { error } = await context.supabase.from("characters").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+const BulkDeleteInput = z.object({ ids: z.array(z.string().uuid()).min(1).max(500) });
+export const bulkDeleteCharacters = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => BulkDeleteInput.parse(d))
+  .handler(async ({ data, context }) => {
+    await context.supabase.from("character_relationships").delete().in("character_id", data.ids);
+    await context.supabase.from("character_relationships").delete().in("related_character_id", data.ids);
+    await context.supabase.from("character_scene_states").delete().in("character_id", data.ids);
+    await context.supabase.from("character_scene_arc_states").delete().in("character_id", data.ids);
+    await context.supabase.from("character_arcs").delete().in("character_id", data.ids);
+    await context.supabase.from("character_evidence_events").delete().in("character_id", data.ids);
+    await context.supabase.from("character_snapshots").delete().in("character_id", data.ids);
+    const { error, count } = await context.supabase
+      .from("characters").delete({ count: "exact" }).in("id", data.ids);
+    if (error) throw new Error(error.message);
+    return { ok: true, deleted: count ?? data.ids.length };
+  });
+
+export const getImageGenStatus = createServerFn({ method: "GET" })
+  .handler(async () => {
+    return { configured: !!process.env.LOVABLE_API_KEY };
+  });
+
 
 // ============= Relationships =============
 
