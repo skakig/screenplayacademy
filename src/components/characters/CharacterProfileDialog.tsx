@@ -66,6 +66,7 @@ export function CharacterProfileDialog({
   const callSuggest = useServerFn(suggestSceneUse);
   const callPortrait = useServerFn(generatePortrait);
   const callVoiceList = useServerFn(listElevenLabsVoices);
+  const callImgStatus = useServerFn(getImageGenStatus);
 
   const { data: character } = useQuery({
     queryKey: ["character", characterId],
