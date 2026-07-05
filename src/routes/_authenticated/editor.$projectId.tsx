@@ -901,13 +901,15 @@ function Editor() {
         )}
 
       </div>
-      <FeatureDock projectId={projectId} />
+      {!focus && !isBasic && <FeatureDock projectId={projectId} />}
       <EditorTour isOpen={tour.isOpen} onClose={tour.stop} />
       <StoryBuilder
         projectId={projectId}
         open={storyBuilderOpen}
         onOpenChange={setStoryBuilderOpen}
       />
+      <FocusPill />
+      <FirstRunModeDialog />
     </AppShell>
   );
 }
