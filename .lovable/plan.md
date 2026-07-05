@@ -1,93 +1,157 @@
-# Payments, Auth, Entitlements & Metering — Cleanup Pass
+# Casting Wall Stabilization + Character Builder v1.0
 
-## What was broken
+Scope is Characters, Scene cleanup, and related tests. **Screenplay editor, typing engine, Enter/Tab/slash/autosave — untouched.**
 
-1. **Env leak in server-side entitlement checks.** `requireFeature` and `createProjectGated` queried the newest subscription row across sandbox + live — a test-mode subscription in preview would have unlocked features after publish, and vice versa. `useSubscription` was already env-scoped, so client and server disagreed.
-2. **No password reset flow.** No "Forgot password?" affordance, no `/reset-password` route.
-3. **`/checkout/success` didn't wait for the webhook.** Users saw "Free" for a beat after paying because the row is written asynchronously.
-4. **`PageFeatureGate` optimistically rendered paid children while loading**, flashing premium UI to un-entitled users on hard refresh.
-5. **Live-mode Paddle approval is still pending**, but pricing CTAs still tried to open the overlay — Paddle would error.
-6. **Metered usage advertised but not enforced.** Pricing promises monthly caps on AI assists, storyboard panels, and table-read minutes. No tracking existed.
+## Pass 1 — "Review Detected Cast" cleanup panel
 
-## What was added
+**New file:** `src/components/characters/CastCleanupPanel.tsx`
 
-### Database (migration `202607052011…`)
+- Reuses `looksLikeStructuralLine` + `isLikelyCharacterName` from `src/lib/editor/manuscriptAnalyzer.ts` (extend that module with a shared `looksLikeSuspiciousCharacterName(name)` helper — one source of truth).
+- Fetches `characters` for the project, filters to suspicious rows:
+  - name matches structural regex (INT/EXT/EST/CUT TO/FADE/ACT/SCENE/OPENING SCENE/MIDPOINT/SEQUENCE)
+  - ends in DAY/NIGHT/DAWN/DUSK/MORNING/EVENING/CONTINUOUS/LATER
+  - fails `isLikelyCharacterName`
+  - OR has zero completeness + zero relationships + zero scene states
+- Row actions: Keep, Rename (inline), Delete. Header actions: Select all, Bulk delete (confirmation dialog).
+- Mounted on Characters page above the grid, collapsible, hidden when list is empty.
+- Never touches `script_blocks`.
 
-- `usage_counters(user_id, environment, period_start, feature, count_used)` with a unique key per user/env/month/feature. RLS: users see own rows, service_role manages.
-- `usage_limit_for(tier, feature)` — SQL source-of-truth for monthly caps:
-  - **ai_assists**: free 5 / creator 100 / pro 500 / studio 1000
-  - **storyboard_panels**: free 0 / creator 25 / pro 100 / studio 500
-  - **tableread_minutes**: free 0 / creator 30 / pro 180 / studio 600
-- `consume_usage(feature, amount, environment)` — atomic check-and-increment. Raises `USAGE_LIMIT: …` when the cap is hit; rolls the increment back so counters never exceed the cap. `SECURITY DEFINER`, scoped to `auth.uid()`.
-- `get_usage_snapshot(environment)` — returns current-month used / monthly_limit / tier per feature for the caller. Ready to wire into Settings later.
-- Regranted `current_subscription_tier` EXECUTE to `authenticated` (needed by the new RPCs).
+## Pass 2 — Obvious deletion on `characters.$projectId.tsx`
 
-### Server-side entitlements now env-scoped
+- Card gets a persistent `•••` `DropdownMenu` trigger (Open, Rename, Duplicate, Delete) visible on all viewports — no hover requirement.
+- Add bulk-select mode toggle in page header; when active, cards render a checkbox and a floating action bar shows "Delete N".
+- All destructive actions use `AlertDialog` confirmation.
+- On success invalidate: `["characters", projectId]`, `["relationship-counts", projectId]`, `["scene-counts", projectId]`.
 
-- New `src/lib/paddleEnv.server.ts` mirrors the client's `getPaddleEnvironment()` by reading `VITE_PAYMENTS_CLIENT_TOKEN` server-side.
-- `src/lib/entitlements.functions.ts::requireFeature` and `src/lib/projects.functions.ts::createProjectGated` filter subscriptions by `environment = serverPaddleEnv()`.
+## Pass 3 — Cast vs Detected Speakers vs Cleanup
 
-### Metering wired into the three paid entry points
+Restructure page into three labeled sections (tabs or stacked):
 
-- `src/lib/usage.functions.ts` — `consumeUsage(supabase, feature, amount)` helper + `getUsageSnapshot` server fn.
-- `aiAssist` → 1 assist; `generatePitchPackage` → 10 assists (heavier call).
-- `generateStoryboardPanel` → 1 panel.
-- `generateTableRead` → estimated minutes at 150 wpm, consumed **before** hitting ElevenLabs so over-quota users never burn TTS credits.
+1. **Cast** — rows from `characters` table (current grid).
+2. **Detected Speakers** — from `tallyCharacters(blocks)` for this project's script; each row shows line count + "Add to Cast" / "Ignore".
+3. **Cleanup** — the Pass 1 panel.
 
-Errors surface as `Error("USAGE_LIMIT: …")` — the existing toast handling in the UI shows the message verbatim.
+Anywhere `tallyCharacters` output is rendered, label it "Detected Speakers", never "Characters".
 
-### Password reset
+## Pass 4 — Guided Character Builder in `CharacterProfileDialog`
 
-- `/auth` now has a "Forgot password?" link on the sign-in form. Sends `resetPasswordForEmail` with `redirectTo=/reset-password`.
-- New public `/reset-password` route (SSR off) waits for the Supabase recovery session, then calls `updateUser({ password })` and drops the user into `/dashboard`.
+- New default tab: **Build this character** (shown first for empty/new; toggle to switch back).
+- 9 steps (Story role → Want → Need → Wound → Lie → Secret → Voice → Visual identity → Arc), one at a time with progress dots.
+- Each step: short explainer, one example, single input (textarea or select), buttons: **Help me write this** (calls existing AI assist server fn with step-specific prompt), **Skip for now**, **Back / Next**.
+- Existing tabs (Identity, Psychology, Voice, Visual, Arc, Relationships, Scenes) preserved behind an **Advanced Profile** toggle. No fields removed.
+- Persists to same `characters` columns via existing `upsertCharacter`.
 
-### Checkout success polling
+## Pass 5 — Visual/image generation clarity
 
-- `/checkout/success` uses `useSubscription` and re-invalidates every 1.5s (up to 30s) until the webhook lands. Shows "Confirming your subscription…" while waiting; switches to "Welcome to the {Tier} plan." as soon as the row appears.
+In the Visual tab of `CharacterProfileDialog`:
 
-### Live-mode CTA gate
+- Add a config status pill via a lightweight server fn `getImageGenStatus()` that reports whether `LOVABLE_API_KEY` is present.
+- If not configured: banner "Portrait generation is not configured in this preview." — disable Generate button.
+- Portrait generation flow:
+  - Require `image_prompt`; if empty, auto-generate one from character summary/visual fields first (existing helper or new small AI call), show it to user before submitting.
+  - After image call, if response contains neither `b64_json` nor `url`, throw `Error("Image generation returned no data")`.
+  - Never write `portrait_url = null` on failure — leave prior value intact.
+  - Inline failure card in the Visual tab (message + retry), in addition to toast.
 
-- New env var: `VITE_PAYMENTS_LIVE_APPROVED` (`false` in `.env.production`, `true` in `.env.development`).
-- On the live site, until this flips to `true`, all pricing CTAs turn into "Join the waitlist" (mailto) and a banner explains paid plans are launching soon. Flip it to `true` after Paddle's automated review completes.
+## Pass 6 — Scene cleanup on Scene Board / StoryPulse
 
-### `PageFeatureGate` fix
+**New:** `src/components/scenes/SceneCleanupPanel.tsx` mounted on `scenes.$projectId.tsx`.
 
-- Loading state now shows a small "Checking your plan…" spinner instead of flashing the paid page.
+- Lists scenes marked auto-detected (e.g. `metadata.source = 'auto'` or scenes with no manual edits) separately.
+- Row actions: Delete (confirm), Open source line in editor (deep-link to `editor/$projectId?block=<id>`).
+- Header actions: **Resync scenes from manuscript** (runs existing sceneSync), **Delete selected**.
+- Manual scenes require confirmation; auto scenes require confirmation only for bulk delete.
 
-## How to test in preview (test mode)
+## Pass 7 — Tests
 
-Preview always runs against Paddle sandbox with the `test_…` client token.
+Extend `src/lib/editor/manuscriptAnalyzer.test.ts` and add `src/lib/characters/cleanup.test.ts`:
 
-### Test cards
+- Structural lines (`CUT TO:`, `INT. HOUSE - DAY`, `EXT. FIELD`, `ACT ONE`, `SCENE 12`, `OPENING SCENE`) never pass `isLikelyCharacterName`.
+- `tallyCharacters` returns only speakers with ≥1 dialogue block.
+- Cleanup detector flags: `CUT TO`, `INT. LIBRARY`, `EXT.`, `ACT II`, `SCENE 3`, `FADE IN`.
+- Valid names pass: `STEPHAN`, `HANS`, `HANS (V.O.)`, `COMMANDER`, `J.T.`, `MARY-ANNE`.
+- Extend `src/lib/import/parser.test.ts` to assert scene-heading lines are not emitted as character blocks.
 
-- `4242 4242 4242 4242` / any future expiry / any CVC — success
-- `4000 0000 0000 3220` — triggers 3-D Secure
-- `4000 0000 0000 0002` — always declined
-- `4000 0027 6000 3184` — succeeds initially, declines on the next renewal (great for testing dunning / past-due UX)
+## Pass 8 — Stability gate
 
-### Flows to walk through
+Run and fix any failures:
 
-1. **New sign-up + email flow**: register a new account on `/auth`, confirm the "Welcome" toast, land on `/dashboard`.
-2. **Password reset**: on `/auth`, enter the email, click **Forgot password?**, open the email, land on `/reset-password`, set a new password → auto-redirect to `/dashboard`.
-3. **Free-tier gate**: create one project → try to create a second → server returns `FREE_TIER_LIMIT:` and the UI shows an upgrade CTA.
-4. **Feature gate**: while on Free, open `/pitch/:id`, `/tableread/:id`, `/storyboard/:id`, `/writers-room/:id` — each should show the "Upgrade to unlock …" card (no flash of the paid UI).
-5. **Checkout — Creator**: from `/pricing`, click **Choose Creator** → Paddle overlay opens with `$19` → pay with `4242…` → overlay closes → `/checkout/success` shows the spinner briefly then "Welcome to the Creator plan." Settings shows Creator badge.
-6. **Metering**: open a project, run `Generate logline` from the AI assist menu six times as a free user (before upgrading, if you want to see the cap). You should hit `USAGE_LIMIT: ai_assists monthly cap reached…` on the 6th call. As Creator you have 100/mo; as Pro 500/mo. Same story on the storyboard page (25 panels for Creator) and table read (30 minutes for Creator).
-7. **Dunning**: subscribe with `4000 0027 6000 3184`, then in the Paddle dashboard fast-forward `next_billed_at` (or use the Simulator) → the orange banner appears at the top of the app; **Update payment method** opens the Paddle customer portal in a new tab.
-8. **Cancel**: Settings → **Manage subscription** → cancel from the Paddle portal. Settings pill should switch to "Ends {date}"; access stays until the paid period ends.
-9. **Re-subscribe**: after canceling, hit `/pricing` again → new subscription row is created (keyed on `paddle_subscription_id`) without overwriting the canceled one.
-10. **Realtime**: keep Settings open while the webhook writes — the plan pill updates without a page refresh.
+- `npm run build`
+- `npm run lint`
+- `npm run test`
 
-### Going live
+Manual acceptance (documented in `.lovable/plan.md`): Characters page loads, profile opens, create/delete works on touch, bulk cleanup deletes junk, Generate Full + Generate Portrait either succeed or show clear config/failure state, Scene Board cleanup works.
 
-When Paddle finishes automated review:
+&nbsp;
 
-1. Flip `VITE_PAYMENTS_LIVE_APPROVED="true"` in `.env.production`.
-2. Republish.
-3. Live pricing CTAs open real Paddle checkout with the live token.
+Approved with amendments:
 
-## Known follow-ups (not in this pass)
+1. Cleanup confidence levels
 
-- The pricing copy still lists **"3 characters"** for the Free tier; character count isn't enforced yet. Add a `characters` cap if you want to honor it.
-- `get_usage_snapshot` is exposed but not surfaced in Settings. Easy add-on: a "This month" widget on the Settings page next to the plan card.
-- Consider subscribing to `subscription.paused` / `subscription.resumed` webhooks if you ever expose pause in the portal.
+Do not treat “zero completeness + zero relationships + zero scene states” as automatic junk. Flag it as low-confidence only. High-confidence junk is structural text like CUT TO:, INT., EXT., ACT, SCENE, FADE IN.
+
+2. Safe deletion
+
+Update delete behavior so deleting a character also removes or safely handles related character_relationships and character_scene_states. Verify DB cascade or delete related rows first in the server function.
+
+3. Scene cleanup source tracking
+
+Current scene sync does not store metadata.source or source block id. If schema supports metadata/source_block_id, write it during sync. If not, infer auto scenes from current manuscript outline and do not promise source-line deep links unless a block id exists.
+
+4. Detected Speakers data source
+
+Characters page must fetch screenplay blocks and derive Detected Speakers from tallyCharacters(blocks). Add ignored detected speaker persistence so ignored names do not keep reappearing.
+
+5. Guided Character Builder safety
+
+“Help me write this” must suggest or fill empty fields only. Never overwrite existing user-written fields without confirmation.
+
+6. Remove Duplicate from the card menu for this pass unless already implemented cleanly. Keep menu to Open / Rename / Delete.
+
+Everything else is approved:
+
+- CastCleanupPanel
+
+- obvious delete
+
+- bulk cleanup
+
+- Cast vs Detected Speakers vs Cleanup
+
+- GuidedCharacterBuilder
+
+- Visual/image generation clarity
+
+- tests
+
+- stability gate
+
+## Files touched
+
+**New**
+
+- `src/components/characters/CastCleanupPanel.tsx`
+- `src/components/characters/GuidedCharacterBuilder.tsx`
+- `src/components/characters/DetectedSpeakersPanel.tsx`
+- `src/components/scenes/SceneCleanupPanel.tsx`
+- `src/lib/characters/cleanup.ts` + `.test.ts`
+- `src/lib/imageGenStatus.functions.ts`
+
+**Edited**
+
+- `src/lib/editor/manuscriptAnalyzer.ts` (export `looksLikeSuspiciousCharacterName`)
+- `src/lib/editor/manuscriptAnalyzer.test.ts`
+- `src/lib/import/parser.test.ts`
+- `src/components/characters/CharacterProfileDialog.tsx` (guided mode + Visual tab clarity)
+- `src/routes/_authenticated/characters.$projectId.tsx` (••• menu, bulk-select, three sections)
+- `src/routes/_authenticated/scenes.$projectId.tsx` (mount SceneCleanupPanel)
+
+**Untouched (explicit)**
+
+- `src/components/editor/**`, `useScreenplayDocument`, `ScreenplayLine`, `screenplayKeymap`, `screenplayPersistence`, autosave, entitlements, payments, webhook.
+
+## Not doing (unless you ask)
+
+- Migrating character schema.
+- Rebuilding relationships/scene-usage tabs.
+- Live multiplayer on characters.
