@@ -273,7 +273,7 @@ export function CharacterProfileDialog({
                 {/* TRUTH CHECK — Would They Do This? */}
                 {showTruthTab && (
                   <TabsContent value="truth" className="mt-0">
-                    <WouldTheyDoThisTab projectId={projectId} character={local} />
+                    <WouldTheyDoThisTab projectId={projectId} character={local} mode={resolvedMode} />
                   </TabsContent>
                 )}
 
