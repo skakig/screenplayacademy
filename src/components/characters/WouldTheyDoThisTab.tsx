@@ -107,7 +107,17 @@ export function WouldTheyDoThisTab({
     setResult(r);
   };
 
-  const isBasic = mode === "basic";
+  const coach: TruthCoachOutput | null = useMemo(
+    () =>
+      result
+        ? createTruthCoachOutput(result, {
+            mode,
+            coachingLevel,
+            writerExperienceLevel,
+          })
+        : null,
+    [result, mode, coachingLevel, writerExperienceLevel],
+  );
 
   return (
     <div className="space-y-4">
@@ -175,7 +185,14 @@ export function WouldTheyDoThisTab({
         </div>
       </Card>
 
-      {result && <ResultCard result={result} isBasic={isBasic} showEvidence={showEvidence} setShowEvidence={setShowEvidence} />}
+      {result && coach && (
+        <ResultCard
+          result={result}
+          coach={coach}
+          showEvidence={showEvidence}
+          setShowEvidence={setShowEvidence}
+        />
+      )}
     </div>
   );
 }
