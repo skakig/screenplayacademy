@@ -14,10 +14,21 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { generateStoryboardPanel } from "@/lib/storyboard.functions";
 
+import { PageFeatureGate } from "@/components/PageFeatureGate";
+
 export const Route = createFileRoute("/_authenticated/storyboard/$projectId")({
   head: () => ({ meta: [{ title: "Storyboard — SceneSmith AI" }] }),
-  component: Storyboard,
+  component: GatedStoryboard,
 });
+
+function GatedStoryboard() {
+  return (
+    <PageFeatureGate feature="storyboard">
+      <Storyboard />
+    </PageFeatureGate>
+  );
+}
+
 
 const STYLES = ["Cinematic", "Noir", "Anime", "Storyboard sketch", "Photoreal", "Watercolor", "Comic"];
 
