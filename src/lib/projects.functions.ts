@@ -23,11 +23,14 @@ export const createProjectGated = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => CreateInput.parse(d))
   .handler(async ({ data, context }) => {
-    // Determine current tier from the user's most recent active subscription row.
+    // Determine current tier from the user's most recent subscription row
+    // in the current Paddle environment (sandbox in preview, live in prod).
+    const environment = serverPaddleEnv();
     const { data: subRow } = await context.supabase
       .from("subscriptions")
       .select("price_id, status, current_period_end, environment")
       .eq("user_id", context.userId)
+      .eq("environment", environment)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
