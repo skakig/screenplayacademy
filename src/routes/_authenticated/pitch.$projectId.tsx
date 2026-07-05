@@ -15,7 +15,15 @@ import { downloadPitchKitPdf } from "@/components/editor/pitchKitPdf";
 
 export const Route = createFileRoute("/_authenticated/pitch/$projectId")({
   head: () => ({ meta: [{ title: "Pitch Package — SceneSmith AI" }] }),
-  component: Pitch,
+  component: GatedPitch,
+});
+
+import { PageFeatureGate } from "@/components/PageFeatureGate";
+function GatedPitch() {
+  return <PageFeatureGate feature="pitch"><Pitch /></PageFeatureGate>;
+}
+// Placeholder to preserve original createFileRoute options object.
+const _noop = ({
 });
 
 const SECTIONS: { key: string; label: string }[] = [
