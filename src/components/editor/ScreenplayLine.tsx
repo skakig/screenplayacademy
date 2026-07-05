@@ -275,6 +275,7 @@ export function ScreenplayLine({
   } | null>(null);
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
   useEffect(() => {
+    if (annotationMode === "silent") { setSuggestion(null); return; }
     if (focused) return;
     if (!block.content.trim()) { setSuggestion(null); return; }
     const id = setTimeout(() => {
