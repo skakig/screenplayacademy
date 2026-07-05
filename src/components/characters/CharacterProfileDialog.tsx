@@ -88,6 +88,9 @@ export function CharacterProfileDialog({
 
   const [local, setLocal] = useState<any>(null);
   const { on: focusOn } = useWriteMode();
+  const { data: onboarding } = useOnboarding();
+  const resolvedMode: "basic" | "advanced" =
+    onboarding?.preferred_mode === "guided" ? "basic" : "advanced";
   const showTruthTab = !focusOn; // Focus mode hides the tab entirely.
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [pressureOut, setPressureOut] = useState<string>("");
