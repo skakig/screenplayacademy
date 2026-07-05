@@ -172,11 +172,18 @@ export function CoachPane({
         <ArcSidebar projectId={projectId} />
       </TabsContent>
 
-      {/* CHARACTERS */}
+      {/* CHARACTERS — script-derived speakers, not the saved cast table. */}
       <TabsContent value="cast" className="m-0 p-4 space-y-3">
-        <h3 className="font-semibold flex items-center gap-1.5 text-sm"><Users className="h-4 w-4 text-primary" />Characters</h3>
+        <div>
+          <h3 className="font-semibold flex items-center gap-1.5 text-sm">
+            <Users className="h-4 w-4 text-primary" />Detected Speakers
+          </h3>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-mono mt-1">
+            From your script · saved cast lives in the workshop
+          </p>
+        </div>
         {characters.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic">No characters yet. They appear here as you write dialogue.</p>
+          <p className="text-xs text-muted-foreground italic">No speakers yet. They appear here as you write dialogue.</p>
         ) : (
           <ul className="space-y-1.5">
             {characters.map((c) => (
@@ -188,7 +195,7 @@ export function CoachPane({
           </ul>
         )}
         <Button asChild variant="outline" size="sm" className="w-full">
-          <Link to="/characters/$projectId" params={{ projectId }}>Open Character workshop</Link>
+          <Link to="/characters/$projectId" params={{ projectId }}>Open Casting Wall</Link>
         </Button>
       </TabsContent>
 
