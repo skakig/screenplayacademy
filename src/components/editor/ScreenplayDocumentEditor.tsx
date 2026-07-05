@@ -93,6 +93,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       onRejectFormatSuggestion,
       screenplayLanguage,
       knownLanguages,
+      annotationMode = "quiet",
     },
 
     ref,
