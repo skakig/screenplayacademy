@@ -208,10 +208,11 @@ export function parseScreenplayText(raw: string, knownCharacterNames: string[] =
       continue;
     }
 
-    // Title-case match against existing character roster
+    // Title-case match against existing character roster (still filtered).
     if (
       nextLineIsDialogueish &&
-      known.has(trimmed.toUpperCase().replace(/\s*\(.*?\)\s*$/, ""))
+      known.has(trimmed.toUpperCase().replace(/\s*\(.*?\)\s*$/, "")) &&
+      isLikelyCharacterLine(trimmed)
     ) {
       push({
         raw_text: trimmed,
