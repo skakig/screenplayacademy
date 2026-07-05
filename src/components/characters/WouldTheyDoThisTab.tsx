@@ -199,12 +199,12 @@ export function WouldTheyDoThisTab({
 
 function ResultCard({
   result,
-  isBasic,
+  coach,
   showEvidence,
   setShowEvidence,
 }: {
   result: CharacterTruthResult;
-  isBasic: boolean;
+  coach: TruthCoachOutput;
   showEvidence: boolean;
   setShowEvidence: (v: boolean) => void;
 }) {
@@ -222,7 +222,9 @@ function ResultCard({
     insufficient_data: "bg-secondary text-muted-foreground border-border",
   }[result.verdict];
 
-  const thinEvidence = result.evidence.length <= 2;
+  const isQuiet = coach.tone === "quiet";
+  const reasonsToShow = result.reasons.slice(0, coach.maxReasons);
+  const missingCap = coach.tone === "teaching" ? 1 : 6;
 
   return (
     <Card className="p-4 space-y-3">
@@ -233,24 +235,38 @@ function ResultCard({
         </span>
       </div>
 
-      {thinEvidence && result.verdict !== "insufficient_data" && (
-        <p className="text-[11px] text-muted-foreground italic">
-          This is a first-pass truth check based on the character data currently filled in.
-        </p>
+      {!isQuiet && (
+        <div className="space-y-1">
+          <div className="text-sm font-medium">{coach.headline}</div>
+          {coach.explanation && (
+            <p className="text-sm text-muted-foreground">{coach.explanation}</p>
+          )}
+        </div>
       )}
 
-      {result.reasons.length > 0 && (
+      {!isQuiet && coach.teachingPrompt && (
+        <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
+          {coach.concept && (
+            <div className="text-[10px] uppercase tracking-wide text-primary/80 mb-1">
+              {coach.concept}
+            </div>
+          )}
+          <div className="text-sm">{coach.teachingPrompt}</div>
+        </div>
+      )}
+
+      {!isQuiet && reasonsToShow.length > 0 && (
         <div>
           <div className="text-xs font-medium mb-1">Why</div>
           <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-4">
-            {(isBasic ? result.reasons.slice(0, 1) : result.reasons).map((r, i) => (
+            {reasonsToShow.map((r, i) => (
               <li key={i}>{r}</li>
             ))}
           </ul>
         </div>
       )}
 
-      {!isBasic && result.suggestedFixes.length > 0 && (
+      {coach.showSuggestedFixes && result.suggestedFixes.length > 0 && (
         <div>
           <div className="text-xs font-medium mb-1">Suggested adjustment</div>
           <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-4">
@@ -259,20 +275,27 @@ function ResultCard({
         </div>
       )}
 
-      {result.missingInputs.length > 0 && (
+      {!isQuiet && result.missingInputs.length > 0 && !coach.teachingPrompt && (
         <div>
           <div className="text-xs font-medium mb-1">
-            {isBasic ? "To sharpen this, tell me:" : "Missing"}
+            {coach.tone === "teaching" ? "To sharpen this, tell me:" : "Missing"}
           </div>
           <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-4">
-            {result.missingInputs.slice(0, isBasic ? 2 : 6).map((m) => (
+            {result.missingInputs.slice(0, missingCap).map((m) => (
               <li key={m.field}>{m.prompt}</li>
             ))}
           </ul>
         </div>
       )}
 
-      {!isBasic && result.evidence.length > 0 && (
+      {!isQuiet && coach.nextStep && (
+        <div className="text-xs text-foreground/80 border-t border-border pt-2">
+          <span className="font-medium">Next step: </span>
+          {coach.nextStep}
+        </div>
+      )}
+
+      {coach.showEvidence && result.evidence.length > 0 && (
         <div>
           <button
             type="button"
