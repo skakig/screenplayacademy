@@ -37,6 +37,11 @@ export type ResolvedWriterGuidance = {
 };
 
 const BEGINNER_TOKENS = [
+  // SceneSmith native onboarding values
+  "first",
+  "guided",
+  "adapting",
+  // Legacy / defensive tokens
   "beginner",
   "new",
   "new_writer",
@@ -51,11 +56,14 @@ const BEGINNER_TOKENS = [
 ];
 
 const ADVANCED_TOKENS = [
+  // SceneSmith native onboarding values
+  "experienced",
+  "pitching",
+  // Legacy / defensive tokens
   "advanced",
   "professional",
   "pro",
   "expert",
-  "experienced",
   "working_writer",
   "workingwriter",
   "produced",
@@ -67,16 +75,31 @@ function normalize(level?: string | null): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function matchesToken(normalized: string, token: string): boolean {
+  // 1. Exact match
+  if (normalized === token) return true;
+
+  // 2. Normalized separator match (underscore / dash / space equivalent)
+  const normInput = normalized.replace(/[_-]/g, " ");
+  const normToken = token.replace(/[_-]/g, " ");
+  if (normInput === normToken) return true;
+
+  // 3. Word-boundary match: token must appear as a whole word
+  const escaped = normToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`\\b${escaped}\\b`);
+  return regex.test(normInput);
+}
+
 export function isBeginnerExperience(level?: string | null): boolean {
   const n = normalize(level);
   if (!n) return false;
-  return BEGINNER_TOKENS.some((t) => n === t || n.includes(t));
+  return BEGINNER_TOKENS.some((t) => matchesToken(n, t));
 }
 
 export function isAdvancedExperience(level?: string | null): boolean {
   const n = normalize(level);
   if (!n) return false;
-  return ADVANCED_TOKENS.some((t) => n === t || n.includes(t));
+  return ADVANCED_TOKENS.some((t) => matchesToken(n, t));
 }
 
 export function resolveWriterGuidance(
