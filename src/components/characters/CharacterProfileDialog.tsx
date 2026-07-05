@@ -89,6 +89,14 @@ export function CharacterProfileDialog({
   const [dialogueScenario, setDialogueScenario] = useState("");
   const [contradictionsOut, setContradictionsOut] = useState<string>("");
   const [sceneSuggestOut, setSceneSuggestOut] = useState<string>("");
+  const [portraitError, setPortraitError] = useState<string | null>(null);
+
+  const imgStatusQ = useQuery({
+    queryKey: ["image-gen-status"],
+    enabled: open,
+    queryFn: () => (useServerFn(getImageGenStatus))(),
+    staleTime: 5 * 60 * 1000,
+  });
 
   useEffect(() => { setLocal(character ?? null); }, [character]);
 
