@@ -40,6 +40,7 @@ function CharactersPage() {
   const callUpsert = useServerFn(upsertCharacter);
   const callDel = useServerFn(deleteCharacter);
   const callBulk = useServerFn(bulkDeleteCharacters);
+  const callRestore = useServerFn(restoreCharacters);
 
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
