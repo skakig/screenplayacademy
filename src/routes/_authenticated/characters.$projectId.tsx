@@ -27,7 +27,7 @@ import { GROUPS, completenessPct, tmhLabel } from "@/components/characters/tmh";
 import { CharacterProfileDialog } from "@/components/characters/CharacterProfileDialog";
 import { CastCleanupPanel } from "@/components/characters/CastCleanupPanel";
 import { DetectedSpeakersPanel } from "@/components/characters/DetectedSpeakersPanel";
-import { upsertCharacter, deleteCharacter, bulkDeleteCharacters } from "@/lib/characters.functions";
+import { upsertCharacter, deleteCharacter, bulkDeleteCharacters, restoreCharacters } from "@/lib/characters.functions";
 
 export const Route = createFileRoute("/_authenticated/characters/$projectId")({
   head: () => ({ meta: [{ title: "Your Characters — SceneSmith AI" }] }),
