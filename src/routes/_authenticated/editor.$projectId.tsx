@@ -391,7 +391,7 @@ function Editor() {
   const [storyBuilderOpen, setStoryBuilderOpen] = useState(false);
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
-  const writeMode = useWriteMode();
+  const [toolsDrawerOpen, setToolsDrawerOpen] = useState(false);
   const focus = writeMode.on;
 
   const { data: onboarding } = useOnboarding();
