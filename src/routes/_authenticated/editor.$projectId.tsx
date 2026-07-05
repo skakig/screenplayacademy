@@ -12,7 +12,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { aiAssist } from "@/lib/ai.functions";
 import { listProjectCharacters, upsertCharacter } from "@/lib/characters.functions";
 import { updateGuidedStep } from "@/lib/academy.functions";
-import { AutosaveIndicator } from "@/components/editor/AutosaveIndicator";
 import type { AutosaveStatus } from "@/hooks/use-autosave";
 import { GuidedRail } from "@/components/guided/GuidedRail";
 import type { CharacterHit } from "@/components/editor/CharacterAutocomplete";
