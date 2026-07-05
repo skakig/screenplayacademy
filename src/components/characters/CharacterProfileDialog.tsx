@@ -330,6 +330,15 @@ export function CharacterProfileDialog({
 
                 {/* VISUAL */}
                 <TabsContent value="visual" className="space-y-3 mt-0">
+                  {imgStatusQ.data && !imgStatusQ.data.configured && (
+                    <Card className="p-3 border-amber-500/40 bg-amber-500/[0.05] text-xs flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-medium text-amber-600">Portrait generation is not configured in this preview.</div>
+                        <div className="text-muted-foreground mt-0.5">Connect Lovable AI to enable image generation. You can still edit the visual prompt below.</div>
+                      </div>
+                    </Card>
+                  )}
                   <div className="grid grid-cols-[180px_1fr] gap-4">
                     <div className="aspect-[3/4] rounded-lg overflow-hidden bg-secondary border border-border flex items-center justify-center">
                       {local.portrait_url ? (
@@ -340,10 +349,41 @@ export function CharacterProfileDialog({
                     </div>
                     <div className="space-y-2">
                       <AiBar label="Generate Visual Prompt" busy={aiBusy === "vis"} onClick={() => runAi("vis", () => callVisual({ data: { characterId } }))} />
-                      <Button size="sm" className="w-full" disabled={!!aiBusy} onClick={() => runAi("portrait", () => callPortrait({ data: { characterId } }))}>
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        disabled={!!aiBusy || (imgStatusQ.data && !imgStatusQ.data.configured)}
+                        onClick={async () => {
+                          setPortraitError(null);
+                          setAiBusy("portrait");
+                          try {
+                            const out: any = await callPortrait({ data: { characterId: characterId! } });
+                            if (out?.row) {
+                              qc.invalidateQueries({ queryKey: ["character", characterId] });
+                              qc.invalidateQueries({ queryKey: ["characters", projectId] });
+                              toast.success("Portrait generated");
+                            }
+                          } catch (e: any) {
+                            const msg = e?.message ?? "Portrait generation failed";
+                            setPortraitError(msg);
+                            toast.error(msg);
+                          } finally {
+                            setAiBusy(null);
+                          }
+                        }}
+                      >
                         {aiBusy === "portrait" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5 mr-1.5" />}
                         Generate Portrait
                       </Button>
+                      {portraitError && (
+                        <Card className="p-2 border-destructive/40 bg-destructive/[0.05] text-[11px] text-destructive">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                            <div className="flex-1">{portraitError}</div>
+                            <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setPortraitError(null)}>Dismiss</Button>
+                          </div>
+                        </Card>
+                      )}
                     </div>
                   </div>
 
