@@ -2329,6 +2329,39 @@ export type Database = {
           },
         ]
       }
+      usage_counters: {
+        Row: {
+          count_used: number
+          created_at: string
+          environment: string
+          feature: string
+          id: string
+          period_start: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          count_used?: number
+          created_at?: string
+          environment?: string
+          feature: string
+          id?: string
+          period_start: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          count_used?: number
+          created_at?: string
+          environment?: string
+          feature?: string
+          id?: string
+          period_start?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_lesson_progress: {
         Row: {
           completed_at: string | null
@@ -2537,9 +2570,22 @@ export type Database = {
         Returns: boolean
       }
       can_view_suggestions: { Args: { _project_id: string }; Returns: boolean }
+      consume_usage: {
+        Args: { _amount: number; _environment?: string; _feature: string }
+        Returns: number
+      }
       current_subscription_tier: {
         Args: { check_env?: string; user_uuid: string }
         Returns: string
+      }
+      get_usage_snapshot: {
+        Args: { _environment?: string }
+        Returns: {
+          feature: string
+          monthly_limit: number
+          tier: string
+          used: number
+        }[]
       }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
@@ -2551,6 +2597,10 @@ export type Database = {
       update_my_project_last_seen: {
         Args: { _project_id: string }
         Returns: undefined
+      }
+      usage_limit_for: {
+        Args: { _feature: string; _tier: string }
+        Returns: number
       }
     }
     Enums: {
