@@ -7,12 +7,14 @@ import { z } from "zod";
 // assistants; keeping bounds tight prevents accidental large writes,
 // denial-of-service via oversized inserts, and DB row-size surprises.
 
-/** Trim, collapse interior whitespace runs, strip control chars except \n and \t. */
+/** Trim, normalize newlines, strip control chars except \n and \t. */
 export function sanitizeText(input: string): string {
   return input
+    // Normalize CRLF and lone CR to LF FIRST — before stripping control chars,
+    // otherwise \r (0x0D) is dropped and adjacent lines get glued together.
+    .replace(/\r\n?/g, "\n")
     // Strip C0 control chars other than \t (\x09) and \n (\x0A), and DEL.
     .replace(/[\x00-\x08\x0B-\x1F\x7F]/g, "")
-    .replace(/\r\n?/g, "\n")
     .trim();
 }
 
