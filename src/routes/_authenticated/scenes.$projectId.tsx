@@ -102,6 +102,8 @@ function ScenesPage() {
             </DialogContent>
           </Dialog>
         </div>
+        <SceneCleanupPanel projectId={projectId} />
+
 
         {scenes.length === 0 ? (
           <Card className="p-12 text-center border-dashed">
