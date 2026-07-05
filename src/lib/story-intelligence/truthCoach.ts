@@ -16,6 +16,10 @@ import type {
   CharacterTruthResult,
   MissingCharacterTruthInput,
 } from "./characterTruthEngine";
+import {
+  resolveWriterGuidance,
+  type WriterCoachingLevel,
+} from "./writerProfileSignals";
 
 // ============================================================================
 // Types
@@ -23,7 +27,7 @@ import type {
 
 export type WriterMode = "basic" | "advanced";
 
-export type CoachingLevel = "off" | "gentle" | "active" | "teaching";
+export type CoachingLevel = WriterCoachingLevel;
 
 export type WriterProfileForCoach = {
   mode: WriterMode;
@@ -40,7 +44,8 @@ export type TruthCoachOutput = {
   showEvidence: boolean;
   showSuggestedFixes: boolean;
   maxReasons: number;
-  tone: "quiet" | "teaching" | "diagnostic";
+  maxMissingInputs: number;
+  tone: "quiet" | "gentle" | "teaching" | "diagnostic";
 };
 
 // ============================================================================
