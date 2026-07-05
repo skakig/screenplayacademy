@@ -1,157 +1,53 @@
-# Casting Wall Stabilization + Character Builder v1.0
+## Goal
+After deleting one or many characters (row menu, bulk action bar, or Cast Cleanup panel), show an "Undo" toast for ~10 seconds. Clicking Undo fully restores the character(s) plus all cascaded rows (relationships, scene states, arcs, snapshots, evidence, arc-beat states) exactly as they were.
 
-Scope is Characters, Scene cleanup, and related tests. **Screenplay editor, typing engine, Enter/Tab/slash/autosave — untouched.**
+## Approach — snapshot on delete, restore on undo
 
-## Pass 1 — "Review Detected Cast" cleanup panel
+Change `deleteCharacter` / `bulkDeleteCharacters` to return a **snapshot payload** of everything they removed, then add a `restoreCharacters` server fn that re-inserts that payload inside RLS. The client keeps the snapshot in memory only for the length of the toast; if the user does nothing, it's discarded (no scheduled server cleanup needed — the rows are already gone).
 
-**New file:** `src/components/characters/CastCleanupPanel.tsx`
+### Server (`src/lib/characters.functions.ts`)
 
-- Reuses `looksLikeStructuralLine` + `isLikelyCharacterName` from `src/lib/editor/manuscriptAnalyzer.ts` (extend that module with a shared `looksLikeSuspiciousCharacterName(name)` helper — one source of truth).
-- Fetches `characters` for the project, filters to suspicious rows:
-  - name matches structural regex (INT/EXT/EST/CUT TO/FADE/ACT/SCENE/OPENING SCENE/MIDPOINT/SEQUENCE)
-  - ends in DAY/NIGHT/DAWN/DUSK/MORNING/EVENING/CONTINUOUS/LATER
-  - fails `isLikelyCharacterName`
-  - OR has zero completeness + zero relationships + zero scene states
-- Row actions: Keep, Rename (inline), Delete. Header actions: Select all, Bulk delete (confirmation dialog).
-- Mounted on Characters page above the grid, collapsible, hidden when list is empty.
-- Never touches `script_blocks`.
+1. Before deleting, `SELECT *` from each dependent table for the target character ids and collect them into a `snapshot` object:
+   ```
+   { characters: [...], character_relationships: [...],
+     character_scene_states: [...], character_scene_arc_states: [...],
+     character_arcs: [...], character_evidence_events: [...],
+     character_snapshots: [...] }
+   ```
+   Include rows where `character_id` OR `related_character_id` is in the id set (for relationships).
+2. Perform the existing cascaded deletes.
+3. Return `{ ok: true, deleted, snapshot }` from both `deleteCharacter` and `bulkDeleteCharacters`.
+4. Add `restoreCharacters` server fn (auth-required, Zod-validated):
+   - Input: the snapshot object.
+   - Verifies every `characters` row's `project_id` belongs to the caller via a `projects` ownership check (RLS on insert already enforces this, but we double-check to fail fast with a clean error).
+   - Re-inserts in dependency order: `characters` first, then relationships / scene states / arcs / evidence / snapshots / arc-beat states — using the original `id`s so foreign keys line up and any other references (e.g. `script_blocks.character_id` if present) keep working.
+   - Uses `upsert(..., { onConflict: 'id', ignoreDuplicates: true })` per table so a partial re-click is safe.
+   - Returns `{ restored: <n> }`.
 
-## Pass 2 — Obvious deletion on `characters.$projectId.tsx`
+### Client (`src/routes/_authenticated/characters.$projectId.tsx`)
 
-- Card gets a persistent `•••` `DropdownMenu` trigger (Open, Rename, Duplicate, Delete) visible on all viewports — no hover requirement.
-- Add bulk-select mode toggle in page header; when active, cards render a checkbox and a floating action bar shows "Delete N".
-- All destructive actions use `AlertDialog` confirmation.
-- On success invalidate: `["characters", projectId]`, `["relationship-counts", projectId]`, `["scene-counts", projectId]`.
+1. On `del.mutate` / `bulkDel.mutate` success, take the returned `snapshot` and call `sonner`'s `toast.success("Deleted <label>", { action: { label: "Undo", onClick: () => restore.mutate(snapshot) }, duration: 10000 })` instead of the current plain success toast.
+2. Add a `restore` mutation that calls the new `restoreCharacters` server fn, then invalidates the same three queries `invalidate()` already refreshes (`characters`, `relationship-counts`, `scene-counts`). On success show `toast.success("Restored")`.
+3. Same treatment inside `CastCleanupPanel` (`src/components/characters/CastCleanupPanel.tsx`) — its Delete / Bulk-delete actions currently go through the same server fns, so wire the returned snapshot into an identical Undo toast there. No other delete surfaces exist for characters.
 
-## Pass 3 — Cast vs Detected Speakers vs Cleanup
+### Non-goals / untouched
+- No new database tables, migrations, or scheduled jobs.
+- No changes to scene deletion, script blocks, or the editor.
+- No change to bulk-delete confirmation UX — Undo is the safety net *after* confirm.
+- Portrait storage: we only reference `portrait_url` (already stored in the `characters` row); we do not copy Storage objects, and none are deleted today, so restore reattaches the same URL.
 
-Restructure page into three labeled sections (tabs or stacked):
-
-1. **Cast** — rows from `characters` table (current grid).
-2. **Detected Speakers** — from `tallyCharacters(blocks)` for this project's script; each row shows line count + "Add to Cast" / "Ignore".
-3. **Cleanup** — the Pass 1 panel.
-
-Anywhere `tallyCharacters` output is rendered, label it "Detected Speakers", never "Characters".
-
-## Pass 4 — Guided Character Builder in `CharacterProfileDialog`
-
-- New default tab: **Build this character** (shown first for empty/new; toggle to switch back).
-- 9 steps (Story role → Want → Need → Wound → Lie → Secret → Voice → Visual identity → Arc), one at a time with progress dots.
-- Each step: short explainer, one example, single input (textarea or select), buttons: **Help me write this** (calls existing AI assist server fn with step-specific prompt), **Skip for now**, **Back / Next**.
-- Existing tabs (Identity, Psychology, Voice, Visual, Arc, Relationships, Scenes) preserved behind an **Advanced Profile** toggle. No fields removed.
-- Persists to same `characters` columns via existing `upsertCharacter`.
-
-## Pass 5 — Visual/image generation clarity
-
-In the Visual tab of `CharacterProfileDialog`:
-
-- Add a config status pill via a lightweight server fn `getImageGenStatus()` that reports whether `LOVABLE_API_KEY` is present.
-- If not configured: banner "Portrait generation is not configured in this preview." — disable Generate button.
-- Portrait generation flow:
-  - Require `image_prompt`; if empty, auto-generate one from character summary/visual fields first (existing helper or new small AI call), show it to user before submitting.
-  - After image call, if response contains neither `b64_json` nor `url`, throw `Error("Image generation returned no data")`.
-  - Never write `portrait_url = null` on failure — leave prior value intact.
-  - Inline failure card in the Visual tab (message + retry), in addition to toast.
-
-## Pass 6 — Scene cleanup on Scene Board / StoryPulse
-
-**New:** `src/components/scenes/SceneCleanupPanel.tsx` mounted on `scenes.$projectId.tsx`.
-
-- Lists scenes marked auto-detected (e.g. `metadata.source = 'auto'` or scenes with no manual edits) separately.
-- Row actions: Delete (confirm), Open source line in editor (deep-link to `editor/$projectId?block=<id>`).
-- Header actions: **Resync scenes from manuscript** (runs existing sceneSync), **Delete selected**.
-- Manual scenes require confirmation; auto scenes require confirmation only for bulk delete.
-
-## Pass 7 — Tests
-
-Extend `src/lib/editor/manuscriptAnalyzer.test.ts` and add `src/lib/characters/cleanup.test.ts`:
-
-- Structural lines (`CUT TO:`, `INT. HOUSE - DAY`, `EXT. FIELD`, `ACT ONE`, `SCENE 12`, `OPENING SCENE`) never pass `isLikelyCharacterName`.
-- `tallyCharacters` returns only speakers with ≥1 dialogue block.
-- Cleanup detector flags: `CUT TO`, `INT. LIBRARY`, `EXT.`, `ACT II`, `SCENE 3`, `FADE IN`.
-- Valid names pass: `STEPHAN`, `HANS`, `HANS (V.O.)`, `COMMANDER`, `J.T.`, `MARY-ANNE`.
-- Extend `src/lib/import/parser.test.ts` to assert scene-heading lines are not emitted as character blocks.
-
-## Pass 8 — Stability gate
-
-Run and fix any failures:
-
-- `npm run build`
-- `npm run lint`
-- `npm run test`
-
-Manual acceptance (documented in `.lovable/plan.md`): Characters page loads, profile opens, create/delete works on touch, bulk cleanup deletes junk, Generate Full + Generate Portrait either succeed or show clear config/failure state, Scene Board cleanup works.
-
-&nbsp;
-
-Approved with amendments:
-
-1. Cleanup confidence levels
-
-Do not treat “zero completeness + zero relationships + zero scene states” as automatic junk. Flag it as low-confidence only. High-confidence junk is structural text like CUT TO:, INT., EXT., ACT, SCENE, FADE IN.
-
-2. Safe deletion
-
-Update delete behavior so deleting a character also removes or safely handles related character_relationships and character_scene_states. Verify DB cascade or delete related rows first in the server function.
-
-3. Scene cleanup source tracking
-
-Current scene sync does not store metadata.source or source block id. If schema supports metadata/source_block_id, write it during sync. If not, infer auto scenes from current manuscript outline and do not promise source-line deep links unless a block id exists.
-
-4. Detected Speakers data source
-
-Characters page must fetch screenplay blocks and derive Detected Speakers from tallyCharacters(blocks). Add ignored detected speaker persistence so ignored names do not keep reappearing.
-
-5. Guided Character Builder safety
-
-“Help me write this” must suggest or fill empty fields only. Never overwrite existing user-written fields without confirmation.
-
-6. Remove Duplicate from the card menu for this pass unless already implemented cleanly. Keep menu to Open / Rename / Delete.
-
-Everything else is approved:
-
-- CastCleanupPanel
-
-- obvious delete
-
-- bulk cleanup
-
-- Cast vs Detected Speakers vs Cleanup
-
-- GuidedCharacterBuilder
-
-- Visual/image generation clarity
-
-- tests
-
-- stability gate
+### Edge cases handled
+- Undo after another mutation touched the project → `upsert` with original ids is idempotent; already-existing rows are skipped.
+- User navigates away before clicking Undo → snapshot lives in the toast closure; when the toast disposes, the snapshot is GC'd. Data stays deleted, which matches "short time window."
+- Snapshot too large (hundreds of characters bulk-deleted) → payload is JSON over the existing server-fn transport; acceptable for the ≤500 cap already enforced by `BulkDeleteInput`.
 
 ## Files touched
+- `src/lib/characters.functions.ts` — extend `deleteCharacter` + `bulkDeleteCharacters`, add `restoreCharacters`.
+- `src/routes/_authenticated/characters.$projectId.tsx` — Undo toast + restore mutation.
+- `src/components/characters/CastCleanupPanel.tsx` — same Undo toast on its delete paths.
 
-**New**
-
-- `src/components/characters/CastCleanupPanel.tsx`
-- `src/components/characters/GuidedCharacterBuilder.tsx`
-- `src/components/characters/DetectedSpeakersPanel.tsx`
-- `src/components/scenes/SceneCleanupPanel.tsx`
-- `src/lib/characters/cleanup.ts` + `.test.ts`
-- `src/lib/imageGenStatus.functions.ts`
-
-**Edited**
-
-- `src/lib/editor/manuscriptAnalyzer.ts` (export `looksLikeSuspiciousCharacterName`)
-- `src/lib/editor/manuscriptAnalyzer.test.ts`
-- `src/lib/import/parser.test.ts`
-- `src/components/characters/CharacterProfileDialog.tsx` (guided mode + Visual tab clarity)
-- `src/routes/_authenticated/characters.$projectId.tsx` (••• menu, bulk-select, three sections)
-- `src/routes/_authenticated/scenes.$projectId.tsx` (mount SceneCleanupPanel)
-
-**Untouched (explicit)**
-
-- `src/components/editor/**`, `useScreenplayDocument`, `ScreenplayLine`, `screenplayKeymap`, `screenplayPersistence`, autosave, entitlements, payments, webhook.
-
-## Not doing (unless you ask)
-
-- Migrating character schema.
-- Rebuilding relationships/scene-usage tabs.
-- Live multiplayer on characters.
+## Manual test
+1. Delete a single character via the `•••` menu → toast shows "Undo" → click within 10s → character reappears with portrait, relationships, scene notes intact.
+2. Bulk select 3 characters, delete → Undo restores all 3 and their cross-relationships.
+3. Delete via Cast Cleanup panel → Undo works there too.
+4. Let toast expire → character stays gone; no console errors.
