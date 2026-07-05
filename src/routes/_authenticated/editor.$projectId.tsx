@@ -391,9 +391,25 @@ function Editor() {
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const writeMode = useWriteMode();
+  const focus = writeMode.on;
 
   const { data: onboarding } = useOnboarding();
-  const coachDefaultTab = onboarding?.preferred_mode === "guided" ? "builder" : "coach";
+  const isBasic = onboarding?.preferred_mode === "guided";
+  const coachDefaultTab = isBasic ? "builder" : "coach";
+
+  // Esc exits Focus Mode. Ignore when a modal/menu/popover has consumed the
+  // event (Radix marks defaultPrevented), and don't fire if a bare Escape
+  // isn't the key.
+  useEffect(() => {
+    if (!focus) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      writeMode.set(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [focus, writeMode]);
 
   // Global Cmd/Ctrl+1–7 → set active block's type
   useEffect(() => {
