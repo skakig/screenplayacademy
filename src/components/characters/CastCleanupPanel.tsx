@@ -14,7 +14,7 @@ import { AlertTriangle, ChevronDown, ChevronRight, Trash2, PencilLine, Check } f
 import { toast } from "sonner";
 import { detectCleanupCandidates, type CleanupCandidate } from "@/lib/characters/cleanup";
 import { completenessPct } from "./tmh";
-import { bulkDeleteCharacters, upsertCharacter } from "@/lib/characters.functions";
+import { bulkDeleteCharacters, upsertCharacter, restoreCharacters } from "@/lib/characters.functions";
 
 export function CastCleanupPanel({
   projectId,
