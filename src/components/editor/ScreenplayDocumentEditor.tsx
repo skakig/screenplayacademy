@@ -426,6 +426,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     languageContext={{ ...languageContext, blockType: b.block_type }}
                     onAddDictionaryTerm={onAddDictionaryTerm}
                     onRejectFormatSuggestion={onRejectFormatSuggestion}
+                    annotationMode={annotationMode}
                   />
                 </div>
               );
