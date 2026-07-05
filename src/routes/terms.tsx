@@ -53,25 +53,37 @@ function TermsPage() {
         </p>
 
         <h2>4. Acceptable use</h2>
-        <p>You must not misuse the Service. In particular, you must not:</p>
+        <p>
+          You agree to use the Service only for lawful, legitimate creative and business purposes.
+          You must not, and must not allow any third party to:
+        </p>
         <ul>
-          <li>Use the Service for any unlawful purpose, fraud, spam, or harassment;</li>
-          <li>Infringe intellectual property, publicity, or privacy rights of others;</li>
-          <li>Upload malware, probe or scan for vulnerabilities, or interfere with the Service's security;</li>
-          <li>Scrape, reverse engineer, resell, or redistribute the Service or its outputs beyond your plan;</li>
-          <li>Attempt to circumvent access controls, rate limits, or feature gates;</li>
-          <li>Generate illegal content, deepfakes without consent, hate speech, sexual content involving minors, or content designed to deceive or defraud;</li>
-          <li>Attempt to "jailbreak" the AI models or use outputs to train competing models.</li>
+          <li><strong>Illegal activity</strong> — use the Service for any unlawful purpose, including fraud, money laundering, spam, phishing, harassment, stalking, or human trafficking;</li>
+          <li><strong>Infringement</strong> — infringe intellectual property, publicity, or privacy rights of others, or upload content you do not have the rights to use;</li>
+          <li><strong>Prohibited content</strong> — generate, upload, or distribute: child sexual abuse material (CSAM); non-consensual sexual content or intimate imagery; content that sexualises minors; terrorist or violent-extremist content; content that incites violence, self-harm, or genocide; hate speech targeting protected classes; deepfakes or synthetic media depicting real people without their explicit consent; content designed to defraud, deceive, or manipulate elections;</li>
+          <li><strong>Regulated advice</strong> — present AI outputs as licensed legal, financial, medical, or other regulated professional advice;</li>
+          <li><strong>Security</strong> — upload malware, probe or scan for vulnerabilities, disrupt, overload, or interfere with the Service's security or availability;</li>
+          <li><strong>Reverse engineering & resale</strong> — reverse engineer, decompile, resell, sublicense, or redistribute the Service, or use outputs to develop or train a competing AI model or service;</li>
+          <li><strong>Circumvention</strong> — attempt to bypass access controls, rate limits, feature gates, safety filters, or "jailbreak" the AI models;</li>
+          <li><strong>Automated abuse</strong> — use bots, scrapers, or automated tools to access the Service outside our documented interfaces.</li>
         </ul>
 
-        <h2>5. AI outputs</h2>
+        <h2>5. Generative AI — your responsibilities</h2>
         <p>
-          The Service uses generative AI. You are responsible for the prompts you submit, for reviewing and
-          verifying any AI outputs before relying on them, and for ensuring you have the rights to any
-          content you upload or import. Outputs may be inaccurate and are not a substitute for professional
-          legal, financial, or medical advice. We may filter, refuse, or moderate outputs and may remove
-          content or suspend accounts that violate these Terms.
+          The Service uses generative AI models provided by us and by third-party AI providers. You
+          acknowledge and agree that:
         </p>
+        <ul>
+          <li><strong>Your inputs.</strong> You are solely responsible for the prompts, source material, and context you submit, and you represent that you have all necessary rights to submit them.</li>
+          <li><strong>Your outputs.</strong> You are responsible for how you use, publish, or distribute AI outputs, including verifying their accuracy, originality, and fitness for your purpose before relying on them.</li>
+          <li><strong>Accuracy disclosure.</strong> AI outputs can be inaccurate, incomplete, biased, or offensive. They are provided for creative assistance and are <em>not</em> a substitute for professional legal, financial, medical, or other regulated advice, and must not be used in place of professional oversight in those contexts.</li>
+          <li><strong>IP in outputs.</strong> As between you and us, and subject to third-party rights and applicable law, you own the outputs you generate through your use of the Service. You are responsible for confirming that your use of an output does not infringe any third-party right.</li>
+          <li><strong>Takedown pathway.</strong> If you believe content on the Service infringes your intellectual property or other rights, contact us via the support channel in your account settings with a detailed description and proof of ownership. We will investigate promptly and, where appropriate, remove or disable access to the content.</li>
+          <li><strong>Repeat infringers.</strong> We terminate the accounts of users who repeatedly infringe others' rights.</li>
+          <li><strong>Content moderation rights.</strong> We may, at our discretion and without prior notice, refuse, filter, restrict, or remove any input, output, or user content, and suspend or terminate any account, that we reasonably believe violates these Terms or applicable law.</li>
+        </ul>
+
+
 
         <h2>6. Your content</h2>
         <p>
