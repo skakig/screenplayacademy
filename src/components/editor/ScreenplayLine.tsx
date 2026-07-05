@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Command, BookPlus, X as XIcon, Wand2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { cycleType } from "./screenplayKeymap";
 import { detectBlockType, BLOCK_LABEL } from "@/lib/editor/autoFormat";
