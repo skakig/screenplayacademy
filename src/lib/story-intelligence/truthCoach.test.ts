@@ -92,14 +92,64 @@ describe("createTruthCoachOutput", () => {
     expect(out.showSuggestedFixes).toBe(false);
   });
 
-  it("5. Advanced shows evidence and suggested fixes", () => {
+  it("5. Advanced + gentle hides evidence but still shows suggested fixes", () => {
     const out = createTruthCoachOutput(fakeResult(), {
       mode: "advanced",
       coachingLevel: "gentle",
     });
+    expect(out.showEvidence).toBe(false);
+    expect(out.showSuggestedFixes).toBe(true);
+    expect(out.maxReasons).toBe(2);
+    expect(out.tone).toBe("gentle");
+  });
+
+  it("5b. Advanced + active shows evidence and diagnostic depth", () => {
+    const out = createTruthCoachOutput(fakeResult(), {
+      mode: "advanced",
+      coachingLevel: "active",
+    });
     expect(out.showEvidence).toBe(true);
     expect(out.showSuggestedFixes).toBe(true);
-    expect(out.maxReasons).toBe(3);
+    expect(out.tone).toBe("diagnostic");
+  });
+
+  it("5c. Advanced + teaching includes concept labels", () => {
+    const r = fakeResult({
+      verdict: "insufficient_data",
+      missingInputs: [{ field: "wound", prompt: "What past hurt?" }],
+    });
+    const out = createTruthCoachOutput(r, {
+      mode: "advanced",
+      coachingLevel: "teaching",
+    });
+    expect(out.concept).toBe("Character wound");
+    expect(out.showEvidence).toBe(true);
+  });
+
+  it("5d. Basic + beginner includes concept labels", () => {
+    const r = fakeResult({
+      verdict: "insufficient_data",
+      missingInputs: [{ field: "wound", prompt: "What past hurt?" }],
+    });
+    const out = createTruthCoachOutput(r, {
+      mode: "basic",
+      coachingLevel: "gentle",
+      writerExperienceLevel: "beginner",
+    });
+    expect(out.concept).toBe("Character wound");
+  });
+
+  it("5e. Basic + professional experience does not include concept labels", () => {
+    const r = fakeResult({
+      verdict: "insufficient_data",
+      missingInputs: [{ field: "wound", prompt: "What past hurt?" }],
+    });
+    const out = createTruthCoachOutput(r, {
+      mode: "basic",
+      coachingLevel: "gentle",
+      writerExperienceLevel: "professional",
+    });
+    expect(out.concept).toBeUndefined();
   });
 
   it("6. strained verdict produces a next step about making pressure visible", () => {
