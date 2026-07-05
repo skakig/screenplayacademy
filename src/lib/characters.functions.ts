@@ -97,22 +97,59 @@ export const upsertCharacter = createServerFn({ method: "POST" })
   });
 
 const IdInput = z.object({ id: z.string().uuid() });
+
+const DEP_TABLES = [
+  "character_relationships",
+  "character_scene_states",
+  "character_scene_arc_states",
+  "character_arcs",
+  "character_evidence_events",
+  "character_snapshots",
+] as const;
+
+async function snapshotForIds(ctx: any, ids: string[]) {
+  const idList = ids.join(",");
+  const [chars, rels, scenes, sceneArcs, arcs, evidence, snaps] = await Promise.all([
+    ctx.supabase.from("characters").select("*").in("id", ids),
+    ctx.supabase.from("character_relationships").select("*").or(
+      `character_id.in.(${idList}),related_character_id.in.(${idList})`,
+    ),
+    ctx.supabase.from("character_scene_states").select("*").in("character_id", ids),
+    ctx.supabase.from("character_scene_arc_states").select("*").in("character_id", ids),
+    ctx.supabase.from("character_arcs").select("*").in("character_id", ids),
+    ctx.supabase.from("character_evidence_events").select("*").in("character_id", ids),
+    ctx.supabase.from("character_snapshots").select("*").in("character_id", ids),
+  ]);
+  return {
+    characters: chars.data ?? [],
+    character_relationships: rels.data ?? [],
+    character_scene_states: scenes.data ?? [],
+    character_scene_arc_states: sceneArcs.data ?? [],
+    character_arcs: arcs.data ?? [],
+    character_evidence_events: evidence.data ?? [],
+    character_snapshots: snaps.data ?? [],
+  };
+}
+
+async function cascadeDelete(ctx: any, ids: string[]) {
+  await ctx.supabase.from("character_relationships").delete().in("character_id", ids);
+  await ctx.supabase.from("character_relationships").delete().in("related_character_id", ids);
+  await ctx.supabase.from("character_scene_states").delete().in("character_id", ids);
+  await ctx.supabase.from("character_scene_arc_states").delete().in("character_id", ids);
+  await ctx.supabase.from("character_arcs").delete().in("character_id", ids);
+  await ctx.supabase.from("character_evidence_events").delete().in("character_id", ids);
+  await ctx.supabase.from("character_snapshots").delete().in("character_id", ids);
+}
+
 export const deleteCharacter = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => IdInput.parse(d))
   .handler(async ({ data, context }) => {
-    // Cascade: remove dependent rows first (RLS-scoped; safe even if DB has
-    // its own ON DELETE CASCADE — this is idempotent).
-    await context.supabase.from("character_relationships").delete().eq("character_id", data.id);
-    await context.supabase.from("character_relationships").delete().eq("related_character_id", data.id);
-    await context.supabase.from("character_scene_states").delete().eq("character_id", data.id);
-    await context.supabase.from("character_scene_arc_states").delete().eq("character_id", data.id);
-    await context.supabase.from("character_arcs").delete().eq("character_id", data.id);
-    await context.supabase.from("character_evidence_events").delete().eq("character_id", data.id);
-    await context.supabase.from("character_snapshots").delete().eq("character_id", data.id);
+    const snapshot = await snapshotForIds(context, [data.id]);
+    await cascadeDelete(context, [data.id]);
     const { error } = await context.supabase.from("characters").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: true, deleted: 1, snapshot };
   });
 
 const BulkDeleteInput = z.object({ ids: z.array(z.string().uuid()).min(1).max(500) });
@@ -120,18 +157,63 @@ export const bulkDeleteCharacters = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => BulkDeleteInput.parse(d))
   .handler(async ({ data, context }) => {
-    await context.supabase.from("character_relationships").delete().in("character_id", data.ids);
-    await context.supabase.from("character_relationships").delete().in("related_character_id", data.ids);
-    await context.supabase.from("character_scene_states").delete().in("character_id", data.ids);
-    await context.supabase.from("character_scene_arc_states").delete().in("character_id", data.ids);
-    await context.supabase.from("character_arcs").delete().in("character_id", data.ids);
-    await context.supabase.from("character_evidence_events").delete().in("character_id", data.ids);
-    await context.supabase.from("character_snapshots").delete().in("character_id", data.ids);
+    const snapshot = await snapshotForIds(context, data.ids);
+    await cascadeDelete(context, data.ids);
     const { error, count } = await context.supabase
       .from("characters").delete({ count: "exact" }).in("id", data.ids);
     if (error) throw new Error(error.message);
-    return { ok: true, deleted: count ?? data.ids.length };
+    return { ok: true, deleted: count ?? data.ids.length, snapshot };
   });
+
+const RestoreInput = z.object({
+  snapshot: z.object({
+    characters: z.array(z.record(z.string(), z.any())).default([]),
+    character_relationships: z.array(z.record(z.string(), z.any())).default([]),
+    character_scene_states: z.array(z.record(z.string(), z.any())).default([]),
+    character_scene_arc_states: z.array(z.record(z.string(), z.any())).default([]),
+    character_arcs: z.array(z.record(z.string(), z.any())).default([]),
+    character_evidence_events: z.array(z.record(z.string(), z.any())).default([]),
+    character_snapshots: z.array(z.record(z.string(), z.any())).default([]),
+  }),
+});
+
+export const restoreCharacters = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => RestoreInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { snapshot } = data;
+    if (!snapshot.characters.length) return { restored: 0 };
+
+    // Verify ownership of every project referenced by the character rows.
+    const projectIds = Array.from(
+      new Set(snapshot.characters.map((c: any) => c.project_id).filter(Boolean)),
+    );
+    if (projectIds.length) {
+      const { data: owned, error: ownErr } = await context.supabase
+        .from("projects").select("id").in("id", projectIds);
+      if (ownErr) throw new Error(ownErr.message);
+      const ownedIds = new Set((owned ?? []).map((p: any) => p.id));
+      for (const pid of projectIds) {
+        if (!ownedIds.has(pid)) throw new Error("Not allowed to restore into that project");
+      }
+    }
+
+    // Characters first, then dependents (preserves foreign-key order).
+    const { error: cErr } = await context.supabase
+      .from("characters").upsert(snapshot.characters, { onConflict: "id", ignoreDuplicates: true });
+    if (cErr) throw new Error(cErr.message);
+
+    for (const table of DEP_TABLES) {
+      const rows = (snapshot as any)[table] as any[];
+      if (!rows?.length) continue;
+      const { error } = await context.supabase
+        .from(table).upsert(rows, { onConflict: "id", ignoreDuplicates: true });
+      if (error) throw new Error(`${table}: ${error.message}`);
+    }
+
+    return { restored: snapshot.characters.length };
+  });
+
 
 export const getImageGenStatus = createServerFn({ method: "GET" })
   .handler(async () => {
