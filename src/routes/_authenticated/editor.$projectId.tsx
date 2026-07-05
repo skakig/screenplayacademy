@@ -51,6 +51,8 @@ import { buildOutline, estimatePages } from "@/lib/editor/manuscriptAnalyzer";
 import { BookOpen, Map as MapIcon, Clapperboard } from "lucide-react";
 import { useWriterEvents } from "@/hooks/useWriterEvents";
 import { useWriteMode } from "@/hooks/use-write-mode";
+import { FocusPill } from "@/components/editor/FocusPill";
+import { FirstRunModeDialog } from "@/components/editor/FirstRunModeDialog";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Writer's Desk — Screenplay Academy" }] }),
