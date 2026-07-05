@@ -7,11 +7,16 @@ import {
   type Feature,
   type Tier,
 } from "@/lib/entitlements";
+import { serverPaddleEnv } from "@/lib/paddleEnv.server";
 
 /**
  * Server-side entitlement guard for `createServerFn` handlers.
  * Pass the user-scoped supabase client (context.supabase from requireSupabaseAuth)
  * and the userId. Throws if the user cannot access `feature`.
+ *
+ * The subscription lookup is scoped to the current Paddle environment
+ * (sandbox in preview, live in production) so a sandbox subscription can
+ * never grant access on the live site and vice-versa.
  *
  * Message format: `FEATURE_LOCKED: ...` — clients can `.startsWith("FEATURE_LOCKED")`
  * to render an upgrade CTA instead of a generic error.
@@ -21,10 +26,12 @@ export async function requireFeature(
   userId: string,
   feature: Feature,
 ): Promise<Tier> {
+  const environment = serverPaddleEnv();
   const { data: row } = await supabase
     .from("subscriptions")
     .select("price_id, status, current_period_end")
     .eq("user_id", userId)
+    .eq("environment", environment)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
