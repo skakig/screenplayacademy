@@ -157,6 +157,15 @@ export const generateTableRead = createServerFn({ method: "POST" })
       throw new Error("Nothing to perform — add scene headings, action, or dialogue first.");
     }
 
+    // Estimate spoken minutes at ~150 wpm and consume that from the monthly
+    // cap up-front — this way we never burn ElevenLabs credits for an
+    // over-quota user. Rounded up, minimum 1 minute per run.
+    const totalWords = lines.reduce((s, l) => s + l.text.split(/\s+/).filter(Boolean).length, 0);
+    const estimatedMinutes = Math.max(1, Math.ceil(totalWords / 150));
+    await consumeUsage(supabase, "tableread_minutes", estimatedMinutes);
+
+
+
     // Create a pending row up front so the UI shows progress and we get an id
     const { data: pendingRow, error: insertErr } = await supabase
       .from("audio_assets")
