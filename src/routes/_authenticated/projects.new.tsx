@@ -109,9 +109,22 @@ function NewProject() {
             <Label>Logline (optional)</Label>
             <Textarea value={form.logline} onChange={(e) => setForm({ ...form, logline: e.target.value })} placeholder="A retired lighthouse keeper must..." rows={3} />
           </div>
-          <Button className="w-full" size="lg" disabled={!form.title || create.isPending} onClick={() => create.mutate()}>
+          {locked && (
+            <div className="rounded-md border border-orange-300 bg-orange-50 p-3 text-sm text-orange-900 flex items-start gap-2">
+              <Lock className="h-4 w-4 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <div className="font-medium">Free plan limit reached</div>
+                <div className="text-xs opacity-90">
+                  Free plan is limited to 1 project. Upgrade to Creator or higher to keep starting new scripts.
+                </div>
+              </div>
+              <a href="/pricing" className="text-xs font-medium underline shrink-0">See plans</a>
+            </div>
+          )}
+          <Button className="w-full" size="lg" disabled={!form.title || create.isPending || locked} onClick={() => create.mutate()}>
             {create.isPending ? "Creating..." : "Create & Start Writing"}
           </Button>
+
         </Card>
       </div>
     </AppShell>
