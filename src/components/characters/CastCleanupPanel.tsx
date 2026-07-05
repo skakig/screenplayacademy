@@ -49,13 +49,23 @@ export function CastCleanupPanel({
     qc.invalidateQueries({ queryKey: ["scene-counts", projectId] });
   };
 
+  const restore = useMutation({
+    mutationFn: async (snapshot: any) => callRestore({ data: { snapshot } }),
+    onSuccess: () => { invalidate(); toast.success("Restored"); },
+    onError: (e: any) => toast.error(e?.message ?? "Restore failed"),
+  });
+
   const bulkDel = useMutation({
     mutationFn: async (ids: string[]) => callBulk({ data: { ids } }),
     onSuccess: (r: any) => {
       invalidate();
       setSelected(new Set());
       setConfirming(null);
-      toast.success(`Removed ${r?.deleted ?? "selected"} character${r?.deleted === 1 ? "" : "s"}`);
+      const n = r?.deleted ?? 0;
+      toast.success(`Deleted ${n} character${n === 1 ? "" : "s"}`, {
+        duration: 10000,
+        action: { label: "Undo", onClick: () => restore.mutate(r?.snapshot) },
+      });
     },
     onError: (e: any) => toast.error(e?.message ?? "Delete failed"),
   });
