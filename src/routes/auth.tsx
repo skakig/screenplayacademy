@@ -11,6 +11,9 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" ? s.next : "",
+  }),
   head: () => ({
     meta: [
       { title: "Sign in or sign up — SceneSmith Studio" },
@@ -28,8 +31,16 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+// Only allow same-origin relative paths as post-auth redirect targets.
+function safeNext(next: string): string {
+  if (!next.startsWith("/") || next.startsWith("//")) return "/dashboard";
+  return next;
+}
+
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  const target = safeNext(next);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,7 +50,7 @@ function AuthPage() {
   useEffect(() => {
     let cancelled = false;
     supabase.auth.getUser().then(({ data }) => {
-      if (!cancelled && data.user) navigate({ to: "/dashboard", replace: true });
+      if (!cancelled && data.user) window.location.assign(target);
     });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -52,15 +63,15 @@ function AuthPage() {
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email, password,
-          options: { emailRedirectTo: window.location.origin, data: { full_name: fullName } },
+          options: { emailRedirectTo: `${window.location.origin}${target}`, data: { full_name: fullName } },
         });
         if (error) throw error;
         toast.success("Your studio is ready. Welcome.");
-        navigate({ to: "/dashboard" });
+        window.location.assign(target);
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate({ to: "/dashboard" });
+        window.location.assign(target);
       }
     } catch (err: any) {
       toast.error(err.message ?? "Something went wrong");
@@ -71,10 +82,10 @@ function AuthPage() {
 
   const handleGoogle = async () => {
     setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/dashboard` });
+    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}${target}` });
     if (result.error) { toast.error("Google sign-in failed"); setLoading(false); return; }
     if (result.redirected) return;
-    navigate({ to: "/dashboard" });
+    window.location.assign(target);
   };
 
   const isSignin = mode === "signin";
