@@ -60,6 +60,7 @@ export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   validateSearch: (s: Record<string, unknown>) => ({
     from: typeof s.from === "string" ? s.from : undefined,
     step: typeof s.step === "string" ? s.step : undefined,
+    block: typeof s.block === "string" ? s.block : undefined,
   }),
   component: Editor,
   errorComponent: ({ error, reset }) => (
