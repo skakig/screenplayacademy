@@ -14,6 +14,7 @@ import {
   evaluateDialogueFit,
   type CharacterTruthResult,
 } from "@/lib/story-intelligence/characterTruthEngine";
+import { normalizeSceneStateForTruthEngine } from "@/lib/story-intelligence/sceneStateAdapter";
 
 type Mode = "basic" | "advanced";
 
