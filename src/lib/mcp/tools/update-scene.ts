@@ -1,6 +1,15 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-import { assertSceneWritable, fail, ok, unauth, userClient } from "./_shared";
+import {
+  SCENE_STATUS,
+  assertSceneWritable,
+  fail,
+  longTextNullable,
+  ok,
+  shortTextNullable,
+  unauth,
+  userClient,
+} from "./_shared";
 
 export default defineTool({
   name: "update_scene",
@@ -9,15 +18,15 @@ export default defineTool({
     "Update editable metadata on a scene (heading, title, location, time_of_day, purpose, conflict, status). Refuses if another collaborator holds an active lock on the scene. Respects RLS.",
   inputSchema: {
     scene_id: z.string().uuid(),
-    scene_heading: z.string().max(500).nullable().optional(),
-    title: z.string().max(300).nullable().optional(),
-    location: z.string().max(200).nullable().optional(),
-    time_of_day: z.string().max(60).nullable().optional(),
-    emotional_purpose: z.string().max(2000).nullable().optional(),
-    plot_purpose: z.string().max(2000).nullable().optional(),
-    conflict: z.string().max(2000).nullable().optional(),
-    reversal: z.string().max(2000).nullable().optional(),
-    status: z.string().max(40).optional(),
+    scene_heading: shortTextNullable(300).optional(),
+    title: shortTextNullable(200).optional(),
+    location: shortTextNullable(200).optional(),
+    time_of_day: shortTextNullable(60).optional(),
+    emotional_purpose: longTextNullable(2000).optional(),
+    plot_purpose: longTextNullable(2000).optional(),
+    conflict: longTextNullable(2000).optional(),
+    reversal: longTextNullable(2000).optional(),
+    status: z.enum(SCENE_STATUS).optional(),
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   handler: async (input, ctx) => {
@@ -31,7 +40,9 @@ export default defineTool({
 
     const { scene_id, ...patch } = input;
     const clean = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined));
-    if (Object.keys(clean).length === 0) return fail("No fields to update.");
+    if (Object.keys(clean).length === 0) {
+      return fail("No fields to update. Provide at least one editable field.");
+    }
 
     const { data, error } = await supabase
       .from("scenes")

@@ -270,8 +270,7 @@
             "scene_heading": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 500
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -281,8 +280,7 @@
             "title": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 300
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -292,8 +290,7 @@
             "location": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 200
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -303,8 +300,7 @@
             "time_of_day": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 60
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -314,8 +310,7 @@
             "emotional_purpose": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 2000
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -325,8 +320,7 @@
             "plot_purpose": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 2000
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -336,8 +330,7 @@
             "conflict": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 2000
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -347,8 +340,7 @@
             "reversal": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "maxLength": 2000
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -357,7 +349,14 @@
             },
             "status": {
               "type": "string",
-              "maxLength": 40
+              "enum": [
+                "draft",
+                "in_progress",
+                "needs_review",
+                "locked",
+                "final",
+                "archived"
+              ]
             }
           },
           "required": [
