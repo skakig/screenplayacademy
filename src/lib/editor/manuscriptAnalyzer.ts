@@ -98,6 +98,17 @@ export function isLikelyCharacterName(s: string): boolean {
   return CHAR_NAME_RE.test(t);
 }
 
+/**
+ * Cast cleanup: returns true when a saved character row's name looks like
+ * structural screenplay text rather than a person. Used by the "Review
+ * Detected Cast" panel to flag junk that leaked in from parsing.
+ */
+export function looksLikeSuspiciousCharacterName(raw: string): boolean {
+  const t = (raw || "").trim();
+  if (!t) return true;
+  return looksLikeStructuralLine(t) || !isLikelyCharacterName(t);
+}
+
 
 export function normalizeCharacterName(s: string): string {
   return (s || "")

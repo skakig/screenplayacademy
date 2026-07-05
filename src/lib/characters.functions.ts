@@ -101,10 +101,43 @@ export const deleteCharacter = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => IdInput.parse(d))
   .handler(async ({ data, context }) => {
+    // Cascade: remove dependent rows first (RLS-scoped; safe even if DB has
+    // its own ON DELETE CASCADE — this is idempotent).
+    await context.supabase.from("character_relationships").delete().eq("character_id", data.id);
+    await context.supabase.from("character_relationships").delete().eq("related_character_id", data.id);
+    await context.supabase.from("character_scene_states").delete().eq("character_id", data.id);
+    await context.supabase.from("character_scene_arc_states").delete().eq("character_id", data.id);
+    await context.supabase.from("character_arcs").delete().eq("character_id", data.id);
+    await context.supabase.from("character_evidence_events").delete().eq("character_id", data.id);
+    await context.supabase.from("character_snapshots").delete().eq("character_id", data.id);
     const { error } = await context.supabase.from("characters").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+const BulkDeleteInput = z.object({ ids: z.array(z.string().uuid()).min(1).max(500) });
+export const bulkDeleteCharacters = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => BulkDeleteInput.parse(d))
+  .handler(async ({ data, context }) => {
+    await context.supabase.from("character_relationships").delete().in("character_id", data.ids);
+    await context.supabase.from("character_relationships").delete().in("related_character_id", data.ids);
+    await context.supabase.from("character_scene_states").delete().in("character_id", data.ids);
+    await context.supabase.from("character_scene_arc_states").delete().in("character_id", data.ids);
+    await context.supabase.from("character_arcs").delete().in("character_id", data.ids);
+    await context.supabase.from("character_evidence_events").delete().in("character_id", data.ids);
+    await context.supabase.from("character_snapshots").delete().in("character_id", data.ids);
+    const { error, count } = await context.supabase
+      .from("characters").delete({ count: "exact" }).in("id", data.ids);
+    if (error) throw new Error(error.message);
+    return { ok: true, deleted: count ?? data.ids.length };
+  });
+
+export const getImageGenStatus = createServerFn({ method: "GET" })
+  .handler(async () => {
+    return { configured: !!process.env.LOVABLE_API_KEY };
+  });
+
 
 // ============= Relationships =============
 
@@ -394,49 +427,51 @@ export const generatePortrait = createServerFn({ method: "POST" })
     const c = await loadOwnedCharacter(context, data.characterId);
     const key = process.env.LOVABLE_API_KEY;
     if (!key) {
-      // No-op demo: just stamp a placeholder URL we can show as “coming soon”
-      return { row: c, demo: true, message: "AI image not configured — connect Lovable AI to generate portraits." };
+      throw new Error("Portrait generation is not configured in this preview. Connect Lovable AI to enable image generation.");
     }
-    const prompt = c.image_prompt || demoVisualPrompt(c);
-    try {
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image-preview",
-          prompt,
-          n: 1,
-        }),
-      });
-      if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        throw new Error(`Image gen failed (${res.status}): ${t.slice(0, 160)}`);
-      }
-      const json: any = await res.json();
-      const b64 = json?.data?.[0]?.b64_json;
-      const url = json?.data?.[0]?.url;
-      let portraitUrl: string | null = null;
-      if (b64) {
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-        const path = `${c.project_id}/characters/${c.id}.png`;
-        const { error: upErr } = await supabaseAdmin.storage
-          .from("storyboards")
-          .upload(path, bytes, { contentType: "image/png", upsert: true });
-        if (upErr) throw new Error(upErr.message);
-        const { data: signed } = await supabaseAdmin.storage
-          .from("storyboards").createSignedUrl(path, 60 * 60 * 24 * 30);
-        portraitUrl = signed?.signedUrl ?? null;
-      } else if (url) {
-        portraitUrl = url;
-      }
-      const { data: row } = await context.supabase
-        .from("characters").update({ portrait_url: portraitUrl, image_prompt: prompt })
-        .eq("id", c.id).select().single();
-      return { row, demo: false };
-    } catch (e: any) {
-      throw new Error(e?.message ?? "Portrait generation failed");
+    // Ensure we always have a prompt before calling the image API.
+    let prompt = (c.image_prompt || "").trim();
+    if (!prompt) {
+      prompt = demoVisualPrompt(c);
+      await context.supabase.from("characters").update({ image_prompt: prompt }).eq("id", c.id);
     }
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "google/gemini-2.5-flash-image-preview", prompt, n: 1 }),
+    });
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      throw new Error(`Portrait generation failed (${res.status}): ${t.slice(0, 200) || res.statusText}`);
+    }
+    const json: any = await res.json().catch(() => ({}));
+    const b64 = json?.data?.[0]?.b64_json;
+    const url = json?.data?.[0]?.url;
+    if (!b64 && !url) {
+      throw new Error("Portrait generation returned no image data. Try again or refine the visual prompt.");
+    }
+    let portraitUrl: string | null = null;
+    if (b64) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+      const path = `${c.project_id}/characters/${c.id}.png`;
+      const { error: upErr } = await supabaseAdmin.storage
+        .from("storyboards")
+        .upload(path, bytes, { contentType: "image/png", upsert: true });
+      if (upErr) throw new Error(`Portrait upload failed: ${upErr.message}`);
+      const { data: signed } = await supabaseAdmin.storage
+        .from("storyboards").createSignedUrl(path, 60 * 60 * 24 * 30);
+      portraitUrl = signed?.signedUrl ?? null;
+    } else if (url) {
+      portraitUrl = url;
+    }
+    if (!portraitUrl) {
+      throw new Error("Portrait was generated but could not be stored. Please retry.");
+    }
+    const { data: row } = await context.supabase
+      .from("characters").update({ portrait_url: portraitUrl, image_prompt: prompt })
+      .eq("id", c.id).select().single();
+    return { row, demo: false };
   });
 
 // ============= List characters for a project (for autocomplete) =============

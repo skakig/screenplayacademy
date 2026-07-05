@@ -28,9 +28,10 @@ import { useAutosave } from "@/hooks/use-autosave";
 import {
   upsertCharacter, generateFullCharacter, generateBackstory, generateTMHProfile,
   generateDialogueVoice, generateVisualPrompt, runMoralPressureTest, analyzeCharacterArc,
-  testDialogue, findContradictions, suggestSceneUse, generatePortrait,
+  testDialogue, findContradictions, suggestSceneUse, generatePortrait, getImageGenStatus,
 } from "@/lib/characters.functions";
 import { listElevenLabsVoices } from "@/lib/elevenlabs-voices.functions";
+import { GuidedCharacterBuilder } from "./GuidedCharacterBuilder";
 
 const TextField = ({ label, value, onChange, multiline, rows = 2, placeholder }: any) => (
   <div>
@@ -65,6 +66,7 @@ export function CharacterProfileDialog({
   const callSuggest = useServerFn(suggestSceneUse);
   const callPortrait = useServerFn(generatePortrait);
   const callVoiceList = useServerFn(listElevenLabsVoices);
+  const callImgStatus = useServerFn(getImageGenStatus);
 
   const { data: character } = useQuery({
     queryKey: ["character", characterId],
@@ -88,6 +90,14 @@ export function CharacterProfileDialog({
   const [dialogueScenario, setDialogueScenario] = useState("");
   const [contradictionsOut, setContradictionsOut] = useState<string>("");
   const [sceneSuggestOut, setSceneSuggestOut] = useState<string>("");
+  const [portraitError, setPortraitError] = useState<string | null>(null);
+
+  const imgStatusQ = useQuery({
+    queryKey: ["image-gen-status"],
+    enabled: open,
+    queryFn: () => callImgStatus(),
+    staleTime: 5 * 60 * 1000,
+  });
 
   useEffect(() => { setLocal(character ?? null); }, [character]);
 
@@ -163,8 +173,15 @@ export function CharacterProfileDialog({
           </div>
         </DialogHeader>
 
-        <Tabs defaultValue="overview" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="mx-6 mt-3 grid grid-cols-9 h-auto">
+        {(() => {
+          const filledCount = local ? [
+            "role","external_goal","internal_need","wound","core_lie","secret","voice_summary","visual_description","character_arc",
+          ].filter((k) => local[k] && String(local[k]).trim()).length : 0;
+          const initialTab = filledCount < 3 ? "build" : "overview";
+          return (
+        <Tabs defaultValue={initialTab} className="flex-1 overflow-hidden flex flex-col">
+          <TabsList className="mx-6 mt-3 grid grid-cols-10 h-auto">
+            <TabsTrigger value="build" className="text-[11px]"><Sparkles className="h-3 w-3 mr-1" />Build</TabsTrigger>
             <TabsTrigger value="overview" className="text-[11px]">Overview</TabsTrigger>
             <TabsTrigger value="backstory" className="text-[11px]"><BookOpen className="h-3 w-3 mr-1" />Backstory</TabsTrigger>
             <TabsTrigger value="personality" className="text-[11px]"><Brain className="h-3 w-3 mr-1" />Personality</TabsTrigger>
@@ -181,6 +198,14 @@ export function CharacterProfileDialog({
               <div className="flex items-center justify-center py-20"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
             ) : (
               <>
+                {/* BUILD (guided) */}
+                <TabsContent value="build" className="mt-0">
+                  <GuidedCharacterBuilder
+                    characterId={characterId!}
+                    projectId={projectId}
+                    character={local}
+                  />
+                </TabsContent>
                 {/* OVERVIEW */}
                 <TabsContent value="overview" className="space-y-3 mt-0">
                   <div className="grid grid-cols-2 gap-3">
@@ -305,6 +330,15 @@ export function CharacterProfileDialog({
 
                 {/* VISUAL */}
                 <TabsContent value="visual" className="space-y-3 mt-0">
+                  {imgStatusQ.data && !imgStatusQ.data.configured && (
+                    <Card className="p-3 border-amber-500/40 bg-amber-500/[0.05] text-xs flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-medium text-amber-600">Portrait generation is not configured in this preview.</div>
+                        <div className="text-muted-foreground mt-0.5">Connect Lovable AI to enable image generation. You can still edit the visual prompt below.</div>
+                      </div>
+                    </Card>
+                  )}
                   <div className="grid grid-cols-[180px_1fr] gap-4">
                     <div className="aspect-[3/4] rounded-lg overflow-hidden bg-secondary border border-border flex items-center justify-center">
                       {local.portrait_url ? (
@@ -315,10 +349,41 @@ export function CharacterProfileDialog({
                     </div>
                     <div className="space-y-2">
                       <AiBar label="Generate Visual Prompt" busy={aiBusy === "vis"} onClick={() => runAi("vis", () => callVisual({ data: { characterId } }))} />
-                      <Button size="sm" className="w-full" disabled={!!aiBusy} onClick={() => runAi("portrait", () => callPortrait({ data: { characterId } }))}>
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        disabled={!!aiBusy || (imgStatusQ.data && !imgStatusQ.data.configured)}
+                        onClick={async () => {
+                          setPortraitError(null);
+                          setAiBusy("portrait");
+                          try {
+                            const out: any = await callPortrait({ data: { characterId: characterId! } });
+                            if (out?.row) {
+                              qc.invalidateQueries({ queryKey: ["character", characterId] });
+                              qc.invalidateQueries({ queryKey: ["characters", projectId] });
+                              toast.success("Portrait generated");
+                            }
+                          } catch (e: any) {
+                            const msg = e?.message ?? "Portrait generation failed";
+                            setPortraitError(msg);
+                            toast.error(msg);
+                          } finally {
+                            setAiBusy(null);
+                          }
+                        }}
+                      >
                         {aiBusy === "portrait" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5 mr-1.5" />}
                         Generate Portrait
                       </Button>
+                      {portraitError && (
+                        <Card className="p-2 border-destructive/40 bg-destructive/[0.05] text-[11px] text-destructive">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                            <div className="flex-1">{portraitError}</div>
+                            <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setPortraitError(null)}>Dismiss</Button>
+                          </div>
+                        </Card>
+                      )}
                     </div>
                   </div>
 
@@ -373,6 +438,8 @@ export function CharacterProfileDialog({
             )}
           </div>
         </Tabs>
+          );
+        })()}
       </DialogContent>
     </Dialog>
   );
