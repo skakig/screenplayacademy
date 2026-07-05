@@ -275,7 +275,7 @@ function ResultCard({
         </div>
       )}
 
-      {!isQuiet && result.missingInputs.length > 0 && !coach.teachingPrompt && (
+      {!isQuiet && result.missingInputs.length > 0 && !coach.teachingPrompt && missingCap > 0 && (
         <div>
           <div className="text-xs font-medium mb-1">
             {coach.tone === "teaching" ? "To sharpen this, tell me:" : "Missing"}
