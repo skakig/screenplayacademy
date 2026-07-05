@@ -553,7 +553,7 @@
       {
         "name": "append_script_blocks",
         "title": "Append screenplay blocks to a scene",
-        "description": "Append one or more screenplay blocks (action, character, dialogue, parenthetical, transition, shot, note, scene_heading) to the end of a scene. Refuses if another collaborator holds an active lock on the scene. Respects RLS.",
+        "description": "Append up to 50 screenplay blocks (action, character, dialogue, parenthetical, transition, shot, note, scene_heading) to the end of a scene. Refuses if another collaborator holds an active lock on the scene. Respects RLS.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -575,7 +575,7 @@
             },
             "blocks": {
               "minItems": 1,
-              "maxItems": 200,
+              "maxItems": 50,
               "type": "array",
               "items": {
                 "type": "object",
@@ -594,8 +594,7 @@
                     ]
                   },
                   "content": {
-                    "type": "string",
-                    "maxLength": 8000
+                    "type": "string"
                   },
                   "character_id": {
                     "anyOf": [
