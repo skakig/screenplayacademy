@@ -14,7 +14,7 @@ import { AlertTriangle, ChevronDown, ChevronRight, Trash2, PencilLine, Check } f
 import { toast } from "sonner";
 import { detectCleanupCandidates, type CleanupCandidate } from "@/lib/characters/cleanup";
 import { completenessPct } from "./tmh";
-import { bulkDeleteCharacters, upsertCharacter } from "@/lib/characters.functions";
+import { bulkDeleteCharacters, upsertCharacter, restoreCharacters } from "@/lib/characters.functions";
 
 export function CastCleanupPanel({
   projectId,
@@ -30,6 +30,7 @@ export function CastCleanupPanel({
   const qc = useQueryClient();
   const callBulk = useServerFn(bulkDeleteCharacters);
   const callUpsert = useServerFn(upsertCharacter);
+  const callRestore = useServerFn(restoreCharacters);
   const [open, setOpen] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState<null | { ids: string[]; label: string }>(null);
@@ -48,13 +49,23 @@ export function CastCleanupPanel({
     qc.invalidateQueries({ queryKey: ["scene-counts", projectId] });
   };
 
+  const restore = useMutation({
+    mutationFn: async (snapshot: any) => callRestore({ data: { snapshot } }),
+    onSuccess: () => { invalidate(); toast.success("Restored"); },
+    onError: (e: any) => toast.error(e?.message ?? "Restore failed"),
+  });
+
   const bulkDel = useMutation({
     mutationFn: async (ids: string[]) => callBulk({ data: { ids } }),
     onSuccess: (r: any) => {
       invalidate();
       setSelected(new Set());
       setConfirming(null);
-      toast.success(`Removed ${r?.deleted ?? "selected"} character${r?.deleted === 1 ? "" : "s"}`);
+      const n = r?.deleted ?? 0;
+      toast.success(`Deleted ${n} character${n === 1 ? "" : "s"}`, {
+        duration: 10000,
+        action: { label: "Undo", onClick: () => restore.mutate(r?.snapshot) },
+      });
     },
     onError: (e: any) => toast.error(e?.message ?? "Delete failed"),
   });

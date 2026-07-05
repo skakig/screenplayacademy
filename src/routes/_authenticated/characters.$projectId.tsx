@@ -27,7 +27,7 @@ import { GROUPS, completenessPct, tmhLabel } from "@/components/characters/tmh";
 import { CharacterProfileDialog } from "@/components/characters/CharacterProfileDialog";
 import { CastCleanupPanel } from "@/components/characters/CastCleanupPanel";
 import { DetectedSpeakersPanel } from "@/components/characters/DetectedSpeakersPanel";
-import { upsertCharacter, deleteCharacter, bulkDeleteCharacters } from "@/lib/characters.functions";
+import { upsertCharacter, deleteCharacter, bulkDeleteCharacters, restoreCharacters } from "@/lib/characters.functions";
 
 export const Route = createFileRoute("/_authenticated/characters/$projectId")({
   head: () => ({ meta: [{ title: "Your Characters — SceneSmith AI" }] }),
@@ -40,6 +40,7 @@ function CharactersPage() {
   const callUpsert = useServerFn(upsertCharacter);
   const callDel = useServerFn(deleteCharacter);
   const callBulk = useServerFn(bulkDeleteCharacters);
+  const callRestore = useServerFn(restoreCharacters);
 
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
@@ -112,9 +113,25 @@ function CharactersPage() {
     },
     onError: (e: any) => toast.error(e.message),
   });
+  const restore = useMutation({
+    mutationFn: async (snapshot: any) => callRestore({ data: { snapshot } }),
+    onSuccess: () => { invalidate(); toast.success("Restored"); },
+    onError: (e: any) => toast.error(e?.message ?? "Restore failed"),
+  });
+  const showUndoToast = (label: string, snapshot: any) => {
+    toast.success(`Deleted ${label}`, {
+      duration: 10000,
+      action: { label: "Undo", onClick: () => restore.mutate(snapshot) },
+    });
+  };
   const del = useMutation({
     mutationFn: async (id: string) => callDel({ data: { id } }),
-    onSuccess: () => { invalidate(); setConfirm(null); toast.success("Character removed"); },
+    onSuccess: (r: any, id) => {
+      invalidate();
+      setConfirm(null);
+      const name = characters.find((c) => c.id === id)?.name || "character";
+      showUndoToast(name, r?.snapshot);
+    },
     onError: (e: any) => toast.error(e?.message ?? "Delete failed"),
   });
   const bulkDel = useMutation({
@@ -124,7 +141,8 @@ function CharactersPage() {
       setBulkSelected(new Set());
       setBulkMode(false);
       setConfirm(null);
-      toast.success(`Removed ${r?.deleted ?? "selected"} character${r?.deleted === 1 ? "" : "s"}`);
+      const n = r?.deleted ?? 0;
+      showUndoToast(`${n} character${n === 1 ? "" : "s"}`, r?.snapshot);
     },
     onError: (e: any) => toast.error(e?.message ?? "Delete failed"),
   });
