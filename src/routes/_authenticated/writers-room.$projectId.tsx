@@ -28,10 +28,21 @@ import { useLiveSceneCollabEnabled } from "@/lib/featureFlags";
 import { fetchProjectRole, wrKeys } from "@/lib/collab";
 import { t } from "@/lib/i18n/t";
 
+import { PageFeatureGate } from "@/components/PageFeatureGate";
+
 export const Route = createFileRoute("/_authenticated/writers-room/$projectId")({
   head: () => ({ meta: [{ title: "Writers' Room — SceneSmith Studio" }] }),
-  component: WritersRoomPage,
+  component: GatedWritersRoom,
 });
+
+function GatedWritersRoom() {
+  return (
+    <PageFeatureGate feature="writers_room">
+      <WritersRoomPage />
+    </PageFeatureGate>
+  );
+}
+
 
 function WritersRoomPage() {
   const { projectId } = Route.useParams();
