@@ -1,116 +1,257 @@
-## Writer Modes: Focus / Basic / Advanced
+## UX Simplification: Studio Menu, Quiet Chrome, Summoned Panels
 
-Reuses existing hooks and storage. No schema changes. No editor engine changes.
+Core principle: **The Page is the product. Everything else is summoned.**
 
-- Focus ↔ `useWriteMode` (localStorage)
-- Basic ↔ `preferred_mode = "guided"` (+ `coaching_level` "teaching"/"active")
-- Advanced ↔ `preferred_mode = "studio"`
+No new features. No schema changes. No editor engine changes. Reorganize what exists into one predictable menu, one guided next-step, and drawers instead of always-on panels.
 
-### Pass 1 — Rename visible labels
+### Pass 1 — Collapse top navigation into one shell
 
-Update `src/components/editor/WriterDeskModeToggle.tsx`:
+Today: `AppShell` header (5 links) + `ProjectNav` sub-bar (up to 10 project rooms) + inline editor top bar. Three horizontal nav layers.
 
-- Relabel Writer→Focus, Studio→Advanced, Rehearsal→Basic.
-- Reorder as Focus | Basic | Advanced.
-- Keep internal `DeskMode` values but map cleanly; when selecting Basic, also bump `coaching_level` to `"teaching"` if currently `"off"`/`"gentle"`.
-- Route all labels/toasts through `t()` (`mode.focus`, `mode.basic`, `mode.advanced`, `mode.focus.toast`, etc.).
+Change `src/components/AppShell.tsx`:
 
-Update `src/components/settings/ModeSettings.tsx` copy to Basic/Advanced (values unchanged).
+- Header keeps only: brand logo, page title slot, **Studio Menu** button (hamburger), sign-out.
+- Remove the 5-link nav row from the header.
 
-Update `src/components/editor/StudioModeToggle.tsx` labels similarly (or retire in favor of `WriterDeskModeToggle` on the editor route).
+Replace `src/components/ProjectNav.tsx` usage in every project route with the same **Studio Menu** trigger (no horizontal room bar rendered by default).
 
-### Pass 2 — Strict Focus Mode in editor route
+New component `src/components/StudioMenu.tsx` (uses existing shadcn `Sheet`):
 
-In `src/routes/_authenticated/editor.$projectId.tsx`, derive `const focus = useWriteMode().on`. Gate rendering so when `focus` is true, we do NOT render:
+- Opens from the right on desktop, from the top on mobile.
+- Two sections rendered from arrays already in `AppShell` and `ProjectNav`:
+  - **Studio** — Studio Lobby, Script Vault, Screenplay School, Pricing, Studio Settings.
+  - **Project rooms** (only when a `projectId` is in scope) — Writer's Desk, Scene Board, Casting Wall, Story Spine, Dramatic Pulse, Shot Wall, Rehearsal Room, Producer Room, Writers' Room. When `preferred_mode === "guided"`, prepend Guided Path.
+- Active route highlighted via `Link activeProps`.
+- Closes on selection.
 
-- `GuidedRail`
-- left `StoryNavigatorPane` / Script Map aside + mobile Sheet trigger (`PanelLeft`)
-- right `CoachPane` aside + mobile Sheet trigger (`PanelRight`)
-- `FeatureDock`
-- `GuidedStepStrip`
-- `CanvasToolbar` (or collapse to a tiny floating button opening a Popover of its actions)
-- `StoryBuilder` empty-state helper cards
-- Top-bar AI/Import/Pitch/Table Read/Storyboard buttons
+Wire trigger:
 
-Keep visible in Focus:
+- `AppShell` renders the trigger in the header.
+- Editor route removes `<ProjectNav …>` and instead relies on the same header trigger. `PresenceAvatarStack` moves next to the trigger.
 
-- `ScreenplayDocumentEditor`
-- `AutosaveIndicator` (compact)
-- `SaveStatusBanner` (only when erroring)
-- Small centered "Focus" pill with "Exit Focus" button and hint "Esc to exit"
-- `WriterDeskModeToggle` (small, top-right)
+### Pass 2 — Focus Mode: page only
 
-Add global `Esc` handler at the route level: if `focus` on and no modal/menu open, toggle focus off. Do not steal typing focus — attach on `window` with capture=false and ignore when target is a textarea/contenteditable, only firing when key is bare `Escape`.
+Already mostly done. Additional cleanups in `src/routes/_authenticated/editor.$projectId.tsx`:
 
-### Pass 3 — First-run mode chooser
+- Hide the entire `AppShell` header row when `focus` (render `<main>` full-bleed via a `focus` prop on `AppShell` that suppresses header + `GuidedReturnBanner`).
+- Keep only: manuscript page, `AutosaveIndicator` (compact top-right), `SaveStatusBanner` (only on error), `FocusPill` (bottom-center), `WriterDeskModeToggle` (small top-right).
+- `CanvasToolbar` becomes summoned: not rendered in Focus; a small floating "Format" button (bottom-right) opens it in a `Popover`. Same for Basic (see Pass 3).
+- No `GuidedRail`, `GuidedStepStrip`, `FeatureDock`, side asides, mobile drawer triggers — already gated; verify none leaked.
 
-New component `src/components/editor/FirstRunModeDialog.tsx`:
+### Pass 3 — Basic Mode: page + one guided next-step
 
-- Uses `Dialog` from `@/components/ui/dialog`.
-- Shows only when `onboarding.app_walkthrough_completed !== true` AND localStorage flag `lovable.modeChooser.v1` unset.
-- Three cards: Focus / Basic / Advanced with the promise copy from the spec (via i18n keys).
-- On select:
-  - Focus → set `useWriteMode.on = true` (toggle if off), mark localStorage flag, mark walkthrough completed via `upsertOnboarding({ app_walkthrough_completed: true })`.
-  - Basic → `upsertOnboarding({ preferred_mode: "guided", coaching_level: "teaching", app_walkthrough_completed: true })`, ensure Focus off.
-  - Advanced → `upsertOnboarding({ preferred_mode: "studio", app_walkthrough_completed: true })`, ensure Focus off.
-- Mount inside the editor route (renders under `AppShell`), gated on `onboarding` query resolved.
-- Add "Reopen mode chooser" link in `ModeSettings` that clears the localStorage flag and reopens.
+In the editor route when `preferred_mode === "guided"` and not `focus`:
 
-### Pass 4 — Simplify Basic Mode
+- Hide left `StoryNavigatorPane` aside and right `CoachPane` aside (they become drawer-only via Studio Menu → project rooms).
+- Keep `GuidedStepStrip` at the top (already there).
+- Show a single `StepCoach` card centered above the manuscript with beginner sections mapped to existing copy in `stepMeta.ts`:
+  - **What to do next** — primary action label.
+  - **Why it matters** — from `stepMeta.principle` (fall back to a short blurb).
+  - **Example** — from `stepMeta.example` (fall back to hide).
+  - **Help me start** — invokes existing `handleCoachPrimary` (already runs the AI/insert path per step).
+- Hide `CanvasToolbar`, `FeatureDock`, page/scene bar, kbd-hint strip; expose them through the floating Format button and Studio Menu.
+- No new i18n content: reuse existing keys and `stepMeta` fields; add only wrapper labels `mode.basic.next`, `mode.basic.why`, `mode.basic.example`, `mode.basic.helpStart` to `src/lib/i18n/keys.ts`.
 
-In the editor route when `preferred_mode === "guided"` AND not in Focus:
+### Pass 4 — Advanced Mode: dockable, not always-on
 
-- Hide `FeatureDock`.
-- Collapse `CanvasToolbar` to a small button.
-- Right pane: force `CoachPane` default tab to guided/coach; hide advanced diagnostics tabs.
-- Keep `GuidedRail` + `GuidedStepStrip` + one `StepCoach` card visible; suppress additional teacher/insights panels.
-- No changes to Advanced Mode behavior.
+Advanced is the current default layout minus permanent panels. In `src/routes/_authenticated/editor.$projectId.tsx` when not `focus` and not Basic:
 
-### Pass 5 — i18n keys
+- Convert the desktop left aside (`StoryNavigatorPane`) and right aside (`CoachPane`) into collapsed-by-default drawers, opened from the header trigger group:
+  - "Script Map" button → opens left `Sheet` (reuse the mobile Sheet already present, drop the `lg:hidden` gating).
+  - "Director's Chair" button → opens right `Sheet` (reuse the mobile Sheet, drop `xl:hidden`).
+- Remove the permanent `<aside … hidden lg:block>` and `<aside … hidden xl:block>` blocks so the manuscript grid becomes single-column by default at all breakpoints.
+- `FeatureDock` becomes summoned: hide by default; add a small "Tools" button next to Format that opens it in a `Sheet` from the bottom.
+- Keep `CanvasToolbar` behavior identical to Focus/Basic (floating Format popover), so Advanced is Focus + tool buttons visible in the header, not a wall of chrome.
 
-Add to `src/lib/i18n/keys.ts` (English fallbacks) and use via `t()` in every touched surface:
+Result: the page is visually dominant in every mode; power tools are one click away.
 
-```
-mode.focus, mode.basic, mode.advanced
-mode.focus.tagline, mode.basic.tagline, mode.advanced.tagline
-mode.focus.pill, mode.focus.exit, mode.focus.escHint
-mode.chooser.title
-mode.settings.reopenChooser
-```
+### Pass 5 — Quiet the editor line
 
-No hardcoded English in new/edited JSX.
+In `src/components/editor/ScreenplayLine.tsx`, hide the "New word / Heads up" chip cluster by default and replace with a subtle left-margin indicator:
 
-### Pass 6 — QA
+- New render: when `visibleUnknowns.length > 0` and the line is not focused, render a single 4px accent dot in the left margin (absolute-positioned, `bg-primary/50`) instead of the current chip row (lines ~400–470).
+- On hover of that dot, or when the line is focused, reveal the existing chip row inside a small `Popover` anchored to the dot.
+- Same treatment for the medium-confidence `suggestion` block (lines ~475+): dot in the margin, popover on hover/focus with existing accept/reject controls.
+- No logic changes to `unknownTerms`, `suggestion`, `dismissedTerms`, `onAddDictionaryTerm`, or `onRejectFormatSuggestion` — only presentation.
 
-Manual pass in `/editor-lab` then `/editor/$projectId` following `docs/EDITOR_ACCEPTANCE_TESTS.md` + the three mode acceptance tests in the spec. Verify:
+### Pass 6 — First-run mode chooser wording
 
-- First-character not lost after entering Focus.
-- Esc exits Focus and restores prior panes.
-- Basic hides FeatureDock but keeps guided rail + one coach card.
-- Advanced unchanged.
+Reuse `FirstRunModeDialog`. Update taglines already in `src/lib/i18n/keys.ts`:
 
-This plan is approved with four adjustments:
+- `mode.focus.tagline` → "Page only. Nothing else."
+- `mode.basic.tagline` → "One clear next step at a time."
+- `mode.advanced.tagline` → "Full studio. Tools on demand."
 
-1. Do not instantiate useWriteMode() separately in the editor route and toggle unless it is backed by shared context/store state. Use one Focus state source and pass it down, or refactor the hook to expose shared state.
-2. Esc should exit Focus Mode even while the screenplay textarea is focused, unless a modal, slash menu, autocomplete, or popover has consumed the key event.
-3. The first-run mode chooser should be gated primarily by the new versioned localStorage flag lovable.modeChooser.v1, so existing users also see it once. After selection, update onboarding and set the local flag.
-4. In Settings, rename “Reopen mode chooser” to “Show setup chooser next time I open the editor” unless the chooser can actually open from that route.
+Success criteria checks (manual after build):
 
-Keep the rest of the plan. No schema changes. No editor engine changes. No AI behavior changes. Focus Mode is subtraction, Basic Mode is guidance, Advanced Mode is the full studio.
+- Any project route shows only header + manuscript; every other room is one click behind Studio Menu.
+- Focus renders page + pill + save state — nothing else.
+- Basic renders page + one guided card + Studio Menu.
+- Advanced renders page + Script Map/Director/Tools buttons in header; nothing docked permanently.
+- Editor line has no visible chips until hover/focus.
 
-One more small thing: they should also hide FeatureDock in Focus Mode. The current editor route already hides side asides when writeMode.on, but FeatureDock still renders at the bottom unconditionally.  That is the exact kind of “one little leftover dock” that ruins Focus Mode.
+Amendments:
+
+Write
+
+- Writer’s Desk
+
+- Focus Mode
+
+Plan
+
+- Guided Path
+
+- Scene Board
+
+- Story Spine
+
+- Casting Wall
+
+Polish
+
+- Dramatic Pulse
+
+- Director’s Notes
+
+- Rewrite Tools
+
+Produce
+
+- Shot Wall
+
+- Rehearsal Room
+
+- Producer Room
+
+- Pitch Deck
+
+Settings
+
+- Studio Settings
+
+- Pricing
+
+&nbsp;
+
+This plan is approved with the following amendments.
+
+Core principle stays:
+
+The Page is the product. Everything else is summoned.
+
+Required changes before implementation:
+
+1. Studio Menu IA
+
+Do not label the main menu section “Project rooms” as the primary mental model. Organize tools by creative purpose:
+
+- Write
+
+- Plan
+
+- Polish
+
+- Produce
+
+- Settings
+
+Each advanced tool should have a short beginner-readable subtitle.
+
+2. Basic Mode
+
+Do not keep the full GuidedStepStrip visible by default. Replace it with a compact progress pill:
+
+“Step 10 of 13 · Build the Midpoint.”
+
+Basic Mode should show:
+
+- page
+
+- one next-step card
+
+- compact progress
+
+- Studio Menu
+
+No horizontal curriculum strip unless opened.
+
+3. Editor shell
+
+In the editor, there should be one header only:
+
+SceneSmith / Project Title / Mode Toggle / Studio Menu / Saved status.
+
+Do not create a second header, subnav, room row, or guided banner layer.
+
+4. Advanced Mode
+
+Advanced defaults to page-first with summoned drawers:
+
+- Script Map
+
+- Director’s Chair
+
+- Tools
+
+- Format
+
+Do not render permanent side panels by default. Future “pin panel” behavior may come later, but is out of scope.
+
+5. Quiet editor annotations
+
+The chip cleanup must include:
+
+- New word chips
+
+- Heads up chips
+
+- suggestion chips
+
+- beat tags
+
+- “Inciting Incident” / “No beat” floating controls
+
+In Focus and Basic, these should be hidden or represented by subtle margin indicators. On iPad/mobile, reveal by tap/focus, not hover only.
+
+6. Scope wording
+
+Change success criteria from “Any project route shows only header + manuscript” to:
+
+“Any editor route shows the manuscript as the dominant object. Other project rooms use the simplified shell and Studio Menu.”
+
+7. Preserve editor behavior
+
+No changes to:
+
+- screenplay block model
+
+- local-first persistence
+
+- autosave
+
+- keymap
+
+- slash menu
+
+- Enter/Tab behavior
+
+- AI behavior
+
+- database schema
+
+If typing breaks, stop and fix the editor before polishing UI.
 
 ### Files touched
 
-- edit `src/components/editor/WriterDeskModeToggle.tsx`
-- edit `src/components/editor/StudioModeToggle.tsx`
-- edit `src/components/settings/ModeSettings.tsx`
-- edit `src/routes/_authenticated/editor.$projectId.tsx` (gating only; no editor engine changes)
-- new  `src/components/editor/FirstRunModeDialog.tsx`
-- new  `src/components/editor/FocusPill.tsx` (small exit control)
-- edit `src/lib/i18n/keys.ts` (add mode.* keys)
-- create `docs/WRITER_MODES_FOCUS_BASIC_ADVANCED.md` (spec doc from user)
+- edit `src/components/AppShell.tsx` (drop nav row, add `focus` prop, mount Studio Menu trigger)
+- new  `src/components/StudioMenu.tsx` (Sheet with Studio + Project sections)
+- edit `src/components/ProjectNav.tsx` — reduced to header-side trigger group (title + presence + drawer buttons in Advanced); no horizontal room bar
+- edit `src/routes/_authenticated/editor.$projectId.tsx` (drop always-on asides, add Format/Tools/Script Map/Director buttons, wire Basic StepCoach)
+- edit `src/components/editor/ScreenplayLine.tsx` (chip cluster → margin dot + popover)
+- edit `src/lib/i18n/keys.ts` (basic-mode section labels, updated taglines)
+- new  `src/components/editor/BasicNextStepCard.tsx` (uses `StepCoach` internals; single card wrapper)
 
 ### Out of scope
 
-No changes to `useScreenplayDocument`, `ScreenplayDocumentEditor`, `ScreenplayLine`, keymap, persistence, DB schema, or AI behavior.
+No editor engine, autosave, local-first, keyboard, slash-menu, screenplay block model, DB schema, AI behavior, or new features.
