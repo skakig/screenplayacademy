@@ -560,8 +560,8 @@ export function ScreenplayLine({
         />
       )}
 
-      {isSceneHeading && (
-        <div className="absolute right-0 -bottom-7 z-10 font-sans">
+      {isSceneHeading && (focused || beat) && (
+        <div className="absolute right-0 -bottom-7 z-10 font-sans opacity-70 hover:opacity-100 focus-within:opacity-100 transition-opacity">
           <SceneBeatPicker
             value={beat}
             onChange={(b) => {
