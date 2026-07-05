@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { tierFromPriceId, hasFeature } from "@/lib/entitlements";
+import { serverPaddleEnv } from "@/lib/paddleEnv.server";
 
 const CreateInput = z.object({
   title: z.string().trim().min(1).max(200),
