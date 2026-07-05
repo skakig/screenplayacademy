@@ -113,9 +113,25 @@ function CharactersPage() {
     },
     onError: (e: any) => toast.error(e.message),
   });
+  const restore = useMutation({
+    mutationFn: async (snapshot: any) => callRestore({ data: { snapshot } }),
+    onSuccess: () => { invalidate(); toast.success("Restored"); },
+    onError: (e: any) => toast.error(e?.message ?? "Restore failed"),
+  });
+  const showUndoToast = (label: string, snapshot: any) => {
+    toast.success(`Deleted ${label}`, {
+      duration: 10000,
+      action: { label: "Undo", onClick: () => restore.mutate(snapshot) },
+    });
+  };
   const del = useMutation({
     mutationFn: async (id: string) => callDel({ data: { id } }),
-    onSuccess: () => { invalidate(); setConfirm(null); toast.success("Character removed"); },
+    onSuccess: (r: any, id) => {
+      invalidate();
+      setConfirm(null);
+      const name = characters.find((c) => c.id === id)?.name || "character";
+      showUndoToast(name, r?.snapshot);
+    },
     onError: (e: any) => toast.error(e?.message ?? "Delete failed"),
   });
   const bulkDel = useMutation({
@@ -125,7 +141,8 @@ function CharactersPage() {
       setBulkSelected(new Set());
       setBulkMode(false);
       setConfirm(null);
-      toast.success(`Removed ${r?.deleted ?? "selected"} character${r?.deleted === 1 ? "" : "s"}`);
+      const n = r?.deleted ?? 0;
+      showUndoToast(`${n} character${n === 1 ? "" : "s"}`, r?.snapshot);
     },
     onError: (e: any) => toast.error(e?.message ?? "Delete failed"),
   });
