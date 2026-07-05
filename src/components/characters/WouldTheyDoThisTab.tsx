@@ -224,7 +224,7 @@ function ResultCard({
 
   const isQuiet = coach.tone === "quiet";
   const reasonsToShow = result.reasons.slice(0, coach.maxReasons);
-  const missingCap = coach.tone === "teaching" ? 1 : 6;
+  const missingCap = coach.maxMissingInputs;
 
   return (
     <Card className="p-4 space-y-3">
@@ -275,7 +275,7 @@ function ResultCard({
         </div>
       )}
 
-      {!isQuiet && result.missingInputs.length > 0 && !coach.teachingPrompt && (
+      {!isQuiet && result.missingInputs.length > 0 && !coach.teachingPrompt && missingCap > 0 && (
         <div>
           <div className="text-xs font-medium mb-1">
             {coach.tone === "teaching" ? "To sharpen this, tell me:" : "Missing"}

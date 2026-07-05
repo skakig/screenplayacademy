@@ -16,6 +16,10 @@ import type {
   CharacterTruthResult,
   MissingCharacterTruthInput,
 } from "./characterTruthEngine";
+import {
+  resolveWriterGuidance,
+  type WriterCoachingLevel,
+} from "./writerProfileSignals";
 
 // ============================================================================
 // Types
@@ -23,7 +27,7 @@ import type {
 
 export type WriterMode = "basic" | "advanced";
 
-export type CoachingLevel = "off" | "gentle" | "active" | "teaching";
+export type CoachingLevel = WriterCoachingLevel;
 
 export type WriterProfileForCoach = {
   mode: WriterMode;
@@ -40,7 +44,8 @@ export type TruthCoachOutput = {
   showEvidence: boolean;
   showSuggestedFixes: boolean;
   maxReasons: number;
-  tone: "quiet" | "teaching" | "diagnostic";
+  maxMissingInputs: number;
+  tone: "quiet" | "gentle" | "teaching" | "diagnostic";
 };
 
 // ============================================================================
@@ -177,23 +182,30 @@ export function createTruthCoachOutput(
   result: CharacterTruthResult,
   profile: WriterProfileForCoach,
 ): TruthCoachOutput {
-  const coachingLevel: CoachingLevel = profile.coachingLevel ?? "gentle";
   const isBasic = profile.mode === "basic";
+  const guidance = resolveWriterGuidance({
+    mode: profile.mode,
+    coachingLevel: profile.coachingLevel ?? undefined,
+    writerExperienceLevel: profile.writerExperienceLevel ?? undefined,
+  });
 
-  // Coaching off — quiet output, verdict-only.
-  if (coachingLevel === "off") {
+  // Coaching off — quiet output, verdict-only, but display flags follow guidance.
+  if (profile.coachingLevel === "off") {
     return {
       headline: HEADLINES_BASIC[result.verdict],
       explanation: "",
-      showEvidence: false,
-      showSuggestedFixes: false,
-      maxReasons: 0,
-      tone: "quiet",
+      showEvidence: guidance.showEvidence,
+      showSuggestedFixes: guidance.showSuggestedFixes,
+      maxReasons: guidance.maxReasons,
+      maxMissingInputs: guidance.maxMissingInputs,
+      tone: guidance.tone,
     };
   }
 
   const { headline, explanation } = explainVerdictForWriter(result, profile);
-  const nextStep = getNextWriterAction(result, profile);
+  const nextStep = guidance.includeNextStep
+    ? getNextWriterAction(result, profile)
+    : undefined;
   const primaryMissing = selectPrimaryMissingInput(result);
 
   // Teaching prompt: one question, only when it will help right now.
@@ -206,7 +218,7 @@ export function createTruthCoachOutput(
     }
   }
 
-  const concept =
+  const conceptRaw =
     primaryMissing?.field === "wound"
       ? "Character wound"
       : primaryMissing?.field === "moral_pressure"
@@ -217,15 +229,21 @@ export function createTruthCoachOutput(
             ? "Need"
             : undefined;
 
+  const concept = guidance.includeConceptLabel ? conceptRaw : undefined;
+
+  const maxReasons = Math.min(guidance.maxReasons, result.reasons.length);
+
   return {
     headline,
     explanation,
     nextStep,
     teachingPrompt,
     concept,
-    showEvidence: !isBasic,
-    showSuggestedFixes: !isBasic,
-    maxReasons: isBasic ? 1 : result.reasons.length,
-    tone: isBasic ? "teaching" : "diagnostic",
+    showEvidence: guidance.showEvidence,
+    showSuggestedFixes: guidance.showSuggestedFixes,
+    maxReasons,
+    maxMissingInputs: guidance.maxMissingInputs,
+    tone: guidance.tone,
   };
 }
+
