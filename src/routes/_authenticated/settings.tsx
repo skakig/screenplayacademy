@@ -1,15 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Save, User as UserIcon, Languages } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Save, User as UserIcon, Languages, CreditCard, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { ModeSettings } from "@/components/settings/ModeSettings";
+import { useSubscription } from "@/hooks/useSubscription";
+import { TIER_LABEL } from "@/lib/entitlements";
+import { createCustomerPortalSession } from "@/lib/customerPortal.functions";
 import {
   SUPPORTED_LANGUAGES,
   LANGUAGE_LABEL,
@@ -20,6 +25,89 @@ export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Settings — SceneSmith AI" }] }),
   component: Settings,
 });
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function PlanCard() {
+  const openPortal = useServerFn(createCustomerPortalSession);
+  const { loading, subscription, tier, isActive, isPastDue, isCanceledInGrace } = useSubscription();
+  const [busy, setBusy] = useState(false);
+
+  const handlePortal = async () => {
+    setBusy(true);
+    try {
+      const { url } = await openPortal({ data: {} });
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not open billing portal");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card className="p-6 space-y-4">
+      <div className="flex items-center gap-3 mb-1">
+        <div className="h-10 w-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center">
+          <CreditCard className="h-5 w-5 text-primary" />
+        </div>
+        <h2 className="font-semibold">Plan &amp; billing</h2>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">Current plan:</span>
+        <Badge variant={tier === "free" ? "outline" : "default"} className="capitalize">
+          {loading ? "…" : TIER_LABEL[tier]}
+        </Badge>
+        {isPastDue && (
+          <Badge variant="destructive">Payment failed</Badge>
+        )}
+        {isCanceledInGrace && (
+          <Badge variant="outline" className="border-orange-400 text-orange-600">
+            Ends {formatDate(subscription?.current_period_end)}
+          </Badge>
+        )}
+      </div>
+
+      {isActive && subscription && !isCanceledInGrace && (
+        <p className="text-xs text-muted-foreground">
+          {subscription.cancel_at_period_end
+            ? `Scheduled to cancel on ${formatDate(subscription.current_period_end)}.`
+            : `Renews on ${formatDate(subscription.current_period_end)}.`}
+        </p>
+      )}
+      {!isActive && !loading && (
+        <p className="text-xs text-muted-foreground">
+          You're on the Free plan (1 project, editor only). Upgrade to unlock more projects, Script Brain, Pitch Deck, Table Read, Storyboard, and Writers' Room.
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-2 pt-1">
+        {isActive ? (
+          <Button variant="outline" size="sm" onClick={handlePortal} disabled={busy}>
+            <ExternalLink className="h-4 w-4 mr-2" />
+            {busy ? "Opening…" : "Manage subscription"}
+          </Button>
+        ) : (
+          <Button asChild size="sm">
+            <a href="/pricing">See plans</a>
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
+}
 
 function Settings() {
   const qc = useQueryClient();
@@ -88,7 +176,7 @@ function Settings() {
       <div className="max-w-2xl mx-auto px-4 py-10 space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">Your account & plan.</p>
+          <p className="text-muted-foreground">Your account &amp; plan.</p>
         </div>
 
         <Card className="p-6 space-y-4">
@@ -164,13 +252,7 @@ function Settings() {
 
         <ModeSettings />
 
-
-        <Card className="p-6 space-y-3">
-          <h2 className="font-semibold">Plan</h2>
-          <p className="text-sm">Current: <span className="capitalize font-medium text-primary">{profile?.plan ?? "free"}</span></p>
-          <p className="text-xs text-muted-foreground">Subscription management is coming soon.</p>
-          <Button variant="outline" size="sm" onClick={() => toast.info("Billing portal coming soon.")}>Manage subscription</Button>
-        </Card>
+        <PlanCard />
 
         <Card className="p-6 space-y-3 border-destructive/30">
           <h2 className="font-semibold text-destructive">Danger zone</h2>
@@ -181,4 +263,3 @@ function Settings() {
     </AppShell>
   );
 }
-

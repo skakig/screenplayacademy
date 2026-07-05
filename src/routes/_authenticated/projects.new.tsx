@@ -2,7 +2,6 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,10 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { seedGuidedSteps } from "@/lib/academy.functions";
+import { createProjectGated } from "@/lib/projects.functions";
 
 export const Route = createFileRoute("/_authenticated/projects/new")({
   head: () => ({ meta: [{ title: "Start a Script — SceneSmith AI" }] }),
@@ -26,18 +26,18 @@ function NewProject() {
   const navigate = useNavigate();
   const { data: onboarding } = useOnboarding();
   const seedFn = useServerFn(seedGuidedSteps);
+  const createFn = useServerFn(createProjectGated);
   const [form, setForm] = useState({
     title: "", project_type: "Feature Film", genre: "", tone: "",
     target_length: "", logline: "", ai_help_level: "Balanced",
   });
+  const [locked, setLocked] = useState(false);
   const create = useMutation({
     mutationFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      const { data, error } = await supabase.from("projects").insert({ ...form, user_id: u.user!.id }).select().single();
-      if (error) throw error;
+      const data = await createFn({ data: form });
       return data;
     },
-    onSuccess: async (p) => {
+    onSuccess: async (p: any) => {
       toast.success("Project created");
       if (onboarding?.preferred_mode === "guided") {
         try { await seedFn({ data: { projectId: p.id } }); } catch { /* ignore */ }
@@ -46,8 +46,17 @@ function NewProject() {
         navigate({ to: "/editor/$projectId", params: { projectId: p.id } });
       }
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => {
+      const msg: string = e?.message ?? "Failed to create project";
+      if (msg.startsWith("FREE_TIER_LIMIT")) {
+        setLocked(true);
+        toast.error("Free plan is limited to 1 project. Upgrade to add more.");
+      } else {
+        toast.error(msg);
+      }
+    },
   });
+
 
   return (
     <AppShell>
