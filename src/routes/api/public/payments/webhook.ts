@@ -118,29 +118,60 @@ async function handleSubscriptionCanceled(data: any, env: PaddleEnv) {
 async function handleWebhook(req: Request, env: PaddleEnv) {
   const event = await verifyWebhook(req, env);
 
-  switch (event.eventType) {
-    case EventName.SubscriptionCreated:
-      await handleSubscriptionCreated(event.data, env);
-      break;
-    case EventName.SubscriptionUpdated:
-      await handleSubscriptionUpdated(event.data, env);
-      break;
-    case EventName.SubscriptionCanceled:
-      await handleSubscriptionCanceled(event.data, env);
-      break;
-    case EventName.TransactionCompleted:
-      // No one-time products in the catalog — log for audit and move on.
-      // Subscription lifecycle events are what update entitlement.
-      console.log("transaction.completed", { txId: (event.data as any)?.id });
-      break;
-    case EventName.TransactionPaymentFailed:
-      // Paddle will retry and eventually flip the subscription to `past_due`
-      // (handled by subscription.updated). We surface `past_due` as a dunning
-      // banner, not a revocation.
-      console.warn("transaction.payment_failed", { txId: (event.data as any)?.id });
-      break;
-    default:
-      console.log("Unhandled event:", event.eventType);
+  // Idempotency / replay protection. Paddle retries any non-2xx response for
+  // up to 3 days and may occasionally re-deliver successful events too. Each
+  // notification carries a stable `eventId` (evt_...) — we insert it into
+  // processed_webhook_events BEFORE handling, so a concurrent redelivery
+  // loses the PK race and returns 200 without re-mutating subscriptions or
+  // usage counters. Cache is per-environment so a sandbox and live event
+  // never collide.
+  const eventId = (event as any).eventId ?? (event as any).event_id;
+  if (eventId) {
+    const { error: dupErr } = await getSupabase()
+      .from("processed_webhook_events" as any)
+      .insert({ event_id: eventId, event_type: event.eventType, environment: env });
+    if (dupErr) {
+      // 23505 = unique_violation → already processed. Ack with 200.
+      if ((dupErr as any).code === "23505") {
+        console.log("Skipping duplicate webhook event", { eventId, type: event.eventType });
+        return;
+      }
+      throw new WebhookRetryable(
+        `Failed to record webhook event ${eventId}: ${dupErr.message}`,
+      );
+    }
+  }
+
+  try {
+    switch (event.eventType) {
+      case EventName.SubscriptionCreated:
+        await handleSubscriptionCreated(event.data, env);
+        break;
+      case EventName.SubscriptionUpdated:
+        await handleSubscriptionUpdated(event.data, env);
+        break;
+      case EventName.SubscriptionCanceled:
+        await handleSubscriptionCanceled(event.data, env);
+        break;
+      case EventName.TransactionCompleted:
+        console.log("transaction.completed", { txId: (event.data as any)?.id });
+        break;
+      case EventName.TransactionPaymentFailed:
+        console.warn("transaction.payment_failed", { txId: (event.data as any)?.id });
+        break;
+      default:
+        console.log("Unhandled event:", event.eventType);
+    }
+  } catch (err) {
+    // Handler failed — remove the idempotency row so Paddle's retry is
+    // processed instead of silently skipped as a duplicate.
+    if (eventId) {
+      await getSupabase()
+        .from("processed_webhook_events" as any)
+        .delete()
+        .eq("event_id", eventId);
+    }
+    throw err;
   }
 }
 

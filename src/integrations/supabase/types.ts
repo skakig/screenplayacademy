@@ -1452,6 +1452,27 @@ export type Database = {
         }
         Relationships: []
       }
+      processed_webhook_events: {
+        Row: {
+          environment: string
+          event_id: string
+          event_type: string
+          received_at: string
+        }
+        Insert: {
+          environment: string
+          event_id: string
+          event_type: string
+          received_at?: string
+        }
+        Update: {
+          environment?: string
+          event_id?: string
+          event_type?: string
+          received_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
