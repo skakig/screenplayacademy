@@ -76,8 +76,20 @@ function Pricing() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Live checkout only works after Paddle finishes automated review of the
+  // account. Until the ops team flips `VITE_PAYMENTS_LIVE_APPROVED` to true
+  // in the production env, the CTA on the live site turns into a waitlist
+  // link so we don't dump users into a broken Paddle overlay.
+  const liveMode = getPaddleEnvironment() === "live";
+  const liveApproved = import.meta.env.VITE_PAYMENTS_LIVE_APPROVED === "true";
+  const checkoutBlocked = liveMode && !liveApproved;
+
   const handleBuy = async (tier: Tier) => {
     if (!tier.priceId) return;
+    if (checkoutBlocked) {
+      window.location.href = "mailto:hello@scenesmithstudio.com?subject=SceneSmith%20Studio%20paid%20plans%20waitlist";
+      return;
+    }
     if (!user) {
       toast.info("Sign in to subscribe.");
       navigate({ to: "/auth" });
