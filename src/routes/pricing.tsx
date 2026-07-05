@@ -124,6 +124,11 @@ function Pricing() {
           <p className="text-[11px] uppercase tracking-[0.32em] text-muted-foreground mb-3">SceneSmith Studio · Pricing</p>
           <h1 className="font-display text-5xl font-bold tracking-tight">Pricing for every storyteller.</h1>
           <p className="text-muted-foreground mt-3">Write free. Upgrade when you're ready to pitch.</p>
+          {checkoutBlocked && (
+            <div className="mt-6 mx-auto max-w-xl text-sm rounded-lg border border-amber-400/40 bg-amber-100/70 text-amber-900 px-4 py-3">
+              Paid plans are launching soon. Join the waitlist and we'll email you the moment checkout opens.
+            </div>
+          )}
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
           {TIERS.map((t) => {
