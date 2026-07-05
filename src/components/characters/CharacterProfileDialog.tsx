@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
   Sparkles, Loader2, ImagePlus, BookOpen, Brain, Mic2, Eye, Users, Activity, FileText, Wand2, Volume2,
-  AlertTriangle, MessageSquareQuote, Search, Lightbulb,
+  AlertTriangle, MessageSquareQuote, Search, Lightbulb, Scale,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TMHInfoPanel } from "./TMHInfoPanel";
@@ -32,6 +32,8 @@ import {
 } from "@/lib/characters.functions";
 import { listElevenLabsVoices } from "@/lib/elevenlabs-voices.functions";
 import { GuidedCharacterBuilder } from "./GuidedCharacterBuilder";
+import { WouldTheyDoThisTab } from "./WouldTheyDoThisTab";
+import { useWriteMode } from "@/hooks/use-write-mode";
 
 const TextField = ({ label, value, onChange, multiline, rows = 2, placeholder }: any) => (
   <div>
@@ -84,6 +86,8 @@ export function CharacterProfileDialog({
   });
 
   const [local, setLocal] = useState<any>(null);
+  const { on: focusOn } = useWriteMode();
+  const showTruthTab = !focusOn; // Focus mode hides the tab entirely.
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [pressureOut, setPressureOut] = useState<string>("");
   const [dialogueOut, setDialogueOut] = useState<string>("");
@@ -180,20 +184,26 @@ export function CharacterProfileDialog({
           const initialTab = filledCount < 3 ? "build" : "overview";
           return (
         <Tabs defaultValue={initialTab} className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="mx-6 mt-3 grid grid-cols-10 h-auto">
-            <TabsTrigger value="build" className="text-[11px]"><Sparkles className="h-3 w-3 mr-1" />Build</TabsTrigger>
-            <TabsTrigger value="overview" className="text-[11px]">Overview</TabsTrigger>
-            <TabsTrigger value="backstory" className="text-[11px]"><BookOpen className="h-3 w-3 mr-1" />Backstory</TabsTrigger>
-            <TabsTrigger value="personality" className="text-[11px]"><Brain className="h-3 w-3 mr-1" />Personality</TabsTrigger>
-            <TabsTrigger value="tmh" className="text-[11px]">TMH</TabsTrigger>
-            <TabsTrigger value="voice" className="text-[11px]"><Mic2 className="h-3 w-3 mr-1" />Voice</TabsTrigger>
-            <TabsTrigger value="visual" className="text-[11px]"><Eye className="h-3 w-3 mr-1" />Visual</TabsTrigger>
-            <TabsTrigger value="relationships" className="text-[11px]"><Users className="h-3 w-3 mr-1" />Rel.</TabsTrigger>
-            <TabsTrigger value="arc" className="text-[11px]"><Activity className="h-3 w-3 mr-1" />Arc</TabsTrigger>
-            <TabsTrigger value="scenes" className="text-[11px]"><FileText className="h-3 w-3 mr-1" />Scenes</TabsTrigger>
+          <TabsList className="mx-6 mt-3 inline-flex w-auto max-w-[calc(100%-3rem)] overflow-x-auto flex-nowrap h-auto justify-start gap-1">
+            <TabsTrigger value="build" className="text-[11px] shrink-0"><Sparkles className="h-3 w-3 mr-1" />Build</TabsTrigger>
+            <TabsTrigger value="overview" className="text-[11px] shrink-0">Overview</TabsTrigger>
+            <TabsTrigger value="backstory" className="text-[11px] shrink-0"><BookOpen className="h-3 w-3 mr-1" />Backstory</TabsTrigger>
+            <TabsTrigger value="personality" className="text-[11px] shrink-0"><Brain className="h-3 w-3 mr-1" />Personality</TabsTrigger>
+            {showTruthTab && (
+              <TabsTrigger value="truth" className="text-[11px] shrink-0" title="Would they do this?">
+                <Scale className="h-3 w-3 mr-1" /><span className="hidden md:inline">Truth Check</span><span className="md:hidden">Truth</span>
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="tmh" className="text-[11px] shrink-0">TMH</TabsTrigger>
+            <TabsTrigger value="voice" className="text-[11px] shrink-0"><Mic2 className="h-3 w-3 mr-1" />Voice</TabsTrigger>
+            <TabsTrigger value="visual" className="text-[11px] shrink-0"><Eye className="h-3 w-3 mr-1" />Visual</TabsTrigger>
+            <TabsTrigger value="relationships" className="text-[11px] shrink-0"><Users className="h-3 w-3 mr-1" />Rel.</TabsTrigger>
+            <TabsTrigger value="arc" className="text-[11px] shrink-0"><Activity className="h-3 w-3 mr-1" />Arc</TabsTrigger>
+            <TabsTrigger value="scenes" className="text-[11px] shrink-0"><FileText className="h-3 w-3 mr-1" />Scenes</TabsTrigger>
           </TabsList>
 
           <div className="flex-1 overflow-y-auto px-6 py-5">
+
             {!local ? (
               <div className="flex items-center justify-center py-20"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
             ) : (
@@ -256,7 +266,15 @@ export function CharacterProfileDialog({
                   </div>
                 </TabsContent>
 
+                {/* TRUTH CHECK — Would They Do This? */}
+                {showTruthTab && (
+                  <TabsContent value="truth" className="mt-0">
+                    <WouldTheyDoThisTab projectId={projectId} character={local} />
+                  </TabsContent>
+                )}
+
                 {/* TMH */}
+
                 <TabsContent value="tmh" className="space-y-4 mt-0">
                   <TMHInfoPanel />
                   <AiBar label="Generate TMH Profile" busy={aiBusy === "tmh"} onClick={() => runAi("tmh", () => callTMH({ data: { characterId } }))} />
