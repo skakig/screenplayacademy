@@ -535,6 +535,28 @@ export const i18nStrings = {
   "collab.acceptInvite.missingTokenTitle": "Invite link is missing a token",
   "collab.acceptInvite.missingTokenBody":
     "Open the full link you were sent — the token at the end is required.",
+
+  // Writer modes: Focus / Basic / Advanced
+  "mode.focus": "Focus",
+  "mode.basic": "Basic",
+  "mode.advanced": "Advanced",
+  "mode.focus.tagline": "Just the page. No panels. No noise.",
+  "mode.basic.tagline": "Walk me through my first screenplay.",
+  "mode.advanced.tagline": "Open the full studio.",
+  "mode.focus.toast": "Focus Mode — page only",
+  "mode.basic.toast": "Basic Mode",
+  "mode.advanced.toast": "Advanced Mode",
+  "mode.groupLabel": "Writing mode",
+  "mode.focus.pill": "Focus Mode",
+  "mode.focus.exit": "Exit Focus",
+  "mode.focus.escHint": "Press Esc to exit",
+  "mode.chooser.title": "Choose your writing setup",
+  "mode.chooser.subtitle": "You can change this any time from Settings.",
+  "mode.chooser.pick": "Pick this",
+  "mode.settings.title": "Writing mode",
+  "mode.settings.reopenChooser": "Show setup chooser next time I open the editor",
+  "mode.settings.reopenToast": "The setup chooser will appear next time you open the editor.",
+  "mode.canvasToolbar.open": "Formatting tools",
 } as const;
 
 export type I18nKey = keyof typeof i18nStrings;

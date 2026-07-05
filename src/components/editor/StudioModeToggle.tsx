@@ -2,8 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { upsertOnboarding } from "@/lib/onboarding.functions";
 import { useOnboarding } from "@/hooks/use-onboarding";
-import { Compass, Wand2 } from "lucide-react";
+import { Compass, LayoutDashboard } from "lucide-react";
 import { toast } from "sonner";
+import { t } from "@/lib/i18n/t";
 
 export function StudioModeToggle() {
   const { data: onboarding } = useOnboarding();
@@ -16,7 +17,7 @@ export function StudioModeToggle() {
       upsert({ data: { preferred_mode: next } }),
     onSuccess: (_d, next) => {
       qc.invalidateQueries({ queryKey: ["onboarding"] });
-      toast.success(`${next === "guided" ? "Guided" : "Studio"} Mode`);
+      toast.success(next === "guided" ? t("mode.basic.toast") : t("mode.advanced.toast"));
     },
   });
 
@@ -30,7 +31,7 @@ export function StudioModeToggle() {
             : "text-muted-foreground hover:text-foreground"
         }`}
       >
-        <Wand2 className="h-3 w-3" /> Studio
+        <LayoutDashboard className="h-3 w-3" /> {t("mode.advanced")}
       </button>
       <button
         onClick={() => mode !== "guided" && setMode.mutate("guided")}
@@ -40,7 +41,7 @@ export function StudioModeToggle() {
             : "text-muted-foreground hover:text-foreground"
         }`}
       >
-        <Compass className="h-3 w-3" /> Guided
+        <Compass className="h-3 w-3" /> {t("mode.basic")}
       </button>
     </div>
   );
