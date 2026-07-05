@@ -2,7 +2,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { Button } from "@/components/ui/button";
 import { Sparkles, FileText, Wand2, Info, X } from "lucide-react";
 import { useScreenplayDocument, type SaveStatus, type LocalBlock } from "./useScreenplayDocument";
-import { ScreenplayLine, type AutoFormatEvent } from "./ScreenplayLine";
+import { ScreenplayLine, type AutoFormatEvent, type AnnotationMode } from "./ScreenplayLine";
 import { nextBlockTypeAfter } from "./screenplayKeymap";
 import type { CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import type { PersistenceAdapter } from "./screenplayPersistence";
