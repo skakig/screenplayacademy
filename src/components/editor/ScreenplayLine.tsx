@@ -259,7 +259,7 @@ export function ScreenplayLine({
       );
     }, 400);
     return () => clearTimeout(id);
-  }, [block.content, block.block_type, block.metadata, focused, languageContext]);
+  }, [block.content, block.block_type, block.metadata, focused, languageContext, annotationMode]);
 
   const visibleUnknowns = useMemo(
     () => unknownTerms.filter((u) => !dismissedTerms.has(u.term.toLowerCase())),
