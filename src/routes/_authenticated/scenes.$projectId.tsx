@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, LayoutGrid, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { SceneCleanupPanel } from "@/components/scenes/SceneCleanupPanel";
 
 export const Route = createFileRoute("/_authenticated/scenes/$projectId")({
   head: () => ({ meta: [{ title: "Scenes — SceneSmith AI" }] }),
