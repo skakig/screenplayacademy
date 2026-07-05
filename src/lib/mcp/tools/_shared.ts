@@ -34,20 +34,20 @@ export async function assertSceneWritable(
   sceneId: string,
   currentUserId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const nowIso = new Date().toISOString();
   const { data, error } = await supabase
     .from("scene_locks")
     .select("locked_by, lock_type, expires_at, released_at")
     .eq("scene_id", sceneId)
-    .is("released_at", null)
-    .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-    .limit(1);
+    .is("released_at", null);
   if (error) return { ok: false, message: `Lock check failed: ${error.message}` };
-  const lock = data?.[0];
-  if (lock && lock.locked_by !== currentUserId) {
+  const now = Date.now();
+  const active = (data ?? []).find(
+    (l) => !l.expires_at || new Date(l.expires_at).getTime() > now,
+  );
+  if (active && active.locked_by !== currentUserId) {
     return {
       ok: false,
-      message: `Scene is locked by another collaborator (${lock.lock_type}). Ask them to release it, or use the app to override.`,
+      message: `Scene is locked by another collaborator (${active.lock_type}). Ask them to release it, or use the app to override.`,
     };
   }
   return { ok: true };
