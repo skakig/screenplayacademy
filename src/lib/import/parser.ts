@@ -34,6 +34,21 @@ const PARENTHETICAL = /^\(.*\)\s*$/;
 const SHOT = /^(CLOSE ON|ANGLE ON|WIDE ON|POV|INSERT|PAN TO|TRACK)\b/i;
 const CHAR_TAG = /\((V\.?O\.?|O\.?S\.?|CONT'D|CONTINUED|PRE-LAP|FILTERED)\)$/i;
 
+// Structural / act / sequence labels that must never become characters.
+const STRUCTURAL_LABEL = new RegExp(
+  "^(ACT|SCENE|CHAPTER|PART|PROLOGUE|EPILOGUE|TEASER|COLD OPEN|" +
+    "OPENING SCENE|MIDPOINT|SEQUENCE|MONTAGE|SERIES OF SHOTS|" +
+    "THE END|END( OF)?( ACT| SCENE| MONTAGE)?|FADE (IN|OUT)|EST)\\b",
+  "i",
+);
+// Common time-of-day tail (e.g. "EXT LIBYAN PLATEAU DAY" — no INT/EXT parsed
+// but clearly a slug).
+const TIME_TAIL =
+  /\b(DAY|NIGHT|DAWN|DUSK|MORNING|EVENING|CONTINUOUS|LATER|MOMENTS LATER|SAME|NOON|MIDNIGHT|AFTERNOON)\.?$/i;
+const SCENE_NUMBER = /^\d+[A-Z]?\.?$/;
+const NUMBERED_SLUG = /^\d+\s+(INT|EXT)\b/i;
+const STOPWORD_CHAR = new Set(["THE", "AND", "BUT", "OR", "SO", "A", "AN"]);
+
 function normalizeName(line: string): string {
   // Drop modifiers in parens for the proposed_character_name field.
   return line.replace(/\s*\(.*?\)\s*$/g, "").trim();
@@ -46,14 +61,28 @@ function isLikelyCharacterLine(line: string): boolean {
   if (trimmed.endsWith(":")) return false;
   if (TRANSITION_HIGH.test(trimmed)) return false;
   if (SCENE_HIGH.test(trimmed)) return false;
+  if (SCENE_MED.test(trimmed)) return false;
   if (PARENTHETICAL.test(trimmed)) return false;
-  // Strip allowed modifier tags before testing uppercase.
+  if (SHOT.test(trimmed)) return false;
+  if (STRUCTURAL_LABEL.test(trimmed)) return false;
+  if (SCENE_NUMBER.test(trimmed)) return false;
+  if (NUMBERED_SLUG.test(trimmed)) return false;
+  if (TIME_TAIL.test(trimmed)) return false;
+  // Strip allowed modifier tags before further tests.
   const base = trimmed.replace(CHAR_TAG, "").trim();
   if (!base) return false;
+  // Reject sentence-like punctuation. Allow initials such as "J.T.".
+  if (/[!?]/.test(base)) return false;
+  if (/\./.test(base) && !/^([A-Z]\.){1,4}[A-Z]?$/.test(base.replace(/\s+/g, ""))) return false;
+  if (STOPWORD_CHAR.has(base.toUpperCase())) return false;
+  // Character names are short.
+  const words = base.split(/\s+/).filter(Boolean);
+  if (words.length > 5) return false;
   // Must have at least one letter and be fully uppercase (with allowed punctuation).
   if (!/[A-Z]/.test(base)) return false;
   return base === base.toUpperCase() && /^[A-Z0-9 ()'\-.\u00C0-\u017F]+$/.test(base);
 }
+
 
 function parseSceneHeading(line: string): { location?: string; time?: string } {
   // EXT. BY THE TANK - DAWN  →  { location: "BY THE TANK", time: "DAWN" }
