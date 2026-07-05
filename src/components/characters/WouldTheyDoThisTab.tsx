@@ -15,6 +15,11 @@ import {
   type CharacterTruthResult,
 } from "@/lib/story-intelligence/characterTruthEngine";
 import { normalizeSceneStateForTruthEngine } from "@/lib/story-intelligence/sceneStateAdapter";
+import {
+  createTruthCoachOutput,
+  type CoachingLevel,
+  type TruthCoachOutput,
+} from "@/lib/story-intelligence/truthCoach";
 
 type Mode = "basic" | "advanced";
 
@@ -22,11 +27,15 @@ export function WouldTheyDoThisTab({
   projectId,
   character,
   mode = "advanced",
+  coachingLevel = null,
+  writerExperienceLevel = null,
 }: {
   projectId: string;
   character: any;
   /** Explicit mode wins. Default to advanced (never Focus — Focus hides the tab). */
   mode?: Mode;
+  coachingLevel?: CoachingLevel | null;
+  writerExperienceLevel?: string | null;
 }) {
   const [kind, setKind] = useState<"action" | "dialogue">("action");
   const [sceneId, setSceneId] = useState<string>("");
