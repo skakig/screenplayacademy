@@ -304,7 +304,7 @@ describe("upsert_character input schema", () => {
     const parsed = schema.parse({
       project_id: UUID,
       fields: { name: "Jane", alias: "   ", archetype: "Mentor" },
-    });
+    }) as { fields: { alias: string | null; archetype: string | null } };
     expect(parsed.fields.alias).toBeNull();
     expect(parsed.fields.archetype).toBe("Mentor");
   });
