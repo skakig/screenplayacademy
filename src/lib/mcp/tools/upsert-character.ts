@@ -1,26 +1,34 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-import { fail, ok, unauth, userClient } from "./_shared";
+import {
+  fail,
+  longTextNullable,
+  ok,
+  shortText,
+  shortTextNullable,
+  unauth,
+  userClient,
+} from "./_shared";
 
 /**
  * Small, safe subset of character fields. The characters table has ~90 columns;
  * we expose only the profile fields most useful for external assistants.
  */
 const CharacterFields = z.object({
-  name: z.string().min(1).max(200).optional(),
-  alias: z.string().max(200).nullable().optional(),
-  age: z.string().max(60).nullable().optional(),
-  character_type: z.string().max(60).nullable().optional(),
-  archetype: z.string().max(200).nullable().optional(),
-  external_goal: z.string().max(2000).nullable().optional(),
-  internal_need: z.string().max(2000).nullable().optional(),
-  defining_wound: z.string().max(2000).nullable().optional(),
-  fear: z.string().max(2000).nullable().optional(),
-  contradiction: z.string().max(2000).nullable().optional(),
-  character_arc: z.string().max(4000).nullable().optional(),
-  color_palette: z.string().max(500).nullable().optional(),
-  costume_notes: z.string().max(2000).nullable().optional(),
-  favorite_phrases: z.string().max(2000).nullable().optional(),
+  name: shortText(120).optional(),
+  alias: shortTextNullable(120).optional(),
+  age: shortTextNullable(40).optional(),
+  character_type: shortTextNullable(40).optional(),
+  archetype: shortTextNullable(120).optional(),
+  external_goal: longTextNullable(2000).optional(),
+  internal_need: longTextNullable(2000).optional(),
+  defining_wound: longTextNullable(2000).optional(),
+  fear: longTextNullable(2000).optional(),
+  contradiction: longTextNullable(2000).optional(),
+  character_arc: longTextNullable(4000).optional(),
+  color_palette: shortTextNullable(300).optional(),
+  costume_notes: longTextNullable(2000).optional(),
+  favorite_phrases: longTextNullable(2000).optional(),
 });
 
 export default defineTool({
@@ -45,7 +53,21 @@ export default defineTool({
     const patch = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined));
 
     if (character_id) {
-      if (Object.keys(patch).length === 0) return fail("No fields to update.");
+      if (Object.keys(patch).length === 0) {
+        return fail("No fields to update. Provide at least one editable field.");
+      }
+      // Verify character belongs to project before update.
+      const { data: existing, error: readErr } = await supabase
+        .from("characters")
+        .select("id, project_id")
+        .eq("id", character_id)
+        .maybeSingle();
+      if (readErr) return fail(readErr.message);
+      if (!existing) return fail("Character not found.");
+      if (existing.project_id !== project_id) {
+        return fail("character_id does not belong to the given project_id.");
+      }
+
       const { data, error } = await supabase
         .from("characters")
         .update(patch)
@@ -57,7 +79,9 @@ export default defineTool({
       return ok(data, "character");
     }
 
-    if (!patch.name) return fail("`fields.name` is required to create a character.");
+    if (!patch.name || typeof patch.name !== "string") {
+      return fail("`fields.name` is required to create a character.");
+    }
     const { data, error } = await supabase
       .from("characters")
       .insert({ project_id, ...patch, name: patch.name as string })

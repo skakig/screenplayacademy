@@ -393,15 +393,12 @@
               "type": "object",
               "properties": {
                 "name": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 200
+                  "type": "string"
                 },
                 "alias": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 200
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -411,8 +408,7 @@
                 "age": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 60
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -422,8 +418,7 @@
                 "character_type": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 60
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -433,8 +428,7 @@
                 "archetype": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 200
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -444,8 +438,7 @@
                 "external_goal": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 2000
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -455,8 +448,7 @@
                 "internal_need": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 2000
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -466,8 +458,7 @@
                 "defining_wound": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 2000
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -477,8 +468,7 @@
                 "fear": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 2000
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -488,8 +478,7 @@
                 "contradiction": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 2000
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -499,8 +488,7 @@
                 "character_arc": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 4000
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -510,8 +498,7 @@
                 "color_palette": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 500
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -521,8 +508,7 @@
                 "costume_notes": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 2000
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -532,8 +518,7 @@
                 "favorite_phrases": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "maxLength": 2000
+                      "type": "string"
                     },
                     {
                       "type": "null"
