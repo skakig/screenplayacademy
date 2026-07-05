@@ -211,7 +211,7 @@ describe("append_script_blocks input schema", () => {
         { block_type: "character", content: "JANE" },
         { block_type: "dialogue", content: "Hi.", character_id: null },
       ],
-    });
+    }) as { blocks: Array<{ content: string }> };
     expect(parsed.blocks).toHaveLength(3);
     expect(parsed.blocks[0].content).toBe("She enters.");
   });
