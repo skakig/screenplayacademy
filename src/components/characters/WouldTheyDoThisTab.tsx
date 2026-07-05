@@ -224,7 +224,7 @@ function ResultCard({
 
   const isQuiet = coach.tone === "quiet";
   const reasonsToShow = result.reasons.slice(0, coach.maxReasons);
-  const missingCap = coach.tone === "teaching" ? 1 : 6;
+  const missingCap = coach.maxMissingInputs;
 
   return (
     <Card className="p-4 space-y-3">
