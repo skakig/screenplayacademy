@@ -32,6 +32,8 @@ import {
 } from "@/lib/characters.functions";
 import { listElevenLabsVoices } from "@/lib/elevenlabs-voices.functions";
 import { GuidedCharacterBuilder } from "./GuidedCharacterBuilder";
+import { WouldTheyDoThisTab } from "./WouldTheyDoThisTab";
+import { useWriteMode } from "@/hooks/use-write-mode";
 
 const TextField = ({ label, value, onChange, multiline, rows = 2, placeholder }: any) => (
   <div>
