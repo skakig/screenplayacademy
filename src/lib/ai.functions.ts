@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { consumeUsage } from "@/lib/usage.functions";
 import { z } from "zod";
 import { generateText } from "ai";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
@@ -40,6 +41,10 @@ export const aiAssist = createServerFn({ method: "POST" })
     const { data: p, error: pe } = await context.supabase
       .from("projects").select("id").eq("id", data.projectId).maybeSingle();
     if (pe || !p) throw new Error("Project not found");
+
+    // Meter monthly AI assists. Throws USAGE_LIMIT when the tier cap is reached.
+    await consumeUsage(context.supabase, "ai_assists", 1);
+
 
     const gateway = createLovableAiGatewayProvider(key);
     const toolGuidance = TOOL_PROMPTS[data.tool] ?? "";
@@ -89,6 +94,10 @@ export const generatePitchPackage = createServerFn({ method: "POST" })
 
     const { data: project } = await context.supabase.from("projects").select("*").eq("id", data.projectId).maybeSingle();
     if (!project) throw new Error("Project not found");
+
+    // Pitch generation is a heavier call — bills as 10 AI assists.
+    await consumeUsage(context.supabase, "ai_assists", 10);
+
 
     const { data: characters = [] } = await context.supabase.from("characters").select("name, role, archetype, external_goal, internal_need, wound").eq("project_id", data.projectId);
     const { data: blocks = [] } = await context.supabase.from("script_blocks").select("block_type, content").eq("project_id", data.projectId).order("order_index").limit(800);

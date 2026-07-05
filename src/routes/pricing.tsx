@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
+import { getPaddleEnvironment } from "@/lib/paddle";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/pricing")({
@@ -75,8 +76,20 @@ function Pricing() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Live checkout only works after Paddle finishes automated review of the
+  // account. Until the ops team flips `VITE_PAYMENTS_LIVE_APPROVED` to true
+  // in the production env, the CTA on the live site turns into a waitlist
+  // link so we don't dump users into a broken Paddle overlay.
+  const liveMode = getPaddleEnvironment() === "live";
+  const liveApproved = import.meta.env.VITE_PAYMENTS_LIVE_APPROVED === "true";
+  const checkoutBlocked = liveMode && !liveApproved;
+
   const handleBuy = async (tier: Tier) => {
     if (!tier.priceId) return;
+    if (checkoutBlocked) {
+      window.location.href = "mailto:hello@scenesmithstudio.com?subject=SceneSmith%20Studio%20paid%20plans%20waitlist";
+      return;
+    }
     if (!user) {
       toast.info("Sign in to subscribe.");
       navigate({ to: "/auth" });
@@ -111,6 +124,11 @@ function Pricing() {
           <p className="text-[11px] uppercase tracking-[0.32em] text-muted-foreground mb-3">SceneSmith Studio · Pricing</p>
           <h1 className="font-display text-5xl font-bold tracking-tight">Pricing for every storyteller.</h1>
           <p className="text-muted-foreground mt-3">Write free. Upgrade when you're ready to pitch.</p>
+          {checkoutBlocked && (
+            <div className="mt-6 mx-auto max-w-xl text-sm rounded-lg border border-amber-400/40 bg-amber-100/70 text-amber-900 px-4 py-3">
+              Paid plans are launching soon. Join the waitlist and we'll email you the moment checkout opens.
+            </div>
+          )}
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
           {TIERS.map((t) => {
@@ -146,6 +164,8 @@ function Pricing() {
                   >
                     {isPending ? (
                       <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Opening checkout…</>
+                    ) : checkoutBlocked ? (
+                      <>Join the waitlist <ArrowRight className="h-3.5 w-3.5 ml-1.5" /></>
                     ) : (
                       <>{t.cta} <ArrowRight className="h-3.5 w-3.5 ml-1.5" /></>
                     )}
