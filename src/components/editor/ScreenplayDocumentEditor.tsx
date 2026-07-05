@@ -63,6 +63,8 @@ type Props = {
   screenplayLanguage?: import("@/lib/language/types").LanguageCode;
   /** Languages the writer reads/writes. Drives cognate / false-friend logic. */
   knownLanguages?: import("@/lib/language/types").LanguageCode[];
+  /** In-page annotation visibility. Focus/Basic pass "silent"; Advanced passes "quiet". */
+  annotationMode?: AnnotationMode;
 };
 
 
