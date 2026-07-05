@@ -732,7 +732,9 @@ function Editor() {
                       m.markFixRejected(projectId, original),
                     );
                   }}
+                  annotationMode={focus || isBasic ? "silent" : "quiet"}
                 />
+
               </div>
 
               <EditorCommandBar

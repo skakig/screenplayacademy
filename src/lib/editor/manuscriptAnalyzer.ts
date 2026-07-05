@@ -35,17 +35,69 @@ export type CharacterTally = {
 const HEADING_RE = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*(.+?)(?:\s*[-—–]\s*(.+))?$/i;
 const CHAR_NAME_RE = /^[A-Z][A-Z0-9 \-\.']{1,38}(?:\s*\([^)]+\))?$/;
 
+// Words/phrases that are structural and must never be treated as a character
+// name — even if written in ALL CAPS by the writer or importer.
+const STRUCTURAL_HEAD = new RegExp(
+  "^(" +
+    // Slugs
+    "INT|EXT|INT\\.|EXT\\.|INT\\.\\/EXT\\.|INT\\/EXT|I\\/E|EST|" +
+    // Act / scene / structural labels
+    "ACT|SCENE|CHAPTER|PART|PROLOGUE|EPILOGUE|TEASER|COLD OPEN|" +
+    "OPENING SCENE|MIDPOINT|SEQUENCE|MONTAGE|SERIES OF SHOTS|" +
+    "THE END|END( OF)?( ACT| SCENE| MONTAGE)?|" +
+    // Transitions
+    "FADE IN|FADE OUT|FADE TO|CUT TO|SMASH CUT|DISSOLVE TO|MATCH CUT|JUMP CUT|BACK TO" +
+    ")\\b",
+  "i",
+);
+// Common scene time-of-day suffixes — a line ending in these looks like a slug.
+const TIME_OF_DAY_TAIL =
+  /\b(DAY|NIGHT|DAWN|DUSK|MORNING|EVENING|CONTINUOUS|LATER|MOMENTS LATER|SAME|NOON|MIDNIGHT|AFTERNOON)\.?$/i;
+// Trivial stopwords that occasionally slip through in all caps (e.g. section
+// dividers). None of these are ever a character name on their own.
+const STOPWORD_ONLY = new Set([
+  "THE", "AND", "BUT", "OR", "SO", "A", "AN", "OF", "TO", "IN", "ON",
+]);
+
 export function parseSceneHeading(raw: string): { location: string; timeOfDay: string | null } {
   const m = (raw || "").trim().match(HEADING_RE);
   if (!m) return { location: raw.trim(), timeOfDay: null };
   return { location: (m[2] || "").trim(), timeOfDay: (m[3] || "").trim() || null };
 }
 
+/** True when the raw line looks structural (slug, act/scene label, transition). */
+export function looksLikeStructuralLine(raw: string): boolean {
+  const t = (raw || "").trim();
+  if (!t) return false;
+  if (STRUCTURAL_HEAD.test(t)) return true;
+  // Ends in a scene time-of-day tail (e.g. "EXT LIBYAN PLATEAU DAY").
+  if (TIME_OF_DAY_TAIL.test(t)) return true;
+  // Pure numeric scene numbers or "12A"-style continuations.
+  if (/^\d+[A-Z]?\.?$/.test(t)) return true;
+  // Ends with ":" (transition-like: "CUT TO:", "FADE IN:")
+  if (/:\s*$/.test(t)) return true;
+  return false;
+}
+
 export function isLikelyCharacterName(s: string): boolean {
   const t = (s || "").trim();
   if (!t || t.length > 40) return false;
+  // Strip trailing modifier tag before further tests, e.g. "HANS (V.O.)".
+  const base = t.replace(/\s*\([^)]*\)\s*$/g, "").trim();
+  if (!base) return false;
+  // Reject structural lines.
+  if (looksLikeStructuralLine(base) || looksLikeStructuralLine(t)) return false;
+  // Reject any sentence-like line (periods/exclaim/question, but allow initials like "J.T." or "T.J.").
+  if (/[!?]/.test(base)) return false;
+  if (/\./.test(base) && !/^([A-Z]\.){1,4}[A-Z]?$/.test(base.replace(/\s+/g, ""))) return false;
+  // Reject trivial stopwords standing alone.
+  if (STOPWORD_ONLY.has(base.toUpperCase())) return false;
+  // Character names are short — cap word count.
+  const words = base.split(/\s+/).filter(Boolean);
+  if (words.length > 5) return false;
   return CHAR_NAME_RE.test(t);
 }
+
 
 export function normalizeCharacterName(s: string): string {
   return (s || "")
@@ -155,7 +207,12 @@ export function tallyCharacters(blocks: Block[]): CharacterTally[] {
     }
   }
 
-  return [...map.values()].sort((a, b) => b.lineCount - a.lineCount);
+  // Only surface speakers that actually spoke at least once. Prevents stray
+  // character blocks (or misclassified structural lines that slipped past the
+  // filter) from polluting the Detected Speakers list.
+  return [...map.values()]
+    .filter((c) => c.lineCount > 0)
+    .sort((a, b) => b.lineCount - a.lineCount);
 }
 
 /** Rough page count using the industry rule of ~55 lines per page. */

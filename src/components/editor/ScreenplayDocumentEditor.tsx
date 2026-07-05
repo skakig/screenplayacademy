@@ -2,7 +2,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { Button } from "@/components/ui/button";
 import { Sparkles, FileText, Wand2, Info, X } from "lucide-react";
 import { useScreenplayDocument, type SaveStatus, type LocalBlock } from "./useScreenplayDocument";
-import { ScreenplayLine, type AutoFormatEvent } from "./ScreenplayLine";
+import { ScreenplayLine, type AutoFormatEvent, type AnnotationMode } from "./ScreenplayLine";
 import { nextBlockTypeAfter } from "./screenplayKeymap";
 import type { CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import type { PersistenceAdapter } from "./screenplayPersistence";
@@ -63,6 +63,8 @@ type Props = {
   screenplayLanguage?: import("@/lib/language/types").LanguageCode;
   /** Languages the writer reads/writes. Drives cognate / false-friend logic. */
   knownLanguages?: import("@/lib/language/types").LanguageCode[];
+  /** In-page annotation visibility. Focus/Basic pass "silent"; Advanced passes "quiet". */
+  annotationMode?: AnnotationMode;
 };
 
 
@@ -91,6 +93,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       onRejectFormatSuggestion,
       screenplayLanguage,
       knownLanguages,
+      annotationMode = "quiet",
     },
 
     ref,
@@ -423,6 +426,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     languageContext={{ ...languageContext, blockType: b.block_type }}
                     onAddDictionaryTerm={onAddDictionaryTerm}
                     onRejectFormatSuggestion={onRejectFormatSuggestion}
+                    annotationMode={annotationMode}
                   />
                 </div>
               );

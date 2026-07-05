@@ -49,6 +49,8 @@ export type AutoFormatEvent = {
   languageFixKind?: "capitalize_i" | "sentence_start";
 };
 
+export type AnnotationMode = "silent" | "quiet" | "full";
+
 export function ScreenplayLine({
   block,
   isActive,
@@ -67,6 +69,7 @@ export function ScreenplayLine({
   languageContext,
   onAddDictionaryTerm,
   onRejectFormatSuggestion,
+  annotationMode = "quiet",
 }: {
   block: LocalBlock;
   isActive: boolean;
@@ -89,7 +92,15 @@ export function ScreenplayLine({
   onAddDictionaryTerm?: (term: string, category?: "character" | "location" | "custom") => void;
   /** Called when the writer dismisses a structural format suggestion. */
   onRejectFormatSuggestion?: (original: string, suggestedType: string) => void;
+  /**
+   * Controls in-page annotation visibility.
+   * - "silent": no chips, dots, or beat picker. Focus + Basic default.
+   * - "quiet": margin dots only, popover reveals on click, beat picker requires focus. Advanced default.
+   * - "full": inline chips + beat picker (dev/internal only).
+   */
+  annotationMode?: AnnotationMode;
 }) {
+
   const ref = useRef<HTMLTextAreaElement>(null);
   const [focused, setFocused] = useState(false);
 
@@ -231,6 +242,7 @@ export function ScreenplayLine({
   useEffect(() => {
     // Re-scan only when block content settles (debounced) and the line is
     // not actively being typed. Never per keystroke.
+    if (annotationMode === "silent") { setUnknownTerms([]); return; }
     if (!languageContext) return;
     if (focused) return;
     const id = setTimeout(() => {
@@ -247,7 +259,7 @@ export function ScreenplayLine({
       );
     }, 400);
     return () => clearTimeout(id);
-  }, [block.content, block.block_type, block.metadata, focused, languageContext]);
+  }, [block.content, block.block_type, block.metadata, focused, languageContext, annotationMode]);
 
   const visibleUnknowns = useMemo(
     () => unknownTerms.filter((u) => !dismissedTerms.has(u.term.toLowerCase())),
@@ -263,6 +275,7 @@ export function ScreenplayLine({
   } | null>(null);
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
   useEffect(() => {
+    if (annotationMode === "silent") { setSuggestion(null); return; }
     if (focused) return;
     if (!block.content.trim()) { setSuggestion(null); return; }
     const id = setTimeout(() => {
@@ -287,7 +300,7 @@ export function ScreenplayLine({
       }
     }, 600);
     return () => clearTimeout(id);
-  }, [block.content, block.block_type, focused, prevBlockType, languageContext?.characterNames, dismissedSuggestions]);
+  }, [block.content, block.block_type, focused, prevBlockType, languageContext?.characterNames, dismissedSuggestions, annotationMode]);
 
   const acceptSuggestion = () => {
     if (!suggestion) return;
@@ -401,7 +414,7 @@ export function ScreenplayLine({
       />
 
       {/* Subtle margin indicators — chips summoned on demand. */}
-      {(visibleUnknowns.length > 0 || suggestion) && !focused && (
+      {annotationMode !== "silent" && (visibleUnknowns.length > 0 || suggestion) && !focused && (
         <div className="absolute -left-5 top-2 flex flex-col gap-1 z-10">
           {visibleUnknowns.length > 0 && (
             <Popover>
@@ -560,7 +573,9 @@ export function ScreenplayLine({
         />
       )}
 
-      {isSceneHeading && (focused || beat) && (
+      {isSceneHeading && annotationMode !== "silent" && (
+        (annotationMode === "full" ? (focused || beat) : focused)
+      ) && (
         <div className="absolute right-0 -bottom-7 z-10 font-sans opacity-70 hover:opacity-100 focus-within:opacity-100 transition-opacity">
           <SceneBeatPicker
             value={beat}
