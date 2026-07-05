@@ -95,7 +95,7 @@ export function CharacterProfileDialog({
   const imgStatusQ = useQuery({
     queryKey: ["image-gen-status"],
     enabled: open,
-    queryFn: () => (useServerFn(getImageGenStatus))(),
+    queryFn: () => callImgStatus(),
     staleTime: 5 * 60 * 1000,
   });
 
