@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as ScreenplayFormattingStandardsRouteImport } from './routes/screenplay-formatting-standards'
 import { Route as RefundRouteImport } from './routes/refund'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
@@ -55,6 +56,12 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ScreenplayFormattingStandardsRoute =
+  ScreenplayFormattingStandardsRouteImport.update({
+    id: '/screenplay-formatting-standards',
+    path: '/screenplay-formatting-standards',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const RefundRoute = RefundRouteImport.update({
   id: '/refund',
   path: '/refund',
@@ -247,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
+  '/screenplay-formatting-standards': typeof ScreenplayFormattingStandardsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -283,6 +291,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
+  '/screenplay-formatting-standards': typeof ScreenplayFormattingStandardsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -321,6 +330,7 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
+  '/screenplay-formatting-standards': typeof ScreenplayFormattingStandardsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -359,6 +369,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/refund'
+    | '/screenplay-formatting-standards'
     | '/sitemap.xml'
     | '/terms'
     | '/.mcp/list-tools'
@@ -395,6 +406,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/refund'
+    | '/screenplay-formatting-standards'
     | '/sitemap.xml'
     | '/terms'
     | '/.mcp/list-tools'
@@ -432,6 +444,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/refund'
+    | '/screenplay-formatting-standards'
     | '/sitemap.xml'
     | '/terms'
     | '/.mcp/list-tools'
@@ -470,6 +483,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   RefundRoute: typeof RefundRoute
+  ScreenplayFormattingStandardsRoute: typeof ScreenplayFormattingStandardsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
@@ -494,6 +508,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/screenplay-formatting-standards': {
+      id: '/screenplay-formatting-standards'
+      path: '/screenplay-formatting-standards'
+      fullPath: '/screenplay-formatting-standards'
+      preLoaderRoute: typeof ScreenplayFormattingStandardsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/refund': {
@@ -814,6 +835,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   RefundRoute: RefundRoute,
+  ScreenplayFormattingStandardsRoute: ScreenplayFormattingStandardsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
