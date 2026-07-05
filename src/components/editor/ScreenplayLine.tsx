@@ -49,6 +49,8 @@ export type AutoFormatEvent = {
   languageFixKind?: "capitalize_i" | "sentence_start";
 };
 
+export type AnnotationMode = "silent" | "quiet" | "full";
+
 export function ScreenplayLine({
   block,
   isActive,
@@ -67,6 +69,7 @@ export function ScreenplayLine({
   languageContext,
   onAddDictionaryTerm,
   onRejectFormatSuggestion,
+  annotationMode = "quiet",
 }: {
   block: LocalBlock;
   isActive: boolean;
@@ -89,7 +92,15 @@ export function ScreenplayLine({
   onAddDictionaryTerm?: (term: string, category?: "character" | "location" | "custom") => void;
   /** Called when the writer dismisses a structural format suggestion. */
   onRejectFormatSuggestion?: (original: string, suggestedType: string) => void;
+  /**
+   * Controls in-page annotation visibility.
+   * - "silent": no chips, dots, or beat picker. Focus + Basic default.
+   * - "quiet": margin dots only, popover reveals on click, beat picker requires focus. Advanced default.
+   * - "full": inline chips + beat picker (dev/internal only).
+   */
+  annotationMode?: AnnotationMode;
 }) {
+
   const ref = useRef<HTMLTextAreaElement>(null);
   const [focused, setFocused] = useState(false);
 
