@@ -680,7 +680,7 @@ function Editor() {
             </div>
           ) : (
           <>
-          {(guidedStep || redirect) && (
+          {!focus && (guidedStep || redirect) && (
             <details className="max-w-[760px] mx-auto mb-4 group font-sans" open>
               <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-border/60 bg-card/40 text-xs text-muted-foreground hover:bg-card/60">
                 <span className="flex items-center gap-2">
@@ -732,6 +732,7 @@ function Editor() {
             </details>
           )}
 
+          {!focus && (
           <div className="max-w-[680px] mx-auto mb-3 flex items-center justify-between gap-3 font-sans px-1">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <BookOpen className="h-3.5 w-3.5" />
@@ -771,7 +772,9 @@ function Editor() {
               </Button>
             </div>
           </div>
+          )}
 
+          {!focus && (
           <CanvasToolbar
             blockType={activeBlockType}
             onChangeType={(t) => editorRef.current?.changeActiveType(t)}
@@ -780,13 +783,17 @@ function Editor() {
             wordCount={(blocks as any[]).reduce((n: number, b: any) => n + (b.content?.trim().split(/\s+/).filter(Boolean).length ?? 0), 0)}
             sceneCount={outline.length}
           />
+          )}
 
+          {!focus && (
           <div className="max-w-[760px] mx-auto mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-mono text-muted-foreground/70 px-1">
             <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">Enter</kbd> next block</span>
             <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">Tab</kbd> change type</span>
             <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">/</kbd> menu</span>
             <span><kbd className="px-1 py-0.5 rounded bg-muted/40 border border-border/40">⌘↵</kbd> AI continue</span>
           </div>
+          )}
+
 
           <SaveStatusBanner
             visible={saveStatus === "error" || failedCount > 0}
