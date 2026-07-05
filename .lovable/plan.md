@@ -1,137 +1,181 @@
-# Character Truth Engine — Bridge Patch Plan
+# ITS/PfHU First Integration Pass — Truth Coach Adapter
 
-Small, contained patch so ITS/PfHU can safely build on top. No new features, no editor/autosave/schema/payment changes.
+Translate Character Truth Engine results into writer-facing coaching, gated by onboarding mode + coaching level. No new DB, no AI, no editor changes, no new routes, no dashboard.
 
-## 1. Pass real Basic/Advanced mode into the Truth Check tab
+## Files to create
 
-Source of truth already exists: `user_onboarding.preferred_mode` (`"guided" | "studio"`), read via `getOnboarding` and used in `ModeSettings`. Focus is separate (`useWriteMode`) and already hides the tab.
+1. `**src/lib/story-intelligence/truthCoach.ts**` — pure TS module.
+  - No React / Supabase / AI / UI imports. Deterministic. Does not mutate input.
+  - Exports:
+    - Types: `WriterMode` (`"basic" | "advanced"`), `CoachingLevel` (`"off" | "gentle" | "active" | "teaching"`), `WriterProfileForCoach`, `TruthCoachOutput`.
+    - `createTruthCoachOutput(result, profile): TruthCoachOutput` — main entry point.
+    - `selectPrimaryMissingInput(result)` — picks the single most useful missing field (priority: `wound` → `external_goal` → `internal_need` → `fear` → `core_lie` → first available).
+    - `explainVerdictForWriter(result, profile)` — verdict-specific headline + explanation.
+    - `getNextWriterAction(result, profile)` — one-line "do this next".
+  - Rule shape (see Behavior below).
+2. `**src/lib/story-intelligence/truthCoach.test.ts**` — Vitest coverage for the 10 acceptance tests listed in the prompt.
 
-- In `src/components/characters/CharacterProfileDialog.tsx`:
-  - Add a `useQuery(["onboarding"], getOnboarding)` read (or reuse if already fetched upstream) to get `preferred_mode`.
-  - Compute `resolvedMode: "basic" | "advanced" = preferred_mode === "guided" ? "basic" : "advanced"`.
-  - Pass `<WouldTheyDoThisTab projectId={projectId} character={local} mode={resolvedMode} />`.
-- Focus behavior unchanged (tab still hidden when `focusOn`).
-- Do NOT treat `useWriteMode` as Basic/Advanced.
+## Files to edit
 
-## 2. SceneSmith → Engine scene-state adapter
+1. `**src/components/characters/WouldTheyDoThisTab.tsx**`
+  - Accept new props: `coachingLevel?: CoachingLevel | null`, `writerExperienceLevel?: string | null`.
+  - After `analyze()` produces `result`, compute `coach = createTruthCoachOutput(result, { mode, coachingLevel, writerExperienceLevel })`.
+  - Route existing Basic/Advanced display through `coach` instead of scattered `isBasic` conditions:
+    - `coach.maxReasons` caps the reasons list.
+    - `coach.showSuggestedFixes` gates the "Suggested adjustment" block.
+    - `coach.showEvidence` gates evidence toggle + list.
+    - Render new coaching block above the raw reasons: `headline`, `explanation`, optional `teachingPrompt`, optional `nextStep`. Tone class from `coach.tone`.
+  - `coachingLevel === "off"` → render verdict + confidence only (no headline block, no teaching prompt, no next step, no missing-input prompts).
+2. `**src/components/characters/CharacterProfileDialog.tsx**`
+  - Pass through onboarding fields already fetched via `useOnboarding()`:
 
-New pure module `src/lib/story-intelligence/sceneStateAdapter.ts`:
+## Behavior rules (encoded in `truthCoach.ts`)
 
-```ts
-export function normalizeSceneStateForTruthEngine(
-  raw?: Partial<Record<string, any>> | null,
-  beat?: Partial<Record<string, any>> | null,
-): SceneStateLike | null
-```
+**Coaching off** → `{ tone: "quiet", headline: verdictLabel, explanation: "", showEvidence: false, showSuggestedFixes: false, maxReasons: 0 }`. No teaching prompt, no next step.
 
-Mapping (nullish coalescing, no schema change):
+**Basic Mode** (`mode === "basic"`, coaching on):
 
-- `scene_goal` ← `raw.goal_in_scene ?? raw.scene_goal`
-- `moral_pressure` ← `raw.moral_pressure`
-- `tactic` ← `raw.tactic`
-- `tmh_level` ← `raw.tmh_level`
-- `emotional_state` ← `raw.emotional_state`
-- `fear_in_scene` ← `raw.fear_in_scene` (passed through for engine keyword checks)
-- `relationship_shift` ← `raw.relationship_shift`
-- `secret_status` ← `raw.secret_status`
-- `scene_turn` ← `raw.scene_turn ?? beat?.scene_turn`
-- `stakes_change` ← `raw.stakes_change ?? beat?.stakes_change`
-- `character_choice` ← `raw.character_choice ?? beat?.climax_choice ?? beat?.scene_choice`
+- `tone: "teaching"`, `maxReasons: 1`, `showEvidence: false`, `showSuggestedFixes: false`.
+- Headline uses plain writer language ("Not enough character truth yet", "This fits", "This feels off under pressure", "This contradicts who they are").
+- `teachingPrompt` = `selectPrimaryMissingInput(result).prompt` when verdict is `insufficient_data` OR when confidence is `"low"` and a primary missing input exists.
+- `nextStep` = one imperative sentence ("Answer that first, then run Truth Check again." / "Make the pressure visible on the page." / "Keep writing — this rings true.").
+- Missing inputs list capped at 2 items, phrased as craft questions (already the case in the engine).
 
-Returns `null` if both inputs are absent. Never throws.
+**Advanced Mode** (coaching on):
 
-If `SceneStateLike` in `characterTruthEngine.ts` is missing any of the mapped optional fields, widen the type additively (no behavior change to existing evaluators).
+- `tone: "diagnostic"`, `maxReasons: result.reasons.length`, `showEvidence: true`, `showSuggestedFixes: true`.
+- Headline uses diagnostic phrasing ("Fits under stress, strains the aspirational arc", etc.).
+- `explanation` may reference TMH regression, wound sensitivity, voice mismatch when those evidence sources are present.
+- `nextStep` still surfaces but honest about uncertainty for low confidence.
 
-## 3. Fetch selected scene_arc_beat in the Truth Check tab
+**Verdict → next step matrix** (both modes):
 
-In `src/components/characters/WouldTheyDoThisTab.tsx`:
+- `fits` + high confidence → "Keep writing."
+- `fits` + medium/low → "Trust it, but watch how the next beat lands."
+- `strained` → "Make the pressure visible on the page." (Basic) / "Show the pressure that justifies this behavior, or soften the beat." (Advanced)
+- `contradicts` → "Either raise the pressure until this fits, or pick a different action." 
+- `insufficient_data` → "Answer the question above, then run Truth Check again."
 
-- Add a `useQuery` enabled by `sceneId`:
-  - `supabase.from("scene_arc_beats").select("*").eq("scene_id", sceneId).maybeSingle()`.
-- Before calling `evaluateActionFit` / `evaluateDialogueFit`, run raw `sceneState` and `beat` through `normalizeSceneStateForTruthEngine`.
-- Graceful when no beat / no scene selected (adapter returns `null` → engine sees no scene state, existing behavior).
+**PfHU-lite**: only reads `mode`, `coachingLevel`, `writerExperienceLevel` from the profile. `writerExperienceLevel === "beginner"` bumps tone toward gentler phrasing (still Basic caps). No writes, no logs, no new fields.
 
-## 4. Tests
+## Tests to add (`truthCoach.test.ts`)
 
-New `src/lib/story-intelligence/sceneStateAdapter.test.ts`:
+1. `coachingLevel: "off"` returns `tone: "quiet"`, no `teachingPrompt`, no `nextStep`, `showEvidence: false`.
+2. Basic + `insufficient_data` (bare char) → `teachingPrompt` matches the primary missing input's prompt (wound question).
+3. Basic caps `maxReasons` to 1.
+4. Basic sets `showEvidence: false` and `showSuggestedFixes: false`.
+5. Advanced sets `showEvidence: true` and `showSuggestedFixes: true`.
+6. `strained` verdict → `nextStep` contains "pressure".
+7. `fits` verdict + high confidence → `nextStep` encourages continuing, no over-explanation.
+8. Missing `wound` maps to a craft question (contains "hurt" / "past" / "wound" as sentence, not the raw field name).
+9. Low-confidence result includes an honest-uncertainty phrase in `explanation` (e.g. "first-pass", "based on what you've told me").
+10. Calling `createTruthCoachOutput` on a frozen result does not throw and does not mutate `result.reasons` / `result.missingInputs` / `result.evidence`.
 
-- `goal_in_scene` maps to `scene_goal`.
-- `scene_turn` sourced from beat when raw missing.
-- `stakes_change` sourced from beat when raw missing.
-- Missing beat does not throw and still maps raw fields.
-- Both inputs absent → returns `null`.
+## UI behavior changes
 
-Extend `WouldTheyDoThisTab` test coverage (or add a focused render test) confirming:
-
-- With `mode="basic"`, only simplified sections render (no evidence toggle, no Suggested adjustment, reasons truncated).
+- Truth Check tab gains a small coaching header card above existing "Why / Suggested adjustment / Missing / Evidence" sections.
+- Basic writers see: one headline, one plain-language question, one next step. Reasons capped to 1, no evidence, no suggested fixes.
+- Advanced writers see: diagnostic headline + explanation + full reasons + suggested fixes + evidence toggle (current behavior, now driven by the adapter).
+- Coaching off writers see: verdict badge + confidence only (matches "quiet" tone).
+- Focus mode still hides the tab entirely (unchanged, via `useWriteMode` gate in the dialog).
 
 Approved with two amendments.
 
-This bridge patch is the right size before ITS/PfHU. It should stay small and contained.
+The plan is the right size and direction:
 
-## Amendment 1 — Scene evidence in Truth Check
+- pure `truthCoach.ts`
 
-The adapter should normalize `goal_in_scene`, `scene_turn`, and `stakes_change`, but Truth Check currently calls `evaluateActionFit` / `evaluateDialogueFit`, not `evaluateScenePressure`.
+- tests
 
-So either:
+- no DB
 
-1. Add normalized scene fields to `evaluateActionFit` / `evaluateDialogueFit` evidence when present, without changing scoring/verdict logic, or
+- no AI
 
-2. Revise acceptance so only `moral_pressure` is expected in Truth Check evidence.
+- no editor changes
 
-Preferred: option 1. Evidence-only addition. No behavior/scoring change.
+- no dashboard
 
-## Amendment 2 — Scene arc beat query
+- onboarding-driven coaching behavior
 
-If `scene_arc_beats` may contain more than one row per scene, avoid fragile `.maybeSingle()` behavior.
+- `WouldTheyDoThisTab` uses the adapter instead of scattered Basic/Advanced conditions
 
-Use a safe query pattern such as:
+Please apply these amendments before coding.
 
-```ts
+## Amendment 1 — Basic Mode should focus on one primary teaching prompt
 
-supabase
+In Basic Mode, if `teachingPrompt` exists, show that as the main prompt.
 
-  .from("scene_arc_beats")
+Do not overwhelm the writer with multiple missing-input questions at once.
 
-  .select("*")
+If a missing-input list is still shown, cap it to 1 primary item by default, or place secondary missing inputs behind a subtle “More to fill later” disclosure.
 
-  .eq("scene_id", sceneId)
+Basic Mode principle:
 
-  .limit(1)
+> one useful next step, not a checklist.
 
-  .maybeSingle()
+## Amendment 2 — Keep TMH language mostly out of Basic Mode
 
-## Files
+In Basic Mode, prefer plain screenplay language over TMH labels.
 
-Create:
+Use language like:
 
-- `src/lib/story-intelligence/sceneStateAdapter.ts`
-- `src/lib/story-intelligence/sceneStateAdapter.test.ts`
+- “under pressure”
 
-Edit:
+- “when cornered”
 
-- `src/components/characters/CharacterProfileDialog.tsx` (fetch onboarding, pass `mode`)
-- `src/components/characters/WouldTheyDoThisTab.tsx` (accept mode already; add beat query; run adapter)
-- `src/lib/story-intelligence/characterTruthEngine.ts` (only if `SceneStateLike` needs additive fields; no logic changes)
+- “what they justify”
 
-## Out of scope
+- “what choice reveals them”
 
-- Editor, autosave, Enter/Tab/slash behavior.
-- DB schema, RLS, payments, entitlements.
-- New AI calls, new UI panels, new routes.
-- Refactoring `useWriteMode` or the Focus pill.
-- Any ITS/PfHU work.
+- “what past hurt makes them overreact”
+
+Avoid leading with:
+
+- “TMH regression”
+
+- “L7 baseline”
+
+- “L2 stress”
+
+Advanced Mode may use TMH terminology when evidence supports it.
+
+## Everything else is approved
+
+Proceed with:
+
+- `src/lib/story-intelligence/truthCoach.ts`
+
+- `src/lib/story-intelligence/truthCoach.test.ts`
+
+- pass `coachingLevel` and `writerExperienceLevel` into `WouldTheyDoThisTab`
+
+- route Truth Check display through `createTruthCoachOutput`
+
+- respect `coachingLevel === "off"`
+
+- keep Focus mode hidden
+
+- no new DB
+
+- no AI
+
+- no editor changes
 
 ## Risks
 
-- Double-fetching onboarding in the dialog — mitigate by reusing an existing query key if already in cache.
-- `scene_arc_beats` may have multiple rows per scene → use `.maybeSingle()` or `.limit(1)` and treat missing as no beat.
-- `SceneStateLike` field widening could ripple into engine tests — keep it additive/optional only.
+- Adapter drifting into duplicating engine logic. Mitigation: adapter only reformats/prioritizes; all rule firing stays in the engine.
+- Basic-mode phrasing feeling condescending. Mitigation: neutral craft questions, no exclamation, no "you should".
+- Onboarding row absent for older users → both `coachingLevel` and `writerExperienceLevel` will be `null`. Adapter must default sensibly (treat null coachingLevel as `"gentle"` → normal coaching on).
+- Tests coupling too tightly to phrasing. Mitigation: assert on substrings / structure, not exact strings.
 
-## Acceptance
+## Out of scope
 
-- Truth Check still works with no scene selected.
-- Focus mode hides the tab.
-- Basic user sees simplified output; Advanced sees evidence + suggestions.
-- Selecting a scene surfaces `goal_in_scene`, `moral_pressure`, and beat-level `scene_turn`/`stakes_change` in engine evidence when present.
-- No editor files touched. `bun test` green.
+- No DB schema changes, no migrations, no RLS edits.
+- No new PfHU tables, no logs, no persistent writer profile learning.
+- No AI calls, no server functions.
+- No new routes, no dashboard, no new tab.
+- No TMH upsell / premium report CTA yet.
+- No changes to `useScreenplayDocument`, `ScreenplayLine`, `screenplayKeymap`, screenplay persistence, autosave, Enter/Tab/slash behavior.
+- No changes to `evaluateDialogueFit` scene-awareness (deferred).
+- No Director's Chair integration, no cross-script dashboards, no inline screenplay annotations.
+- No payments / webhooks / entitlements changes.
