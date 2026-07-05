@@ -2537,6 +2537,10 @@ export type Database = {
         Returns: boolean
       }
       can_view_suggestions: { Args: { _project_id: string }; Returns: boolean }
+      current_subscription_tier: {
+        Args: { check_env?: string; user_uuid: string }
+        Returns: string
+      }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean

@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireFeature } from "@/lib/entitlements.functions";
 import { z } from "zod";
 
 const Input = z.object({
@@ -18,8 +19,11 @@ export const generateStoryboardPanel = createServerFn({ method: "POST" })
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("AI not configured");
 
+    await requireFeature(context.supabase, context.userId, "storyboard");
+
     const { data: p } = await context.supabase.from("projects").select("id").eq("id", data.projectId).maybeSingle();
     if (!p) throw new Error("Project not found");
+
 
     const fullPrompt = `${data.prompt}${data.style ? `. Visual style: ${data.style}` : ""}. Cinematic, 16:9, dramatic lighting.`;
 

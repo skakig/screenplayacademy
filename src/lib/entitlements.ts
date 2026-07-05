@@ -1,0 +1,70 @@
+// Pure entitlement helpers — safe to import from client and server.
+// Do NOT put server-only imports (supabase admin, node SDKs) in this file.
+
+export type Tier = "free" | "creator" | "pro" | "studio";
+
+export const TIER_RANK: Record<Tier, number> = {
+  free: 0,
+  creator: 1,
+  pro: 2,
+  studio: 3,
+};
+
+export const TIER_LABEL: Record<Tier, string> = {
+  free: "Free",
+  creator: "Creator",
+  pro: "Pro",
+  studio: "Studio",
+};
+
+// The single source of truth for what each feature requires.
+// Keep this in sync with the pricing page copy.
+export type Feature =
+  | "extra_projects" // Free = 1 project only; any paid tier unlocks more
+  | "script_brain"
+  | "pitch"
+  | "table_read"
+  | "storyboard"
+  | "mcp_writes"
+  | "writers_room";
+
+export const FEATURE_MIN_TIER: Record<Feature, Tier> = {
+  extra_projects: "creator",
+  script_brain: "creator",
+  pitch: "creator",
+  table_read: "pro",
+  storyboard: "pro",
+  mcp_writes: "pro",
+  writers_room: "studio",
+};
+
+export const FEATURE_LABEL: Record<Feature, string> = {
+  extra_projects: "additional projects",
+  script_brain: "Script Brain",
+  pitch: "Pitch Deck",
+  table_read: "Table Read",
+  storyboard: "Storyboard",
+  mcp_writes: "MCP write tools",
+  writers_room: "Writers' Room collaboration",
+};
+
+export function tierFromPriceId(priceId: string | null | undefined): Tier {
+  switch (priceId) {
+    case "studio_monthly":
+      return "studio";
+    case "pro_monthly":
+      return "pro";
+    case "creator_monthly":
+      return "creator";
+    default:
+      return "free";
+  }
+}
+
+export function hasFeature(tier: Tier, feature: Feature): boolean {
+  return TIER_RANK[tier] >= TIER_RANK[FEATURE_MIN_TIER[feature]];
+}
+
+export function minTierFor(feature: Feature): Tier {
+  return FEATURE_MIN_TIER[feature];
+}

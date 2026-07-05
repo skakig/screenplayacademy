@@ -5,6 +5,7 @@ import {
   blockContent,
   fail,
   ok,
+  requireMcpWrites,
   unauth,
   userClient,
 } from "./_shared";
@@ -42,6 +43,10 @@ export default defineTool({
     }
 
     const supabase = userClient(ctx);
+
+    const feat = await requireMcpWrites(supabase, userId);
+    if (!feat.ok) return fail(feat.message);
+
 
     const { data: current, error: readErr } = await supabase
       .from("script_blocks")

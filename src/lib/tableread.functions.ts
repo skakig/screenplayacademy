@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireFeature } from "@/lib/entitlements.functions";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { z } from "zod";
 
@@ -56,6 +57,8 @@ export const generateTableRead = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const apiKey = process.env.ELEVENLABS_API_KEY;
     const { supabase, userId } = context;
+    await requireFeature(supabase, userId, "table_read");
+
 
     const { data: project } = await supabase
       .from("projects")

@@ -1,137 +1,70 @@
-## Pass 8 — QA & Hardening for Writers' Room
+# Payments & Entitlement Fixes
 
-Five focused changes. No edits to the screenplay editor typing path, keys, formatting, or keymap. No live cursors. No screenplay-content broadcast. No editor bridge wired in this pass — Live Lab stays coordination-only and the copy will say so.
+Based on the audit and your answers, here's what I'll build. Grouped by layer so you can spot-check.
 
----
+## 1. Webhook fixes — `src/routes/api/public/payments/webhook.ts`
 
-### 1. Double-gated feature flag (`src/lib/featureFlags.ts`)
+- **Missing `userId` in `customData`**: return **500** (not 200) so Paddle retries and the subscription isn't permanently lost.
+- **`subscription.updated`**: also update `product_id`, `price_id`, `paddle_customer_id` (resolved from `importMeta.externalId`) so upgrades/downgrades reflect in DB.
+- **`subscription.canceled`**: keep existing `current_period_end` intact (don't null it) and set `cancel_at_period_end=false` — access continues until period end via `has_active_subscription`.
+- **`transaction.payment_failed`** / `past_due`: log + let `status='past_due'` land on the row (no revocation — surfaced as banner, not gate).
+- **`transaction.completed`**: log only (no one-time products in catalog).
 
-Keep the build-time env gate, add a per-browser local switch on top.
+## 2. SQL migration — grace period for `past_due`
 
-- `isLiveSceneCollabAvailable()` — reads `VITE_COLLAB_LIVE_SCENE_EDITING` (current behavior).
-- `isLiveSceneCollabUserEnabled()` — reads `localStorage["scenesmith.experimental.liveCollab.enabled"] === "1"`, guarded with `typeof window !== "undefined"` (false during SSR).
-- `setLiveSceneCollabUserEnabled(enabled)` — writes the key, dispatches a `window` CustomEvent `scenesmith:experimental-flags-changed` so listeners refresh without a reload.
-- `isLiveSceneCollabEnabled()` — `available && userEnabled` (replaces current env-only impl; all existing call sites keep working).
-- `useLiveSceneCollabEnabled()` React hook — subscribes to the custom event + `storage` event, returns the current effective value. Used by Writers' Room to re-render the tab.
+Update `has_active_subscription` so `past_due` retains access while Paddle retries (dunning window). Currently `past_due` = no access, which contradicts the "don't revoke on payment retry" pattern.
 
-Defaults: both gates false. Off-by-default preserved.
+## 3. Entitlement layer (new)
 
-### 2. In-app Experimental Features card
+- **`src/hooks/useSubscription.ts`** — client hook. Reads `subscriptions` filtered by `environment`, orders by `created_at desc`, `.maybeSingle()`. Returns `{ subscription, tier, isActive, isPastDue, isCanceledInGrace }`. Tier derived from `price_id` (`creator_monthly`→`creator`, `pro_monthly`→`pro`, `studio_monthly`→`studio`, else `free`). Subscribes to realtime updates on that user's row.
+- **`src/lib/entitlements.ts`** — pure functions:
+  - `TIER_RANK = { free:0, creator:1, pro:2, studio:3 }`
+  - `FEATURE_MIN_TIER = { script_brain:'creator', pitch:'creator', table_read:'pro', storyboard:'pro', mcp_writes:'pro', writers_room:'studio' }`
+  - `hasFeature(tier, feature)`, `tierFromPriceId(priceId)`.
+- **`src/utils/entitlements.functions.ts`** — server-side `requireFeature(feature)` helper. Uses `requireSupabaseAuth` context, calls `has_active_subscription` + reads the current row's `price_id`, throws `Response('Payment required', { status: 402 })` if the tier is insufficient.
 
-New component `src/components/writers-room/ExperimentalFeaturesCard.tsx`, rendered inside the existing **Access** tab in `writers-room.$projectId.tsx` (below `AccessRulesPanel`). Visible to project members only (route is already member-gated).
+## 4. Server-side gates
 
-- If env gate off: small muted note "Live Collaboration Lab is disabled for this build."
-- If env gate on: shadcn `Switch` (`src/components/ui/switch.tsx`), label "Live Collaboration Lab", description matching the spec ("Turn on experimental scene-scoped co-writing tools for this browser. This does not enable production live co-writing. It only exposes the testing lab."), bound to `setLiveSceneCollabUserEnabled`.
+- **Free = 1 project**: `createProject` server fn checks: if no active sub AND user already has ≥1 project → 402.
+- **MCP writes**: `src/lib/mcp/tools/_shared.ts` — all 5 write tools call `requireFeature('mcp_writes')` (Pro+) before executing.
+- **Script Brain / Pitch / Table Read / Storyboard**: their existing server fns call `requireFeature(...)`.
+- **Writers' Room**: seat-count enforcement on `project_invites` creation (Studio only).
 
-No DB writes. Per-browser only.
+## 5. Client-side gates (UX only)
 
-### 3. Live tab visibility + graceful teardown
+- `<FeatureGate feature="table_read">` wrapper component — shows children if entitled, otherwise renders upgrade CTA linking to `/pricing`.
+- Wrap the entry points for each feature (Table Read, Storyboard, Pitch, Script Brain buttons; Writers' Room invite dialog).
+- Route guards on `/table-read`, `/storyboard`, etc. — redirect to pricing when un-entitled.
 
-In `writers-room.$projectId.tsx`:
+## 6. Settings — replace `profile.plan` with live subscription
 
-- Replace `isLiveSceneCollabEnabled()` call with `useLiveSceneCollabEnabled()` so toggling refreshes the tab list immediately.
-- When the hook flips from true → false while the user is on the Live tab: switch active tab back to "Access", show a sonner toast ("Live Collaboration Lab disabled. Your normal writing flow is unchanged.").
-- Session teardown: `LiveCollabLabPanel` unmounts when the tab disappears, which already triggers `useLiveSceneSession`'s cleanup (channel unsubscribe + presence leave). Add an explicit `useEffect` cleanup check in `LiveCollabLabPanel` that calls `session.leave()` on unmount if `session.active`, so an in-progress session is left cleanly rather than just dropped.
+- `src/routes/_authenticated/settings.tsx`: read from `useSubscription()`. Show tier badge, renewal date, `cancel_at_period_end` state.
+- **"Manage subscription"** button → calls new server fn `createPortalSession` (uses `paddle.customerPortalSessions.create`, resolved from user's `paddle_customer_id`), opens returned URL in new tab.
+- Remove `profile.plan` reads across the codebase (grep for `\.plan\b` in components).
 
-### 4. Honest Live Lab copy
+## 7. Dunning banner
 
-In `LiveCollabLabPanel.tsx` and i18n keys:
+- New component `<DunningBanner />` in `_authenticated` layout. Shown if `isPastDue`. One-line orange banner with "Update payment method" → opens portal.
 
-- Subtitle changes to: "Live Collaboration Lab is currently a scene-session coordination test. Real co-editing is not connected to the Writer's Desk yet."
-- Remove/avoid any "Co-write in real time" phrasing in panel and i18n.
-- Keep the existing "experimental" badge.
+## 8. Checkout race fix
 
-No editor bridge work in this pass (deferred — would require safe integration with `useScreenplayDocument`, dirty/focused-block guards, real query keys, two-browser verification; out of scope).
+- `usePaddleCheckout`: move `setLoading(false)` out of `finally`. Use Paddle's `eventCallback` (`checkout.closed` / `checkout.completed`) to clear loading. Prevents double-click race.
 
-### 5. Real `/accept-invite` route
+## 9. Testing guide (will print at end)
 
-Approach: SECURITY DEFINER RPC + thin client route, so token hashing + member upsert + invite update happen atomically server-side under the caller's `auth.uid()`.
+- Sandbox test cards: `4000 0566 5566 5556` (visa success), `4000 0000 0000 0002` (declined), `4000 0000 0000 3220` (3DS required). Any future expiry, any 3-digit CVC, any name/postal.
+- Test scenarios walked through:
+  1. Sign up → free tier → try to create 2nd project → 402 upgrade prompt.
+  2. Buy Creator → refresh Settings → tier="Creator", Script Brain works, Table Read shows upgrade.
+  3. Upgrade to Pro via portal → webhook updates `price_id` → Table Read unlocks live.
+  4. Cancel via portal → `cancel_at_period_end=true`, banner shows "ends on X", features stay live.
+  5. Trigger `past_due` (Paddle sandbox: use decline card mid-subscription) → dunning banner, features stay live.
+- How to inspect webhook events + subscription rows via the backend.
 
-**Migration** (`supabase/migrations/<ts>_accept_invite_rpc.sql`):
+## Files touched
 
-```sql
-create or replace function public.accept_project_invite(_token text)
-returns table(project_id uuid, status text)
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_uid uuid := auth.uid();
-  v_email text := lower(coalesce(auth.jwt() ->> 'email', ''));
-  v_hash text;
-  v_invite public.project_invites%rowtype;
-begin
-  if v_uid is null then
-    return query select null::uuid, 'unauthenticated'::text; return;
-  end if;
-  v_hash := encode(digest(_token, 'sha256'), 'hex');
-  select * into v_invite from public.project_invites
-    where token_hash = v_hash limit 1;
-  if not found then
-    return query select null::uuid, 'invalid'::text; return;
-  end if;
-  if v_invite.status <> 'pending' then
-    return query select v_invite.project_id, v_invite.status; return;
-  end if;
-  if v_invite.expires_at is not null and v_invite.expires_at < now() then
-    update public.project_invites set status='expired' where id=v_invite.id;
-    return query select v_invite.project_id, 'expired'::text; return;
-  end if;
-  if lower(v_invite.email) <> v_email then
-    return query select v_invite.project_id, 'email_mismatch'::text; return;
-  end if;
+Modified: `webhook.ts`, `settings.tsx`, `usePaddleCheckout.ts`, MCP tools `_shared.ts`, Table Read/Storyboard/Pitch/Script Brain server fns, project-create server fn, `__root.tsx` (banner), route configs for gated pages, migration.
 
-  insert into public.project_members
-    (project_id, user_id, role, status, invited_by, joined_at)
-  values
-    (v_invite.project_id, v_uid, v_invite.role, 'active', v_invite.invited_by, now())
-  on conflict (project_id, user_id) do update
-    set role = excluded.role, status = 'active', joined_at = coalesce(public.project_members.joined_at, now());
+Created: `useSubscription.ts`, `entitlements.ts`, `entitlements.functions.ts`, `FeatureGate.tsx`, `DunningBanner.tsx`, `customerPortal.functions.ts`.
 
-  update public.project_invites
-     set status='accepted', accepted_by=v_uid, accepted_at=now()
-   where id=v_invite.id;
-
-  return query select v_invite.project_id, 'accepted'::text;
-end $$;
-
-revoke execute on function public.accept_project_invite(text) from public, anon;
-grant  execute on function public.accept_project_invite(text) to authenticated;
-```
-
-(Relies on the existing `pgcrypto` `digest()` — already used elsewhere; falls back to a JS hash + parameter if the linter flags it.)
-
-**Route** `src/routes/_authenticated/accept-invite.tsx`:
-
-- Lives under `_authenticated/` so the auth gate redirects unauthenticated users to `/auth` and back (using existing `redirect` query support if present, otherwise a sessionStorage stash of the token before redirect).
-- Reads `?token=` via `Route.useSearch()` with a Zod validator.
-- Calls `supabase.rpc("accept_project_invite", { _token })`.
-- Maps status → calm UI:
-  - `accepted` / already-active: redirect to `/writers-room/$projectId`.
-  - `email_mismatch`: explain the invite was sent to a different email; offer sign-out.
-  - `expired` / `revoked` / `invalid`: friendly message + link to dashboard.
-- Uses `Card`/`Button` and existing brand tokens. New i18n keys under `collab.invite.accept.*`.
-
-`buildInviteUrl` already produces `/accept-invite?token=...` — no change.
-
-### Acceptance & verification
-
-- Typecheck after edits (no manual build, harness handles it).
-- Manual flow: toggle switch off → Live tab disappears, active session leaves; toggle on → tab reappears. Generate invite → open link in second session → membership added, redirect to Writers' Room.
-
-### Deferred
-
-- Real editor bridge from live session into `useScreenplayDocument` (explicitly out of scope; copy now reflects this).
-- Cross-email invite acceptance / owner override.
-- Server-issued invite emails.
-
-### Files
-
-- edit `src/lib/featureFlags.ts`
-- new  `src/components/writers-room/ExperimentalFeaturesCard.tsx`
-- edit `src/routes/_authenticated/writers-room.$projectId.tsx`
-- edit `src/components/writers-room/live/LiveCollabLabPanel.tsx`
-- edit `src/lib/i18n/keys.ts`
-- new  `src/routes/_authenticated/accept-invite.tsx`
-- new  migration `supabase/migrations/<ts>_accept_invite_rpc.sql`
+Approve to implement, or tell me what to change.

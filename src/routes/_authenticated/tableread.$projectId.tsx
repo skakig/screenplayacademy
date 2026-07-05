@@ -16,10 +16,21 @@ import { useServerFn } from "@tanstack/react-start";
 import { generateTableRead, refreshTableReadUrl } from "@/lib/tableread.functions";
 import { listElevenLabsVoices } from "@/lib/elevenlabs-voices.functions";
 
+import { PageFeatureGate } from "@/components/PageFeatureGate";
+
 export const Route = createFileRoute("/_authenticated/tableread/$projectId")({
   head: () => ({ meta: [{ title: "Table Read — SceneSmith AI" }] }),
-  component: TableRead,
+  component: GatedTableRead,
 });
+
+function GatedTableRead() {
+  return (
+    <PageFeatureGate feature="table_read">
+      <TableRead />
+    </PageFeatureGate>
+  );
+}
+
 
 function TableRead() {
   const { projectId } = Route.useParams();

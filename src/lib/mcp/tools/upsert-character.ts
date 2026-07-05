@@ -4,6 +4,7 @@ import {
   fail,
   longTextNullable,
   ok,
+  requireMcpWrites,
   shortText,
   shortTextNullable,
   unauth,
@@ -48,7 +49,14 @@ export default defineTool({
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   handler: async ({ project_id, character_id, fields }, ctx) => {
     if (!ctx.isAuthenticated()) return unauth();
+    const userId = ctx.getUserId();
+    if (!userId) return unauth();
     const supabase = userClient(ctx);
+
+    const gate = await requireMcpWrites(supabase, userId);
+    if (!gate.ok) return fail(gate.message);
+
+
 
     const patch = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined));
 

@@ -13,10 +13,21 @@ import { generatePitchPackage } from "@/lib/ai.functions";
 import { format } from "date-fns";
 import { downloadPitchKitPdf } from "@/components/editor/pitchKitPdf";
 
+import { PageFeatureGate } from "@/components/PageFeatureGate";
+
 export const Route = createFileRoute("/_authenticated/pitch/$projectId")({
   head: () => ({ meta: [{ title: "Pitch Package — SceneSmith AI" }] }),
-  component: Pitch,
+  component: GatedPitch,
 });
+
+function GatedPitch() {
+  return (
+    <PageFeatureGate feature="pitch">
+      <Pitch />
+    </PageFeatureGate>
+  );
+}
+
 
 const SECTIONS: { key: string; label: string }[] = [
   { key: "logline", label: "Logline" },

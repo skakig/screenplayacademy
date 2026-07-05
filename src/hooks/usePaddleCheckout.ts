@@ -9,6 +9,12 @@ type OpenCheckoutOptions = {
   successUrl?: string;
 };
 
+/**
+ * Loading is cleared only when Paddle emits `checkout.closed` or `checkout.completed`
+ * (or setup throws). This prevents the previous race where `loading` returned to
+ * `false` inside a `finally` block before the overlay was even open, allowing
+ * double-click submissions.
+ */
 export function usePaddleCheckout() {
   const [loading, setLoading] = useState(false);
 
@@ -28,9 +34,17 @@ export function usePaddleCheckout() {
           allowLogout: false,
           variant: "one-page",
         },
+        eventCallback: (evt: { name?: string } | undefined) => {
+          const name = evt?.name;
+          if (name === "checkout.closed" || name === "checkout.completed" || name === "checkout.error") {
+            setLoading(false);
+          }
+        },
       });
-    } finally {
+    } catch (e) {
+      // Setup failed (bad token, price not found, network) — release the button.
       setLoading(false);
+      throw e;
     }
   };
 

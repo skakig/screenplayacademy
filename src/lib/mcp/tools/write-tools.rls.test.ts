@@ -140,20 +140,48 @@ describe.skipIf(!ENABLED)("MCP write tools — Supabase RLS integration", () => 
       .single();
     if (charErr || !character) throw charErr ?? new Error("character seed failed");
     characterId = character.id;
+
+    // MCP write tools are gated behind the Pro plan or higher. Seed a live
+    // active subscription for BOTH users so the entitlement check passes
+    // and this suite continues to test RLS in isolation from billing.
+    const seedSub = async (uid: string, subId: string) => {
+      const now = new Date();
+      const end = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      await admin.from("subscriptions").upsert(
+        {
+          user_id: uid,
+          paddle_subscription_id: subId,
+          paddle_customer_id: `ctm_test_${subId}`,
+          product_id: "pro_plan",
+          price_id: "pro_monthly",
+          status: "active",
+          current_period_start: now.toISOString(),
+          current_period_end: end.toISOString(),
+          environment: "live",
+        },
+        { onConflict: "paddle_subscription_id" },
+      );
+    };
+    await seedSub(userAId, `sub_test_a_${runId}`);
+    await seedSub(userBId, `sub_test_b_${runId}`);
   }, 60_000);
+
 
   afterAll(async () => {
     if (!admin) return;
     if (projectId) {
-      // Cascade cleanup: scenes/characters/script_blocks reference projects.
       await admin.from("script_blocks").delete().eq("project_id", projectId);
       await admin.from("characters").delete().eq("project_id", projectId);
       await admin.from("scenes").delete().eq("project_id", projectId);
       await admin.from("projects").delete().eq("id", projectId);
     }
+    // Clean up seeded subscription rows before deleting the users.
+    if (userAId) await admin.from("subscriptions").delete().eq("user_id", userAId);
+    if (userBId) await admin.from("subscriptions").delete().eq("user_id", userBId);
     if (userAId) await admin.auth.admin.deleteUser(userAId).catch(() => {});
     if (userBId) await admin.auth.admin.deleteUser(userBId).catch(() => {});
   }, 60_000);
+
 
   // ---------- Non-owner (User B) is blocked ----------
 
