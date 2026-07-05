@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Command, BookPlus, X as XIcon, Wand2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { cycleType } from "./screenplayKeymap";
 import { detectBlockType, BLOCK_LABEL } from "@/lib/editor/autoFormat";
@@ -399,106 +400,141 @@ export function ScreenplayLine({
         } as any}
       />
 
-      {visibleUnknowns.length > 0 && !focused && (
-        <div className="mt-1 flex flex-wrap items-center gap-1 font-sans">
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
-            {visibleUnknowns.some((u) => u.kind === "false_friend") ? "Heads up" : "New word"}
-          </span>
-          {visibleUnknowns.slice(0, 4).map(({ term, kind, note }) => {
-            const isFalseFriend = kind === "false_friend";
-            return (
-              <div
-                key={`${kind}:${term}`}
-                className={
-                  "inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[11px] text-foreground/80 " +
-                  (isFalseFriend
-                    ? "border-orange-500/40 bg-orange-500/10"
-                    : "border-amber-500/30 bg-amber-500/5")
-                }
-                title={
-                  isFalseFriend
-                    ? note ?? "Possible false friend."
-                    : "SceneSmith hasn't seen this word before. Add it to the project so it's never flagged again."
-                }
-              >
-                <span className="font-mono">{term}</span>
-                {isFalseFriend && note && (
-                  <span className="ml-1 text-[10px] text-muted-foreground/90">{note}</span>
-                )}
-                {!isFalseFriend && onAddDictionaryTerm && (
-                  <>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        onAddDictionaryTerm(term, "character");
-                        setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
-                      }}
-                      className="ml-1 inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-amber-500/10 transition"
-                      title="Add as character"
-                    >
-                      <BookPlus className="h-3 w-3" />
-                      Character
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        onAddDictionaryTerm(term, "custom");
-                        setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
-                      }}
-                      className="inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-amber-500/10 transition"
-                      title="Add to project dictionary"
-                    >
-                      Term
-                    </button>
-                  </>
-                )}
+      {/* Subtle margin indicators — chips summoned on demand. */}
+      {(visibleUnknowns.length > 0 || suggestion) && !focused && (
+        <div className="absolute -left-5 top-2 flex flex-col gap-1 z-10">
+          {visibleUnknowns.length > 0 && (
+            <Popover>
+              <PopoverTrigger asChild>
                 <button
                   type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
-                  }}
-                  className="ml-0.5 inline-flex items-center justify-center rounded-full p-0.5 text-muted-foreground/70 hover:text-foreground hover:bg-amber-500/10 transition"
-                  title="Ignore"
-                  aria-label="Ignore"
-                >
-                  <XIcon className="h-3 w-3" />
-                </button>
-              </div>
-            );
-          })}
+                  aria-label={
+                    visibleUnknowns.some((u) => u.kind === "false_friend")
+                      ? "Language heads up"
+                      : "New word suggestion"
+                  }
+                  className={
+                    "h-2 w-2 rounded-full opacity-70 hover:opacity-100 focus:opacity-100 transition-opacity " +
+                    (visibleUnknowns.some((u) => u.kind === "false_friend")
+                      ? "bg-orange-500/70"
+                      : "bg-amber-500/70")
+                  }
+                />
+              </PopoverTrigger>
+              <PopoverContent side="left" align="start" className="w-auto max-w-[320px] p-2 font-sans">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-1">
+                  {visibleUnknowns.some((u) => u.kind === "false_friend") ? "Heads up" : "New word"}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {visibleUnknowns.slice(0, 4).map(({ term, kind, note }) => {
+                    const isFalseFriend = kind === "false_friend";
+                    return (
+                      <div
+                        key={`${kind}:${term}`}
+                        className={
+                          "inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[11px] text-foreground/80 " +
+                          (isFalseFriend
+                            ? "border-orange-500/40 bg-orange-500/10"
+                            : "border-amber-500/30 bg-amber-500/5")
+                        }
+                        title={
+                          isFalseFriend
+                            ? note ?? "Possible false friend."
+                            : "SceneSmith hasn't seen this word before. Add it to the project so it's never flagged again."
+                        }
+                      >
+                        <span className="font-mono">{term}</span>
+                        {isFalseFriend && note && (
+                          <span className="ml-1 text-[10px] text-muted-foreground/90">{note}</span>
+                        )}
+                        {!isFalseFriend && onAddDictionaryTerm && (
+                          <>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                onAddDictionaryTerm(term, "character");
+                                setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
+                              }}
+                              className="ml-1 inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-amber-500/10 transition"
+                              title="Add as character"
+                            >
+                              <BookPlus className="h-3 w-3" />
+                              Character
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                onAddDictionaryTerm(term, "custom");
+                                setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
+                              }}
+                              className="inline-flex items-center gap-0.5 rounded-full px-1 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-amber-500/10 transition"
+                              title="Add to project dictionary"
+                            >
+                              Term
+                            </button>
+                          </>
+                        )}
+                        <button
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setDismissedTerms((s) => new Set(s).add(term.toLowerCase()));
+                          }}
+                          className="ml-0.5 inline-flex items-center justify-center rounded-full p-0.5 text-muted-foreground/70 hover:text-foreground hover:bg-amber-500/10 transition"
+                          title="Ignore"
+                          aria-label="Ignore"
+                        >
+                          <XIcon className="h-3 w-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+          {suggestion && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Format suggestion"
+                  className="h-2 w-2 rounded-full bg-primary/60 opacity-70 hover:opacity-100 focus:opacity-100 transition-opacity"
+                />
+              </PopoverTrigger>
+              <PopoverContent side="left" align="start" className="w-auto max-w-[320px] p-2 font-sans">
+                <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-[11px] text-foreground/80">
+                  <Wand2 className="h-3 w-3 text-primary" aria-hidden="true" />
+                  <span className="truncate max-w-[260px]">
+                    {suggestion.reason} — convert to {BLOCK_LABEL[suggestion.type] ?? suggestion.type}?
+                  </span>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); acceptSuggestion(); }}
+                    className="ml-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] bg-primary/15 hover:bg-primary/25 text-primary transition"
+                    title="Convert"
+                  >
+                    Convert
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); dismissSuggestion(); }}
+                    className="inline-flex items-center justify-center rounded-full p-0.5 text-muted-foreground hover:text-foreground hover:bg-primary/10 transition"
+                    title="Dismiss"
+                    aria-label="Dismiss"
+                  >
+                    <XIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              </PopoverContent>
+            </Popover>
+          )}
         </div>
       )}
 
-      {suggestion && !focused && (
-        <div className="mt-1 flex flex-wrap items-center gap-1 font-sans">
-          <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-[11px] text-foreground/80">
-            <Wand2 className="h-3 w-3 text-primary" aria-hidden="true" />
-            <span className="truncate max-w-[260px]">
-              {suggestion.reason} — convert to {BLOCK_LABEL[suggestion.type] ?? suggestion.type}?
-            </span>
-            <button
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); acceptSuggestion(); }}
-              className="ml-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] bg-primary/15 hover:bg-primary/25 text-primary transition"
-              title="Convert"
-            >
-              Convert
-            </button>
-            <button
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); dismissSuggestion(); }}
-              className="inline-flex items-center justify-center rounded-full p-0.5 text-muted-foreground hover:text-foreground hover:bg-primary/10 transition"
-              title="Dismiss"
-              aria-label="Dismiss"
-            >
-              <XIcon className="h-3 w-3" />
-            </button>
-          </span>
-        </div>
-      )}
+
 
 
 
@@ -524,8 +560,8 @@ export function ScreenplayLine({
         />
       )}
 
-      {isSceneHeading && (
-        <div className="absolute right-0 -bottom-7 z-10 font-sans">
+      {isSceneHeading && (focused || beat) && (
+        <div className="absolute right-0 -bottom-7 z-10 font-sans opacity-70 hover:opacity-100 focus-within:opacity-100 transition-opacity">
           <SceneBeatPicker
             value={beat}
             onChange={(b) => {
