@@ -200,7 +200,7 @@ export const restoreCharacters = createServerFn({ method: "POST" })
 
     // Characters first, then dependents (preserves foreign-key order).
     const { error: cErr } = await context.supabase
-      .from("characters").upsert(snapshot.characters, { onConflict: "id", ignoreDuplicates: true });
+      .from("characters").upsert(snapshot.characters as any, { onConflict: "id", ignoreDuplicates: true });
     if (cErr) throw new Error(cErr.message);
 
     for (const table of DEP_TABLES) {
