@@ -42,7 +42,6 @@ import { CoachPane } from "@/components/editor/CoachPane";
 import { StoryBuilder } from "@/components/editor/StoryBuilder";
 import { WriterDeskModeToggle } from "@/components/editor/WriterDeskModeToggle";
 import { FeatureDock } from "@/components/editor/FeatureDock";
-import { GuidedStepStrip } from "@/components/editor/GuidedStepStrip";
 import { CanvasToolbar } from "@/components/editor/CanvasToolbar";
 import { useManuscriptAnalyzer } from "@/hooks/useManuscriptAnalyzer";
 import { useOnboarding } from "@/hooks/use-onboarding";
@@ -52,6 +51,10 @@ import { useWriterEvents } from "@/hooks/useWriterEvents";
 import { useWriteMode } from "@/hooks/use-write-mode";
 import { FocusPill } from "@/components/editor/FocusPill";
 import { FirstRunModeDialog } from "@/components/editor/FirstRunModeDialog";
+import { BasicProgressPill } from "@/components/editor/BasicProgressPill";
+import { EditorSummonBar } from "@/components/editor/EditorSummonBar";
+import { PresenceAvatarStack } from "@/components/writers-room/presence/PresenceAvatarStack";
+import { AutosaveIndicator } from "@/components/editor/AutosaveIndicator";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Writer's Desk — Screenplay Academy" }] }),
