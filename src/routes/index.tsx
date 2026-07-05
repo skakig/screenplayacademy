@@ -332,10 +332,13 @@ function Landing() {
 
       {/* Footer */}
       <footer className="border-t border-border/40 py-8">
-        <div className="max-w-6xl mx-auto px-4 flex items-center justify-between text-xs text-muted-foreground">
-          <span>© {new Date().getFullYear()} SceneSmith Studio</span>
-          <div className="flex gap-4">
+        <div className="max-w-6xl mx-auto px-4 flex flex-wrap items-center justify-between gap-4 text-xs text-muted-foreground">
+          <span>© {new Date().getFullYear()} Joshua Ellis — SceneSmith Studio</span>
+          <div className="flex flex-wrap gap-4">
             <Link to="/pricing">Pricing</Link>
+            <Link to="/terms">Terms</Link>
+            <Link to="/privacy">Privacy</Link>
+            <Link to="/refund">Refund</Link>
             <Link to="/auth">Sign in</Link>
           </div>
         </div>
