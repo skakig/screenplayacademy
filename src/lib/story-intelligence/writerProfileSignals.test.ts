@@ -102,4 +102,21 @@ describe("resolveWriterGuidance", () => {
     expect(() => resolveWriterGuidance(frozen)).not.toThrow();
     expect(JSON.stringify(frozen)).toBe(before);
   });
+
+  it("11. SceneSmith onboarding values are recognized correctly", () => {
+    expect(isBeginnerExperience("first")).toBe(true);
+    expect(isBeginnerExperience("guided")).toBe(true);
+    expect(isBeginnerExperience("adapting")).toBe(true);
+    expect(isAdvancedExperience("experienced")).toBe(true);
+    expect(isAdvancedExperience("pitching")).toBe(true);
+  });
+
+  it("12. Short tokens do not create false positives via substring matching", () => {
+    // "pro" should not match inside unrelated words
+    expect(isAdvancedExperience("program")).toBe(false);
+    expect(isAdvancedExperience("improvisation")).toBe(false);
+    // But "pro" itself and explicit tokens still match
+    expect(isAdvancedExperience("pro")).toBe(true);
+    expect(isAdvancedExperience("professional")).toBe(true);
+  });
 });
