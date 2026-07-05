@@ -398,6 +398,8 @@ export function CharacterProfileDialog({
             )}
           </div>
         </Tabs>
+          );
+        })()}
       </DialogContent>
     </Dialog>
   );
