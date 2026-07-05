@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.current_subscription_tier(uuid, text) FROM PUBLIC, anon;
