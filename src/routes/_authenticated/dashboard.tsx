@@ -93,6 +93,7 @@ function Dashboard() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [initialType, setInitialType] = useState<string>("Feature Film");
   const { data: onboarding, isLoading: onboardingLoading } = useOnboarding();
   const seedFn = useServerFn(seedGuidedSteps);
 
@@ -115,7 +116,7 @@ function Dashboard() {
     onSuccess: async (p) => {
       qc.invalidateQueries({ queryKey: ["projects"] });
       setOpen(false);
-      toast.success("Studio's ready. Lights up.");
+      toast.success(t("dashboard.toast.created"));
       if (onboarding?.preferred_mode === "guided") {
         try { await seedFn({ data: { projectId: p.id } }); } catch { /* ignore */ }
         navigate({ to: "/first-screenplay/$projectId", params: { projectId: p.id } });
