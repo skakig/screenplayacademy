@@ -20,7 +20,7 @@ import { GuidedDashboard } from "@/components/dashboard/GuidedDashboard";
 import { seedGuidedSteps } from "@/lib/academy.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Studio Lobby — Screenplay Academy" }] }),
+  head: () => ({ meta: [{ title: "Studio Lobby — SceneSmith Studio" }] }),
   component: Dashboard,
 });
 
