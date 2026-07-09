@@ -140,6 +140,8 @@ function Dashboard() {
     return <AppShell><GuidedDashboard /></AppShell>;
   }
 
+  const mostRecent = projects[0];
+
   return (
     <AppShell>
       <div className="max-w-[1400px] mx-auto px-4 py-10">
@@ -150,52 +152,76 @@ function Dashboard() {
             style={{ backgroundImage: "radial-gradient(circle at 15% 25%, var(--primary) 0, transparent 38%), radial-gradient(circle at 85% 75%, var(--accent) 0, transparent 42%)" }} />
           <div className="relative flex items-end justify-between flex-wrap gap-4">
             <div>
-              <p className="font-mono uppercase tracking-[0.22em] text-[10px] text-primary/80 mb-2">Studio Lobby</p>
-              <h1 className="font-display text-4xl md:text-5xl font-semibold tracking-tight">Welcome back to the lot.</h1>
+              <p className="font-mono uppercase tracking-[0.22em] text-[10px] text-primary/80 mb-2">{t("dashboard.studio_lobby")}</p>
+              <h1 className="font-display text-4xl md:text-5xl font-semibold tracking-tight">{t("dashboard.welcome_back")}</h1>
               <p className="font-script italic text-muted-foreground mt-2 text-base md:text-lg">
-                Every great film starts with a blank page. Yours doesn't have to.
+                {t("dashboard.tagline")}
               </p>
             </div>
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button size="lg" className="shadow-lg shadow-primary/20"><Plus className="h-4 w-4 mr-2" />Start a Script</Button>
-              </DialogTrigger>
-              <NewProjectDialog onCreate={(v) => create.mutate(v)} loading={create.isPending} />
-            </Dialog>
+            <div className="flex flex-wrap items-center gap-2">
+              {mostRecent && (
+                <Button asChild size="lg" className="shadow-lg shadow-primary/20 max-w-[22rem]">
+                  <Link to="/editor/$projectId" params={{ projectId: mostRecent.id }}>
+                    <PlayCircle className="h-4 w-4 mr-2 shrink-0" />
+                    <span className="truncate">{t("dashboard.continue_prefix", { title: mostRecent.title })}</span>
+                  </Link>
+                </Button>
+              )}
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    size="lg"
+                    variant={mostRecent ? "outline" : "default"}
+                    className={mostRecent ? "" : "shadow-lg shadow-primary/20"}
+                    onClick={() => setInitialType("Feature Film")}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />{t("dashboard.start_project")}
+                  </Button>
+                </DialogTrigger>
+                <NewProjectDialog
+                  open={open}
+                  initialType={initialType}
+                  onCreate={(v) => create.mutate(v)}
+                  loading={create.isPending}
+                />
+              </Dialog>
+            </div>
           </div>
         </div>
 
         {/* Quick-start: format slates */}
-        <p className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground mb-3">New on the slate</p>
+        <p className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground mb-3">{t("dashboard.new_on_slate")}</p>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-12">
           {PROJECT_TYPES.map(({ value, icon: Icon }) => (
             <button
               key={value}
-              onClick={() => { setOpen(true); }}
+              onClick={() => { setInitialType(value); setOpen(true); }}
               className="cine-card group p-4 rounded-lg bg-card border border-border/60 hover:border-primary/50 transition text-left"
             >
-              <Icon className="h-5 w-5 text-primary mb-2 group-hover:scale-110 transition" />
-              <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">New</div>
+              <Icon className="h-5 w-5 text-primary mb-2 group-hover:scale-110 transition" aria-hidden="true" />
+              <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">{t("dashboard.new_card_kicker")}</div>
               <div className="text-sm font-medium">{value}</div>
             </button>
           ))}
         </div>
 
         <div className="flex items-baseline justify-between mb-4">
-          <h2 className="font-display text-2xl font-semibold">In Production</h2>
+          <h2 className="font-display text-2xl font-semibold">{t("dashboard.in_production")}</h2>
           <span className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground">
-            {projects.length} {projects.length === 1 ? "script" : "scripts"} on the lot
+            {t(projects.length === 1 ? "dashboard.projects_on_lot_one" : "dashboard.projects_on_lot_other", { count: projects.length })}
           </span>
         </div>
 
         {isLoading ? (
-          <div className="text-muted-foreground font-script italic">Setting the stage…</div>
+          <div className="text-muted-foreground font-script italic">{t("dashboard.setting_stage")}</div>
         ) : projects.length === 0 ? (
           <Card className="p-12 text-center border-dashed">
-            <Film className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <h3 className="font-display text-xl font-semibold mb-1">The page is waiting</h3>
-            <p className="text-sm text-muted-foreground mb-4">Start your first screenplay to open the Writer's Desk.</p>
-            <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" />Start a Script</Button>
+            <Film className="h-10 w-10 text-muted-foreground mx-auto mb-3" aria-hidden="true" />
+            <h3 className="font-display text-xl font-semibold mb-1">{t("dashboard.page_waiting")}</h3>
+            <p className="text-sm text-muted-foreground mb-4">{t("dashboard.page_waiting_body")}</p>
+            <Button onClick={() => { setInitialType("Feature Film"); setOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />{t("dashboard.start_project")}
+            </Button>
           </Card>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -231,15 +257,15 @@ function Dashboard() {
                           "{p.logline}"
                         </p>
                       ) : (
-                        <p className="font-script italic text-sm text-muted-foreground">Logline pending…</p>
+                        <p className="font-script italic text-sm text-muted-foreground">{t("dashboard.logline_pending")}</p>
                       )}
                       <PipelineStrip stageIndex={stageIndex} />
-                      <div className="flex items-center justify-between pt-2 border-t border-border/40">
+                      <div className="flex items-center justify-between pt-2 border-t border-border/40 gap-2">
                         <span className="font-mono uppercase tracking-[0.18em] text-[10px] text-muted-foreground">
-                          Updated {formatDistanceToNow(new Date(p.updated_at), { addSuffix: true })}
+                          {t("dashboard.updated_prefix", { when: formatDistanceToNow(new Date(p.updated_at), { addSuffix: true }) })}
                         </span>
-                        <span className="text-[11px] text-primary opacity-0 group-hover:opacity-100 transition">
-                          Open desk →
+                        <span className="text-[11px] text-primary opacity-100 md:opacity-60 md:group-hover:opacity-100 transition whitespace-nowrap">
+                          {t("dashboard.open_writers_desk")}
                         </span>
                       </div>
                     </div>
@@ -253,6 +279,7 @@ function Dashboard() {
     </AppShell>
   );
 }
+
 
 function NewProjectDialog({ onCreate, loading }: { onCreate: (v: any) => void; loading: boolean }) {
   const [form, setForm] = useState({
