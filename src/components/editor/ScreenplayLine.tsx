@@ -12,6 +12,7 @@ import {
 } from "./screenplayLanguageIntelligence";
 import { CharacterAutocomplete, type CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import { SceneBeatPicker } from "@/components/editor/SceneBeatPicker";
+import { SceneBeatGutterDot } from "@/components/editor/SceneBeatGutterDot";
 import type { LocalBlock } from "./useScreenplayDocument";
 
 
