@@ -11,6 +11,9 @@ import { t } from "@/lib/i18n/t";
 import { useActiveLineViewport, type ActiveLineViewportMode } from "./useActiveLineViewport";
 import { formatPastedScript, type ParsedBlock } from "./screenplayAutoFormat";
 import { PasteFormatPreviewDialog } from "./PasteFormatPreviewDialog";
+import { SceneHeadingChips } from "./SceneHeadingChips";
+import { RecentCharacterChips } from "./RecentCharacterChips";
+import { markFixRejected } from "./formatOverrideMemory";
 
 
 export type ActiveBlockMeta = {
@@ -65,6 +68,13 @@ type Props = {
   knownLanguages?: import("@/lib/language/types").LanguageCode[];
   /** In-page annotation visibility. Focus/Basic pass "silent"; Advanced passes "quiet". */
   annotationMode?: AnnotationMode;
+  /**
+   * Chrome-level surface control, distinct from annotationMode.
+   * - "focus":   hide chip strips AND the auto-format pill (sacred page).
+   * - "basic":   show chip strips and the auto-format pill (teaching mode).
+   * - "advanced":show chip strips and the auto-format pill (default).
+   */
+  chromeMode?: "focus" | "basic" | "advanced";
 };
 
 
@@ -94,8 +104,8 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       screenplayLanguage,
       knownLanguages,
       annotationMode = "quiet",
+      chromeMode = "advanced",
     },
-
     ref,
   ) {
     const doc = useScreenplayDocument({
@@ -108,6 +118,11 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       onDraftRestored,
       persistence,
     });
+
+    const showChips = chromeMode !== "focus";
+    const showFormatPill = chromeMode !== "focus";
+    const [suppressToken, setSuppressToken] = useState(0);
+    const [suppressFor, setSuppressFor] = useState<{ blockId: string; original: string } | null>(null);
 
     // bubble active block info up (debounced by key string to avoid spam)
     const lastSent = useRef<string>("");
@@ -338,7 +353,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
           className="screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 cursor-text relative"
           onClick={handlePaperClick}
         >
-        {lastFormat && (
+        {showFormatPill && lastFormat && (
           <div
             className="sticky top-3 z-20 mx-auto mb-3 w-fit max-w-full font-sans"
             onClick={(e) => e.stopPropagation()}
@@ -352,6 +367,27 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     })
                   : t("editor.autoFormat.indicatorGeneric")}
               </span>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  if (!lastFormat) return;
+                  doc.updateBlockContent(lastFormat.blockId, lastFormat.original);
+                  if (lastFormat.typeChanged) {
+                    doc.changeBlockType(lastFormat.blockId, lastFormat.previousBlockType);
+                  }
+                  markFixRejected(projectId, lastFormat.original);
+                  setSuppressFor({ blockId: lastFormat.blockId, original: lastFormat.original });
+                  setSuppressToken((n) => n + 1);
+                  setLastFormat(null);
+                  setWhyOpen(false);
+                }}
+                className="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/15 transition"
+                aria-label={t("editor.autoFormat.undo")}
+                title={t("editor.autoFormat.undo")}
+              >
+                {t("editor.autoFormat.undo")}
+              </button>
               <button
                 type="button"
                 onClick={() => setWhyOpen((v) => !v)}
@@ -392,6 +428,9 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
             {doc.localBlocks.map((b, i) => {
               const prev = i > 0 ? doc.localBlocks[i - 1] : undefined;
               const isNewScene = b.block_type === "scene_heading" && i > 0;
+              const isActive = b.id === doc.activeBlockId;
+              const suppressOriginalForBlock =
+                suppressFor && suppressFor.blockId === b.id ? suppressFor.original : null;
               return (
                 <div key={b.id} data-local-id={b.id}>
                   {isNewScene && (
@@ -403,9 +442,27 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                       <div className="h-px flex-1 bg-border/60" />
                     </div>
                   )}
+                  {/* Mobile: chip strip renders ABOVE the line (keyboard sits below). */}
+                  {showChips && isActive && isMobile && b.block_type === "scene_heading" && (
+                    <SceneHeadingChips
+                      value={b.content}
+                      onApply={(next) => doc.updateBlockContent(b.id, next)}
+                    />
+                  )}
+                  {showChips && isActive && isMobile && b.block_type === "character" && b.content === "" && (
+                    <RecentCharacterChips
+                      blocks={doc.localBlocks}
+                      activeId={doc.activeBlockId}
+                      onPick={(name) => {
+                        doc.updateBlockContent(b.id, name);
+                        const nextType = nextBlockTypeAfter("character", prev?.block_type);
+                        doc.insertBlockAfter(b.id, nextType);
+                      }}
+                    />
+                  )}
                   <ScreenplayLine
                     block={b}
-                    isActive={b.id === doc.activeBlockId}
+                    isActive={isActive}
                     isFirstEmpty={i === 0 && doc.localBlocks.length === 1 && b.content === "" && b.block_type === "scene_heading"}
                     characters={characters}
                     prevBlockType={prev?.block_type}
@@ -427,7 +484,27 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     onAddDictionaryTerm={onAddDictionaryTerm}
                     onRejectFormatSuggestion={onRejectFormatSuggestion}
                     annotationMode={annotationMode}
+                    suppressAutoFormatOriginal={suppressOriginalForBlock}
+                    suppressAutoFormatToken={suppressToken}
                   />
+                  {/* Desktop/tablet: chip strip renders BELOW the line. */}
+                  {showChips && isActive && !isMobile && b.block_type === "scene_heading" && (
+                    <SceneHeadingChips
+                      value={b.content}
+                      onApply={(next) => doc.updateBlockContent(b.id, next)}
+                    />
+                  )}
+                  {showChips && isActive && !isMobile && b.block_type === "character" && b.content === "" && (
+                    <RecentCharacterChips
+                      blocks={doc.localBlocks}
+                      activeId={doc.activeBlockId}
+                      onPick={(name) => {
+                        doc.updateBlockContent(b.id, name);
+                        const nextType = nextBlockTypeAfter("character", prev?.block_type);
+                        doc.insertBlockAfter(b.id, nextType);
+                      }}
+                    />
+                  )}
                 </div>
               );
             })}

@@ -779,6 +779,7 @@ function Editor() {
                     );
                   }}
                   annotationMode={focus || isBasic ? "silent" : "quiet"}
+                  chromeMode={focus ? "focus" : isBasic ? "basic" : "advanced"}
                 />
 
               </div>

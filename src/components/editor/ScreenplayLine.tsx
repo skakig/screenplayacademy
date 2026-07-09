@@ -42,6 +42,8 @@ const QUICK_TYPES = ["scene_heading", "action", "character", "dialogue", "parent
 export type AutoFormatEvent = {
   blockId: string;
   blockType: string;
+  /** Block type BEFORE this format event, so callers can undo type changes. */
+  previousBlockType: string;
   original: string;
   formatted: string;
   typeChanged: boolean;
@@ -70,6 +72,8 @@ export function ScreenplayLine({
   onAddDictionaryTerm,
   onRejectFormatSuggestion,
   annotationMode = "quiet",
+  suppressAutoFormatOriginal,
+  suppressAutoFormatToken,
 }: {
   block: LocalBlock;
   isActive: boolean;
@@ -99,6 +103,13 @@ export function ScreenplayLine({
    * - "full": inline chips + beat picker (dev/internal only).
    */
   annotationMode?: AnnotationMode;
+  /**
+   * One-shot suppression: if the current block content equals this string on
+   * the next auto-format pass, skip formatting once. Paired with a token so
+   * a fresh Undo can re-arm the guard even for the same original string.
+   */
+  suppressAutoFormatOriginal?: string | null;
+  suppressAutoFormatToken?: number;
 }) {
 
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -172,6 +183,16 @@ export function ScreenplayLine({
     }
   }, [block.content]);
 
+  // One-shot Undo guard: parent arms this after auto-format Undo so the
+  // very next runSafeFormat pass (on the same original text) is skipped.
+  const suppressOnceRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (suppressAutoFormatOriginal != null) {
+      suppressOnceRef.current = suppressAutoFormatOriginal;
+    }
+    // Re-arm every time the parent bumps the token, even for the same string.
+  }, [suppressAutoFormatOriginal, suppressAutoFormatToken]);
+
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const v = e.target.value;
     onContentChange(v);
@@ -190,6 +211,11 @@ export function ScreenplayLine({
   const runSafeFormat = (): boolean => {
     const raw = block.content;
     if (!raw) return false;
+    // One-shot Undo suppression — consume and skip.
+    if (suppressOnceRef.current != null && suppressOnceRef.current === raw) {
+      suppressOnceRef.current = null;
+      return false;
+    }
 
     // 1) Language fixes first — they only change casing/punctuation, never
     //    semantic meaning, and skip any token in characterNames / dictionary.
@@ -226,6 +252,7 @@ export function ScreenplayLine({
     onAutoFormatApplied?.({
       blockId: block.id,
       blockType: effectiveType,
+      previousBlockType: block.block_type,
       original: raw,
       formatted,
       typeChanged,

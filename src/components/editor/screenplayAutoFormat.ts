@@ -22,6 +22,75 @@ const TIME_TOKENS = [
   "EVENING","CONTINUOUS","LATER","NIGHT","DAWN","DUSK","DAY",
 ];
 
+export const SCENE_PREFIX_CHIPS = ["INT.", "EXT.", "INT./EXT.", "EST."] as const;
+export const SCENE_TIME_CHIPS = [
+  "DAY", "NIGHT", "CONTINUOUS", "LATER", "MORNING", "EVENING", "MOMENTS LATER",
+] as const;
+
+/**
+ * Return true when a scene-heading string has all three canonical parts:
+ * PREFIX + LOCATION + TIME. Used by the chip strip to auto-hide when
+ * the heading is "complete."
+ */
+export function isSceneHeadingComplete(text: string): boolean {
+  const t = (text ?? "").trim();
+  if (!t) return false;
+  const prefixRe = /^\s*(int\.?\/ext\.?|i\/e\.?|int\.?|ext\.?|est\.?)\.?\s*/i;
+  const m = t.match(prefixRe);
+  if (!m) return false;
+  const afterPrefix = t.slice(m[0].length);
+  const upper = afterPrefix.toUpperCase();
+  let body = afterPrefix;
+  let hasTime = false;
+  for (const tok of TIME_TOKENS) {
+    const re = new RegExp(`\\s*-?\\s*${tok.replace(/ /g, "\\s+")}\\s*$`);
+    if (re.test(upper)) {
+      hasTime = true;
+      body = afterPrefix.replace(new RegExp(`\\s*-?\\s*${tok.replace(/ /g, "\\s+")}\\s*$`, "i"), "");
+      break;
+    }
+  }
+  if (!hasTime) return false;
+  return /[A-Za-z0-9]/.test(body);
+}
+
+/**
+ * Insert or replace a canonical part of a scene heading.
+ * - kind="prefix": replace or prepend the INT./EXT./INT./EXT./EST. prefix.
+ * - kind="time":  replace or append the trailing "- TIME" token.
+ * Idempotent — applying the same part twice yields the same string.
+ */
+export function applySlugPart(
+  currentText: string,
+  part: string,
+  kind: "prefix" | "time",
+): string {
+  const raw = currentText ?? "";
+  if (kind === "prefix") {
+    // Strip any leading prefix + trailing period + whitespace, then prepend
+    // the canonical chip value. Preserve body casing/spacing so re-taps are
+    // idempotent without depending on formatSceneHeading's regex quirks.
+    let stripped = raw.replace(/^\s*(int\.?\/ext\.?|i\/e\.?|int\.?|ext\.?|est\.?)\.?\s*/i, "");
+    // Uppercase the body to match screenplay convention while remaining stable.
+    stripped = stripped.toUpperCase().trim();
+    return stripped ? `${part} ${stripped}` : `${part} `.trimEnd();
+  }
+  // kind === "time"
+  const upper = raw.toUpperCase();
+  let base = upper;
+  for (const tok of TIME_TOKENS) {
+    const re = new RegExp(`\\s*-?\\s*${tok.replace(/ /g, "\\s+")}\\s*$`);
+    if (re.test(base)) {
+      base = base.replace(re, "");
+      break;
+    }
+  }
+  base = base.replace(/[\s-]+$/, "").trim();
+  if (!base) return part;
+  return `${base} - ${part}`;
+}
+
+
 const TRANSITION_VERBS =
   /^(CUT TO|FADE IN|FADE OUT|FADE TO BLACK|SMASH CUT(?: TO)?|MATCH CUT(?: TO)?|JUMP CUT(?: TO)?|DISSOLVE TO|HARD CUT TO|TIME CUT)\b/;
 
