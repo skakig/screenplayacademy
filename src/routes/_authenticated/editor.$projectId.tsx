@@ -423,19 +423,41 @@ function Editor() {
   const isBasic = onboarding?.preferred_mode === "guided";
   const coachDefaultTab = isBasic ? "builder" : "coach";
 
-  // Esc exits Focus Mode. Ignore when a modal/menu/popover has consumed the
-  // event (Radix marks defaultPrevented), and don't fire if a bare Escape
-  // isn't the key.
+  // Esc exits Focus Mode; Cmd/Ctrl+. toggles Focus Mode from anywhere.
+  // Ignore when a modal/menu/popover has consumed the event (Radix marks
+  // defaultPrevented).
   useEffect(() => {
-    if (!focus) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || e.defaultPrevented) return;
-      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
-      writeMode.set(false);
+      if (e.defaultPrevented) return;
+      // Cmd/Ctrl+. toggle
+      if ((e.metaKey || e.ctrlKey) && e.key === "." && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        writeMode.toggle();
+        return;
+      }
+      // Bare Escape exits focus
+      if (focus && e.key === "Escape" && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        writeMode.set(false);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [focus, writeMode]);
+
+  // Emit focus-mode analytics whenever it toggles (post-mount only).
+  const lastFocusRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (lastFocusRef.current === null) {
+      lastFocusRef.current = focus;
+      return;
+    }
+    if (lastFocusRef.current === focus) return;
+    lastFocusRef.current = focus;
+    emitEvent({
+      event_type: focus ? "focus_mode_entered" : "focus_mode_exited",
+      project_id: projectId,
+    });
+  }, [focus, emitEvent, projectId]);
 
   // Global Cmd/Ctrl+1–7 → set active block's type
   useEffect(() => {
