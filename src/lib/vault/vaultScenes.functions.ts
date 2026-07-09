@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { VaultSceneInput, VaultSceneUpdate, type VaultSceneRow } from "./schemas";
+import type { Database } from "@/integrations/supabase/types";
 
 const ProjectId = z.object({ projectId: z.string().uuid() });
 const Id = z.object({ id: z.string().uuid() });
