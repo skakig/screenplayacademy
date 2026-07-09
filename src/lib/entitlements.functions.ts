@@ -7,7 +7,7 @@ import {
   type Feature,
   type Tier,
 } from "@/lib/entitlements";
-import { serverPaddleEnv } from "@/lib/paddleEnv.server";
+import { serverStripeEnv } from "@/lib/stripeEnv.server";
 
 /**
  * Server-side entitlement guard for `createServerFn` handlers.
@@ -26,7 +26,7 @@ export async function requireFeature(
   userId: string,
   feature: Feature,
 ): Promise<Tier> {
-  const environment = serverPaddleEnv();
+  const environment = serverStripeEnv();
   const { data: row } = await supabase
     .from("subscriptions")
     .select("price_id, status, current_period_end")
