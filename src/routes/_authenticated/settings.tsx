@@ -47,8 +47,12 @@ function PlanCard() {
   const handlePortal = async () => {
     setBusy(true);
     try {
-      const { url } = await openPortal({ data: {} });
-      window.open(url, "_blank", "noopener,noreferrer");
+      const { getStripeEnvironment } = await import("@/lib/stripe");
+      const result = await openPortal({
+        data: { environment: getStripeEnvironment(), returnUrl: window.location.href },
+      });
+      if ("error" in result) throw new Error(result.error);
+      window.open(result.url, "_blank", "noopener,noreferrer");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not open billing portal");
     } finally {
