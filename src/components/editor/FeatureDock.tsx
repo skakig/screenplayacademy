@@ -32,7 +32,7 @@ export function FeatureDock({ projectId }: Props) {
             const params = it.to.includes("$projectId") ? { projectId } : undefined;
             return (
               <Link
-                key={it.label}
+                key={it.labelKey}
                 to={it.to}
                 params={params as any}
                 className="group relative overflow-hidden rounded-lg border border-border/50 bg-card/50 p-3 hover:border-primary/40 hover:bg-card/80 transition-all"
@@ -42,16 +42,17 @@ export function FeatureDock({ projectId }: Props) {
                 />
                 <div className="relative flex items-start gap-2.5">
                   <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-4 w-4" aria-hidden="true" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground truncate">
-                      {it.label}
+                      {t(it.labelKey)}
                     </p>
                     <p className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
-                      {it.desc}
+                      {t(it.descKey)}
                     </p>
                   </div>
+                </div>
                 </div>
               </Link>
             );
