@@ -12,12 +12,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Film, Tv, Clapperboard, BookOpen, FileText, Lightbulb, Type, ListOrdered, Pencil, RefreshCw, Mic, Presentation } from "lucide-react";
+import { Plus, Film, Tv, Clapperboard, BookOpen, FileText, Lightbulb, Type, ListOrdered, Pencil, RefreshCw, Mic, Presentation, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { GuidedDashboard } from "@/components/dashboard/GuidedDashboard";
 import { seedGuidedSteps } from "@/lib/academy.functions";
+import { t } from "@/lib/i18n/t";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Studio Lobby — SceneSmith Studio" }] }),
