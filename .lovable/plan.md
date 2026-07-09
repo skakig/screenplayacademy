@@ -1,91 +1,138 @@
-# PfHU Signal Layer — Onboarding Value Alignment Patch
 
-## Problem
+# Scene Vault — Implementation Plan
 
-`writerProfileSignals.ts` currently maps generic beginner/advanced tokens like `"beginner"`, `"new"`, `"pro"`, etc. SceneSmith's real onboarding values are `"first" | "guided" | "experienced" | "adapting" | "pitching"`, so a user selecting "My first screenplay" (stored as `"first"`) is not recognized as a beginner. Also, `n.includes(t)` substring matching risks false positives from short tokens like `"pro"`.
+A dedicated workshop inside each project where writers stash scenes, dialogue fragments, set pieces, and alternate takes before knowing where they belong — then integrate them into the timeline with an AI-assisted safety check.
 
-## Plan
+## 1. Data model (one migration)
 
-### 1. Update token arrays and matching logic
+New table `public.vault_scenes`:
 
-**File:** `src/lib/story-intelligence/writerProfileSignals.ts`
+- `id uuid pk`
+- `project_id uuid → projects` (RLS via `is_project_member` / `can_edit_project`)
+- `kind text` — one of: `vault_scene | dialogue_fragment | set_piece | alternate_take`
+- `title text`
+- `content text` (scene/fragment body)
+- `notes text`
+- `location text`
+- `emotional_tone text`
+- `estimated_position text` — one of: `act_1 | act_2a | midpoint | act_2b | act_3 | unsure`
+- `tags text[]`
+- `status text` — one of: `vaulted | candidate | integrated | alternate | needs_rewrite | locked | deleted` (default `vaulted`)
+- `linked_scene_id uuid → scenes(id)` nullable (populated on integration — Copy + link)
+- `linked_character_ids uuid[]` (references characters by id, kept as array for corkboard simplicity)
+- `alternate_of uuid → vault_scenes(id)` nullable (for Alternate Takes)
+- `archived_at timestamptz` nullable
+- `created_by uuid`, `created_at`, `updated_at` (+ trigger)
 
-- Add SceneSmith-native tokens to `BEGINNER_TOKENS`: `"first"`, `"guided"`, `"adapting"`.
-- Add SceneSmith-native tokens to `ADVANCED_TOKENS`: `"experienced"`, `"pitching"`.
-- Replace `n.includes(t)` with a safer `matchesToken(n, t)` helper that supports:
-  - exact match
-  - underscore / dash / space normalized match (e.g. `"first_time"` matches `"first time"`)
-  - word-boundary match (prevents short tokens like `"pro"` from matching inside unrelated words)
-- Update `isBeginnerExperience` and `isAdvancedExperience` to use the new helper.
+RLS: SELECT/INSERT/UPDATE/DELETE gated by `is_project_member` / `can_edit_project`. GRANTs to `authenticated` + `service_role`.
 
-### 2. Update tests
+Also: add nullable `source_vault_scene_id uuid` column on `public.scenes` so an integrated timeline scene links back to its Vault origin.
 
-**File:** `src/lib/story-intelligence/writerProfileSignals.test.ts`
+## 2. Server functions (`src/lib/vault/`)
 
-- Add tests proving:
-  - `isBeginnerExperience("first") === true`
-  - `isBeginnerExperience("guided") === true`
-  - `isBeginnerExperience("adapting") === true`
-  - `isAdvancedExperience("experienced") === true`
-  - `isAdvancedExperience("pitching") === true`
-  - Short token `"pro"` does not create false positives (e.g. `"improvisation"`, `"professional"` still matches via exact token but a generic `"program"` does not match `"pro"`)
-- Verify all existing 44 tests still pass.
+Client-safe `.functions.ts` files, all `requireSupabaseAuth`:
 
-## Acceptance
+- `vaultScenes.functions.ts` — `listVaultScenes`, `getVaultScene`, `createVaultScene`, `updateVaultScene`, `archiveVaultScene`, `deleteVaultScene`, `duplicateAsAlternate`.
+- `vaultIntegration.functions.ts`
+  - `integrateVaultScene({ vaultSceneId, destination, referenceSceneId?, position: 'before'|'after' })` → creates a `scenes` row at chosen order_index (recomputed), sets `vault_scenes.status='integrated'`, `linked_scene_id`, and mirrors the vault content into the new scene's opening `script_blocks` (action block seeded from vault `content`). Never overwrites an existing scene.
+- `vaultAi.functions.ts` — Lovable AI Gateway (`google/gemini-3-flash-preview`) via existing `ai-gateway.server.ts`:
+  - `suggestPlacement({ vaultSceneId })` → returns ranked `{ act, beforeSceneId?, afterSceneId?, rationale, confidence }[]`. Context: existing scenes list (heading, order, tone), characters, arc beats, vault scene body/tags/tone.
+  - `integrationCheck({ vaultSceneId, destination, referenceSceneId? })` → returns categorized warnings: `timeline_contradiction | motivation_mismatch | emotional_continuity | duplicated_beat | premature_reveal | missing_setup | payoff_opportunity`, each with severity + explanation.
 
-- All existing 44 tests pass.
-- New tests pass.
-- No UI changes.
-- No DB changes.
-- No editor changes.
-- No AI.
+Structured output via `Output.object` + Zod (Gemini path — no `structuredOutputs` flag). Handle `NoObjectGeneratedError` with graceful fallback.
 
-Approved.
+## 3. UI
 
-This is the correct hardening patch before we move on.
+### Vault page — new route `src/routes/_authenticated/vault.$projectId.tsx`
 
-Please proceed with:
+Corkboard aesthetic (not a table): masonry of index-card tiles on a warm paper/cork background, subtle rotation, pushpin accents, tag chips. Uses existing Playfair/Inter tokens.
 
-- adding SceneSmith-native onboarding tokens:
+- Filter bar: kind, status, character, tag, tone, estimated position.
+- New card button opens `VaultSceneDialog` (create/edit) with all fields, character multi-select, tag input, tone/position dropdowns.
+- Card actions: Open, Suggest Placement, Integrate into Timeline, Duplicate as Alternate, Archive.
+- Empty state: "Every great scene starts in the vault." with prominent create CTA.
 
-  - beginner/guided: `first`, `guided`, `adapting`
+Components under `src/components/vault/`:
+- `VaultCorkboard.tsx`
+- `VaultSceneCard.tsx`
+- `VaultSceneDialog.tsx` (create/edit form)
+- `SuggestPlacementDialog.tsx` (shows AI-ranked destinations, click-to-select)
+- `IntegrateDialog.tsx` (destination picker: Act I / II-A / Midpoint / II-B / III / custom before-or-after scene; runs Integration Check; renders categorized warnings; requires explicit "Integrate" confirmation)
+- `IntegrationWarningList.tsx`
 
-  - advanced/studio: `experienced`, `pitching`
+### Writer's Desk — editor route
 
-- replacing broad `includes()` matching with safer token matching:
+In `src/routes/_authenticated/editor.$projectId.tsx` (top-of-editor toolbar area, non-intrusive), add a **New…** dropdown:
+- Timeline Scene (existing add-scene behavior)
+- Vault Scene
+- Dialogue Fragment
+- Set Piece
+- Alternate Take (requires selecting an existing timeline or vault scene)
 
-  - exact match
+Vault items open `VaultSceneDialog` directly with `kind` preselected — no editor context switch. Also add a small "Vault (N)" pill linking to the Vault page.
 
-  - normalized separator match
+### Nav
 
-  - safe word-boundary match
+Add "Vault" entry to `ProjectNav.tsx`.
 
-- adding tests for:
+## 4. Integration flow (Copy + link)
 
-  - `first`
+1. User clicks Integrate → picks destination.
+2. Run `integrationCheck` — show warnings grouped by severity.
+3. User confirms → `integrateVaultScene`:
+   - Recompute `order_index` for target position.
+   - Insert new `scenes` row (`source_vault_scene_id = vault.id`, heading derived from title/location/tone).
+   - Seed one `script_blocks` action block from vault content (writer edits from there).
+   - Update vault row: `status='integrated'`, `linked_scene_id=<new scene>`. Vault row is preserved.
+4. Toast with "Open new scene" link.
 
-  - `guided`
+## 5. Feel & polish
 
-  - `adapting`
+- Corkboard bg: warm paper texture via CSS gradient + subtle noise; cards use `bg-card` with slight rotation `[--r:-1.2deg]`, soft shadow, pushpin SVG.
+- Status chips color-coded (Vaulted=neutral, Candidate=amber, Integrated=emerald, Alternate=violet, Needs Rewrite=rose, Locked=slate, Deleted=muted).
+- Micro-copy leans creative ("Pinned to the board", "Sent to the timeline") not database-y.
 
-  - `experienced`
+## 6. Tests
 
-  - `pitching`
+- `src/lib/vault/vaultScenes.test.ts` — server-fn shape + validators.
+- `src/lib/vault/integrationCheck.test.ts` — deterministic warning normalization/mapping given a mocked AI payload.
+- `src/lib/vault/placement.test.ts` — placement suggestion normalization + ranking clamp.
 
-  - `pro` not falsely matching unrelated words like `program` or `improvisation`
+## Files to create
 
-One note:
+- Migration (via `supabase--migration`).
+- `src/lib/vault/vaultScenes.functions.ts`
+- `src/lib/vault/vaultIntegration.functions.ts`
+- `src/lib/vault/vaultAi.functions.ts`
+- `src/lib/vault/schemas.ts` (Zod)
+- `src/lib/vault/*.test.ts` (3 files)
+- `src/routes/_authenticated/vault.$projectId.tsx`
+- `src/components/vault/VaultCorkboard.tsx`
+- `src/components/vault/VaultSceneCard.tsx`
+- `src/components/vault/VaultSceneDialog.tsx`
+- `src/components/vault/SuggestPlacementDialog.tsx`
+- `src/components/vault/IntegrateDialog.tsx`
+- `src/components/vault/IntegrationWarningList.tsx`
 
-Keep `professional` as an advanced match because it is already an explicit advanced token. Just make sure `pro` itself does not become a broad substring match.
+## Files to edit
 
-No UI changes.
-
-No DB changes.
-
-No editor changes.
-
-No AI.
+- `src/routes/_authenticated/editor.$projectId.tsx` — add "New…" dropdown + Vault pill.
+- `src/components/ProjectNav.tsx` — add Vault nav entry.
+- `src/routeTree.gen.ts` — regenerated by plugin (do not hand-edit).
 
 ## Out of scope
 
-- Persistent PfHU logs, TMH upsell CTA, full TMH reports, Director's Chair, Dramatic Pulse, inline screenplay annotations, database schema changes, AI integration.
+- Real-time collab on vault cards.
+- Drag-to-reorder integration onto a visual timeline (destination picker only).
+- Bulk integration.
+- Auto-integration without confirmation.
+- Vault version history (relies on `updated_at` only for now).
+- Import/export of vault items.
+- Cross-project vault sharing.
+
+## Risks
+
+- AI cost/latency on large projects — mitigate by trimming context to scene headings + short summaries, cap at ~60 scenes.
+- Order-index recomputation collisions — wrap in a single transaction and re-fetch after insert.
+- Corkboard visual on mobile — fall back to single-column stacked cards, keep rotation subtle.
+- `linked_character_ids` as array bypasses FK integrity — acceptable for a workshop surface; clean up dangling ids on read.
