@@ -269,7 +269,7 @@ export function StoryNavigatorPane({
                                 </span>
                               )}
                             </div>
-                          </div>
+                          </button>
                         </div>
                       </li>
                     );
