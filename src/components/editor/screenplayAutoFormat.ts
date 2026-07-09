@@ -64,27 +64,27 @@ export function applySlugPart(
 ): string {
   const raw = currentText ?? "";
   if (kind === "prefix") {
-    // Strip any leading prefix (with or without trailing period) and any
-    // whitespace after it, then prepend the canonical chip value.
-    const stripped = raw.replace(SCENE_PREFIX, "").replace(/^\s+/, "");
-    const joined = stripped ? `${part} ${stripped}` : `${part} `;
-    // Route through formatSceneHeading so casing/spacing normalizes.
-    return formatSceneHeading(joined).replace(/\s+$/, joined.endsWith(" ") ? " " : "");
+    // Strip any leading prefix + trailing period + whitespace, then prepend
+    // the canonical chip value. Preserve body casing/spacing so re-taps are
+    // idempotent without depending on formatSceneHeading's regex quirks.
+    let stripped = raw.replace(/^\s*(int\.?\/ext\.?|i\/e\.?|int\.?|ext\.?|est\.?)\.?\s*/i, "");
+    // Uppercase the body to match screenplay convention while remaining stable.
+    stripped = stripped.toUpperCase().trim();
+    return stripped ? `${part} ${stripped}` : `${part} `.trimEnd();
   }
   // kind === "time"
   const upper = raw.toUpperCase();
-  // Strip any existing trailing time token (with optional leading dash).
-  let base = raw;
+  let base = upper;
   for (const tok of TIME_TOKENS) {
-    const re = new RegExp(`\\s*-?\\s*${tok.replace(/ /g, "\\s+")}\\s*$`, "i");
-    if (re.test(upper)) {
-      base = raw.replace(re, "");
+    const re = new RegExp(`\\s*-?\\s*${tok.replace(/ /g, "\\s+")}\\s*$`);
+    if (re.test(base)) {
+      base = base.replace(re, "");
       break;
     }
   }
-  base = base.replace(/[\s-]+$/, "");
-  if (!base) return `${part}`;
-  return formatSceneHeading(`${base} - ${part}`);
+  base = base.replace(/[\s-]+$/, "").trim();
+  if (!base) return part;
+  return `${base} - ${part}`;
 }
 
 
