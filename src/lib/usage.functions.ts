@@ -1,28 +1,29 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { serverStripeEnv } from "@/lib/stripeEnv.server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const consumeUsage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (d: {
-      feature: "ai_assists" | "storyboard_panels" | "tableread_minutes";
-      amount?: number;
-    }) => ({
-      feature: d.feature,
-      amount: Math.max(1, Math.floor(d.amount ?? 1)),
-    }),
-  )
-  .handler(async ({ data, context }) => {
-    const environment = serverStripeEnv();
-    const { data: used, error } = await context.supabase.rpc("consume_usage", {
-      _feature: data.feature,
-      _amount: data.amount,
-      _environment: environment,
-    });
-    if (error) throw new Error(error.message);
-    return { used: used as number };
+/**
+ * Increment a metered feature counter for the current user. Called from
+ * other server functions (which already have a request-scoped supabase
+ * client) — NOT exposed to the client directly.
+ *
+ * Throws `USAGE_LIMIT: …` when the monthly cap is reached.
+ */
+export async function consumeUsage(
+  supabase: SupabaseClient,
+  feature: "ai_assists" | "storyboard_panels" | "tableread_minutes",
+  amount = 1,
+): Promise<number> {
+  const environment = serverStripeEnv();
+  const { data, error } = await supabase.rpc("consume_usage", {
+    _feature: feature,
+    _amount: Math.max(1, Math.floor(amount)),
+    _environment: environment,
   });
+  if (error) throw new Error(error.message);
+  return data as number;
+}
 
 export const getUsageSnapshot = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
