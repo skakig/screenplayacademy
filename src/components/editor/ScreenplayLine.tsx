@@ -211,6 +211,11 @@ export function ScreenplayLine({
   const runSafeFormat = (): boolean => {
     const raw = block.content;
     if (!raw) return false;
+    // One-shot Undo suppression — consume and skip.
+    if (suppressOnceRef.current != null && suppressOnceRef.current === raw) {
+      suppressOnceRef.current = null;
+      return false;
+    }
 
     // 1) Language fixes first — they only change casing/punctuation, never
     //    semantic meaning, and skip any token in characterNames / dictionary.
