@@ -139,7 +139,7 @@ function Pricing() {
                 className={`p-6 rounded-xl border bg-card/40 flex flex-col ${t.highlight ? "border-primary/60 shadow-lg shadow-primary/15 ring-1 ring-primary/30" : "border-border/60"}`}
               >
                 {t.highlight && <div className="text-[10px] font-semibold uppercase tracking-wider text-primary mb-2">Most popular</div>}
-                <h3 className="font-display text-2xl font-bold">{t.name}</h3>
+                <h2 className="font-display text-2xl font-bold">{t.name}</h2>
                 <div className="mt-2 mb-4">
                   <span className="text-3xl font-bold">{t.price}</span>
                   <span className="text-muted-foreground text-sm ml-1">{t.cadence}</span>
