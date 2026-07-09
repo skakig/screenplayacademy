@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { LessonView } from "@/components/academy/Lesson";
 import { ArrowLeft } from "lucide-react";
+import { t } from "@/lib/i18n/t";
 import {
   aiGenerateLoglineOptions,
   aiGenerateThemeOptions,
