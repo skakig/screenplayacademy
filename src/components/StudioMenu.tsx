@@ -25,6 +25,7 @@ import {
   FolderKanban,
   GraduationCap,
   CreditCard,
+  Archive,
   type LucideIcon,
 } from "lucide-react";
 import { useState, type ComponentProps } from "react";
@@ -53,6 +54,7 @@ const GROUPS: { key: string; label: string; items: Item[] }[] = [
     label: "Plan",
     items: [
       { to: "/scenes/$projectId", label: "Scene Board", desc: "See every scene on one wall.", icon: LayoutGrid, needsProject: true },
+      { to: "/vault/$projectId", label: "Scene Vault", desc: "Stash scenes, fragments, and alt takes before they have a home.", icon: Archive, needsProject: true },
       { to: "/story-arc/$projectId", label: "Story Spine", desc: "Beats and turning points across three acts.", icon: GitBranch, needsProject: true },
       { to: "/characters/$projectId", label: "Casting Wall", desc: "Character profiles, wants, wounds.", icon: Users, needsProject: true },
     ],
