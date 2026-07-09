@@ -38,16 +38,27 @@ type Props = {
   onOpenChange: (v: boolean) => void;
   scene: VaultSceneRow;
   scenes: Array<{ id: string; title: string | null; scene_heading: string | null; order_index: number }>;
+  initialDestination?: (typeof DESTS)[number]["v"];
+  initialReferenceSceneId?: string | null;
+  initialPosition?: "before" | "after";
 };
 
-export function IntegrateDialog({ open, onOpenChange, scene, scenes }: Props) {
+export function IntegrateDialog({
+  open,
+  onOpenChange,
+  scene,
+  scenes,
+  initialDestination,
+  initialReferenceSceneId,
+  initialPosition,
+}: Props) {
   const qc = useQueryClient();
   const checkFn = useServerFn(integrationCheck);
   const integrateFn = useServerFn(integrateVaultScene);
 
-  const [destination, setDestination] = useState<(typeof DESTS)[number]["v"]>("act_2a");
-  const [refSceneId, setRefSceneId] = useState<string | null>(null);
-  const [pos, setPos] = useState<"before" | "after">("after");
+  const [destination, setDestination] = useState<(typeof DESTS)[number]["v"]>(initialDestination ?? "act_2a");
+  const [refSceneId, setRefSceneId] = useState<string | null>(initialReferenceSceneId ?? null);
+  const [pos, setPos] = useState<"before" | "after">(initialPosition ?? "after");
 
   const check = useQuery({
     enabled: open,
