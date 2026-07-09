@@ -64,7 +64,7 @@ export const updateVaultScene = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => VaultSceneUpdate.parse(d))
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
+    const patch: Database["public"]["Tables"]["vault_scenes"]["Update"] = {};
     if (data.kind !== undefined) patch.kind = data.kind;
     if (data.title !== undefined) patch.title = data.title;
     if (data.content !== undefined) patch.content = data.content;
