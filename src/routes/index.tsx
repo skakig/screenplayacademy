@@ -37,7 +37,9 @@ export const Route = createFileRoute("/")({
         content:
           "One studio for screenplays, novels, worlds, comedy, and audio stories. Write, develop, perform, and pitch with AI.",
       },
+      { property: "og:url", content: "https://scenesmithstudio.com/" },
     ],
+    links: [{ rel: "canonical", href: "https://scenesmithstudio.com/" }],
   }),
   component: Landing,
 });
