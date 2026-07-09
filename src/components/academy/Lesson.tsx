@@ -64,7 +64,7 @@ export function LessonView({
     mutationFn: () => upsertFn({ data: { lessonId: lesson.id, status: "in_progress", user_output: userInput } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lesson-progress", lesson.id] });
-      toast.success("Saved");
+      toast.success(t("academy.toast.saved"));
     },
   });
 
@@ -73,7 +73,7 @@ export function LessonView({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lesson-progress", lesson.id] });
       qc.invalidateQueries({ queryKey: ["module-lessons"] });
-      toast.success("Lesson complete");
+      toast.success(t("academy.toast.lessonComplete"));
     },
   });
 
@@ -82,7 +82,7 @@ export function LessonView({
       if (!onSaveToProject) return;
       await onSaveToProject(aiOutput ?? userInput);
     },
-    onSuccess: () => toast.success("Saved to project"),
+    onSuccess: () => toast.success(t("academy.toast.savedToProject")),
     onError: (e: Error) => toast.error(e.message),
   });
 
