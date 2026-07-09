@@ -14,7 +14,7 @@ import { serverStripeEnv } from "@/lib/stripeEnv.server";
  * Pass the user-scoped supabase client (context.supabase from requireSupabaseAuth)
  * and the userId. Throws if the user cannot access `feature`.
  *
- * The subscription lookup is scoped to the current Paddle environment
+ * The subscription lookup is scoped to the current Stripe environment
  * (sandbox in preview, live in production) so a sandbox subscription can
  * never grant access on the live site and vice-versa.
  *

@@ -24,7 +24,7 @@ export const createProjectGated = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => CreateInput.parse(d))
   .handler(async ({ data, context }) => {
     // Determine current tier from the user's most recent subscription row
-    // in the current Paddle environment (sandbox in preview, live in prod).
+    // in the current Stripe environment (sandbox in preview, live in prod).
     const environment = serverStripeEnv();
     const { data: subRow } = await context.supabase
       .from("subscriptions")

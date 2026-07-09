@@ -150,8 +150,8 @@ describe.skipIf(!ENABLED)("MCP write tools — Supabase RLS integration", () => 
       await admin.from("subscriptions").upsert(
         {
           user_id: uid,
-          paddle_subscription_id: subId,
-          paddle_customer_id: `ctm_test_${subId}`,
+          stripe_subscription_id: subId,
+          stripe_customer_id: `ctm_test_${subId}`,
           product_id: "pro_plan",
           price_id: "pro_monthly",
           status: "active",
@@ -159,7 +159,7 @@ describe.skipIf(!ENABLED)("MCP write tools — Supabase RLS integration", () => 
           current_period_end: end.toISOString(),
           environment: "live",
         },
-        { onConflict: "paddle_subscription_id" },
+        { onConflict: "stripe_subscription_id" },
       );
     };
     await seedSub(userAId, `sub_test_a_${runId}`);

@@ -18,7 +18,7 @@ export const Route = createFileRoute("/checkout/success")({
 });
 
 function CheckoutSuccess() {
-  // Paddle's overlay closes the moment the user pays, but the subscription
+  // Stripe checkout returns the user to us right after payment, but the subscription
   // row is created by the async webhook — usually within 1–5s. Poll every
   // 1.5s (up to ~30s) so the user sees their new plan appear instead of a
   // stale "Free" flash.
