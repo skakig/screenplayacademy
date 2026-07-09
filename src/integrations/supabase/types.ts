@@ -2007,6 +2007,7 @@ export type Database = {
           project_id: string
           reversal: string | null
           scene_heading: string | null
+          source_vault_scene_id: string | null
           status: string
           time_of_day: string | null
           title: string | null
@@ -2023,6 +2024,7 @@ export type Database = {
           project_id: string
           reversal?: string | null
           scene_heading?: string | null
+          source_vault_scene_id?: string | null
           status?: string
           time_of_day?: string | null
           title?: string | null
@@ -2039,6 +2041,7 @@ export type Database = {
           project_id?: string
           reversal?: string | null
           scene_heading?: string | null
+          source_vault_scene_id?: string | null
           status?: string
           time_of_day?: string | null
           title?: string | null
@@ -2050,6 +2053,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scenes_source_vault_scene_id_fkey"
+            columns: ["source_vault_scene_id"]
+            isOneToOne: false
+            referencedRelation: "vault_scenes"
             referencedColumns: ["id"]
           },
         ]
@@ -2462,6 +2472,91 @@ export type Database = {
           writer_experience_level?: string | null
         }
         Relationships: []
+      }
+      vault_scenes: {
+        Row: {
+          alternate_of: string | null
+          archived_at: string | null
+          content: string
+          created_at: string
+          created_by: string | null
+          emotional_tone: string | null
+          estimated_position: string
+          id: string
+          kind: string
+          linked_character_ids: string[]
+          linked_scene_id: string | null
+          location: string | null
+          notes: string
+          project_id: string
+          status: string
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          alternate_of?: string | null
+          archived_at?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          emotional_tone?: string | null
+          estimated_position?: string
+          id?: string
+          kind?: string
+          linked_character_ids?: string[]
+          linked_scene_id?: string | null
+          location?: string | null
+          notes?: string
+          project_id: string
+          status?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          alternate_of?: string | null
+          archived_at?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          emotional_tone?: string | null
+          estimated_position?: string
+          id?: string
+          kind?: string
+          linked_character_ids?: string[]
+          linked_scene_id?: string | null
+          location?: string | null
+          notes?: string
+          project_id?: string
+          status?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vault_scenes_alternate_of_fkey"
+            columns: ["alternate_of"]
+            isOneToOne: false
+            referencedRelation: "vault_scenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vault_scenes_linked_scene_id_fkey"
+            columns: ["linked_scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vault_scenes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       writer_profiles: {
         Row: {
