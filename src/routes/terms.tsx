@@ -161,9 +161,7 @@ function TermsPage() {
         <h2>16. Contact</h2>
         <p>
           Questions about these Terms: contact Joshua Ellis via the support channel available in your
-          account settings, or via Paddle at{" "}
-          <a href="https://paddle.net" target="_blank" rel="noopener noreferrer">paddle.net</a> for billing
-          matters.
+          account settings.
         </p>
       </main>
       <footer className="border-t border-border/40 py-8 mt-12">
