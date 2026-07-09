@@ -76,6 +76,19 @@ export const Route = createFileRoute("/_authenticated/editor/$projectId")({
       </div>
     </div>
   ),
+  notFoundComponent: () => (
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="max-w-md text-center space-y-3">
+        <h2 className="text-xl font-semibold">That script isn't here</h2>
+        <p className="text-sm text-muted-foreground">
+          The project you're trying to open doesn't exist or you don't have access to it.
+        </p>
+        <div className="flex gap-2 justify-center">
+          <a href="/dashboard" className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm">Back to dashboard</a>
+        </div>
+      </div>
+    </div>
+  ),
 });
 
 const AI_TOOLS = [
@@ -266,7 +279,9 @@ function Editor() {
     [emitEvent, projectId],
   );
 
-  // Bulk insert template / starter blocks (used by AI + template helpers)
+  // Bulk insert template / starter blocks (used by AI + template helpers).
+  // Uses setQueryData cache-patch instead of invalidateQueries to avoid a
+  // refetch racing the server-echo merge while the writer is actively typing.
   const insertTemplate = useMutation({
     mutationFn: async (template: { block_type: string; content: string }[]) => {
       const startOrder = (blocks?.length ?? 0);
@@ -276,10 +291,17 @@ function Editor() {
         content: t.content,
         order_index: startOrder + i,
       }));
-      const { error } = await supabase.from("script_blocks").insert(rows);
+      const { data, error } = await supabase.from("script_blocks").insert(rows).select();
       if (error) throw error;
+      return data ?? [];
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["blocks", projectId] }),
+    onSuccess: (inserted) => {
+      if (!inserted?.length) return;
+      qc.setQueryData(["blocks", projectId], (prev: any[] | undefined) => {
+        const base = Array.isArray(prev) ? prev : [];
+        return [...base, ...inserted];
+      });
+    },
   });
 
   // Guided step: mark complete + advance
