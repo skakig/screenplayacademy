@@ -65,6 +65,13 @@ type Props = {
   knownLanguages?: import("@/lib/language/types").LanguageCode[];
   /** In-page annotation visibility. Focus/Basic pass "silent"; Advanced passes "quiet". */
   annotationMode?: AnnotationMode;
+  /**
+   * Chrome-level surface control, distinct from annotationMode.
+   * - "focus":   hide chip strips AND the auto-format pill (sacred page).
+   * - "basic":   show chip strips and the auto-format pill (teaching mode).
+   * - "advanced":show chip strips and the auto-format pill (default).
+   */
+  chromeMode?: "focus" | "basic" | "advanced";
 };
 
 
