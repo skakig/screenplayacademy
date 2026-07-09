@@ -73,7 +73,7 @@ function LessonPage() {
     <AppShell>
       <div className="max-w-3xl mx-auto px-4 py-10">
         <Link to="/academy/$moduleSlug" params={{ moduleSlug }} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mb-4">
-          <ArrowLeft className="h-3 w-3" /> Back to module
+          <ArrowLeft className="h-3 w-3" aria-hidden="true" /> {t("academy.backToModule")}
         </Link>
         <LessonView lesson={lesson} onAIAssist={onAIAssist} />
       </div>
