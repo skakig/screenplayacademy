@@ -1,66 +1,54 @@
-# SceneSmith Studio — Full Audit & Remediation Roadmap
+## Scope
 
-## Verdict (one paragraph)
+Tackle roadmap items #5 (i18n sweep), #6 (Focus Mode), #8 (writer_profiles wiring), then #4 (Academy content). A full i18n sweep of every string in the codebase is a multi-day effort; this plan does a **structured Pass 1** — infrastructure + high-visibility surfaces — and defines the follow-up pattern.
 
-The **editor engine itself is architecturally excellent** and largely compliant with AGENTS.md's local-first invariants — stable local IDs as React keys, serverId stored separately, no Supabase in the typing path, correct Enter/Tab transitions across all 8 block types, server-echo merge that protects dirty/active blocks. The **design system is genuinely distinctive** (brass-on-slate "Midnight Screening Room" with Cormorant Garamond + Courier Prime on cream paper — not a generic purple-gradient SaaS dashboard). But three big things are broken relative to the doctrine: (1) the app never answers "where do I write?" on first contact, (2) all 10 downstream build stages ship live while Stage 1 is still being debugged, and (3) the intellectually serious Screenplay-University pieces (Character Truth Engine, PfHU signals, coaching adapter) are effectively disconnected from any actual pedagogical loop — no lesson content, no practice→assess cycle, no skill scores ever get updated.
+## #5 — i18n sweep (Pass 1)
 
-## AGENTS.md Compliance Scorecard
+- Keep the current `t()` + `keys.ts` map (no library swap — that would be a rewrite).
+- Split `keys.ts` into namespaced files: `keys.editor.ts`, `keys.import.ts`, `keys.academy.ts`, `keys.common.ts`, `keys.focus.ts`, plus a new `keys.chrome.ts` for nav/toolbar/toasts.
+- Add a Vitest that asserts no duplicate keys and that all keys use `namespace.…` shape.
+- Migrate these high-visibility surfaces to `t()`:
+  - Editor route header, toolbar, save banner, tour, empty state
+  - `WriterInsightsPanel` (skills, coach recs)
+  - `CoachPane`, `StoryNavigatorPane`, `FeatureDock` labels
+  - Character page: cleanup panel, delete/undo toasts (Pass 1 target since it was recently touched)
+- Defer: Academy lesson bodies, dialogs deep in seldom-used flows, admin surfaces. Track remainder in a checklist committed to `docs/lovable/10_I18N.md`.
 
-| Area | Verdict |
-|---|---|
-| Local-first typing invariants | ✅ Pass |
-| Enter/Tab block transitions (all 8 types) | ✅ Pass |
-| Stable React keys, serverId separation | ✅ Pass |
-| Server-echo merge guards dirty/active blocks | ✅ Pass |
-| `/editor-lab` isolated route | ✅ Pass |
-| TanStack Start conventions (no `src/pages/`, `<Outlet/>` present) | ✅ Pass |
-| App opens to a writable editor | ❌ Fail — `/` → auth → dashboard → pick project → editor |
-| Build sequence (editor first, then downstream) | ❌ Fail — Stages 3–10 all ship live |
-| i18n rule (no hardcoded UI strings) | ❌ Fail — ~30 keys exist; toasts/labels/academy copy are all hardcoded English |
-| `insertTemplate` avoids `invalidateQueries` during typing | ⚠️ Partial fail — `editor.$projectId.tsx:282` invalidates `['blocks', projectId]` after AI template inserts |
-| No ghost `div role="button"` in editor UI | ⚠️ Partial fail — `StoryNavigatorPane.tsx:215` uses it (navigator, not a line) |
-| `notFoundComponent` on loader routes | ❌ Missing |
-| AI cannot overwrite user work | ⚠️ Partial — `draftOpeningWithAi` inserts blocks directly without confirmation |
+## #6 — Focus Mode
 
-## 16-Step Acceptance Test — Predicted Result
+- Add `focusMode` state in the editor route (persisted to `localStorage` per project).
+- New `<FocusModeToggle />` button in editor header (keyboard shortcut `⌘.` / `Ctrl+.`).
+- In focus mode: hide `StoryNavigatorPane`, `FeatureDock`, `CoachPane`, `WriterInsightsPanel`, `EditorSummonBar`; collapse toolbar to a minimal auto-hiding strip that appears on caret-move; widen the manuscript to `max-w-[7in]` centered; dim non-current blocks to `opacity-60` (fully readable, not black).
+- Escape or toggle exits focus mode.
+- Emit `focus_mode_entered` / `focus_mode_exited` writer events.
 
-Steps 1–15 pass on paper. Step 16 (30-second sustained typing + refresh + network failure) is **very likely to pass** given the local-first architecture, but has one latent failure mode: if the guided rail auto-fires an `insertTemplate` during the session, the `invalidateQueries(['blocks', projectId])` at `editor.$projectId.tsx:282` races the server-echo merge. Recommendation is to actually run the test manually and record which steps fail before any further work.
+## #8 — Wire writer_profiles skill updates
 
-## Design Critique (professional)
+- Currently `aggregateWriterProfile` only runs when `WriterInsightsPanel` mounts. Wire a real loop:
+  - Debounced trigger (`aggregateWriterProfile`) after every N=25 writer events emitted in a session, tracked in a `useWriterEvents` internal counter.
+  - Also trigger on `beforeunload` / route unmount (fire-and-forget).
+- Expand event coverage in editor route:
+  - Emit `format_error` when auto-format corrects a block (from `screenplayAutoFormat`).
+  - Emit `ai_accepted` / `ai_rejected` from AI suggestion apply/dismiss handlers (already partially there — audit and fill gaps).
+  - Emit `scene_created` with `has_turn: true` when a scene arc beat is added.
+  - Emit `block_created` with `visual: true` when action block contains verbs from a small visual-verb list.
+- Add unit test for the aggregator with a synthetic events fixture asserting expected score bands.
 
-1. **Distinctive brand identity.** Brass `oklch(0.74 0.14 70)` on deep slate is a real point of view. Editorial-serif display + Courier Prime screenplay paper reads as a cinematic tool, not a template.
-2. **Landing page never shows the product.** Copy is evocative ("The page is yours. / The studio is waiting.") but there is no editor screenshot, demo, or embedded viewport. Final Draft, WriterDuet, Highland, Arc Studio Pro all lead with the writing surface. A new visitor cannot answer AGENTS.md's own question.
-3. **Editor chrome is overloaded.** `editor.$projectId.tsx` imports 20+ chrome components (`StoryNavigatorPane`, `CoachPane`, `StoryBuilder`, `FeatureDock`, `CanvasToolbar`, `GuidedRail`, `StepCoach`, `EditorTour`, `EditorCommandBar`, `WriterDeskNewMenu`, `PresenceAvatarStack`, `AutosaveIndicator`, etc.) competing with the paper. Arc Studio Pro's default view shows essentially nothing but the page.
-4. **Paper/ink contrast is correct** (~11:1). `--muted-foreground` on background is ~4.2:1 — borderline for small text like the `text-[11px]` nav labels on the landing page.
-5. **Mobile responsiveness untested for chrome.** The paper collapses reasonably (`px-10 lg:px-16`, max-w 760px) but the side panes and feature dock have no evidence of mobile layouts.
+## #4 — Academy real curriculum
 
-## Screenplay-University Gap Analysis
+- Migration seeds two modules with real lesson bodies:
+  - `screenplay-basics` (6 lessons): Scene headings, Action lines, Character cues, Dialogue rhythm, Parentheticals, Transitions.
+  - `story-engine` (5 lessons): Scene turn, Goal & obstacle, Stakes change, Character wound, Moral hierarchy intro.
+- Each lesson has: `title`, `slug`, `est_minutes`, `body_markdown` (~300–500 words, screenwriting-specific with 2–3 concrete before/after examples), `check_prompt` (a single reflective/practice prompt), `skill_tag` matching `writer_profiles` fields.
+- Coach recs' `lesson_slug` values must resolve to seeded lessons — cross-check `coachRecommendations.functions.ts`.
+- Lesson viewer route already exists (`/academy/$moduleSlug/$lessonSlug`); no route changes, just ensure it renders `body_markdown` via existing markdown pipeline.
 
-**Strong bones, no body.** The `characterTruthEngine` (753 lines, deterministic, evidence-based), `sceneStateAdapter`, `truthCoach`, and `writerProfileSignals` form a genuinely serious intelligent tutoring foundation. But:
+## Order of operations
 
-- **No lesson content.** `academy_lessons` table exists; the three academy route files total ~246 lines of shell.
-- **No practice→assess loop.** Truth Engine can diagnose, TruthCoach can teach, nothing evaluates what the writer actually produces or updates `writer_profiles` skill scores.
-- **Coaching runs only on demand.** The `truthCoach` fires when a user manually opens "Would They Do This?" — it does not observe live writing.
-- **No curriculum sequencing, prerequisites, or spaced repetition.** Module/lesson slugs exist without adaptive path logic.
-- **Skill scores are read-only.** `writer_profiles.formatting_skill_score`, `dialogue_score`, etc. are bootstrapped and read, never written from actual writing events.
+1. Pass 1 i18n infrastructure + migrate editor chrome (#5)
+2. Focus Mode toggle + styling (#6)
+3. Aggregation trigger + expanded event emission + test (#8)
+4. Academy seed migration + content (#4)
+5. Typecheck + smoke-run acceptance test steps 1–5 (typing) to confirm nothing regressed.
 
-## Prioritized Remediation Roadmap (top 10)
-
-Ordered by impact on the prime directive — "the screenplay editor is the product."
-
-1. **Manually run the 16-step acceptance test.** Document exact repro for anything that fails. Zero code changes; unblocks everything else.
-2. **Remove `invalidateQueries` after `insertTemplate`.** Replace with `setQueryData` cache patching to match `SupabasePersistenceAdapter`. `editor.$projectId.tsx:282`.
-3. **Land authed users directly in the editor.** `/` → (if authed) → last edited project's editor, else project-creation flow. Removes 3 clicks between arrival and writing.
-4. **Freeze downstream feature work** (Academy, Table Read, Pitch, Writers' Room, Storyboard) until the acceptance test is signed off. Process/PR gate.
-5. **i18n sweep for all toasts, buttons, empty states, errors.** Infrastructure exists; usage is missing outside auto-format/import. Codebase-wide search-and-replace to `t(...)`.
-6. **Focus-mode editor: collapse chrome to ≤3 visible regions by default.** Paper + minimal status + collapsed toolbar. All panes accessible via shortcut/toggle.
-7. **Add `notFoundComponent` to every loader route** (start with `editor.$projectId.tsx`). Prevents blank-state failures on bad URLs.
-8. **Wire `writer_profiles` skill-score updates to real writing events.** In `writerEvents.functions.ts`, after each session compute formatting/dialogue/scene signals from block data and increment scores. This is the minimum for the ITS to be adaptive.
-9. **Author real Academy curriculum** and connect each lesson to a "practice in your script" action that opens the editor with a guided prompt tied to the Truth Engine.
-10. **Replace `div role="button"` in `StoryNavigatorPane.tsx:215`** with a real `<button>`. Two-minute a11y fix explicitly called out in AGENTS.md.
-
-## What I'd Like to Build First
-
-I recommend we tackle **#2 (remove invalidateQueries), #3 (auth → editor redirect), #7 (notFoundComponent), and #10 (button a11y)** in a single first pass — they're all small, high-signal, and directly serve the prime directive without touching the intelligence layer. Then we run the acceptance test (#1) against the tightened editor, and from that baseline decide whether the next pass is chrome reduction (#6), i18n sweep (#5), or ITS wiring (#8).
-
-Approve this plan to move into build mode, or tell me which item(s) you want to reorder, drop, or expand first.
+Approve to build, or tell me which piece to reshape (e.g. "skip focus dimming", "seed only screenplay-basics", "swap `t()` for real react-i18next now").
