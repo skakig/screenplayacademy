@@ -4,9 +4,11 @@ import { Check, ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
-import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
-import { getPaddleEnvironment } from "@/lib/paddle";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
+import { getStripeEnvironment, isPaymentsConfigured } from "@/lib/stripe";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -62,7 +64,7 @@ const TIERS: Tier[] = [
 
 function Pricing() {
   const navigate = useNavigate();
-  const { openCheckout, loading } = usePaddleCheckout();
+  const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
   const [pending, setPending] = useState<string | null>(null);
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
 
@@ -76,13 +78,7 @@ function Pricing() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Live checkout only works after Paddle finishes automated review of the
-  // account. Until the ops team flips `VITE_PAYMENTS_LIVE_APPROVED` to true
-  // in the production env, the CTA on the live site turns into a waitlist
-  // link so we don't dump users into a broken Paddle overlay.
-  const liveMode = getPaddleEnvironment() === "live";
-  const liveApproved = import.meta.env.VITE_PAYMENTS_LIVE_APPROVED === "true";
-  const checkoutBlocked = liveMode && !liveApproved;
+  const checkoutBlocked = !isPaymentsConfigured();
 
   const handleBuy = async (tier: Tier) => {
     if (!tier.priceId) return;
@@ -97,11 +93,9 @@ function Pricing() {
     }
     setPending(tier.priceId);
     try {
-      await openCheckout({
+      openCheckout({
         priceId: tier.priceId,
-        customerEmail: user.email,
-        customData: { userId: user.id },
-        successUrl: `${window.location.origin}/checkout/success`,
+        returnUrl: `${window.location.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       });
     } catch (e) {
       console.error(e);
@@ -110,6 +104,7 @@ function Pricing() {
       setPending(null);
     }
   };
+
 
   return (
     <div className="min-h-screen">
@@ -132,7 +127,7 @@ function Pricing() {
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
           {TIERS.map((t) => {
-            const isPending = pending === t.priceId && loading;
+            const isPending = pending === t.priceId;
             return (
               <div
                 key={t.name}
@@ -176,6 +171,14 @@ function Pricing() {
           })}
         </div>
       </section>
+      <Dialog open={isOpen} onOpenChange={(v) => (!v ? closeCheckout() : undefined)}>
+        <DialogContent className="max-w-2xl p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle>Complete your subscription</DialogTitle>
+          </DialogHeader>
+          <div className="px-2 pb-2">{checkoutElement}</div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

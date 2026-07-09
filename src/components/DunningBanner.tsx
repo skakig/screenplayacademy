@@ -1,3 +1,4 @@
+import { getStripeEnvironment } from "@/lib/stripe";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle } from "lucide-react";
@@ -6,7 +7,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { createCustomerPortalSession } from "@/lib/customerPortal.functions";
 
 /**
- * One-line banner shown while a subscription is in Paddle's payment-retry window
+ * One-line banner shown while a subscription is in Stripe's payment-retry window
  * (`past_due`). Access is preserved; this just nudges the user to fix the card.
  */
 export function DunningBanner() {
@@ -19,7 +20,7 @@ export function DunningBanner() {
   const handleClick = async () => {
     setBusy(true);
     try {
-      const { url } = await openPortal({ data: {} });
+      const { url } = await openPortal({ data: { environment: getStripeEnvironment() } });
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not open billing portal");

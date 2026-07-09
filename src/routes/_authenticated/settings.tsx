@@ -1,3 +1,4 @@
+import { getStripeEnvironment } from "@/lib/stripe";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -47,7 +48,7 @@ function PlanCard() {
   const handlePortal = async () => {
     setBusy(true);
     try {
-      const { url } = await openPortal({ data: {} });
+      const { url } = await openPortal({ data: { environment: getStripeEnvironment() } });
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not open billing portal");

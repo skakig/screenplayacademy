@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { serverPaddleEnv } from "@/lib/paddleEnv.server";
+import { serverStripeEnv } from "@/lib/stripeEnv.server";
 
 export type MeteredFeature = "ai_assists" | "storyboard_panels" | "tableread_minutes";
 
@@ -18,7 +18,7 @@ export async function consumeUsage(
   feature: MeteredFeature,
   amount = 1,
 ): Promise<number> {
-  const environment = serverPaddleEnv();
+  const environment = serverStripeEnv();
   const { data, error } = await supabase.rpc("consume_usage", {
     _feature: feature,
     _amount: amount,
@@ -31,7 +31,7 @@ export async function consumeUsage(
 export const getUsageSnapshot = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const environment = serverPaddleEnv();
+    const environment = serverStripeEnv();
     const { data, error } = await context.supabase.rpc("get_usage_snapshot", {
       _environment: environment,
     });

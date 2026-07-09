@@ -46,7 +46,7 @@ function PrivacyPage() {
           <li><strong>Support messages</strong>: content of messages you send us.</li>
           <li><strong>Usage and telemetry</strong>: pages visited, feature usage, errors, timestamps.</li>
           <li><strong>Device data</strong>: browser type, operating system, device identifiers, IP address, approximate location derived from IP.</li>
-          <li><strong>Billing data</strong>: handled by our Merchant of Record, Paddle. We receive a subscription status and customer identifier — we do not receive your card details.</li>
+          <li><strong>Billing data</strong>: handled by our payment processor, Stripe. We receive a subscription status and customer identifier — we do not receive your card details.</li>
         </ul>
 
         <h2>3. Why we use it (purposes and legal bases)</h2>
@@ -69,7 +69,7 @@ function PrivacyPage() {
 
         <h2>5. Who we share it with</h2>
         <ul>
-          <li><strong>Paddle</strong> — Merchant of Record for sales, subscription management, payments, tax compliance, invoicing, and refunds.</li>
+          <li><strong>Stripe</strong> — payment processing, subscription billing, invoicing, and refunds.</li>
           <li><strong>Supabase</strong> — database, authentication, and storage hosting.</li>
           <li><strong>Lovable</strong> — application hosting and AI gateway.</li>
           <li><strong>ElevenLabs</strong> — text-to-speech for the Table Read feature (only when you use it).</li>
@@ -133,8 +133,8 @@ function PrivacyPage() {
         <h2>13. Contact</h2>
         <p>
           For any privacy question or to exercise your rights, contact Joshua Ellis via the support channel
-          in your account settings. For billing-related privacy queries, you can also contact Paddle at{" "}
-          <a href="https://paddle.net" target="_blank" rel="noopener noreferrer">paddle.net</a>.
+          in your account settings. Billing-related queries can also be raised with Stripe via{" "}
+          <a href="https://support.stripe.com" target="_blank" rel="noopener noreferrer">support.stripe.com</a>.
         </p>
       </main>
       <footer className="border-t border-border/40 py-8 mt-12">

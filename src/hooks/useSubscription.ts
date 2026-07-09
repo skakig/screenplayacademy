@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getPaddleEnvironment } from "@/lib/paddle";
+import { getStripeEnvironment } from "@/lib/stripe";
 import { tierFromPriceId, type Tier } from "@/lib/entitlements";
 
 type Row = {
   id: string;
   user_id: string;
-  paddle_subscription_id: string;
-  paddle_customer_id: string | null;
+  stripe_subscription_id: string;
+  stripe_customer_id: string | null;
   product_id: string | null;
   price_id: string | null;
   status: string;
@@ -45,7 +45,7 @@ export type SubscriptionState = {
 };
 
 export function useSubscription(): SubscriptionState {
-  const environment = getPaddleEnvironment();
+  const environment = getStripeEnvironment();
   const qc = useQueryClient();
   const [userId, setUserId] = useState<string | null>(null);
 

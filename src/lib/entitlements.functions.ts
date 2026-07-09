@@ -7,14 +7,14 @@ import {
   type Feature,
   type Tier,
 } from "@/lib/entitlements";
-import { serverPaddleEnv } from "@/lib/paddleEnv.server";
+import { serverStripeEnv } from "@/lib/stripeEnv.server";
 
 /**
  * Server-side entitlement guard for `createServerFn` handlers.
  * Pass the user-scoped supabase client (context.supabase from requireSupabaseAuth)
  * and the userId. Throws if the user cannot access `feature`.
  *
- * The subscription lookup is scoped to the current Paddle environment
+ * The subscription lookup is scoped to the current Stripe environment
  * (sandbox in preview, live in production) so a sandbox subscription can
  * never grant access on the live site and vice-versa.
  *
@@ -26,7 +26,7 @@ export async function requireFeature(
   userId: string,
   feature: Feature,
 ): Promise<Tier> {
-  const environment = serverPaddleEnv();
+  const environment = serverStripeEnv();
   const { data: row } = await supabase
     .from("subscriptions")
     .select("price_id, status, current_period_end")

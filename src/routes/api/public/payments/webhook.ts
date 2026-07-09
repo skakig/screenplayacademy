@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { verifyWebhook, EventName, type PaddleEnv } from "@/lib/paddle.server";
+import { verifyWebhook, type StripeEnv } from "@/lib/stripe.server";
 
 let _supabase: ReturnType<typeof createClient<Database>> | null = null;
 function getSupabase() {
@@ -16,124 +16,96 @@ function getSupabase() {
 
 class WebhookRetryable extends Error {}
 
-function resolveExternalIds(item: any): { productId: string | null; priceId: string | null } {
-  return {
-    priceId: item?.price?.importMeta?.externalId ?? null,
-    productId: item?.product?.importMeta?.externalId ?? null,
-  };
+/**
+ * Prefer `price.lookup_key` (set by `create_price`) so tier gating survives
+ * the sandbox → live transition. Fall back to legacy metadata, then the raw
+ * Stripe price id as a last resort.
+ */
+function humanPriceId(price: any): string | null {
+  return (
+    price?.lookup_key ??
+    price?.metadata?.lovable_external_id ??
+    price?.id ??
+    null
+  );
 }
 
-async function handleSubscriptionCreated(data: any, env: PaddleEnv) {
-  const { id, customerId, items, status, currentBillingPeriod, customData } = data;
+async function handleSubscriptionCreatedOrUpdated(subscription: any, env: StripeEnv) {
+  const userId = subscription.metadata?.userId;
+  const item = subscription.items?.data?.[0];
+  const priceId = humanPriceId(item?.price);
+  const productId =
+    typeof item?.price?.product === "string" ? item.price.product : item?.price?.product?.id ?? null;
+  // Basil API version puts period fields on the item; older payloads had them on the subscription.
+  const periodStart = item?.current_period_start ?? subscription.current_period_start;
+  const periodEnd = item?.current_period_end ?? subscription.current_period_end;
 
-  const userId = customData?.userId;
+  const base = {
+    status: subscription.status,
+    product_id: productId,
+    price_id: priceId,
+    current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
+    current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+    cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+    environment: env,
+    updated_at: new Date().toISOString(),
+  };
+
   if (!userId) {
-    // Do NOT swallow this — return a retryable error so Paddle re-sends the
-    // event (up to 3 days). If we 200 here the subscription is permanently
-    // orphaned; the user has been charged with no server-side record.
+    const { error } = await getSupabase()
+      .from("subscriptions")
+      .update(base as any)
+      .eq("stripe_subscription_id", subscription.id);
+    if (error) throw new WebhookRetryable(error.message);
+    return;
+  }
+  if (!priceId || !productId) {
     throw new WebhookRetryable(
-      `subscription.created event ${id} is missing customData.userId — refusing to persist an orphaned subscription`,
+      `subscription ${subscription.id} is missing price/product; cannot create row`,
     );
   }
 
-  const item = items?.[0];
-  const { priceId, productId } = resolveExternalIds(item);
-  if (!priceId || !productId) {
-    console.warn("Skipping subscription: missing importMeta.externalId", {
-      rawPriceId: item?.price?.id,
-      rawProductId: item?.product?.id,
-    });
-    return;
-  }
-
-  await getSupabase()
+  const { error } = await getSupabase()
     .from("subscriptions")
     .upsert(
       {
+        ...base,
         user_id: userId,
-        paddle_subscription_id: id,
-        paddle_customer_id: customerId,
-        product_id: productId,
-        price_id: priceId,
-        status,
-        current_period_start: currentBillingPeriod?.startsAt,
-        current_period_end: currentBillingPeriod?.endsAt,
-        environment: env,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "paddle_subscription_id" },
+        stripe_subscription_id: subscription.id,
+        stripe_customer_id:
+          typeof subscription.customer === "string"
+            ? subscription.customer
+            : subscription.customer?.id,
+      } as any,
+      { onConflict: "stripe_subscription_id" },
     );
+  if (error) throw new WebhookRetryable(error.message);
 }
 
-async function handleSubscriptionUpdated(data: any, env: PaddleEnv) {
-  const { id, customerId, items, status, currentBillingPeriod, scheduledChange } = data;
-
-  // Plan changes (upgrade / downgrade) alter items[0] — persist the new
-  // product/price so tier-gating reflects reality. Fall back to what's in
-  // the DB if the payload is somehow missing importMeta.
-  const item = items?.[0];
-  const { priceId, productId } = resolveExternalIds(item);
-
-  await getSupabase()
-    .from("subscriptions")
-    .update({
-      status,
-      current_period_start: currentBillingPeriod?.startsAt,
-      current_period_end: currentBillingPeriod?.endsAt,
-      cancel_at_period_end: scheduledChange?.action === "cancel",
-      updated_at: new Date().toISOString(),
-      ...(customerId ? { paddle_customer_id: customerId } : {}),
-      ...(priceId ? { price_id: priceId } : {}),
-      ...(productId ? { product_id: productId } : {}),
-    })
-    .eq("paddle_subscription_id", id)
-    .eq("environment", env);
-}
-
-async function handleSubscriptionCanceled(data: any, env: PaddleEnv) {
-  // IMPORTANT: preserve current_period_end so `has_active_subscription` keeps
-  // returning true until the paid period actually ends (grace window).
-  // Clear cancel_at_period_end because the cancel has already happened —
-  // there is no future scheduled cancel to warn about anymore.
-  const { id, currentBillingPeriod } = data;
-
+async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
   await getSupabase()
     .from("subscriptions")
     .update({
       status: "canceled",
       cancel_at_period_end: false,
       updated_at: new Date().toISOString(),
-      // Only overwrite current_period_end if Paddle actually re-sends it.
-      ...(currentBillingPeriod?.endsAt
-        ? {
-            current_period_end: currentBillingPeriod.endsAt,
-            current_period_start: currentBillingPeriod.startsAt,
-          }
-        : {}),
     })
-    .eq("paddle_subscription_id", id)
+    .eq("stripe_subscription_id", subscription.id)
     .eq("environment", env);
 }
 
-async function handleWebhook(req: Request, env: PaddleEnv) {
+async function handleWebhook(req: Request, env: StripeEnv) {
   const event = await verifyWebhook(req, env);
 
-  // Idempotency / replay protection. Paddle retries any non-2xx response for
-  // up to 3 days and may occasionally re-deliver successful events too. Each
-  // notification carries a stable `eventId` (evt_...) — we insert it into
-  // processed_webhook_events BEFORE handling, so a concurrent redelivery
-  // loses the PK race and returns 200 without re-mutating subscriptions or
-  // usage counters. Cache is per-environment so a sandbox and live event
-  // never collide.
-  const eventId = (event as any).eventId ?? (event as any).event_id;
+  // Idempotency / replay protection using Stripe's stable event id.
+  const eventId = (event as any).id;
   if (eventId) {
     const { error: dupErr } = await getSupabase()
       .from("processed_webhook_events" as any)
-      .insert({ event_id: eventId, event_type: event.eventType, environment: env });
+      .insert({ event_id: eventId, event_type: event.type, environment: env } as any);
     if (dupErr) {
-      // 23505 = unique_violation → already processed. Ack with 200.
       if ((dupErr as any).code === "23505") {
-        console.log("Skipping duplicate webhook event", { eventId, type: event.eventType });
+        console.log("Skipping duplicate webhook event", { eventId, type: event.type });
         return;
       }
       throw new WebhookRetryable(
@@ -143,28 +115,23 @@ async function handleWebhook(req: Request, env: PaddleEnv) {
   }
 
   try {
-    switch (event.eventType) {
-      case EventName.SubscriptionCreated:
-        await handleSubscriptionCreated(event.data, env);
+    switch (event.type) {
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+        await handleSubscriptionCreatedOrUpdated(event.data.object, env);
         break;
-      case EventName.SubscriptionUpdated:
-        await handleSubscriptionUpdated(event.data, env);
+      case "customer.subscription.deleted":
+        await handleSubscriptionDeleted(event.data.object, env);
         break;
-      case EventName.SubscriptionCanceled:
-        await handleSubscriptionCanceled(event.data, env);
-        break;
-      case EventName.TransactionCompleted:
-        console.log("transaction.completed", { txId: (event.data as any)?.id });
-        break;
-      case EventName.TransactionPaymentFailed:
-        console.warn("transaction.payment_failed", { txId: (event.data as any)?.id });
+      case "checkout.session.completed":
+      case "invoice.paid":
+      case "invoice.payment_failed":
+        console.log(event.type, { id: (event.data.object as any)?.id });
         break;
       default:
-        console.log("Unhandled event:", event.eventType);
+        console.log("Unhandled event:", event.type);
     }
   } catch (err) {
-    // Handler failed — remove the idempotency row so Paddle's retry is
-    // processed instead of silently skipped as a duplicate.
     if (eventId) {
       await getSupabase()
         .from("processed_webhook_events" as any)
@@ -179,15 +146,17 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const url = new URL(request.url);
-        const env = (url.searchParams.get("env") || "sandbox") as PaddleEnv;
+        const rawEnv = new URL(request.url).searchParams.get("env");
+        if (rawEnv !== "sandbox" && rawEnv !== "live") {
+          console.error("Webhook received with invalid env query parameter:", rawEnv);
+          return Response.json({ received: true, ignored: "invalid env" });
+        }
+        const env: StripeEnv = rawEnv;
         try {
           await handleWebhook(request, env);
           return Response.json({ received: true });
         } catch (e) {
           console.error("Webhook error:", e);
-          // 5xx tells Paddle to retry (missing userId, DB unavailable, etc).
-          // 4xx would drop the event permanently.
           const status = e instanceof WebhookRetryable ? 500 : 400;
           return new Response("Webhook error", { status });
         }
