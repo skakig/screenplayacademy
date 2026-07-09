@@ -353,7 +353,7 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
           className="screenplay screenplay-paper max-w-[760px] mx-auto px-10 lg:px-16 py-12 lg:py-16 cursor-text relative"
           onClick={handlePaperClick}
         >
-        {lastFormat && (
+        {showFormatPill && lastFormat && (
           <div
             className="sticky top-3 z-20 mx-auto mb-3 w-fit max-w-full font-sans"
             onClick={(e) => e.stopPropagation()}
@@ -367,6 +367,27 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     })
                   : t("editor.autoFormat.indicatorGeneric")}
               </span>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  if (!lastFormat) return;
+                  doc.updateBlockContent(lastFormat.blockId, lastFormat.original);
+                  if (lastFormat.typeChanged) {
+                    doc.changeBlockType(lastFormat.blockId, lastFormat.previousBlockType);
+                  }
+                  markFixRejected(projectId, lastFormat.original);
+                  setSuppressFor({ blockId: lastFormat.blockId, original: lastFormat.original });
+                  setSuppressToken((n) => n + 1);
+                  setLastFormat(null);
+                  setWhyOpen(false);
+                }}
+                className="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/15 transition"
+                aria-label={t("editor.autoFormat.undo")}
+                title={t("editor.autoFormat.undo")}
+              >
+                {t("editor.autoFormat.undo")}
+              </button>
               <button
                 type="button"
                 onClick={() => setWhyOpen((v) => !v)}
