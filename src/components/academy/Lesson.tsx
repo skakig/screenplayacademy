@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Sparkles, Save } from "lucide-react";
 import { toast } from "sonner";
 import { upsertLessonProgress } from "@/lib/academy.functions";
+import { t } from "@/lib/i18n/t";
 
 type Lesson = {
   id: string;
