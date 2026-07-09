@@ -1,6 +1,7 @@
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 
-export type StripeEnv = "sandbox" | "live";
+// Duplicated locally to keep this client module free of server imports.
+type StripeEnv = "sandbox" | "live";
 
 const clientToken = import.meta.env.VITE_PAYMENTS_CLIENT_TOKEN as string | undefined;
 
@@ -27,9 +28,9 @@ export function getStripeEnvironment(): StripeEnv {
   return paymentsEnvironment();
 }
 
-export function isPaymentsConfigured(): boolean {
+export function isStripeConfigured(): boolean {
   return (
-    clientToken?.startsWith("pk_test_") === true ||
-    clientToken?.startsWith("pk_live_") === true
+    typeof clientToken === "string" &&
+    (clientToken.startsWith("pk_test_") || clientToken.startsWith("pk_live_"))
   );
 }

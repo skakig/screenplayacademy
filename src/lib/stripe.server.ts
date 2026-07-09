@@ -16,17 +16,13 @@ export function getConnectionApiKey(env: StripeEnv): string {
     : getEnv("STRIPE_LIVE_API_KEY");
 }
 
-/**
- * Stripe client that routes all `api.stripe.com` requests through the
- * Lovable connector gateway. The env vars are gateway connection
- * identifiers, NOT real Stripe secret keys — never bypass this helper.
- */
+// Routes api.stripe.com requests through the connector gateway.
 export function createStripeClient(env: StripeEnv): Stripe {
   const connectionApiKey = getConnectionApiKey(env);
   const lovableApiKey = getEnv("LOVABLE_API_KEY");
 
   return new Stripe(connectionApiKey, {
-    apiVersion: "2026-03-25.dahlia",
+    apiVersion: "2026-03-25.dahlia" as never,
     httpClient: Stripe.createFetchHttpClient((input, init) => {
       const stripeUrl = input instanceof Request ? input.url : input.toString();
       const gatewayUrl = stripeUrl.replace("https://api.stripe.com", GATEWAY_STRIPE_BASE);
@@ -34,9 +30,7 @@ export function createStripeClient(env: StripeEnv): Stripe {
         ...init,
         headers: {
           ...Object.fromEntries(
-            new Headers(
-              init?.headers ?? (input instanceof Request ? input.headers : undefined),
-            ).entries(),
+            new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined)).entries(),
           ),
           "X-Connection-Api-Key": connectionApiKey,
           "Lovable-API-Key": lovableApiKey,
@@ -48,7 +42,7 @@ export function createStripeClient(env: StripeEnv): Stripe {
 
 export function getStripeErrorMessage(error: unknown): string {
   if (error && typeof error === "object") {
-    const stripeError = error as {
+    const e = error as {
       message?: string;
       type?: string;
       code?: string;
@@ -64,14 +58,14 @@ export function getStripeErrorMessage(error: unknown): string {
         requestId?: string;
       };
     };
-    const message = stripeError.raw?.message ?? stripeError.message;
+    const message = e.raw?.message ?? e.message;
     if (message) {
       const details = [
-        stripeError.raw?.type ?? stripeError.type,
-        stripeError.raw?.code ?? stripeError.code,
-        stripeError.raw?.decline_code ?? stripeError.decline_code,
-        stripeError.raw?.param ?? stripeError.param,
-        stripeError.raw?.requestId ?? stripeError.requestId,
+        e.raw?.type ?? e.type,
+        e.raw?.code ?? e.code,
+        e.raw?.decline_code ?? e.decline_code,
+        e.raw?.param ?? e.param,
+        e.raw?.requestId ?? e.requestId,
       ].filter(Boolean);
       return details.length ? `${message} (${details.join(", ")})` : message;
     }
@@ -80,14 +74,14 @@ export function getStripeErrorMessage(error: unknown): string {
 }
 
 /**
- * Verify a Stripe webhook via HMAC-SHA256 without depending on the Stripe
- * SDK (so this can run in the Cloudflare Worker runtime without the
- * gateway proxy).
+ * Verify a Stripe webhook signature using HMAC-SHA256 (no SDK required, so
+ * no gateway routing needed). Returns the parsed event on success, throws
+ * on failure.
  */
 export async function verifyWebhook(
   req: Request,
   env: StripeEnv,
-): Promise<{ id?: string; type: string; data: { object: any } }> {
+): Promise<{ type: string; data: { object: any }; id: string }> {
   const signature = req.headers.get("stripe-signature");
   const body = await req.text();
   const secret =

@@ -40,10 +40,21 @@ function RefundPage() {
 
         <h2>How to request a refund</h2>
         <p>
-          Payments are processed by <strong>Stripe</strong>. To request a refund, contact us via the
-          support channel in your account settings with the email address you used at checkout and the
-          date of the charge. We'll process eligible refunds through Stripe within a few business days.
+          Refunds are processed by our payment provider and Merchant of Record, <strong>Stripe</strong>. To
+          request a refund:
         </p>
+        <ol>
+          <li>
+            Go to{" "}
+            <a href="https://billing.stripe.com" target="_blank" rel="noopener noreferrer">billing.stripe.com</a> and enter
+            the email address you used at checkout — Stripe will send you a secure link to manage your
+            order and request a refund.
+          </li>
+          <li>
+            Or contact us via the support channel in your account settings, and we will help you initiate
+            the refund with Stripe.
+          </li>
+        </ol>
 
         <h2>Renewals and cancellations</h2>
         <p>
@@ -56,7 +67,9 @@ function RefundPage() {
         <h2>Questions</h2>
         <p>
           If you have any questions about this policy, contact Joshua Ellis via the support channel in your
-          account settings.
+          account settings, or Stripe at{" "}
+          <a href="https://billing.stripe.com" target="_blank" rel="noopener noreferrer">billing.stripe.com</a> for billing
+          matters.
         </p>
       </main>
       <footer className="border-t border-border/40 py-8 mt-12">

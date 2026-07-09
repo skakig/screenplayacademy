@@ -1,10 +1,10 @@
-import { getStripeEnvironment } from "@/lib/stripe";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useSubscription } from "@/hooks/useSubscription";
 import { createCustomerPortalSession } from "@/lib/customerPortal.functions";
+import { getStripeEnvironment } from "@/lib/stripe";
 
 /**
  * One-line banner shown while a subscription is in Stripe's payment-retry window
@@ -20,14 +20,19 @@ export function DunningBanner() {
   const handleClick = async () => {
     setBusy(true);
     try {
-      const { url } = await openPortal({ data: { environment: getStripeEnvironment() } });
-      window.open(url, "_blank", "noopener,noreferrer");
+      const result = await openPortal({
+        data: { environment: getStripeEnvironment(), returnUrl: window.location.href },
+      });
+      if ("error" in result) throw new Error(result.error);
+      window.open(result.url, "_blank", "noopener,noreferrer");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not open billing portal");
     } finally {
       setBusy(false);
     }
   };
+
+
 
   return (
     <div className="w-full bg-orange-100 border-b border-orange-300 px-4 py-2 text-center text-sm text-orange-900 flex items-center justify-center gap-3">

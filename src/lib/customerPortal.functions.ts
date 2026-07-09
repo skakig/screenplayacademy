@@ -6,15 +6,16 @@ import {
   getStripeErrorMessage,
 } from "@/lib/stripe.server";
 
+type PortalResult = { url: string } | { error: string };
+
 /**
  * Create a Stripe Billing Portal session for the signed-in user.
  * The URL is short-lived — always generate a new one, do not cache.
- * The client opens `url` in a new tab.
  */
 export const createCustomerPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { returnUrl?: string; environment: StripeEnv }) => data)
-  .handler(async ({ data, context }) => {
+  .inputValidator((d: { environment: StripeEnv; returnUrl?: string }) => d)
+  .handler(async ({ data, context }): Promise<PortalResult> => {
     const { data: row, error } = await context.supabase
       .from("subscriptions")
       .select("stripe_customer_id, environment")
@@ -23,19 +24,19 @@ export const createCustomerPortalSession = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!row?.stripe_customer_id) {
-      throw new Error("No subscription found. Upgrade a plan first to manage billing.");
+    if (error) return { error: error.message };
+    if (!row || !row.stripe_customer_id) {
+      return { error: "No subscription found. Upgrade a plan first to manage billing." };
     }
 
     try {
       const stripe = createStripeClient(data.environment);
-      const portal = await stripe.billingPortal.sessions.create({
+      const session = await stripe.billingPortal.sessions.create({
         customer: row.stripe_customer_id,
         ...(data.returnUrl && { return_url: data.returnUrl }),
       });
-      return { url: portal.url, environment: data.environment };
-    } catch (err) {
-      throw new Error(getStripeErrorMessage(err));
+      return { url: session.url };
+    } catch (e) {
+      return { error: getStripeErrorMessage(e) };
     }
   });

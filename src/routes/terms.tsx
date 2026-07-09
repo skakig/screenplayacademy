@@ -103,9 +103,12 @@ function TermsPage() {
 
         <h2>8. Payments and subscriptions</h2>
         <p>
-          Payments are processed by <strong>Stripe</strong>. By purchasing a subscription you also agree to
-          Stripe's terms and privacy notice. Subscriptions renew automatically at the end of each billing
-          period until cancelled. See our <Link to="/refund">Refund Policy</Link> for refund terms.
+          Our order process is conducted by our online reseller <strong>Stripe.com</strong>. Stripe.com is
+          the Merchant of Record for all our orders. Stripe provides all customer service inquiries and
+          handles returns. Payment, billing, tax, cancellation, and refund mechanics are governed by{" "}
+          <a href="https://stripe.com/legal/consumer" target="_blank" rel="noopener noreferrer">Stripe's Buyer Terms</a>.
+          Subscriptions renew automatically at the end of each billing period until cancelled. See our{" "}
+          <Link to="/refund">Refund Policy</Link> for refund terms.
         </p>
 
         <h2>9. Account and credentials</h2>
@@ -161,7 +164,9 @@ function TermsPage() {
         <h2>16. Contact</h2>
         <p>
           Questions about these Terms: contact Joshua Ellis via the support channel available in your
-          account settings.
+          account settings, or via Stripe at{" "}
+          <a href="https://billing.stripe.com" target="_blank" rel="noopener noreferrer">billing.stripe.com</a> for billing
+          matters.
         </p>
       </main>
       <footer className="border-t border-border/40 py-8 mt-12">

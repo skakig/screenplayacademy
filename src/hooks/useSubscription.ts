@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getStripeEnvironment } from "@/lib/stripe";
+import { getStripeEnvironment, isStripeConfigured } from "@/lib/stripe";
 import { tierFromPriceId, type Tier } from "@/lib/entitlements";
 
 type Row = {
@@ -45,11 +45,14 @@ export type SubscriptionState = {
 };
 
 export function useSubscription(): SubscriptionState {
-  const environment = getStripeEnvironment();
+  // If Stripe isn't configured (missing token), fall back to sandbox for
+  // reads so free-tier UI still works without throwing at module load.
+  const environment: "sandbox" | "live" = isStripeConfigured()
+    ? getStripeEnvironment()
+    : "sandbox";
   const qc = useQueryClient();
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Resolve user once on mount and follow auth changes.
   useEffect(() => {
     let mounted = true;
     supabase.auth.getUser().then(({ data }) => {
@@ -71,14 +74,18 @@ export function useSubscription(): SubscriptionState {
     staleTime: 30_000,
   });
 
-  // Realtime — refetch on any change to this user's subscription rows.
   useEffect(() => {
     if (!userId) return;
     const channel = supabase
       .channel(`sub-${userId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${userId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "subscriptions",
+          filter: `user_id=eq.${userId}`,
+        },
         () => qc.invalidateQueries({ queryKey: ["subscription", userId, environment] }),
       )
       .subscribe();

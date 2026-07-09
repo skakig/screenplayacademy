@@ -5,10 +5,9 @@ import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
-import { getStripeEnvironment, isPaymentsConfigured } from "@/lib/stripe";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getStripeEnvironment, isStripeConfigured } from "@/lib/stripe";
 import { supabase } from "@/integrations/supabase/client";
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -78,7 +77,9 @@ function Pricing() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const checkoutBlocked = !isPaymentsConfigured();
+  // Block checkout when the Stripe publishable token isn't wired up yet
+  // (pre-go-live production builds).
+  const checkoutBlocked = !isStripeConfigured();
 
   const handleBuy = async (tier: Tier) => {
     if (!tier.priceId) return;
@@ -95,6 +96,8 @@ function Pricing() {
     try {
       openCheckout({
         priceId: tier.priceId,
+        customerEmail: user.email,
+        userId: user.id,
         returnUrl: `${window.location.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       });
     } catch (e) {
@@ -105,6 +108,8 @@ function Pricing() {
     }
   };
 
+  // Reference so the type stays live even before we render the dialog.
+  void getStripeEnvironment;
 
   return (
     <div className="min-h-screen">
@@ -171,12 +176,13 @@ function Pricing() {
           })}
         </div>
       </section>
-      <Dialog open={isOpen} onOpenChange={(v) => (!v ? closeCheckout() : undefined)}>
+
+      <Dialog open={isOpen} onOpenChange={(o) => { if (!o) closeCheckout(); }}>
         <DialogContent className="max-w-2xl p-0 overflow-hidden">
           <DialogHeader className="px-6 pt-6">
             <DialogTitle>Complete your subscription</DialogTitle>
           </DialogHeader>
-          <div className="px-2 pb-2">{checkoutElement}</div>
+          <div className="p-4">{checkoutElement}</div>
         </DialogContent>
       </Dialog>
     </div>

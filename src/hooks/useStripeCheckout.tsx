@@ -4,13 +4,11 @@ import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 interface CheckoutOptions {
   priceId: string;
   quantity?: number;
+  customerEmail?: string;
+  userId?: string;
   returnUrl?: string;
 }
 
-/**
- * Stripe Embedded Checkout controller. Renders the inline checkout element
- * when opened; parent drops `checkoutElement` into a Dialog/Sheet.
- */
 export function useStripeCheckout() {
   const [isOpen, setIsOpen] = useState(false);
   const [options, setOptions] = useState<CheckoutOptions | null>(null);
@@ -25,8 +23,7 @@ export function useStripeCheckout() {
     setOptions(null);
   }, []);
 
-  const checkoutElement =
-    isOpen && options ? <StripeEmbeddedCheckout {...options} /> : null;
+  const checkoutElement = isOpen && options ? <StripeEmbeddedCheckout {...options} /> : null;
 
   return { openCheckout, closeCheckout, isOpen, checkoutElement };
 }
