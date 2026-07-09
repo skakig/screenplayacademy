@@ -281,42 +281,50 @@ function Dashboard() {
 }
 
 
-function NewProjectDialog({ onCreate, loading }: { onCreate: (v: any) => void; loading: boolean }) {
+function NewProjectDialog({ open, initialType, onCreate, loading }: { open: boolean; initialType: string; onCreate: (v: any) => void; loading: boolean }) {
   const [form, setForm] = useState({
-    title: "", project_type: "Feature Film", genre: "", tone: "", target_length: "", logline: "", ai_help_level: "Balanced",
+    title: "", project_type: initialType, genre: "", tone: "", target_length: "", logline: "", ai_help_level: "Balanced",
   });
+  // Re-seed the form whenever the dialog opens (with the currently selected quick-start type).
+  useEffect(() => {
+    if (open) {
+      setForm({
+        title: "", project_type: initialType, genre: "", tone: "", target_length: "", logline: "", ai_help_level: "Balanced",
+      });
+    }
+  }, [open, initialType]);
   return (
     <DialogContent className="max-w-lg">
-      <DialogHeader><DialogTitle className="font-display">Start a Script</DialogTitle></DialogHeader>
+      <DialogHeader><DialogTitle className="font-display">{t("dashboard.dialog.title")}</DialogTitle></DialogHeader>
       <div className="space-y-3">
-        <div><Label>Title *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="The Last Lighthouse" /></div>
+        <div><Label>{t("dashboard.dialog.title_label")}</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t("dashboard.dialog.title_placeholder")} /></div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Type</Label>
+            <Label>{t("dashboard.dialog.type_label")}</Label>
             <Select value={form.project_type} onValueChange={(v) => setForm({ ...form, project_type: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{PROJECT_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.value}</SelectItem>)}</SelectContent>
+              <SelectContent>{PROJECT_TYPES.map((pt) => <SelectItem key={pt.value} value={pt.value}>{pt.value}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div><Label>Genre</Label><Input value={form.genre} onChange={(e) => setForm({ ...form, genre: e.target.value })} placeholder="Thriller" /></div>
+          <div><Label>{t("dashboard.dialog.genre_label")}</Label><Input value={form.genre} onChange={(e) => setForm({ ...form, genre: e.target.value })} placeholder={t("dashboard.dialog.genre_placeholder")} /></div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div><Label>Tone</Label><Input value={form.tone} onChange={(e) => setForm({ ...form, tone: e.target.value })} placeholder="Atmospheric, slow-burn" /></div>
+          <div><Label>{t("dashboard.dialog.tone_label")}</Label><Input value={form.tone} onChange={(e) => setForm({ ...form, tone: e.target.value })} placeholder={t("dashboard.dialog.tone_placeholder")} /></div>
           <div>
-            <Label>AI Help Level</Label>
+            <Label>{t("dashboard.dialog.ai_label")}</Label>
             <Select value={form.ai_help_level} onValueChange={(v) => setForm({ ...form, ai_help_level: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Minimal">Minimal</SelectItem>
-                <SelectItem value="Balanced">Balanced</SelectItem>
-                <SelectItem value="Heavy">Heavy</SelectItem>
+                <SelectItem value="Minimal">{t("dashboard.dialog.ai_minimal")}</SelectItem>
+                <SelectItem value="Balanced">{t("dashboard.dialog.ai_balanced")}</SelectItem>
+                <SelectItem value="Heavy">{t("dashboard.dialog.ai_heavy")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
-        <div><Label>Logline</Label><Textarea value={form.logline} onChange={(e) => setForm({ ...form, logline: e.target.value })} placeholder="A retired lighthouse keeper must..." rows={3} /></div>
+        <div><Label>{t("dashboard.dialog.logline_label")}</Label><Textarea value={form.logline} onChange={(e) => setForm({ ...form, logline: e.target.value })} placeholder={t("dashboard.dialog.logline_placeholder")} rows={3} /></div>
         <Button className="w-full" disabled={!form.title || loading} onClick={() => onCreate(form)}>
-          {loading ? "Rolling…" : "Open the Studio"}
+          {loading ? t("dashboard.rolling") : t("dashboard.open_studio")}
         </Button>
       </div>
     </DialogContent>
