@@ -181,6 +181,9 @@ function VaultPage() {
           onOpenChange={(v) => { if (!v) { setIntegrateFor(null); setPrefill(null); } }}
           scene={integrateFor}
           scenes={timelineScenes}
+          initialDestination={prefill?.destination as any}
+          initialReferenceSceneId={prefill?.referenceSceneId ?? null}
+          initialPosition={prefill?.position}
         />
       )}
     </AppShell>
