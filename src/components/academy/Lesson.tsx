@@ -92,61 +92,68 @@ export function LessonView({
     <Card className="p-6 space-y-5">
       <div className="flex items-start justify-between gap-3">
         <h1 className="font-display text-2xl font-bold">{lesson.title}</h1>
-        {isComplete && <Badge className="bg-primary/15 text-primary border-primary/30"><Check className="h-3 w-3 mr-1" />Complete</Badge>}
+        {isComplete && (
+          <Badge className="bg-primary/15 text-primary border-primary/30">
+            <Check className="h-3 w-3 mr-1" aria-hidden="true" />
+            {t("academy.complete")}
+          </Badge>
+        )}
       </div>
 
       {lesson.concept && (
         <section>
-          <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Concept</h3>
+          <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">{t("academy.section.concept")}</h3>
           <p className="text-sm">{lesson.concept}</p>
         </section>
       )}
 
       {lesson.why_it_matters && (
         <section>
-          <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Why it matters</h3>
+          <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">{t("academy.section.whyItMatters")}</h3>
           <p className="text-sm text-foreground/85">{lesson.why_it_matters}</p>
         </section>
       )}
 
       {lesson.example && (
         <section className="p-3 rounded-md bg-secondary/40 border border-border/40">
-          <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Example</h3>
-          <p className="text-sm italic">{lesson.example}</p>
+          <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">{t("academy.section.example")}</h3>
+          <p className="text-sm italic whitespace-pre-line">{lesson.example}</p>
         </section>
       )}
 
       {lesson.task_prompt && (
         <section>
-          <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Try it now</h3>
+          <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">{t("academy.section.tryItNow")}</h3>
           <p className="text-sm text-muted-foreground mb-2">{lesson.task_prompt}</p>
-          <Textarea rows={5} value={userInput} onChange={(e) => setUserInput(e.target.value)} placeholder="Write here…" />
+          <Textarea rows={5} value={userInput} onChange={(e) => setUserInput(e.target.value)} placeholder={t("academy.textareaPlaceholder")} />
         </section>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" size="sm" onClick={() => save.mutate()} disabled={!userInput || save.isPending}>
-          <Save className="h-3.5 w-3.5 mr-1.5" />Save draft
+          <Save className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+          {t("academy.saveDraft")}
         </Button>
         {onAIAssist && lesson.ai_button_label && (
           <Button size="sm" onClick={() => aiRun.mutate()} disabled={!userInput || aiRun.isPending}>
-            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-            {aiRun.isPending ? "Thinking…" : lesson.ai_button_label}
+            <Sparkles className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+            {aiRun.isPending ? t("academy.thinking") : lesson.ai_button_label}
           </Button>
         )}
         <div className="ml-auto" />
         <Button size="sm" variant={isComplete ? "secondary" : "default"} onClick={() => markComplete.mutate()} disabled={markComplete.isPending}>
-          <Check className="h-3.5 w-3.5 mr-1.5" />{isComplete ? "Marked complete" : "Mark complete"}
+          <Check className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+          {isComplete ? t("academy.markedComplete") : t("academy.markComplete")}
         </Button>
       </div>
 
       {aiOutput && (
         <Card className="p-4 bg-primary/5 border-primary/20 whitespace-pre-wrap text-sm">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-xs uppercase tracking-wide text-primary font-semibold">AI suggestion</div>
+            <div className="text-xs uppercase tracking-wide text-primary font-semibold">{t("academy.aiSuggestion")}</div>
             {onSaveToProject && (
               <Button size="sm" variant="ghost" onClick={() => saveToProj.mutate()} disabled={saveToProj.isPending}>
-                Use in project
+                {t("academy.useInProject")}
               </Button>
             )}
           </div>
