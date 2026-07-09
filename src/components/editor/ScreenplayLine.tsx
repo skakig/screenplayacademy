@@ -183,6 +183,16 @@ export function ScreenplayLine({
     }
   }, [block.content]);
 
+  // One-shot Undo guard: parent arms this after auto-format Undo so the
+  // very next runSafeFormat pass (on the same original text) is skipped.
+  const suppressOnceRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (suppressAutoFormatOriginal != null) {
+      suppressOnceRef.current = suppressAutoFormatOriginal;
+    }
+    // Re-arm every time the parent bumps the token, even for the same string.
+  }, [suppressAutoFormatOriginal, suppressAutoFormatToken]);
+
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const v = e.target.value;
     onContentChange(v);
