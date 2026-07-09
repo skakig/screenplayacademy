@@ -72,6 +72,8 @@ export function ScreenplayLine({
   onAddDictionaryTerm,
   onRejectFormatSuggestion,
   annotationMode = "quiet",
+  suppressAutoFormatOriginal,
+  suppressAutoFormatToken,
 }: {
   block: LocalBlock;
   isActive: boolean;
@@ -101,6 +103,13 @@ export function ScreenplayLine({
    * - "full": inline chips + beat picker (dev/internal only).
    */
   annotationMode?: AnnotationMode;
+  /**
+   * One-shot suppression: if the current block content equals this string on
+   * the next auto-format pass, skip formatting once. Paired with a token so
+   * a fresh Undo can re-arm the guard even for the same original string.
+   */
+  suppressAutoFormatOriginal?: string | null;
+  suppressAutoFormatToken?: number;
 }) {
 
   const ref = useRef<HTMLTextAreaElement>(null);
