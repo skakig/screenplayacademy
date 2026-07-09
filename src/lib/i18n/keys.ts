@@ -8,6 +8,11 @@ export const i18nStrings = {
   "editor.autoFormat.whyTitle": "Why did this change?",
   "editor.autoFormat.whyBody":
     "Screenplays follow strict industry formatting. We automatically uppercase scene headings, character names, and transitions, wrap parentheticals, and capitalize the start of sentences in action and dialogue — so your script reads like a pro's.",
+  "editor.autoFormat.undo": "Undo",
+
+  "editor.chips.scene.prefixLabel": "Scene start",
+  "editor.chips.scene.timeLabel": "Time of day",
+  "editor.chips.character.recentLabel": "Recent characters",
 
   "settings.language.title": "Languages",
   "settings.language.knownLanguages": "Languages I know",
