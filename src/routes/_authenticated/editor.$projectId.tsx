@@ -76,6 +76,19 @@ export const Route = createFileRoute("/_authenticated/editor/$projectId")({
       </div>
     </div>
   ),
+  notFoundComponent: () => (
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="max-w-md text-center space-y-3">
+        <h2 className="text-xl font-semibold">That script isn't here</h2>
+        <p className="text-sm text-muted-foreground">
+          The project you're trying to open doesn't exist or you don't have access to it.
+        </p>
+        <div className="flex gap-2 justify-center">
+          <a href="/dashboard" className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm">Back to dashboard</a>
+        </div>
+      </div>
+    </div>
+  ),
 });
 
 const AI_TOOLS = [
