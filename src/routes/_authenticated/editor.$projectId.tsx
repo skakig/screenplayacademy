@@ -54,6 +54,7 @@ import { BasicProgressPill } from "@/components/editor/BasicProgressPill";
 import { EditorSummonBar } from "@/components/editor/EditorSummonBar";
 import { PresenceAvatarStack } from "@/components/writers-room/presence/PresenceAvatarStack";
 import { AutosaveIndicator } from "@/components/editor/AutosaveIndicator";
+import { WriterDeskNewMenu } from "@/components/vault/WriterDeskNewMenu";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Writer's Desk — Screenplay Academy" }] }),
@@ -854,6 +855,7 @@ function Editor() {
       />
       <FocusPill />
       <FirstRunModeDialog />
+      <WriterDeskNewMenu projectId={projectId} />
     </AppShell>
   );
 }
