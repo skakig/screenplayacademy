@@ -11,6 +11,9 @@ import { t } from "@/lib/i18n/t";
 import { useActiveLineViewport, type ActiveLineViewportMode } from "./useActiveLineViewport";
 import { formatPastedScript, type ParsedBlock } from "./screenplayAutoFormat";
 import { PasteFormatPreviewDialog } from "./PasteFormatPreviewDialog";
+import { SceneHeadingChips } from "./SceneHeadingChips";
+import { RecentCharacterChips } from "./RecentCharacterChips";
+import { markFixRejected } from "./formatOverrideMemory";
 
 
 export type ActiveBlockMeta = {
@@ -101,8 +104,8 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       screenplayLanguage,
       knownLanguages,
       annotationMode = "quiet",
+      chromeMode = "advanced",
     },
-
     ref,
   ) {
     const doc = useScreenplayDocument({
@@ -115,6 +118,11 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
       onDraftRestored,
       persistence,
     });
+
+    const showChips = chromeMode !== "focus";
+    const showFormatPill = chromeMode !== "focus";
+    const [suppressToken, setSuppressToken] = useState(0);
+    const [suppressFor, setSuppressFor] = useState<{ blockId: string; original: string } | null>(null);
 
     // bubble active block info up (debounced by key string to avoid spam)
     const lastSent = useRef<string>("");
