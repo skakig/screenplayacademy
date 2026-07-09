@@ -22,6 +22,72 @@ const TIME_TOKENS = [
   "EVENING","CONTINUOUS","LATER","NIGHT","DAWN","DUSK","DAY",
 ];
 
+export const SCENE_PREFIX_CHIPS = ["INT.", "EXT.", "INT./EXT.", "EST."] as const;
+export const SCENE_TIME_CHIPS = [
+  "DAY", "NIGHT", "CONTINUOUS", "LATER", "MORNING", "EVENING", "MOMENTS LATER",
+] as const;
+
+/**
+ * Return true when a scene-heading string has all three canonical parts:
+ * PREFIX + LOCATION + TIME. Used by the chip strip to auto-hide when
+ * the heading is "complete."
+ */
+export function isSceneHeadingComplete(text: string): boolean {
+  const t = (text ?? "").trim();
+  if (!t) return false;
+  if (!SCENE_PREFIX.test(t)) return false;
+  const upper = t.toUpperCase();
+  const hasTime = TIME_TOKENS.some((tok) => {
+    const re = new RegExp(`(?:^|-\\s*|\\s)${tok.replace(/ /g, "\\s+")}\\s*$`);
+    return re.test(upper);
+  });
+  if (!hasTime) return false;
+  // Ensure there's something between the prefix and the time (a location).
+  const prefixMatch = t.match(SCENE_PREFIX);
+  if (!prefixMatch) return false;
+  const afterPrefix = t.slice(prefixMatch[0].length).trim();
+  // Strip trailing "- TIME" to check for location body.
+  const body = afterPrefix.replace(/[-\s]+[A-Z ]+$/i, "").trim();
+  return body.length > 0;
+}
+
+/**
+ * Insert or replace a canonical part of a scene heading.
+ * - kind="prefix": replace or prepend the INT./EXT./INT./EXT./EST. prefix.
+ * - kind="time":  replace or append the trailing "- TIME" token.
+ * Idempotent — applying the same part twice yields the same string.
+ */
+export function applySlugPart(
+  currentText: string,
+  part: string,
+  kind: "prefix" | "time",
+): string {
+  const raw = currentText ?? "";
+  if (kind === "prefix") {
+    // Strip any leading prefix (with or without trailing period) and any
+    // whitespace after it, then prepend the canonical chip value.
+    const stripped = raw.replace(SCENE_PREFIX, "").replace(/^\s+/, "");
+    const joined = stripped ? `${part} ${stripped}` : `${part} `;
+    // Route through formatSceneHeading so casing/spacing normalizes.
+    return formatSceneHeading(joined).replace(/\s+$/, joined.endsWith(" ") ? " " : "");
+  }
+  // kind === "time"
+  const upper = raw.toUpperCase();
+  // Strip any existing trailing time token (with optional leading dash).
+  let base = raw;
+  for (const tok of TIME_TOKENS) {
+    const re = new RegExp(`\\s*-?\\s*${tok.replace(/ /g, "\\s+")}\\s*$`, "i");
+    if (re.test(upper)) {
+      base = raw.replace(re, "");
+      break;
+    }
+  }
+  base = base.replace(/[\s-]+$/, "");
+  if (!base) return `${part}`;
+  return formatSceneHeading(`${base} - ${part}`);
+}
+
+
 const TRANSITION_VERBS =
   /^(CUT TO|FADE IN|FADE OUT|FADE TO BLACK|SMASH CUT(?: TO)?|MATCH CUT(?: TO)?|JUMP CUT(?: TO)?|DISSOLVE TO|HARD CUT TO|TIME CUT)\b/;
 
