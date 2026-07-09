@@ -12,7 +12,7 @@ export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
       { title: "Pricing — SceneSmith Studio" },
-      { name: "description", content: "Simple, transparent pricing for storytellers. Start free, then upgrade as your projects grow — Creator, Pro, and Studio plans for screenplays, novels, worlds, comedy, and audio." },
+      { name: "description", content: "Simple, transparent pricing for storytellers. Start free, then upgrade — Creator, Pro, and Studio plans for every kind of story." },
       { property: "og:title", content: "Pricing — SceneSmith Studio" },
       { property: "og:description", content: "Start free and upgrade when you're ready to pitch. Compare Creator, Pro, and Studio plans across the writer's toolbox." },
       { property: "og:url", content: "https://scenesmithstudio.com/pricing" },
