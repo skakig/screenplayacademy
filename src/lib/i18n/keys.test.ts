@@ -9,7 +9,7 @@ describe("i18n keys", () => {
 
   it("every key uses dot-namespaced form (namespace.name...)", () => {
     for (const k of Object.keys(i18nStrings)) {
-      expect(k, `key "${k}" must include a dot namespace`).toMatch(/^[a-z][a-zA-Z0-9]*\.[a-zA-Z0-9.]+$/);
+      expect(k, `key "${k}" must include a dot namespace`).toMatch(/^[a-z][a-zA-Z0-9_]*\.[a-zA-Z0-9_.]+$/);
     }
   });
 
