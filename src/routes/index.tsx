@@ -76,6 +76,34 @@ const FEATURES = [
 ];
 
 function Landing() {
+  const navigate = useNavigate();
+
+  // Prime-directive redirect: if the visitor is already authed, send them
+  // straight to the writing surface. Latest project → editor; no project
+  // yet → dashboard so they can create one. Runs client-side only.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess?.session?.user || cancelled) return;
+      const { data: projects } = await supabase
+        .from("projects")
+        .select("id")
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      if (cancelled) return;
+      const latest = projects?.[0]?.id;
+      if (latest) {
+        navigate({ to: "/editor/$projectId", params: { projectId: latest } });
+      } else {
+        navigate({ to: "/dashboard" });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
   return (
     <div className="min-h-screen">
       {/* Sticky nav */}
