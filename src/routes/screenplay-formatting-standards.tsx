@@ -39,7 +39,7 @@ export const Route = createFileRoute("/screenplay-formatting-standards")({
       {
         name: "description",
         content:
-          "The industry-standard guide to screenplay formatting: Courier 12pt, exact margins, scene headings, action, dialogue, parentheticals, transitions, and modern spec-script rules used by working screenwriters.",
+          "The industry-standard guide to screenplay formatting: Courier 12pt, exact margins, scene headings, dialogue, and modern spec-script rules.",
       },
       { property: "og:title", content: "Screenplay Formatting Standards — The Complete Guide" },
       {

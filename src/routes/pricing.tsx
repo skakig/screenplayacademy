@@ -12,7 +12,7 @@ export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
       { title: "Pricing — SceneSmith Studio" },
-      { name: "description", content: "Simple, transparent pricing for storytellers. Start free, then upgrade as your projects grow — Creator, Pro, and Studio plans for screenplays, novels, worlds, comedy, and audio." },
+      { name: "description", content: "Simple, transparent pricing for storytellers. Start free, then upgrade — Creator, Pro, and Studio plans for every kind of story." },
       { property: "og:title", content: "Pricing — SceneSmith Studio" },
       { property: "og:description", content: "Start free and upgrade when you're ready to pitch. Compare Creator, Pro, and Studio plans across the writer's toolbox." },
       { property: "og:url", content: "https://scenesmithstudio.com/pricing" },
@@ -139,7 +139,7 @@ function Pricing() {
                 className={`p-6 rounded-xl border bg-card/40 flex flex-col ${t.highlight ? "border-primary/60 shadow-lg shadow-primary/15 ring-1 ring-primary/30" : "border-border/60"}`}
               >
                 {t.highlight && <div className="text-[10px] font-semibold uppercase tracking-wider text-primary mb-2">Most popular</div>}
-                <h3 className="font-display text-2xl font-bold">{t.name}</h3>
+                <h2 className="font-display text-2xl font-bold">{t.name}</h2>
                 <div className="mt-2 mb-4">
                   <span className="text-3xl font-bold">{t.price}</span>
                   <span className="text-muted-foreground text-sm ml-1">{t.cadence}</span>
