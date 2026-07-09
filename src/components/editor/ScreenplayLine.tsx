@@ -228,6 +228,7 @@ export function ScreenplayLine({
     onAutoFormatApplied?.({
       blockId: block.id,
       blockType: effectiveType,
+      previousBlockType: block.block_type,
       original: raw,
       formatted,
       typeChanged,
