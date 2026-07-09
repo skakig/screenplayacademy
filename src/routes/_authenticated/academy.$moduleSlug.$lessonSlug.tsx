@@ -47,8 +47,8 @@ function LessonPage() {
     },
   });
 
-  if (isLoading) return <AppShell><div className="p-10 text-muted-foreground">Loading…</div></AppShell>;
-  if (!lesson) return <AppShell><div className="p-10">Lesson not found.</div></AppShell>;
+  if (isLoading) return <AppShell><div className="p-10 text-muted-foreground">{t("academy.loading")}</div></AppShell>;
+  if (!lesson) return <AppShell><div className="p-10">{t("academy.lessonNotFound")}</div></AppShell>;
 
   const aiKind = AI_FOR_SLUG[lessonSlug];
 
