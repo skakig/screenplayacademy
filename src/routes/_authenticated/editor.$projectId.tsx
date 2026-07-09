@@ -266,7 +266,9 @@ function Editor() {
     [emitEvent, projectId],
   );
 
-  // Bulk insert template / starter blocks (used by AI + template helpers)
+  // Bulk insert template / starter blocks (used by AI + template helpers).
+  // Uses setQueryData cache-patch instead of invalidateQueries to avoid a
+  // refetch racing the server-echo merge while the writer is actively typing.
   const insertTemplate = useMutation({
     mutationFn: async (template: { block_type: string; content: string }[]) => {
       const startOrder = (blocks?.length ?? 0);
@@ -276,10 +278,17 @@ function Editor() {
         content: t.content,
         order_index: startOrder + i,
       }));
-      const { error } = await supabase.from("script_blocks").insert(rows);
+      const { data, error } = await supabase.from("script_blocks").insert(rows).select();
       if (error) throw error;
+      return data ?? [];
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["blocks", projectId] }),
+    onSuccess: (inserted) => {
+      if (!inserted?.length) return;
+      qc.setQueryData(["blocks", projectId], (prev: any[] | undefined) => {
+        const base = Array.isArray(prev) ? prev : [];
+        return [...base, ...inserted];
+      });
+    },
   });
 
   // Guided step: mark complete + advance
