@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { LessonView } from "@/components/academy/Lesson";
 import { ArrowLeft } from "lucide-react";
+import { t } from "@/lib/i18n/t";
 import {
   aiGenerateLoglineOptions,
   aiGenerateThemeOptions,
@@ -46,8 +47,8 @@ function LessonPage() {
     },
   });
 
-  if (isLoading) return <AppShell><div className="p-10 text-muted-foreground">Loading…</div></AppShell>;
-  if (!lesson) return <AppShell><div className="p-10">Lesson not found.</div></AppShell>;
+  if (isLoading) return <AppShell><div className="p-10 text-muted-foreground">{t("academy.loading")}</div></AppShell>;
+  if (!lesson) return <AppShell><div className="p-10">{t("academy.lessonNotFound")}</div></AppShell>;
 
   const aiKind = AI_FOR_SLUG[lessonSlug];
 
@@ -72,7 +73,7 @@ function LessonPage() {
     <AppShell>
       <div className="max-w-3xl mx-auto px-4 py-10">
         <Link to="/academy/$moduleSlug" params={{ moduleSlug }} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mb-4">
-          <ArrowLeft className="h-3 w-3" /> Back to module
+          <ArrowLeft className="h-3 w-3" aria-hidden="true" /> {t("academy.backToModule")}
         </Link>
         <LessonView lesson={lesson} onAIAssist={onAIAssist} />
       </div>
