@@ -601,9 +601,18 @@ export function ScreenplayLine({
         />
       )}
 
-      {isSceneHeading && annotationMode !== "silent" && (
-        (annotationMode === "full" ? (focused || beat) : focused)
-      ) && (
+      {isSceneHeading && annotationMode === "quiet" && (
+        <SceneBeatGutterDot
+          value={beat}
+          onChange={(b) => {
+            const next = { ...(block.metadata || {}), beat: b ?? undefined };
+            if (b === null) delete (next as any).beat;
+            onUpdateMetadata(next);
+          }}
+        />
+      )}
+
+      {isSceneHeading && annotationMode === "full" && (focused || beat) && (
         <div className="absolute right-0 -bottom-7 z-10 font-sans opacity-70 hover:opacity-100 focus-within:opacity-100 transition-opacity">
           <SceneBeatPicker
             value={beat}
