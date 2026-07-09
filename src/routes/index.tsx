@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Sparkles,
@@ -14,6 +15,7 @@ import {
 import ctaScene from "@/assets/cta-writer-scene.jpg.asset.json";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { PillarStrip } from "@/components/landing/PillarStrip";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
