@@ -42,6 +42,8 @@ const QUICK_TYPES = ["scene_heading", "action", "character", "dialogue", "parent
 export type AutoFormatEvent = {
   blockId: string;
   blockType: string;
+  /** Block type BEFORE this format event, so callers can undo type changes. */
+  previousBlockType: string;
   original: string;
   formatted: string;
   typeChanged: boolean;
