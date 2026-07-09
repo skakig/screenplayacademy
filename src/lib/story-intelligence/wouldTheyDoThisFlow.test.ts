@@ -257,3 +257,148 @@ describe("WouldTheyDoThisTab integration flow (writerExperienceLevel → rendere
     expect(noisy.conceptVisible).toBe(control.conceptVisible);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Exact-value assertions per onboarding writerExperienceLevel
+// ---------------------------------------------------------------------------
+
+describe("exact rendered guidance per onboarding experience level", () => {
+  const shapeOf = (o: RenderedTab) => ({
+    headlineVisible: o.headlineVisible,
+    reasonsCount: o.reasonsShown.length,
+    missingBlockVisible: o.missingBlockVisible,
+    missingCount: o.missingShown.length,
+    evidenceVisible: o.evidenceVisible,
+    fixesVisible: o.fixesVisible,
+    teachingVisible: o.teachingVisible,
+    conceptVisible: o.conceptVisible,
+    nextStepVisible: o.nextStepVisible,
+  });
+
+  it("'first' (basic + active) → beginner teaching shape, caps at 1 reason, no evidence/fixes", () => {
+    const r = makeResult();
+    const out = render(r, {
+      mode: "basic",
+      coachingLevel: "active",
+      writerExperienceLevel: "first",
+    });
+    expect(out.headlineVisible).toBe(true);
+    expect(out.nextStepVisible).toBe(true);
+    expect(out.reasonsShown.length).toBe(Math.min(1, r.reasons.length));
+    expect(out.evidenceVisible).toBe(false);
+    expect(out.fixesVisible).toBe(false);
+    if (out.teachingVisible) {
+      expect(out.conceptVisible).toBe(true);
+      expect(out.missingBlockVisible).toBe(false);
+    } else {
+      expect(out.missingShown.length).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("'guided' (basic + active) → identical rendered shape to 'first'", () => {
+    const r = makeResult();
+    const first = render(r, {
+      mode: "basic",
+      coachingLevel: "active",
+      writerExperienceLevel: "first",
+    });
+    const guided = render(r, {
+      mode: "basic",
+      coachingLevel: "active",
+      writerExperienceLevel: "guided",
+    });
+    expect(shapeOf(guided)).toEqual(shapeOf(first));
+  });
+
+  it("'adapting' (basic + active) → identical rendered shape to 'first'/'guided'", () => {
+    const r = makeResult();
+    const first = render(r, {
+      mode: "basic",
+      coachingLevel: "active",
+      writerExperienceLevel: "first",
+    });
+    const adapting = render(r, {
+      mode: "basic",
+      coachingLevel: "active",
+      writerExperienceLevel: "adapting",
+    });
+    expect(shapeOf(adapting)).toEqual(shapeOf(first));
+  });
+
+  it("'experienced' (advanced + active) → diagnostic shape: up to 4 reasons, evidence + fixes on when present, no concept label", () => {
+    const r = makeResult();
+    const coach = createTruthCoachOutput(r, {
+      mode: "advanced",
+      coachingLevel: "active",
+      writerExperienceLevel: "experienced",
+    });
+    const out = renderTab(r, coach);
+    expect(out.headlineVisible).toBe(true);
+    expect(out.reasonsShown.length).toBe(Math.min(4, r.reasons.length));
+    expect(out.evidenceVisible).toBe(r.evidence.length > 0);
+    expect(out.fixesVisible).toBe(r.suggestedFixes.length > 0);
+    expect(out.conceptVisible).toBe(false);
+    expect(out.nextStepVisible).toBe(true);
+    const missingExpected =
+      r.missingInputs.length > 0 && !coach.teachingPrompt;
+    expect(out.missingBlockVisible).toBe(missingExpected);
+    if (missingExpected) {
+      expect(out.missingShown.length).toBeLessThanOrEqual(5);
+    }
+  });
+
+  it("'pitching' (advanced + gentle) → gentle shape: cap 2 reasons, no evidence, fixes on, no concept label", () => {
+    const r = makeResult();
+    const out = render(r, {
+      mode: "advanced",
+      coachingLevel: "gentle",
+      writerExperienceLevel: "pitching",
+    });
+    expect(out.headlineVisible).toBe(true);
+    expect(out.reasonsShown.length).toBe(Math.min(2, r.reasons.length));
+    expect(out.evidenceVisible).toBe(false);
+    expect(out.fixesVisible).toBe(r.suggestedFixes.length > 0);
+    expect(out.conceptVisible).toBe(false);
+    expect(out.nextStepVisible).toBe(true);
+  });
+
+  it("'pitching' (advanced + active) → matches 'experienced' diagnostic shape (no beginner drift)", () => {
+    const r = makeResult();
+    const experienced = render(r, {
+      mode: "advanced",
+      coachingLevel: "active",
+      writerExperienceLevel: "experienced",
+    });
+    const pitching = render(r, {
+      mode: "advanced",
+      coachingLevel: "active",
+      writerExperienceLevel: "pitching",
+    });
+    expect(shapeOf(pitching)).toEqual(shapeOf(experienced));
+  });
+
+  it("cross-level matrix → beginner group equal, advanced group equal, groups differ", () => {
+    const r = makeResult();
+    const beginnerProfile = (level: string) => ({
+      mode: "basic" as const,
+      coachingLevel: "active" as const,
+      writerExperienceLevel: level,
+    });
+    const advancedProfile = (level: string) => ({
+      mode: "advanced" as const,
+      coachingLevel: "active" as const,
+      writerExperienceLevel: level,
+    });
+
+    const first = shapeOf(render(r, beginnerProfile("first")));
+    const guided = shapeOf(render(r, beginnerProfile("guided")));
+    const adapting = shapeOf(render(r, beginnerProfile("adapting")));
+    const experienced = shapeOf(render(r, advancedProfile("experienced")));
+    const pitching = shapeOf(render(r, advancedProfile("pitching")));
+
+    expect(guided).toEqual(first);
+    expect(adapting).toEqual(first);
+    expect(pitching).toEqual(experienced);
+    expect(first).not.toEqual(experienced);
+  });
+});
