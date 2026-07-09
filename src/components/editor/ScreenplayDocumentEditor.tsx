@@ -428,6 +428,9 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
             {doc.localBlocks.map((b, i) => {
               const prev = i > 0 ? doc.localBlocks[i - 1] : undefined;
               const isNewScene = b.block_type === "scene_heading" && i > 0;
+              const isActive = b.id === doc.activeBlockId;
+              const suppressOriginalForBlock =
+                suppressFor && suppressFor.blockId === b.id ? suppressFor.original : null;
               return (
                 <div key={b.id} data-local-id={b.id}>
                   {isNewScene && (
@@ -439,9 +442,27 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                       <div className="h-px flex-1 bg-border/60" />
                     </div>
                   )}
+                  {/* Mobile: chip strip renders ABOVE the line (keyboard sits below). */}
+                  {showChips && isActive && isMobile && b.block_type === "scene_heading" && (
+                    <SceneHeadingChips
+                      value={b.content}
+                      onApply={(next) => doc.updateBlockContent(b.id, next)}
+                    />
+                  )}
+                  {showChips && isActive && isMobile && b.block_type === "character" && b.content === "" && (
+                    <RecentCharacterChips
+                      blocks={doc.localBlocks}
+                      activeId={doc.activeBlockId}
+                      onPick={(name) => {
+                        doc.updateBlockContent(b.id, name);
+                        const nextType = nextBlockTypeAfter("character", prev?.block_type);
+                        doc.insertBlockAfter(b.id, nextType);
+                      }}
+                    />
+                  )}
                   <ScreenplayLine
                     block={b}
-                    isActive={b.id === doc.activeBlockId}
+                    isActive={isActive}
                     isFirstEmpty={i === 0 && doc.localBlocks.length === 1 && b.content === "" && b.block_type === "scene_heading"}
                     characters={characters}
                     prevBlockType={prev?.block_type}
@@ -463,7 +484,27 @@ export const ScreenplayDocumentEditor = forwardRef<ScreenplayEditorHandle, Props
                     onAddDictionaryTerm={onAddDictionaryTerm}
                     onRejectFormatSuggestion={onRejectFormatSuggestion}
                     annotationMode={annotationMode}
+                    suppressAutoFormatOriginal={suppressOriginalForBlock}
+                    suppressAutoFormatToken={suppressToken}
                   />
+                  {/* Desktop/tablet: chip strip renders BELOW the line. */}
+                  {showChips && isActive && !isMobile && b.block_type === "scene_heading" && (
+                    <SceneHeadingChips
+                      value={b.content}
+                      onApply={(next) => doc.updateBlockContent(b.id, next)}
+                    />
+                  )}
+                  {showChips && isActive && !isMobile && b.block_type === "character" && b.content === "" && (
+                    <RecentCharacterChips
+                      blocks={doc.localBlocks}
+                      activeId={doc.activeBlockId}
+                      onPick={(name) => {
+                        doc.updateBlockContent(b.id, name);
+                        const nextType = nextBlockTypeAfter("character", prev?.block_type);
+                        doc.insertBlockAfter(b.id, nextType);
+                      }}
+                    />
+                  )}
                 </div>
               );
             })}
