@@ -35,20 +35,23 @@ export const SCENE_TIME_CHIPS = [
 export function isSceneHeadingComplete(text: string): boolean {
   const t = (text ?? "").trim();
   if (!t) return false;
-  if (!SCENE_PREFIX.test(t)) return false;
-  const upper = t.toUpperCase();
-  const hasTime = TIME_TOKENS.some((tok) => {
-    const re = new RegExp(`(?:^|-\\s*|\\s)${tok.replace(/ /g, "\\s+")}\\s*$`);
-    return re.test(upper);
-  });
+  const prefixRe = /^\s*(int\.?\/ext\.?|i\/e\.?|int\.?|ext\.?|est\.?)\.?\s*/i;
+  const m = t.match(prefixRe);
+  if (!m) return false;
+  const afterPrefix = t.slice(m[0].length);
+  const upper = afterPrefix.toUpperCase();
+  let body = afterPrefix;
+  let hasTime = false;
+  for (const tok of TIME_TOKENS) {
+    const re = new RegExp(`\\s*-?\\s*${tok.replace(/ /g, "\\s+")}\\s*$`);
+    if (re.test(upper)) {
+      hasTime = true;
+      body = afterPrefix.replace(new RegExp(`\\s*-?\\s*${tok.replace(/ /g, "\\s+")}\\s*$`, "i"), "");
+      break;
+    }
+  }
   if (!hasTime) return false;
-  // Ensure there's something between the prefix and the time (a location).
-  const prefixMatch = t.match(SCENE_PREFIX);
-  if (!prefixMatch) return false;
-  const afterPrefix = t.slice(prefixMatch[0].length).trim();
-  // Strip trailing "- TIME" to check for location body.
-  const body = afterPrefix.replace(/[-\s]+[A-Z ]+$/i, "").trim();
-  return body.length > 0;
+  return /[A-Za-z0-9]/.test(body);
 }
 
 /**
