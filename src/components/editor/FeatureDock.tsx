@@ -53,7 +53,6 @@ export function FeatureDock({ projectId }: Props) {
                     </p>
                   </div>
                 </div>
-                </div>
               </Link>
             );
           })}
