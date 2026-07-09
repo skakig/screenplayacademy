@@ -98,24 +98,27 @@ export const integrateVaultScene = createServerFn({ method: "POST" })
     if (nsErr || !newScene) throw new Error(nsErr?.message ?? "Could not create scene");
 
     // Seed a scene heading + action block from vault content
-    const blocks: Array<Record<string, unknown>> = [
+    const sceneId = (newScene as { id: string }).id;
+    const blocks = [
       {
         project_id: v.project_id,
-        scene_id: (newScene as { id: string }).id,
+        scene_id: sceneId,
         block_type: "scene_heading",
         content: heading,
         order_index: 0,
       },
+      ...(v.content.trim().length > 0
+        ? [
+            {
+              project_id: v.project_id,
+              scene_id: sceneId,
+              block_type: "action",
+              content: v.content.trim(),
+              order_index: 1,
+            },
+          ]
+        : []),
     ];
-    if (v.content.trim().length > 0) {
-      blocks.push({
-        project_id: v.project_id,
-        scene_id: (newScene as { id: string }).id,
-        block_type: "action",
-        content: v.content.trim(),
-        order_index: 1,
-      });
-    }
     const { error: bErr } = await context.supabase.from("script_blocks").insert(blocks);
     if (bErr) throw new Error(bErr.message);
 
