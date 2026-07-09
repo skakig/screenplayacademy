@@ -9,7 +9,7 @@ import {
 
 describe("vault schemas", () => {
   it("VaultSceneInput requires projectId and applies defaults", () => {
-    const parsed = VaultSceneInput.parse({ projectId: "11111111-1111-1111-1111-111111111111" });
+    const parsed = VaultSceneInput.parse({ projectId: "11111111-1111-4111-8111-111111111111" });
     expect(parsed.kind).toBe("vault_scene");
     expect(parsed.status).toBe("vaulted");
     expect(parsed.estimatedPosition).toBe("unsure");
@@ -18,7 +18,7 @@ describe("vault schemas", () => {
   });
 
   it("rejects invalid kind/status/position", () => {
-    const base = { projectId: "11111111-1111-1111-1111-111111111111" };
+    const base = { projectId: "11111111-1111-4111-8111-111111111111" };
     expect(() => VaultSceneInput.parse({ ...base, kind: "bogus" })).toThrow();
     expect(() => VaultSceneInput.parse({ ...base, status: "bogus" })).toThrow();
     expect(() => VaultSceneInput.parse({ ...base, estimatedPosition: "act_iv" })).toThrow();
@@ -26,7 +26,7 @@ describe("vault schemas", () => {
 
   it("VaultSceneUpdate requires id and allows partial patches", () => {
     const parsed = VaultSceneUpdate.parse({
-      id: "22222222-2222-2222-2222-222222222222",
+      id: "22222222-2222-4222-8222-222222222222",
       title: "New Title",
     });
     expect(parsed.title).toBe("New Title");
