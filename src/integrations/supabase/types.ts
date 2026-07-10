@@ -2393,6 +2393,48 @@ export type Database = {
         }
         Relationships: []
       }
+      usage_credit_grants: {
+        Row: {
+          amount_consumed: number
+          amount_granted: number
+          created_at: string
+          environment: string
+          expires_at: string | null
+          feature: string
+          id: string
+          price_id: string | null
+          stripe_session_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_consumed?: number
+          amount_granted: number
+          created_at?: string
+          environment: string
+          expires_at?: string | null
+          feature: string
+          id?: string
+          price_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_consumed?: number
+          amount_granted?: number
+          created_at?: string
+          environment?: string
+          expires_at?: string | null
+          feature?: string
+          id?: string
+          price_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_lesson_progress: {
         Row: {
           completed_at: string | null
@@ -2718,6 +2760,7 @@ export type Database = {
       get_usage_snapshot: {
         Args: { _environment?: string }
         Returns: {
+          credits_remaining: number
           feature: string
           monthly_limit: number
           tier: string
