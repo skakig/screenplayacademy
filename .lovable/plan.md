@@ -1,424 +1,215 @@
-# Arena Mode v1 — Timed Creative Writing Games for Writers' Room
+## Arena Mode v1 — Hardening Pass
 
-## Vision
+Your comments are spot-on. The current Arena is a working prototype but it treats the client as authority in several places (winner selection, host checks, promotion race, entry edits, live vote reads). This pass moves authority into the database, closes the RLS gaps, and lands the restrained authorship system you described (thin rail + avatar + tint, not neon cards). Writer's Desk and canonical script tables are not touched.
 
-Arena Mode turns collaboration into a screenwriter's sport. Instead of fragile multiplayer typing on canonical script, collaborators enter timed rounds, submit competing entries, vote, and promote winners into Suggestions. Safe by construction — canonical screenplay is never mutated by Arena.
+---
 
-Three-layer collaboration model this fits into:
+### Migration 1 — Lifecycle, integrity, and privacy
 
-1. **Vault** — canonical writing (existing)
-2. **Live Room** — trusted co-writing (existing lab)
-3. **Arena** — timed creative games (this pass)
+Single migration, in order:
 
-## Guardrails (Non-Negotiable)
+1. `**create_arena_session(project_id, title, mode, prompt, duration_seconds, submission_grace_seconds, judging_mode, entry_reveal)` RPC** — SECURITY DEFINER. Validates member + role, inserts session, inserts creator into `arena_participants` as `writer`, returns row. Both rows or neither.
+2. **State-machine trigger** on `arena_sessions` BEFORE UPDATE — allows only: `draft→open|archived`, `open→running|archived`, `running→voting`, `voting→complete`, `complete→archived`. Rejects everything else with `ARENA: invalid transition`.
+3. **Revoke direct lifecycle UPDATE** — RLS update policy on `arena_sessions` allows non-lifecycle metadata edits (title/prompt/duration) only while `status IN ('draft','open')` AND `status` unchanged. Status transitions must go through the existing `start_arena_round` / `advance_arena_round_if_due` / `end_arena_round` / `finalize_arena_round` RPCs.
+4. **Partial unique index** on `arena_sessions(project_id) WHERE status IN ('open','running','voting')` — enforces one active round per project.
+5. **Tighten `arena_entries` UPDATE RLS** — allow only when `OLD.status = 'draft'` AND parent session `status = 'running'` AND `author_id = auth.uid()`. Add trigger blocking changes to `session_id`, `project_id`, `author_id`, `status` (only exception: via RPC below).
+6. `**submit_arena_entry(entry_id)` RPC** — verifies ownership, session running, `now() <= ends_at + submission_grace_seconds`, non-empty body, sets `status='submitted'`, `submitted_at=now()`. Idempotent-reject on already-submitted.
+7. **Vote privacy** — replace `arena_votes` SELECT policy with two policies: (a) voter reads own rows always; (b) all members read all vote rows only when session `status = 'complete'`. Add `get_arena_voting_progress(session_id)` RPC returning `{eligible_voters, completed_voters, entries_with_votes, current_user_has_voted}` — no scores.
+8. `**join_arena_session(session_id, role)` RPC** — enforces stage/role rules: writers only during `open`; judges per `judging_mode`; viewers cannot self-upgrade. Revoke direct INSERT on `arena_participants` (leave DELETE for leave).
+9. `**award_arena_entry(session_id, entry_id, award_type, title)` RPC** — SECURITY DEFINER. Verifies caller is host (`session.created_by`) or project owner; session in `voting|complete`; entry belongs to session; derives `project_id` from session and `awarded_to` from entry author; inserts with ON CONFLICT DO NOTHING against `(session_id, entry_id, award_type)`.
+10. `**promote_arena_entry(session_id, entry_id)` RPC** — verifies session complete, entry submitted, caller is host/owner/co_writer/editor. Writes `suggestions` row with provenance JSON `{source:'arena', arena_session_id, arena_entry_id, arena_award_type, original_author_id}`. Uniqueness enforced by partial unique index on `suggestions((provenance->>'arena_entry_id')) WHERE provenance->>'source' = 'arena'`. Returns existing row on conflict (idempotent).
+11. **Update `finalize_arena_round**` — apply the new tie rules (avg total → Character Truth → Cinematic Value → co-winners) and insert one `studio_winner` award per co-winner.
 
-- Writer's Desk editor is not touched.
-- No canonical script mutation. Arena entries live in Arena tables only.
-- No live cursor / live block sync required — each writer drafts independently.
-- Promotion to script is always via Suggestions, never direct insert.
-- Double-gated feature flag (env + per-browser switch), same pattern as Live Collab Lab.
+All GRANTs on new RPCs: `authenticated`, `service_role`. All RPCs `SET search_path = public`.
 
-## Feature Flag
+---
 
-Add to `src/lib/featureFlags.ts`:
+### Client — `src/lib/arena.ts`
 
-- Env gate: `VITE_COLLAB_ARENA_MODE`
-- localStorage key: `scenesmith.experimental.arena.enabled`
-- Helpers: `isArenaAvailable()`, `isArenaUserEnabled()`, `setArenaUserEnabled()`, `isArenaEnabled()`, `useArenaEnabled()`
-- Surface the switch in `ExperimentalFeaturesCard.tsx` under a second toggle row.
+- `createArenaSession` → `rpc('create_arena_session', …)`.
+- `joinArenaSession` → `rpc('join_arena_session', …)`.
+- `submitEntry` → `rpc('submit_arena_entry', …)`.
+- `awardArenaEntry` → `rpc('award_arena_entry', …)` (drop client-supplied `project_id`/`awarded_to`).
+- `promoteEntryToSuggestion` → `rpc('promote_arena_entry', …)`.
+- New `getVotingProgress(sessionId)`.
+- New `resolveArenaWinner(sessionId)` → reads `arena_awards` where `award_type='studio_winner'`, returns entry rows (supports co-winners).
+- New `getArenaParticipantIdentity(userId, projectId)` — resolves via `profiles` (display_name/full_name/email) with UUID never rendered as fallback ("Unknown writer" instead).
+- New `assignAuthorColor(sessionId, userId)` — deterministic hash → 8-color muted palette (amber/teal/indigo/rose/emerald/violet/sky/orange) as CSS tokens.
 
-## Data Model (Migration)
+---
 
-Five new tables, all in `public`, all with RLS + explicit GRANTs to `authenticated` and `service_role`.
+### Client — UI corrections
 
-### `arena_sessions`
+- `**ResultsPanel.tsx**`: winner comes from `resolveArenaWinner` (DB), not `ranked[0]`. Support co-winner array. Fix `isHostOrOwner = uid === session.created_by || role === 'owner'`. Same fix in `RoundLobby.tsx` for start/end.
+- `**VotingRoom.tsx**`: stop calling `listVotes` during `voting`. Use `getVotingProgress` + own-vote query. Full `listVotes` only when `status='complete'`.
+- `**RoundStage.tsx**`: submission button calls `submit_arena_entry` RPC; show "Submission locked" state after `ends_at + grace`.
+- `**CreateRoundDialog.tsx**`: catch unique-violation on active round → toast "This project already has an active Arena round."
+- **New `AuthorshipRail.tsx**`: 3px left rail + avatar/initials chip + name + optional role, tint bg at 4% opacity. Used in entry cards, results, awards wall.
+- **Blind mode**: when `session.entry_reveal='blind_until_results'` AND `status='voting'`, render neutral labels ("Entry A/B/C"), neutral gray rail, no name/avatar/color. Reveal after `complete`.
+- `**AwardsWall.tsx`, `ResultsPanel.tsx`, `RoundLobby.tsx` participant list**: use `getArenaParticipantIdentity`, drop `user_id.slice(0,8)` displays.
 
-`id, project_id, created_by, title, mode, prompt, status, duration_seconds, starts_at, ends_at, created_at, updated_at`
+---
 
-- `mode`: `dialogue_duel | rewrite_relay | scene_rescue | adlib_character | comedy_punchup | villain_monologue | pitch_blitz | freewrite`
-- `status`: `draft | open | running | voting | complete | archived`
+### Tests
 
-### `arena_participants`
+- **Extend `src/lib/arena.e2e.test.ts**` (in-memory) with: blind-mode reveal, co-winner path, promotion idempotency across two callers, host-not-owner permissions, active-round conflict.
+- **New `src/lib/arena.rls.test.ts**` — real Supabase test file gated by `SUPABASE_TEST_URL` env (skipped otherwise). Seeds owner/host/writer/judge/viewer/non-member users and asserts every row in the Part 14 matrix.
+- **New `src/lib/arena.authorship.test.ts**` — deterministic color hashing, blind-mode identity redaction, display-name resolution never returns a UUID.
 
-`id, session_id, project_id, user_id, role, joined_at`
+---
 
-- `role`: `writer | judge | viewer | host`
-- Unique `(session_id, user_id)`
+### Guardrails preserved
 
-### `arena_entries`
+- `VITE_COLLAB_ARENA_MODE` + `scenesmith.experimental.arena.enabled` double gate unchanged.
+- Experimental badge unchanged.
+- No edits to `ScreenplayDocumentEditor`, `useScreenplayDocument`, screenplay keymap/persistence, `scenes`, `script_blocks`, live cursors.
+- Promotion writes only to `suggestions`.
 
-`id, session_id, project_id, author_id, title, body, status, submitted_at, created_at, updated_at`
+---
 
-- `status`: `draft | submitted | withdrawn | winner`
+### Technical section
 
-### `arena_votes`
+```text
+DB objects added:
+  RPC  create_arena_session
+  RPC  join_arena_session
+  RPC  submit_arena_entry
+  RPC  award_arena_entry            (replaces client insert)
+  RPC  promote_arena_entry          (replaces client insert)
+  RPC  get_arena_voting_progress
+  TRG  arena_sessions_transition_check  BEFORE UPDATE
+  TRG  arena_entries_immutable_fields   BEFORE UPDATE
+  IDX  arena_sessions_one_active_per_project  UNIQUE partial
+  IDX  suggestions_arena_entry_unique         UNIQUE partial
 
-`id, session_id, entry_id, voter_id, score_originality, score_character_truth, score_cinematic_value, score_emotional_impact, score_craft, comment, created_at`
+RLS changes:
+  arena_sessions.UPDATE  → non-lifecycle only, draft|open only
+  arena_entries.UPDATE   → own draft in running session only
+  arena_votes.SELECT     → own during voting, all after complete
+  arena_participants.INSERT → REVOKE; via join_arena_session RPC
 
-- Unique `(session_id, entry_id, voter_id)`
-- CHECK each score 1–5
+Client color palette (CSS tokens in styles.css):
+  --arena-author-1..8  muted amber/teal/indigo/rose/emerald/violet/sky/orange
+```
 
-### `arena_awards`
+---
 
-`id, session_id, project_id, entry_id, awarded_to, award_type, title, created_at`
+### Rollout order
 
-- `award_type`: `best_line | best_dialogue | best_twist | best_character_truth | funniest | most_cinematic | audience_choice | studio_winner`
+1. Migration (approval gate).
+2. `arena.ts` RPC wiring + identity/color helpers.
+3. UI: winner resolution, host check, blind mode, authorship rail.
+4. VotingRoom privacy refactor.
+5. Tests (extend in-memory, add RLS + authorship suites).
+6. Manual smoke pass with flag on.
 
-### RLS Policies
+This is **very close to approval**. Lovable understood the audit and translated it into a serious hardening plan rather than patching buttons around the edges.
 
-Reuse existing security-definer helpers: `is_project_member`, `can_edit_project`, `project_role`, `owns_project`.
+I would approve execution **after adding five corrections**.
 
-- **SELECT** (all Arena tables): `is_project_member(project_id)`
-- **INSERT session**: `project_role(project_id) IN ('owner','co_writer','editor','producer','assistant')`
-- **UPDATE/DELETE session**: creator OR `owns_project(project_id)` (host/owner controls lifecycle)
-- **INSERT participant**: self-join if member and role allowed (`owner,co_writer,editor,producer,commenter,assistant,actor_reader`)
-- **INSERT entry**: `author_id = auth.uid()` AND member is a participant with `role='writer'` AND session `status='running'`
-- **UPDATE entry**: author only, only while `status='draft'` and session `status='running'`
-- **INSERT vote**: `voter_id = auth.uid()`, session `status='voting'`, cannot vote on own entry
-- **INSERT award**: only session host or project owner, session `status IN ('voting','complete')`
+**1. Fix the Suggestions provenance field**
 
-## Server Functions
+The current Suggestions implementation uses:
 
-New file `src/lib/arena.functions.ts` (all `.middleware([requireSupabaseAuth])`):
+metadata
 
-- `createArenaSession({ projectId, mode, title, prompt, durationSeconds })`
-- `joinArenaSession({ sessionId, role })`
-- `startArenaRound({ sessionId })` — sets `status=running`, `starts_at=now()`, `ends_at=now()+duration`
-- `saveArenaEntryDraft({ sessionId, entryId?, title, body })`
-- `submitArenaEntry({ entryId })`
-- `endArenaRound({ sessionId })` — flips to `voting` (server-computed; also allowed after `ends_at`)
-- `castArenaVote({ sessionId, entryId, scores, comment? })`
-- `finalizeArenaRound({ sessionId })` — computes winner from vote totals, marks entry `status=winner`, session `complete`
-- `awardArenaEntry({ sessionId, entryId, awardType, title })`
-- `promoteArenaEntryToSuggestion({ sessionId, entryId, suggestionType })` — inserts a row into existing `suggestions` table with `source='human'`, `metadata={ source:'arena', arena_session_id, arena_entry_id }`. No script mutation.
-- `listArenaSessions({ projectId, status? })`
-- `getArenaSession({ sessionId })` — returns session + participants + entries + vote tallies + awards
+not:
 
-Realtime is out of scope for v1 — poll session state every 3s while the round is running or in voting; use TanStack Query invalidation on writes.
+provenance
 
-## UI
+The proposed unique index says:
 
-New Writers' Room tab **Arena**, gated by `useArenaEnabled()`, mounted in `writers-room.$projectId.tsx` next to Live.
+suggestions((provenance->>'arena_entry_id'))
 
-Files under `src/components/writers-room/arena/`:
+WHERE provenance->>'source' = 'arena'
 
-- `ArenaPanel.tsx` — root, holds sub-sections
-- `ActiveArenaCard.tsx` — currently open/running round with countdown
-- `CreateRoundDialog.tsx` — mode select, title, prompt textarea, duration presets (3/5/7/10/15 min)
-- `RoundLobby.tsx` — participants list, join button, host "Start Round" control
-- `RoundStage.tsx` — countdown timer, prompt, `EntryComposer`, submit lock
-- `EntryComposer.tsx` — autosaving draft (debounced), submit button
-- `VotingRoom.tsx` — list of submitted entries (author names shown; anonymous voting deferred), 5 score sliders, comment
-- `AwardsWall.tsx` — past winners and awards for the project
-- `PromoteToSuggestionDialog.tsx` — host/editor promotes an entry
+That appears inconsistent with the existing Arena promotion code, which stores Arena identifiers under metadata. The current implementation uses metadata.source, metadata.arena_session_id, and metadata.arena_entry_id.
 
-Cinematic copy per spec: "The Arena", "Start Round", "The Clock Is Running", "Submit Scene", "Voting Room", "Awards Wall", "Best Line", "Studio Winner". All strings go through `t()` keys (`arena.*`) per i18n rule; add to `src/lib/i18n/keys.ts` and coverage test.
+Use the actual existing column:
 
-Visual style follows `visualdesign.md` — reuse Card/Tabs/Button/Slider primitives, no new gaming chrome, keep the existing amber "Experimental" badge treatment for the tab label.
+CREATE UNIQUE INDEX suggestions_arena_entry_unique
 
-## Tests
+ON public.suggestions ((metadata->>'arena_entry_id'))
 
-- `arena.functions.test.ts` (Vitest) — lifecycle: create → join → start → submit → vote → finalize → award → promote; guard rails (vote on own entry rejected, non-writer submit rejected, script untouched).
-- RLS test in the same style as `write-tools.rls.test.ts` for member/non-member reads and role gating.
-- `keys.test.ts` extended for `arena.*` keys.
+WHERE metadata->>'source' = 'arena'
 
-Absolutely. I would **not** replace Lovable’s plan—I would append this as an **Architecture Review Addendum** so it enhances the implementation without invalidating the work already planned.
+  AND metadata->>'arena_entry_id' IS NOT NULL;
 
-&nbsp;
+Or add a dedicated nullable column:
 
-**Architecture Review Addendum (Required Before Implementation)**
+arena_entry_id uuid
 
-Before implementing Arena Mode v1, update the design with the following architectural improvements. These changes are intended to improve data integrity, scalability, and long-term maintainability without changing the overall product vision.
+A dedicated column is stronger long-term, but the metadata index is acceptable for this pass.
 
-**1. Atomic Server Lifecycle (Required)**
+**2. Blind voting must be enforced at the data layer**
 
-Several Arena operations change multiple database records and must execute atomically.
+The UI plan hides names and avatars, but if arena_[entries.author](http://entries.author)_id is still returned to every participant during voting, someone can inspect the browser network response and identify the writers.
 
-Move these lifecycle transitions into PostgreSQL RPCs (or equivalent transactional server procedures):
+So blind mode cannot be purely visual.
 
-- start_arena_round
-- advance_arena_round_if_due
-- finalize_arena_round
-- promote_arena_entry
-- award_arena_entry
+When:
 
-TanStack server functions should call these RPCs instead of manually performing multiple sequential database updates.
+entry_reveal = blind_until_results
 
-No lifecycle transition should leave the database in a partially completed state.
+status = voting
 
-&nbsp;
+the client should receive sanitized entries through a secure RPC or view:
 
-**2. Explicit State Machine**
+get_arena_voting_entries(session_id)
 
-Arena sessions must enforce valid lifecycle transitions.
+Return:
 
-Allowed:
+entry_id
 
-draft → open
+title
 
-open → running
+body
 
-running → voting
+anonymous_label
 
-voting → complete
+status
 
-draft/open/complete → archived
+Do not return:
 
-Disallow:
+author_id
 
-complete → running
+user_id
 
-voting → draft
+display_name
 
-archived → running
+email
 
-Enforce these transitions server-side.
+avatar_url
 
-&nbsp;
+After completion, normal identity-bearing entry data can be loaded.
 
-**3. Timer Advancement**
+Otherwise it is “blind judging” with a transparent blindfold.
 
-Polling every few seconds should refresh UI only.
+**3. Direct session updates need column-level enforcement**
 
-Polling must **not** be the authority that changes session state.
+RLS can determine whether a row may be updated, but it is not ideal for securely expressing:
 
-Required behavior:
+“You may modify the title and prompt, but not status, creator, project, timer, or other protected fields.”
 
-- Before ends_at, only the host may manually end the writing period.
-- Once ends_at has passed, any participant may trigger an idempotent advance_arena_round_if_due() transition.
-- Multiple callers must never create duplicate transitions.
+Add a BEFORE UPDATE trigger that compares OLD and NEW and rejects changes to protected fields outside approved RPC execution.
 
-&nbsp;
+Protected fields should include:
 
-**4. One Entry Per Writer**
+id
 
-Arena v1 should enforce:
+project_id
 
-UNIQUE(session_id, author_id)
+created_by
 
-Each participant has one entry.
+status
 
-Future game modes may intentionally support multiple submissions.
+starts_at
 
-&nbsp;
+ends_at
 
-**5. Session / Project Integrity**
+created_at
 
-Child tables currently contain both:
-
-- session_id
-- project_id
-
-The database must guarantee they always match.
-
-Do not trust client input.
-
-Use one of:
-
-- composite foreign keys
-- validation trigger
-- generated value
-
-Likewise ensure:
-
-arena_votes.entry_id
-
-always belongs to the same session referenced by:
-
-arena_votes.session_id
-
-&nbsp;
-
-**6. Host Model**
-
-Do not overload participant roles.
-
-Recommended model:
-
-Arena Session:
-
-created_by = session host
-
-Arena Participant:
-
-role =
-
-writer
-
-judge
-
-viewer
-
-Host authority comes from the session itself.
-
-A host may also participate as a writer.
-
-Automatically insert the host as a participant when the session is created.
-
-&nbsp;
-
-**7. Voting Rules**
-
-Voting permissions must be explicit.
-
-Recommended:
-
-- writers may vote on other entries
-- judges may vote
-- viewers may not vote
-- host authority is independent of voting authority
-
-Disallow self-voting.
-
-Allow vote edits only while:
-
-session.status = voting
-
-Freeze all votes once the round is finalized.
-
-&nbsp;
-
-**8. Hidden Vote Totals**
-
-Do not reveal running vote totals.
-
-During voting show only:
-
-- who has voted
-- remaining voters
-- voting progress
-
-Reveal scores only after finalization.
-
-This reduces bandwagon bias.
-
-&nbsp;
-
-**9. Tie Resolution**
-
-Define deterministic tie rules.
-
-Recommended:
-
-Primary:
-
-Average score
-
-Tie-break 1:
-
-Character Truth
-
-Tie-break 2:
-
-Cinematic Value
-
-Final tie:
-
-Co-Winners
-
-Do not use submission time as a tie breaker.
-
-&nbsp;
-
-**10. Rules / Constraints Engine**
-
-Arena rounds should support optional creative constraints.
-
-Add:
-
-rules jsonb
-
-Example:
-
-{
-
-  "max_words": 500,
-
-  "required_line": "You knew the whole time.",
-
-  "tone": "dark comedy",
-
-  "required_character": "Mara",
-
-  "dialogue_only": true
-
-}
-
-Arena should become a creative challenge platform, not just a timed textarea.
-
-&nbsp;
-
-**11. Submission Grace Period**
-
-When the timer expires:
-
-Do not immediately reject the final autosave.
-
-Recommended:
-
-submission_grace_seconds = 10
-
-After that:
-
-- drafts become locked
-- submitted entries remain valid
-- unsubmitted drafts are excluded
-
-&nbsp;
-
-**12. Separate Lifecycle From Awards**
-
-Do not overload:
-
-entry.status = winner
-
-Recommended:
-
-Entry lifecycle:
-
-draft
-
-submitted
-
-withdrawn
-
-Awards determine winners:
-
-studio_winner
-
-best_dialogue
-
-best_twist
-
-audience_choice
-
-...
-
-This allows one entry to receive multiple awards.
-
-&nbsp;
-
-**13. Idempotent Promotion**
-
-Promotion into Suggestions must be repeat-safe.
-
-Store metadata:
-
-arena_session_id
-
-arena_entry_id
-
-arena_award_type
-
-original_author_id
-
-Prevent duplicate Suggestions from repeated button presses.
-
-&nbsp;
-
-**Recommended Additional Fields**
-
-Arena Session
+Potentially also protect:
 
 judging_mode
 
@@ -426,91 +217,458 @@ entry_reveal
 
 stakes
 
-Allowed values:
+submission_grace_seconds
+
+after the round begins.
+
+The transition trigger should validate legitimate RPC transitions, while the immutable-field trigger prevents metadata updates from becoming a side door.
+
+**4. Identity resolution must not depend on inaccessible email data**
+
+The plan says:
+
+profiles → display_name/full_name/email
+
+But application profile tables often do not contain the authenticated email, and normal clients generally cannot query auth.users.
+
+Use this fallback order:
+
+profiles.display_name
+
+profiles.full_name
+
+project member display data, if available
+
+auth metadata for the current user only
+
+"Unknown writer"
+
+Do not promise email fallback unless the app already maintains a safe public/member-visible email field.
+
+Also, fetch identities in batches:
+
+getArenaParticipantIdentities(userIds, projectId)
+
+Do not make one database request per participant or entry.
+
+**5. Handle existing active rounds before creating the unique index**
+
+Before adding:
+
+UNIQUE(project_id)
+
+WHERE status IN ('open','running','voting')
+
+the migration must check whether existing data already contains more than one active session per project.
+
+Since Arena is new, that is unlikely, but a robust migration should either:
+
+- fail with a clear diagnostic, or
+- archive all but the newest active session per project after deliberate review.
+
+Do not let deployment fail with an unexplained unique-index violation.
+
+&nbsp;
+
+**Additional refinements**
+
+**Make the RPC parameters typed**
+
+Avoid accepting arbitrary text for enum values where possible. Use database enum parameters:
+
+*mode public.arena*mode
+
+*judging*mode public.arena_judging_mode
+
+*entry*reveal public.arena_entry_reveal
+
+*award*type public.arena_award_type
+
+**Explicitly reject unauthenticated RPC calls**
+
+Every SECURITY DEFINER RPC should begin with:
+
+IF auth.uid() IS NULL THEN
+
+  RAISE EXCEPTION 'ARENA: authentication required';
+
+END IF;
+
+Keep:
+
+SET search_path = public
+
+and revoke execution from PUBLIC and anon.
+
+**Derive rather than accept trusted identifiers**
+
+The RPCs should derive:
+
+- project ID from session
+- entry author from entry
+- caller ID from auth.uid()
+- participant project from session
+
+Never accept those values from the browser when the database can resolve them.
+
+**Make submission and draft saving consistent**
+
+The plan secures final submission, but draft autosaving also needs server-time enforcement.
+
+After:
+
+ends_at + grace
+
+both of these should fail:
+
+- submitting
+- continuing to alter the draft
+
+The entry update trigger should perform the time check, not only the submission RPC.
+
+**Prevent premature finalization**
+
+Decide whether the host can finalize immediately after one vote.
+
+For practice mode, that may be fine. For ranked/showcase, require either:
+
+all eligible judges voted
+
+or:
+
+host explicitly confirms early finalization
+
+At minimum, show:
+
+3 of 5 judges have voted.
+
+Finalize early?
+
+**Author colors should be session-local**
+
+The proposed hash should use:
+
+session_id + user_id
+
+That is correct.
+
+It means a writer’s color is stable throughout one round but can differ across rounds, preventing the product from permanently labeling one user “the orange writer.”
+
+&nbsp;
+
+**Authorship design verdict**
+
+The proposed system is exactly right:
+
+- 3px rail
+- initials/avatar
+- name
+- optional role
+- 4% tint
+- controlled palette
+- anonymous neutral presentation during blind voting
+
+I would add one more cue: a tiny authorship marker on quoted or promoted material:
+
+From Arena · Dialogue Duel · Written by Maya
+
+When promoted to Suggestions, preserve the same author identity and color reference in the suggestion card. That gives material a visible creative lineage without contaminating the canonical screenplay formatting.
+
+**Final verdict**
+
+With the five corrections above, this becomes a **proper hardening plan**, not just cleanup.
+
+Lovable should proceed after updating:
+
+1. provenance to the real metadata field
+2. blind identity protection at the RPC/data layer
+3. protected-column update trigger
+4. batched, realistic identity resolution
+5. migration preflight for duplicate active sessions
+
+After that, Arena is ready for implementation and controlled two-account testing—still Experimental, but with a foundation strong enough to grow into ranked competitions and the eventual ScreenSmith awards ecosystem.This is **very close to approval**. Lovable understood the audit and translated it into a serious hardening plan rather than patching buttons around the edges.
+
+I would approve execution **after adding five corrections**.
+
+**1. Fix the Suggestions provenance field**
+
+The current Suggestions implementation uses:
+
+metadata
+
+not:
+
+provenance
+
+The proposed unique index says:
+
+suggestions((provenance->>'arena_entry_id'))
+
+WHERE provenance->>'source' = 'arena'
+
+That appears inconsistent with the existing Arena promotion code, which stores Arena identifiers under metadata. The current implementation uses metadata.source, metadata.arena_session_id, and metadata.arena_entry_id.
+
+Use the actual existing column:
+
+CREATE UNIQUE INDEX suggestions_arena_entry_unique
+
+ON public.suggestions ((metadata->>'arena_entry_id'))
+
+WHERE metadata->>'source' = 'arena'
+
+  AND metadata->>'arena_entry_id' IS NOT NULL;
+
+Or add a dedicated nullable column:
+
+arena_entry_id uuid
+
+A dedicated column is stronger long-term, but the metadata index is acceptable for this pass.
+
+**2. Blind voting must be enforced at the data layer**
+
+The UI plan hides names and avatars, but if arena_[entries.author](http://entries.author)_id is still returned to every participant during voting, someone can inspect the browser network response and identify the writers.
+
+So blind mode cannot be purely visual.
+
+When:
+
+entry_reveal = blind_until_results
+
+status = voting
+
+the client should receive sanitized entries through a secure RPC or view:
+
+get_arena_voting_entries(session_id)
+
+Return:
+
+entry_id
+
+title
+
+body
+
+anonymous_label
+
+status
+
+Do not return:
+
+author_id
+
+user_id
+
+display_name
+
+email
+
+avatar_url
+
+After completion, normal identity-bearing entry data can be loaded.
+
+Otherwise it is “blind judging” with a transparent blindfold.
+
+**3. Direct session updates need column-level enforcement**
+
+RLS can determine whether a row may be updated, but it is not ideal for securely expressing:
+
+“You may modify the title and prompt, but not status, creator, project, timer, or other protected fields.”
+
+Add a BEFORE UPDATE trigger that compares OLD and NEW and rejects changes to protected fields outside approved RPC execution.
+
+Protected fields should include:
+
+id
+
+project_id
+
+created_by
+
+status
+
+starts_at
+
+ends_at
+
+created_at
+
+Potentially also protect:
 
 judging_mode
 
-&nbsp;
-
-peer
-
-host
-
-panel
-
-hybrid
-
 entry_reveal
-
-&nbsp;
-
-named
-
-blind_until_results
 
 stakes
 
+submission_grace_seconds
+
+after the round begins.
+
+The transition trigger should validate legitimate RPC transitions, while the immutable-field trigger prevents metadata updates from becoming a side door.
+
+**4. Identity resolution must not depend on inaccessible email data**
+
+The plan says:
+
+profiles → display_name/full_name/email
+
+But application profile tables often do not contain the authenticated email, and normal clients generally cannot query auth.users.
+
+Use this fallback order:
+
+profiles.display_name
+
+profiles.full_name
+
+project member display data, if available
+
+auth metadata for the current user only
+
+"Unknown writer"
+
+Do not promise email fallback unless the app already maintains a safe public/member-visible email field.
+
+Also, fetch identities in batches:
+
+getArenaParticipantIdentities(userIds, projectId)
+
+Do not make one database request per participant or entry.
+
+**5. Handle existing active rounds before creating the unique index**
+
+Before adding:
+
+UNIQUE(project_id)
+
+WHERE status IN ('open','running','voting')
+
+the migration must check whether existing data already contains more than one active session per project.
+
+Since Arena is new, that is unlikely, but a robust migration should either:
+
+- fail with a clear diagnostic, or
+- archive all but the newest active session per project after deliberate review.
+
+Do not let deployment fail with an unexplained unique-index violation.
+
 &nbsp;
 
-practice
+**Additional refinements**
 
-ranked
+**Make the RPC parameters typed**
 
-showcase
+Avoid accepting arbitrary text for enum values where possible. Use database enum parameters:
 
-Default:
+*mode public.arena*mode
 
-peer
+*judging*mode public.arena_judging_mode
 
-named
+*entry*reveal public.arena_entry_reveal
 
-practice
+*award*type public.arena_award_type
+
+**Explicitly reject unauthenticated RPC calls**
+
+Every SECURITY DEFINER RPC should begin with:
+
+IF auth.uid() IS NULL THEN
+
+  RAISE EXCEPTION 'ARENA: authentication required';
+
+END IF;
+
+Keep:
+
+SET search_path = public
+
+and revoke execution from PUBLIC and anon.
+
+**Derive rather than accept trusted identifiers**
+
+The RPCs should derive:
+
+- project ID from session
+- entry author from entry
+- caller ID from auth.uid()
+- participant project from session
+
+Never accept those values from the browser when the database can resolve them.
+
+**Make submission and draft saving consistent**
+
+The plan secures final submission, but draft autosaving also needs server-time enforcement.
+
+After:
+
+ends_at + grace
+
+both of these should fail:
+
+- submitting
+- continuing to alter the draft
+
+The entry update trigger should perform the time check, not only the submission RPC.
+
+**Prevent premature finalization**
+
+Decide whether the host can finalize immediately after one vote.
+
+For practice mode, that may be fine. For ranked/showcase, require either:
+
+all eligible judges voted
+
+or:
+
+host explicitly confirms early finalization
+
+At minimum, show:
+
+3 of 5 judges have voted.
+
+Finalize early?
+
+**Author colors should be session-local**
+
+The proposed hash should use:
+
+session_id + user_id
+
+That is correct.
+
+It means a writer’s color is stable throughout one round but can differ across rounds, preventing the product from permanently labeling one user “the orange writer.”
 
 &nbsp;
 
-**Long-Term Vision**
+**Authorship design verdict**
 
-Arena Mode is **not** simply multiplayer editing.
+The proposed system is exactly right:
 
-Arena is the foundation for:
+- 3px rail
+- initials/avatar
+- name
+- optional role
+- 4% tint
+- controlled palette
+- anonymous neutral presentation during blind voting
 
-- Timed Writing Challenges
-- Dialogue Duels
-- Rewrite Relays
-- Comedy Punch-Up Battles
-- Character Challenges
-- Story Festivals
-- Studio Leagues
-- Public Competitions
-- Annual ScreenSmith Studio Awards
+I would add one more cue: a tiny authorship marker on quoted or promoted material:
 
-The canonical screenplay remains protected.
+From Arena · Dialogue Duel · Written by Maya
 
-Arena exists to generate outstanding creative material which can later be promoted into Suggestions and, ultimately, into the Writer’s Desk through deliberate editorial review.
+When promoted to Suggestions, preserve the same author identity and color reference in the suggestion card. That gives material a visible creative lineage without contaminating the canonical screenplay formatting.
 
-&nbsp;
+**Final verdict**
 
-## Out of Scope (v1)
+With the five corrections above, this becomes a **proper hardening plan**, not just cleanup.
 
-- Realtime channels / presence inside Arena
-- Anonymous voting (deferred; wire `self_vote_allowed` / anonymity later)
-- AI craft judge auto-notes (stub the panel, no LLM call)
-- Community-wide (cross-project) arenas
-- Mobile-optimized voting flow
+Lovable should proceed after updating:
 
-## Acceptance
+1. provenance to the real metadata field
+2. blind identity protection at the RPC/data layer
+3. protected-column update trigger
+4. batched, realistic identity resolution
+5. migration preflight for duplicate active sessions
 
-- Env + local switch both required to see the tab
-- Permitted member creates a round, others join, host starts
-- Writers submit entries; timer flips to voting
-- Participants score entries; host finalizes; winner marked
-- Awards can be assigned; winning entry promotable to Suggestions
-- No changes to `ScreenplayDocumentEditor` / `useScreenplayDocument` / any editor file
-- Typecheck, lint, and new tests pass
+After that, Arena is ready for implementation and controlled two-account testing—still Experimental, but with a foundation strong enough to grow into ranked competitions and the eventual ScreenSmith awards ecosystem.
 
-## Files Touched / Added
-
-**Migration:** 1 new SQL migration (5 tables + GRANTs + RLS + indexes).
-**New:** `src/lib/arena.functions.ts`, `src/lib/arena.ts` (shared types/keys), 9 components under `src/components/writers-room/arena/`, `arena.functions.test.ts`.
-**Edited:** `src/lib/featureFlags.ts`, `src/components/writers-room/ExperimentalFeaturesCard.tsx`, `src/routes/_authenticated/writers-room.$projectId.tsx`, `src/lib/i18n/keys.ts`, `src/lib/i18n/keys.test.ts`.
-**Untouched:** all `src/components/editor/**`, all `src/lib/editor/**`, `screenplayPersistence.ts`, `useScreenplayDocument.ts`.
+Ready to execute on approval.

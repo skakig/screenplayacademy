@@ -1,16 +1,14 @@
 /**
  * Arena Mode — end-to-end lifecycle test.
  *
- * Drives the full flow through the same public functions the UI uses:
- *   create session → host + writer join → start round → save + submit
- *   entries → timer expires → advance to voting → cast votes → award →
- *   finalize → promote winner into Suggestions.
+ * Drives the full flow through the same public functions the UI uses.
+ * Uses an in-memory Supabase fake that models `.from()` reads plus the
+ * hardened Arena RPCs (create/submit/award/promote/join/archive + the
+ * original start/end/finalize/advance).
  *
- * The Supabase client is replaced by an in-memory fake that models the
- * bits of behavior arena.ts + suggestions.ts actually invoke. Canonical
- * script tables (`scenes`, `script_blocks`) are intentionally NOT part of
- * the fake — if the code under test ever tried to touch them the test
- * would fail with "unknown table", which is the guarantee we want.
+ * Canonical script tables (`scenes`, `script_blocks`) are NOT in the
+ * fake — if the code under test ever touched them the test would fail
+ * with "unknown table", which is the guarantee we want.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -19,7 +17,6 @@ const WRITER_ID = "user-writer";
 const VOTER_ID = "user-voter";
 const PROJECT_ID = "project-1";
 
-// vi.hoisted → available inside the hoisted vi.mock() factory below.
 const fake = vi.hoisted(() => {
   type Row = Record<string, unknown>;
   type Filter =
@@ -120,7 +117,12 @@ const fake = vi.hoisted(() => {
     }
     private stamp(row: Row): Row {
       const now = new Date().toISOString();
-      return { id: nextId(this.table), created_at: now, updated_at: now, ...row };
+      return {
+        id: nextId(this.table),
+        created_at: now,
+        updated_at: now,
+        ...row,
+      };
     }
     private async exec(): Promise<{ data: unknown; error: unknown }> {
       const rows = store[this.table];
@@ -180,17 +182,202 @@ const fake = vi.hoisted(() => {
   }
 
   async function rpc(name: string, params: Record<string, unknown>) {
-    const sessionId = params._session_id as string;
-    const session = store.arena_sessions.find((s) => s.id === sessionId);
-    if (!session) return { data: null, error: new Error("ARENA: session not found") };
+    const uid = state.currentUserId;
+    const sessionId = params._session_id as string | undefined;
+    const session = sessionId
+      ? store.arena_sessions.find((s) => s.id === sessionId)
+      : undefined;
+    const now = () => new Date().toISOString();
+
+    if (name === "create_arena_session") {
+      const active = store.arena_sessions.find(
+        (s) =>
+          s.project_id === params._project_id &&
+          ["open", "running", "voting"].includes(s.status as string),
+      );
+      if (active)
+        return {
+          data: null,
+          error: new Error(
+            "duplicate key value violates unique constraint arena_sessions_one_active_per_project",
+          ),
+        };
+      const row: Row = {
+        id: nextId("arena_sessions"),
+        project_id: params._project_id,
+        created_by: uid,
+        title: params._title,
+        mode: params._mode,
+        prompt: params._prompt,
+        status: "open",
+        duration_seconds: params._duration_seconds,
+        starts_at: null,
+        ends_at: null,
+        rules: params._rules ?? {},
+        judging_mode: params._judging_mode ?? "peer",
+        entry_reveal: params._entry_reveal ?? "named",
+        stakes: params._stakes ?? "practice",
+        submission_grace_seconds: params._submission_grace_seconds ?? 10,
+        created_at: now(),
+        updated_at: now(),
+      };
+      store.arena_sessions.push(row);
+      store.arena_participants.push({
+        id: nextId("arena_participants"),
+        session_id: row.id,
+        project_id: row.project_id,
+        user_id: uid,
+        role: "writer",
+        joined_at: now(),
+      });
+      return { data: row, error: null };
+    }
+    if (name === "join_arena_session") {
+      if (!session)
+        return { data: null, error: new Error("ARENA: session not found") };
+      const existing = store.arena_participants.find(
+        (p) => p.session_id === sessionId && p.user_id === uid,
+      );
+      if (existing) return { data: existing, error: null };
+      const row: Row = {
+        id: nextId("arena_participants"),
+        session_id: sessionId!,
+        project_id: session.project_id,
+        user_id: uid,
+        role: params._role ?? "writer",
+        joined_at: now(),
+      };
+      store.arena_participants.push(row);
+      return { data: row, error: null };
+    }
+    if (name === "submit_arena_entry") {
+      const entry = store.arena_entries.find(
+        (e) => e.id === params._entry_id,
+      );
+      if (!entry)
+        return { data: null, error: new Error("ARENA: entry not found") };
+      if (entry.author_id !== uid)
+        return { data: null, error: new Error("ARENA: not your entry") };
+      if (entry.status !== "draft")
+        return {
+          data: null,
+          error: new Error(`ARENA: entry already ${entry.status}`),
+        };
+      entry.status = "submitted";
+      entry.submitted_at = now();
+      entry.updated_at = now();
+      return { data: entry, error: null };
+    }
+    if (name === "award_arena_entry") {
+      if (!session)
+        return { data: null, error: new Error("ARENA: session not found") };
+      if (session.created_by !== uid)
+        return { data: null, error: new Error("ARENA: only host or owner") };
+      const entry = store.arena_entries.find(
+        (e) => e.id === params._entry_id,
+      );
+      if (!entry || entry.session_id !== sessionId)
+        return {
+          data: null,
+          error: new Error("ARENA: entry does not belong to session"),
+        };
+      const existing = store.arena_awards.find(
+        (a) =>
+          a.session_id === sessionId &&
+          a.entry_id === entry.id &&
+          a.award_type === params._award_type,
+      );
+      if (existing) {
+        if (params._title) existing.title = params._title;
+        return { data: existing, error: null };
+      }
+      const row: Row = {
+        id: nextId("arena_awards"),
+        session_id: sessionId!,
+        project_id: session.project_id,
+        entry_id: entry.id,
+        awarded_to: entry.author_id,
+        award_type: params._award_type,
+        title: params._title ?? null,
+        created_at: now(),
+      };
+      store.arena_awards.push(row);
+      return { data: row, error: null };
+    }
+    if (name === "promote_arena_entry") {
+      if (!session)
+        return { data: null, error: new Error("ARENA: session not found") };
+      if (session.status !== "complete")
+        return {
+          data: null,
+          error: new Error("ARENA: only complete rounds may be promoted"),
+        };
+      const entry = store.arena_entries.find(
+        (e) => e.id === params._entry_id,
+      );
+      if (!entry || entry.session_id !== sessionId)
+        return {
+          data: null,
+          error: new Error("ARENA: entry does not belong to session"),
+        };
+      const existing = store.suggestions.find(
+        (s) =>
+          (s.metadata as Row | null)?.source === "arena" &&
+          (s.metadata as Row | null)?.arena_entry_id === entry.id,
+      );
+      if (existing) {
+        return {
+          data: [{ id: existing.id, already_existed: true }],
+          error: null,
+        };
+      }
+      const award = store.arena_awards.find(
+        (a) => a.entry_id === entry.id && a.session_id === sessionId,
+      );
+      const row: Row = {
+        id: nextId("suggestions"),
+        project_id: session.project_id,
+        author_id: uid,
+        source: "human",
+        suggestion_type: params._suggestion_type ?? "structure_note",
+        status: "open",
+        title: entry.title ?? `Arena · ${session.title}`,
+        rationale: `Promoted from Arena round "${session.title}".`,
+        after: { text: entry.body, arena_entry_title: entry.title },
+        metadata: {
+          source: "arena",
+          arena_session_id: sessionId,
+          arena_entry_id: entry.id,
+          arena_award_type: award?.award_type ?? null,
+          arena_original_author_id: entry.author_id,
+        },
+        created_at: now(),
+        updated_at: now(),
+      };
+      store.suggestions.push(row);
+      return {
+        data: [{ id: row.id, already_existed: false }],
+        error: null,
+      };
+    }
+    if (name === "archive_arena_session") {
+      if (!session)
+        return { data: null, error: new Error("ARENA: session not found") };
+      session.status = "archived";
+      session.updated_at = now();
+      return { data: session, error: null };
+    }
+
+    if (!session)
+      return { data: null, error: new Error("ARENA: session not found") };
     if (name === "start_arena_round") {
       Object.assign(session, {
         status: "running",
-        starts_at: new Date().toISOString(),
+        starts_at: now(),
         ends_at: new Date(
           Date.now() + (session.duration_seconds as number) * 1000,
         ).toISOString(),
-        updated_at: new Date().toISOString(),
+        updated_at: now(),
       });
       return { data: session, error: null };
     }
@@ -203,18 +390,18 @@ const fake = vi.hoisted(() => {
           Date.now()
       ) {
         session.status = "voting";
-        session.updated_at = new Date().toISOString();
+        session.updated_at = now();
       }
       return { data: session, error: null };
     }
     if (name === "end_arena_round") {
       session.status = "voting";
-      session.updated_at = new Date().toISOString();
+      session.updated_at = now();
       return { data: session, error: null };
     }
     if (name === "finalize_arena_round") {
       session.status = "complete";
-      session.updated_at = new Date().toISOString();
+      session.updated_at = now();
       const entries = store.arena_entries.filter(
         (e) => e.session_id === sessionId && e.status === "submitted",
       );
@@ -236,16 +423,24 @@ const fake = vi.hoisted(() => {
       scored.sort((a, b) => b.avg - a.avg);
       const winner = scored[0]?.entry;
       if (winner) {
-        store.arena_awards.push({
-          id: nextId("arena_awards"),
-          session_id: sessionId,
-          project_id: session.project_id,
-          entry_id: winner.id,
-          awarded_to: winner.author_id,
-          award_type: "studio_winner",
-          title: "Studio Winner",
-          created_at: new Date().toISOString(),
-        });
+        const dupe = store.arena_awards.find(
+          (a) =>
+            a.session_id === sessionId &&
+            a.entry_id === winner.id &&
+            a.award_type === "studio_winner",
+        );
+        if (!dupe) {
+          store.arena_awards.push({
+            id: nextId("arena_awards"),
+            session_id: sessionId,
+            project_id: session.project_id,
+            entry_id: winner.id,
+            awarded_to: winner.author_id,
+            award_type: "studio_winner",
+            title: "Studio Winner",
+            created_at: now(),
+          });
+        }
       }
       return { data: session, error: null };
     }
@@ -337,11 +532,11 @@ describe("Arena Mode — full lifecycle", () => {
     await submitEntry(hostDraft.id);
 
     // 5. Clock expires → advance transitions to voting.
-    vi.setSystemTime(new Date(Date.now() + 61_000));
+    vi.setSystemTime(new Date(Date.now() + 75_000));
     const advanced = await advanceArenaRoundIfDue(session.id);
     expect(advanced.status).toBe("voting");
 
-    // 6. Host force-ends (idempotent from voting).
+    // 6. Host force-ends (idempotent from voting in fake, matches RPC guard elsewhere).
     const ended = await endArenaRound(session.id);
     expect(ended.status).toBe("voting");
 
@@ -384,7 +579,7 @@ describe("Arena Mode — full lifecycle", () => {
     const winnerEntry = entryB.author_id === WRITER_ID ? entryB : entryA;
     await awardArenaEntry({
       session,
-      entry: { id: winnerEntry.id, author_id: winnerEntry.author_id },
+      entry: { id: winnerEntry.id },
       awardType: "best_dialogue",
       title: "Best Dialogue",
     });
@@ -401,18 +596,8 @@ describe("Arena Mode — full lifecycle", () => {
 
     // 10. Promote the winner into Suggestions — never mutates script.
     const promoted = await promoteEntryToSuggestion({
-      session: {
-        id: session.id,
-        project_id: session.project_id,
-        title: session.title,
-        mode: session.mode,
-      },
-      entry: {
-        id: winnerEntry.id,
-        author_id: winnerEntry.author_id,
-        title: winnerEntry.title,
-        body: winnerEntry.body,
-      },
+      session: { id: session.id },
+      entry: { id: winnerEntry.id },
     });
     expect(promoted.alreadyExisted).toBe(false);
     expect(fake.store.suggestions).toHaveLength(1);
@@ -427,21 +612,30 @@ describe("Arena Mode — full lifecycle", () => {
 
     // 11. Idempotency — promoting again returns the same suggestion.
     const again = await promoteEntryToSuggestion({
-      session: {
-        id: session.id,
-        project_id: session.project_id,
-        title: session.title,
-        mode: session.mode,
-      },
-      entry: {
-        id: winnerEntry.id,
-        author_id: winnerEntry.author_id,
-        title: winnerEntry.title,
-        body: winnerEntry.body,
-      },
+      session: { id: session.id },
+      entry: { id: winnerEntry.id },
     });
     expect(again.alreadyExisted).toBe(true);
     expect(again.id).toBe(sug.id as string);
     expect(fake.store.suggestions).toHaveLength(1);
+  });
+
+  it("blocks a second active session per project (unique index)", async () => {
+    await createArenaSession({
+      projectId: PROJECT_ID,
+      title: "Round 1",
+      mode: "freewrite",
+      prompt: "warmup",
+      durationSeconds: 60,
+    });
+    await expect(
+      createArenaSession({
+        projectId: PROJECT_ID,
+        title: "Round 2",
+        mode: "freewrite",
+        prompt: "second",
+        durationSeconds: 60,
+      }),
+    ).rejects.toThrow(/already has an active Arena round/i);
   });
 });

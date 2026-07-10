@@ -3027,6 +3027,58 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      archive_arena_session: {
+        Args: { _session_id: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          duration_seconds: number
+          ends_at: string | null
+          entry_reveal: Database["public"]["Enums"]["arena_entry_reveal"]
+          id: string
+          judging_mode: Database["public"]["Enums"]["arena_judging_mode"]
+          mode: Database["public"]["Enums"]["arena_mode"]
+          project_id: string
+          prompt: string
+          rules: Json
+          stakes: Database["public"]["Enums"]["arena_stakes"]
+          starts_at: string | null
+          status: Database["public"]["Enums"]["arena_status"]
+          submission_grace_seconds: number
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "arena_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      award_arena_entry: {
+        Args: {
+          _award_type: Database["public"]["Enums"]["arena_award_type"]
+          _entry_id: string
+          _session_id: string
+          _title?: string
+        }
+        Returns: {
+          award_type: Database["public"]["Enums"]["arena_award_type"]
+          awarded_to: string
+          created_at: string
+          entry_id: string
+          id: string
+          project_id: string
+          session_id: string
+          title: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "arena_awards"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       can_accept_suggestion: { Args: { _project_id: string }; Returns: boolean }
       can_archive_suggestion: {
         Args: { _project_id: string }
@@ -3056,6 +3108,45 @@ export type Database = {
       consume_usage: {
         Args: { _amount: number; _environment?: string; _feature: string }
         Returns: number
+      }
+      create_arena_session: {
+        Args: {
+          _duration_seconds: number
+          _entry_reveal?: Database["public"]["Enums"]["arena_entry_reveal"]
+          _judging_mode?: Database["public"]["Enums"]["arena_judging_mode"]
+          _mode: Database["public"]["Enums"]["arena_mode"]
+          _project_id: string
+          _prompt: string
+          _rules?: Json
+          _stakes?: Database["public"]["Enums"]["arena_stakes"]
+          _submission_grace_seconds?: number
+          _title: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string
+          duration_seconds: number
+          ends_at: string | null
+          entry_reveal: Database["public"]["Enums"]["arena_entry_reveal"]
+          id: string
+          judging_mode: Database["public"]["Enums"]["arena_judging_mode"]
+          mode: Database["public"]["Enums"]["arena_mode"]
+          project_id: string
+          prompt: string
+          rules: Json
+          stakes: Database["public"]["Enums"]["arena_stakes"]
+          starts_at: string | null
+          status: Database["public"]["Enums"]["arena_status"]
+          submission_grace_seconds: number
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "arena_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       current_subscription_tier: {
         Args: { check_env?: string; user_uuid: string }
@@ -3117,6 +3208,36 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_arena_voting_entries: {
+        Args: { _session_id: string }
+        Returns: {
+          anonymous_label: string
+          author_id: string
+          body: string
+          entry_id: string
+          session_id: string
+          status: Database["public"]["Enums"]["arena_entry_status"]
+          submitted_at: string
+          title: string
+        }[]
+      }
+      get_arena_voting_progress: {
+        Args: { _session_id: string }
+        Returns: {
+          completed_voters: number
+          current_user_has_voted: boolean
+          eligible_voters: number
+          entries_with_votes: number
+        }[]
+      }
+      get_project_member_identities: {
+        Args: { _project_id: string; _user_ids: string[] }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          user_id: string
+        }[]
+      }
       get_usage_snapshot: {
         Args: { _environment?: string }
         Returns: {
@@ -3139,8 +3260,39 @@ export type Database = {
         Returns: boolean
       }
       is_project_member: { Args: { _project_id: string }; Returns: boolean }
+      join_arena_session: {
+        Args: {
+          _role?: Database["public"]["Enums"]["arena_participant_role"]
+          _session_id: string
+        }
+        Returns: {
+          id: string
+          joined_at: string
+          project_id: string
+          role: Database["public"]["Enums"]["arena_participant_role"]
+          session_id: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "arena_participants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       owns_project: { Args: { _project_id: string }; Returns: boolean }
       project_role: { Args: { _project_id: string }; Returns: string }
+      promote_arena_entry: {
+        Args: {
+          _entry_id: string
+          _session_id: string
+          _suggestion_type?: string
+        }
+        Returns: {
+          already_existed: boolean
+          id: string
+        }[]
+      }
       start_arena_round: {
         Args: { _session_id: string }
         Returns: {
@@ -3165,6 +3317,27 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "arena_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_arena_entry: {
+        Args: { _entry_id: string }
+        Returns: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          project_id: string
+          session_id: string
+          status: Database["public"]["Enums"]["arena_entry_status"]
+          submitted_at: string | null
+          title: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "arena_entries"
           isOneToOne: true
           isSetofReturn: false
         }
