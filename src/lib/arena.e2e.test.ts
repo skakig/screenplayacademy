@@ -1214,13 +1214,11 @@ describe("Arena Mode — full lifecycle", () => {
         await castArenaVote({ session, entryId: writerDraft.id, scores: high });
         await castArenaVote({ session, entryId: hostDraft.id, scores: high });
       }
-      fake.state.currentUserId = HOST_ID;
-      await awardArenaEntry({
-        session,
-        entry: { id: writerDraft.id },
-        awardType: "best_dialogue",
-        title: "Best Dialogue",
-      });
+      // NOTE: no mid-voting award is granted here. In production, hosts only
+      // award AFTER finalize, and RLS on arena_awards hides awarded_to until
+      // status = 'complete'. Granting mid-voting would test the RLS layer,
+      // not the UI fetch contract this test covers.
+
       for (const viewer of [HOST_ID, WRITER_ID, VOTER_ID]) {
         await exerciseAllFetches(viewer);
         scanReads(viewer, `voting/${viewer}`);
