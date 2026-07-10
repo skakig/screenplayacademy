@@ -6,29 +6,40 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { t } from "@/lib/i18n/t";
 import {
+  isArenaAvailable,
+  isArenaUserEnabled,
   isLiveSceneCollabAvailable,
   isLiveSceneCollabUserEnabled,
+  setArenaUserEnabled,
   setLiveSceneCollabUserEnabled,
+  useArenaEnabled,
   useLiveSceneCollabEnabled,
 } from "@/lib/featureFlags";
 
 /**
- * In-app toggle for the Live Collaboration Lab. Only the per-browser user
- * switch — the build-time env gate is still required to unlock anything.
- * No DB writes. Never affects other users.
+ * In-app toggles for experimental features. Each switch is only the
+ * per-browser user gate — the build-time env gate is still required to
+ * unlock anything. No DB writes.
  */
 export function ExperimentalFeaturesCard() {
-  const available = isLiveSceneCollabAvailable();
-  // Keep the effective gate listener mounted so the switch state stays in
-  // sync if it's flipped from another tab.
+  const liveAvailable = isLiveSceneCollabAvailable();
+  const arenaAvailable = isArenaAvailable();
+  // Keep listeners mounted so switch state stays in sync across tabs.
   useLiveSceneCollabEnabled();
-  const [userEnabled, setUserEnabled] = useState<boolean>(() =>
+  useArenaEnabled();
+  const [liveEnabled, setLiveEnabled] = useState<boolean>(() =>
     isLiveSceneCollabUserEnabled(),
+  );
+  const [arenaEnabled, setArenaEnabled] = useState<boolean>(() =>
+    isArenaUserEnabled(),
   );
 
   useEffect(() => {
-    setUserEnabled(isLiveSceneCollabUserEnabled());
+    setLiveEnabled(isLiveSceneCollabUserEnabled());
+    setArenaEnabled(isArenaUserEnabled());
   }, []);
+
+  const anyAvailable = liveAvailable || arenaAvailable;
 
   return (
     <Card className="p-6 bg-card/60">
@@ -44,31 +55,59 @@ export function ExperimentalFeaturesCard() {
         </div>
       </div>
 
-      {!available ? (
+      {!anyAvailable ? (
         <p className="text-xs italic text-muted-foreground border-t border-border/40 pt-3">
           {t("collab.experimental.unavailable")}
         </p>
       ) : (
-        <div className="flex items-start justify-between gap-4 border-t border-border/40 pt-4">
-          <div className="min-w-0">
-            <Label
-              htmlFor="exp-live-collab-switch"
-              className="font-display text-sm font-semibold"
-            >
-              {t("collab.experimental.liveCollab.title")}
-            </Label>
-            <p className="text-xs text-muted-foreground mt-1 max-w-xl">
-              {t("collab.experimental.liveCollab.body")}
-            </p>
-          </div>
-          <Switch
-            id="exp-live-collab-switch"
-            checked={userEnabled}
-            onCheckedChange={(next) => {
-              setUserEnabled(next);
-              setLiveSceneCollabUserEnabled(next);
-            }}
-          />
+        <div className="space-y-4">
+          {liveAvailable && (
+            <div className="flex items-start justify-between gap-4 border-t border-border/40 pt-4">
+              <div className="min-w-0">
+                <Label
+                  htmlFor="exp-live-collab-switch"
+                  className="font-display text-sm font-semibold"
+                >
+                  {t("collab.experimental.liveCollab.title")}
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1 max-w-xl">
+                  {t("collab.experimental.liveCollab.body")}
+                </p>
+              </div>
+              <Switch
+                id="exp-live-collab-switch"
+                checked={liveEnabled}
+                onCheckedChange={(next) => {
+                  setLiveEnabled(next);
+                  setLiveSceneCollabUserEnabled(next);
+                }}
+              />
+            </div>
+          )}
+
+          {arenaAvailable && (
+            <div className="flex items-start justify-between gap-4 border-t border-border/40 pt-4">
+              <div className="min-w-0">
+                <Label
+                  htmlFor="exp-arena-switch"
+                  className="font-display text-sm font-semibold"
+                >
+                  {t("collab.experimental.arena.title")}
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1 max-w-xl">
+                  {t("collab.experimental.arena.body")}
+                </p>
+              </div>
+              <Switch
+                id="exp-arena-switch"
+                checked={arenaEnabled}
+                onCheckedChange={(next) => {
+                  setArenaEnabled(next);
+                  setArenaUserEnabled(next);
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
     </Card>
