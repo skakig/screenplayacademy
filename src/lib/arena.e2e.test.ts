@@ -784,5 +784,129 @@ describe("Arena Mode — full lifecycle", () => {
     expect(rebuilt.get(HOST_ID)!.rail).toBe(hostColor.rail);
     expect(rebuilt.get(WRITER_ID)!.rail).toBe(writerColor.rail);
   });
+
+  it("redacts author identity across every Arena UI data path until the round is finalized", async () => {
+    // Blind round — identity must stay redacted from every read path the UI
+    // consumes (voting entries feed, awards feed, palette derivation) until
+    // finalize flips the session to 'complete'.
+    const session = await createArenaSession({
+      projectId: PROJECT_ID,
+      title: "Full-path Redaction",
+      mode: "villain_monologue",
+      prompt: "Stay masked.",
+      durationSeconds: 60,
+      entryReveal: "blind_until_results",
+    });
+    fake.state.currentUserId = WRITER_ID;
+    await joinArenaSession(session, "writer");
+    fake.state.currentUserId = VOTER_ID;
+    await joinArenaSession(session, "judge");
+
+    // Helper: assert every UI-facing feed for this session hides identity.
+    const assertRedactedFor = async (label: string) => {
+      fake.state.currentUserId = VOTER_ID;
+      const voting = await listVotingEntries(session.id);
+      for (const row of voting) {
+        expect(
+          row.author_id,
+          `${label}: listVotingEntries leaked author_id`,
+        ).toBeNull();
+        expect(row.anonymous_label).toMatch(/^Writer #\d+$/);
+      }
+      // Awards feed powers ResultsPanel medals — must not surface an
+      // awarded_to before finalization, or the UI could map ids to names.
+      const awards = await listSessionAwards(session.id);
+      expect(awards, `${label}: awards feed leaked before finalize`).toEqual(
+        [],
+      );
+      // Palette built from whatever author_ids the UI can see collapses to
+      // the neutral slot — no writer-specific hue can bleed through.
+      const palette = buildAuthorshipPalette(
+        session.id,
+        voting.map((e) => e.author_id ?? ""),
+      );
+      expect(palette.size, `${label}: palette leaked distinct hues`).toBe(0);
+    };
+
+    // Stage A: OPEN — no submissions yet, feeds must be empty and redacted.
+    await assertRedactedFor("open");
+
+    // Stage B: RUNNING — submitted entries visible but authorless.
+    fake.state.currentUserId = HOST_ID;
+    await startArenaRound(session.id);
+    const hostDraft = await saveEntryDraft(session, {
+      title: "Host Piece",
+      body: "A whisper in the dark.",
+    });
+    await submitEntry(hostDraft.id);
+    fake.state.currentUserId = WRITER_ID;
+    const writerDraft = await saveEntryDraft(session, {
+      title: "Writer Piece",
+      body: "A shout in the light.",
+    });
+    await submitEntry(writerDraft.id);
+    await assertRedactedFor("running");
+
+    // Stage C: VOTING — clock expired, votes cast, peer award granted,
+    // identity must still be hidden until finalize.
+    vi.setSystemTime(new Date(Date.now() + 75_000));
+    await advanceArenaRoundIfDue(session.id);
+    const high = {
+      originality: 5,
+      characterTruth: 5,
+      cinematicValue: 5,
+      emotionalImpact: 5,
+      craft: 5,
+    };
+    for (const voter of [HOST_ID, WRITER_ID, VOTER_ID]) {
+      fake.state.currentUserId = voter;
+      await castArenaVote({ session, entryId: writerDraft.id, scores: high });
+      await castArenaVote({ session, entryId: hostDraft.id, scores: high });
+    }
+    fake.state.currentUserId = HOST_ID;
+    await awardArenaEntry({
+      session,
+      entry: { id: writerDraft.id },
+      awardType: "best_dialogue",
+      title: "Best Dialogue",
+    });
+    // Peer award now exists — but the voting feed must still redact
+    // author_id and the palette must still collapse.
+    fake.state.currentUserId = VOTER_ID;
+    const votingDuring = await listVotingEntries(session.id);
+    expect(votingDuring).toHaveLength(2);
+    for (const row of votingDuring) expect(row.author_id).toBeNull();
+    const paletteDuring = buildAuthorshipPalette(
+      session.id,
+      votingDuring.map((e) => e.author_id ?? ""),
+    );
+    expect(paletteDuring.size).toBe(0);
+
+    // Stage D: FINALIZED — identity is allowed to resolve everywhere.
+    fake.state.currentUserId = HOST_ID;
+    const finalized = await finalizeArenaRound(session.id);
+    expect(finalized.status).toBe("complete");
+
+    fake.state.currentUserId = VOTER_ID;
+    const revealed = await listVotingEntries(session.id);
+    expect(revealed).toHaveLength(2);
+    const revealedAuthors = revealed.map((e) => e.author_id).sort();
+    expect(revealedAuthors).toEqual([HOST_ID, WRITER_ID].sort());
+
+    const awardsAfter = await listSessionAwards(session.id);
+    expect(awardsAfter.length).toBeGreaterThan(0);
+    const awardedTo = new Set(awardsAfter.map((a) => a.awarded_to));
+    expect(awardedTo.has(WRITER_ID) || awardedTo.has(HOST_ID)).toBe(true);
+
+    const revealedPalette = buildAuthorshipPalette(
+      session.id,
+      revealed.map((e) => e.author_id ?? ""),
+    );
+    expect(revealedPalette.size).toBe(2);
+    expect(revealedPalette.get(HOST_ID)!.rail).not.toBe(
+      revealedPalette.get(WRITER_ID)!.rail,
+    );
+  });
 });
+
 
