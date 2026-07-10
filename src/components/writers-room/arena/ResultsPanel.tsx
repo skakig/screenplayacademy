@@ -21,6 +21,7 @@ import {
   arenaKeys,
   awardArenaEntry,
   computeEntryScores,
+  getProjectMemberIdentities,
   listEntries,
   listSessionAwards,
   listVotes,
@@ -29,6 +30,12 @@ import {
   type ArenaEntryRow,
   type ArenaSessionRow,
 } from "@/lib/arena";
+import { AuthorshipRail } from "./AuthorshipRail";
+import {
+  NEUTRAL_AUTHORSHIP_COLOR,
+  buildAuthorshipPalette,
+  type AuthorshipColor,
+} from "./authorshipPalette";
 
 interface Props {
   session: ArenaSessionRow;
@@ -67,8 +74,29 @@ export function ResultsPanel({ session, role, projectId }: Props) {
     });
   }, [submitted, scores]);
 
+  const identityIds = useMemo(
+    () => submitted.map((e) => e.author_id),
+    [submitted],
+  );
+  const identitiesQ = useQuery({
+    queryKey: [...arenaKeys.identities(projectId), identityIds],
+    queryFn: () => getProjectMemberIdentities(projectId, identityIds),
+    enabled: identityIds.length > 0,
+  });
+  const palette = useMemo(
+    () => buildAuthorshipPalette(session.id, identityIds),
+    [session.id, identityIds],
+  );
+
   const winner = ranked[0];
   const isHostOrOwner = role === "owner"; // extra grants happen server-side too
+
+  const winnerColor: AuthorshipColor = winner
+    ? (palette.get(winner.author_id) ?? NEUTRAL_AUTHORSHIP_COLOR)
+    : NEUTRAL_AUTHORSHIP_COLOR;
+  const winnerIdentity = winner
+    ? identitiesQ.data?.get(winner.author_id)
+    : null;
 
   return (
     <Card className="p-6 bg-card/60 space-y-4">
@@ -80,23 +108,25 @@ export function ResultsPanel({ session, role, projectId }: Props) {
       </div>
 
       {winner && (
-        <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
-          <div className="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-400 font-semibold">
-            {t("arena.results.winner")}
-          </div>
+        <AuthorshipRail
+          color={winnerColor}
+          displayName={winnerIdentity?.display_name ?? ""}
+          avatarUrl={winnerIdentity?.avatar_url ?? null}
+          role={null}
+          meta={
+            <Badge variant="secondary">{t("arena.results.winner")}</Badge>
+          }
+        >
           <div className="font-display text-lg font-semibold mt-1">
             {winner.title || "Untitled entry"}
           </div>
           <div className="text-xs text-muted-foreground">
-            {t("arena.voting.byLine", { name: winner.author_id.slice(0, 8) })}
-            <span className="mx-1">·</span>
-            avg{" "}
-            {(scores.get(winner.id)?.average ?? 0).toFixed(1)}
+            avg {(scores.get(winner.id)?.average ?? 0).toFixed(1)}
           </div>
           <p className="text-sm whitespace-pre-wrap font-mono bg-background/60 p-3 rounded mt-3 max-h-60 overflow-y-auto">
             {winner.body}
           </p>
-        </div>
+        </AuthorshipRail>
       )}
 
       <div className="space-y-3">
@@ -109,24 +139,37 @@ export function ResultsPanel({ session, role, projectId }: Props) {
           </p>
         ) : (
           <ul className="space-y-3">
-            {ranked.map((e, i) => (
-              <EntryResultRow
-                key={e.id}
-                rank={i + 1}
-                entry={e}
-                session={session}
-                average={scores.get(e.id)?.average ?? 0}
-                count={scores.get(e.id)?.count ?? 0}
-                awarded={
-                  (awardsQ.data ?? []).find((a) => a.entry_id === e.id) ?? null
-                }
-                canAward={isHostOrOwner}
-                onChanged={() => {
-                  qc.invalidateQueries({ queryKey: arenaKeys.sessionAwards(session.id) });
-                  qc.invalidateQueries({ queryKey: arenaKeys.awards(projectId) });
-                }}
-              />
-            ))}
+            {ranked.map((e, i) => {
+              const color =
+                palette.get(e.author_id) ?? NEUTRAL_AUTHORSHIP_COLOR;
+              const identity = identitiesQ.data?.get(e.author_id);
+              return (
+                <EntryResultRow
+                  key={e.id}
+                  rank={i + 1}
+                  entry={e}
+                  session={session}
+                  average={scores.get(e.id)?.average ?? 0}
+                  count={scores.get(e.id)?.count ?? 0}
+                  awarded={
+                    (awardsQ.data ?? []).find((a) => a.entry_id === e.id) ??
+                    null
+                  }
+                  canAward={isHostOrOwner}
+                  color={color}
+                  identityName={identity?.display_name ?? ""}
+                  identityAvatar={identity?.avatar_url ?? null}
+                  onChanged={() => {
+                    qc.invalidateQueries({
+                      queryKey: arenaKeys.sessionAwards(session.id),
+                    });
+                    qc.invalidateQueries({
+                      queryKey: arenaKeys.awards(projectId),
+                    });
+                  }}
+                />
+              );
+            })}
           </ul>
         )}
       </div>
@@ -142,6 +185,9 @@ function EntryResultRow({
   count,
   awarded,
   canAward,
+  color,
+  identityName,
+  identityAvatar,
   onChanged,
 }: {
   rank: number;
@@ -151,6 +197,9 @@ function EntryResultRow({
   count: number;
   awarded: { award_type: ArenaAwardType } | null;
   canAward: boolean;
+  color: AuthorshipColor;
+  identityName: string;
+  identityAvatar: string | null;
   onChanged: () => void;
 }) {
   const [awardType, setAwardType] = useState<ArenaAwardType>("best_dialogue");
@@ -189,10 +238,23 @@ function EntryResultRow({
   });
 
   return (
-    <li className="border border-border/60 rounded-lg p-3 bg-background/50">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+    <li>
+      <AuthorshipRail
+        color={color}
+        displayName={identityName}
+        avatarUrl={identityAvatar}
+        role={null}
+        meta={
+          awarded ? (
+            <Badge variant="secondary">
+              {t(`arena.awards.${awarded.award_type}` as I18nKey)}
+            </Badge>
+          ) : (
+            <span className="text-xs text-muted-foreground">#{rank}</span>
+          )
+        }
+      >
         <div className="min-w-0">
-          <div className="text-xs text-muted-foreground">#{rank}</div>
           <div className="font-medium truncate">
             {entry.title || "Untitled entry"}
           </div>
@@ -200,49 +262,45 @@ function EntryResultRow({
             avg {average.toFixed(1)} · {count} vote{count === 1 ? "" : "s"}
           </div>
         </div>
-        {awarded && (
-          <Badge variant="secondary">
-            {t(`arena.awards.${awarded.award_type}` as I18nKey)}
-          </Badge>
+        {canAward && (
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            <Select
+              value={awardType}
+              onValueChange={(v) => setAwardType(v as ArenaAwardType)}
+            >
+              <SelectTrigger className="w-52 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ARENA_AWARD_TYPES.map((a) => (
+                  <SelectItem key={a} value={a}>
+                    {t(`arena.awards.${a}` as I18nKey)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => awardM.mutate()}
+              disabled={awardM.isPending}
+            >
+              <Sparkles className="h-3.5 w-3.5 mr-1" />
+              {t("arena.results.awardCta")}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => promoteM.mutate()}
+              disabled={promoteM.isPending || promoted}
+            >
+              <Send className="h-3.5 w-3.5 mr-1" />
+              {promoted ? t("arena.results.promoted") : t("arena.results.promote")}
+            </Button>
+          </div>
         )}
-      </div>
-      {canAward && (
-        <div className="flex items-center gap-2 mt-3 flex-wrap">
-          <Select
-            value={awardType}
-            onValueChange={(v) => setAwardType(v as ArenaAwardType)}
-          >
-            <SelectTrigger className="w-52 h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ARENA_AWARD_TYPES.map((a) => (
-                <SelectItem key={a} value={a}>
-                  {t(`arena.awards.${a}` as I18nKey)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => awardM.mutate()}
-            disabled={awardM.isPending}
-          >
-            <Sparkles className="h-3.5 w-3.5 mr-1" />
-            {t("arena.results.awardCta")}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => promoteM.mutate()}
-            disabled={promoteM.isPending || promoted}
-          >
-            <Send className="h-3.5 w-3.5 mr-1" />
-            {promoted ? t("arena.results.promoted") : t("arena.results.promote")}
-          </Button>
-        </div>
-      )}
+      </AuthorshipRail>
     </li>
   );
 }
+
