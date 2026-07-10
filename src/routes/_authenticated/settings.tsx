@@ -346,6 +346,7 @@ function Settings() {
         <ModeSettings />
 
         <PlanCard />
+        <UsageCard />
 
         <Card className="p-6 space-y-3 border-destructive/30">
           <h2 className="font-semibold text-destructive">Danger zone</h2>
