@@ -85,6 +85,18 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         productDescription = product.name;
       }
 
+      // Resolve a pre-applied promotion code (e.g. from /pricing?promo=LAUNCH50)
+      // to a Stripe promotion_code id so the discount attaches automatically.
+      let promotionCodeId: string | undefined;
+      if (data.promotionCode) {
+        const found = await stripe.promotionCodes.list({
+          code: data.promotionCode,
+          active: true,
+          limit: 1,
+        });
+        if (found.data.length) promotionCodeId = found.data[0].id;
+      }
+
       const session = await stripe.checkout.sessions.create({
         line_items: [{ price: stripePrice.id, quantity: data.quantity || 1 }],
         mode: isRecurring ? "subscription" : "payment",
@@ -95,6 +107,11 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         // `managed_payments: { enabled: true }` once the seller opts
         // into end-to-end compliance handling.
         automatic_tax: { enabled: true },
+        // Let users type any active Stripe promotion code on the checkout
+        // form. Mutually exclusive with an explicit `discounts:` list.
+        ...(promotionCodeId
+          ? { discounts: [{ promotion_code: promotionCodeId }] }
+          : { allow_promotion_codes: true }),
         ...(customerId && { customer: customerId }),
         ...(!isRecurring && {
           payment_intent_data: { description: productDescription },
