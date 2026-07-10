@@ -171,10 +171,12 @@ function WritersRoomTabs({
   const openSuggestionCount = openSuggestions.data?.length ?? 0;
   const [tab, setTab] = useState("team");
   const liveEnabled = useLiveSceneCollabEnabled();
+  const arenaEnabled = useArenaEnabled();
   const prevLiveEnabled = useRef(liveEnabled);
+  const prevArenaEnabled = useRef(arenaEnabled);
 
-  // If the experimental switch flips off mid-session, leave the Live tab
-  // gracefully so the panel unmounts (which tears down any active session).
+  // If an experimental switch flips off mid-session, leave that tab
+  // gracefully so its panel unmounts.
   useEffect(() => {
     if (prevLiveEnabled.current && !liveEnabled) {
       if (tab === "live") setTab("team");
@@ -182,6 +184,12 @@ function WritersRoomTabs({
     }
     prevLiveEnabled.current = liveEnabled;
   }, [liveEnabled, tab]);
+  useEffect(() => {
+    if (prevArenaEnabled.current && !arenaEnabled) {
+      if (tab === "arena") setTab("team");
+    }
+    prevArenaEnabled.current = arenaEnabled;
+  }, [arenaEnabled, tab]);
 
   const { setActiveArea } = usePresence();
   useEffect(() => {
