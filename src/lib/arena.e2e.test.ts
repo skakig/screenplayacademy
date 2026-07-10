@@ -907,6 +907,148 @@ describe("Arena Mode — full lifecycle", () => {
       revealedPalette.get(WRITER_ID)!.rail,
     );
   });
+
+  it("keeps each writer's rail color deterministic across votes, entries, and awards regardless of ordering", async () => {
+    // Third writer so we get a real ordering permutation.
+    const THIRD_ID = "user-third";
+    const session = await createArenaSession({
+      projectId: PROJECT_ID,
+      title: "Deterministic Rails",
+      mode: "villain_monologue",
+      prompt: "One color per writer.",
+      durationSeconds: 60,
+      entryReveal: "blind_until_results",
+    });
+    for (const uid of [WRITER_ID, VOTER_ID, THIRD_ID]) {
+      fake.state.currentUserId = uid;
+      await joinArenaSession(session, "writer");
+    }
+
+    fake.state.currentUserId = HOST_ID;
+    await startArenaRound(session.id);
+
+    // Submit in order: HOST → WRITER → THIRD.
+    const drafts: Record<string, string> = {};
+    for (const uid of [HOST_ID, WRITER_ID, THIRD_ID]) {
+      fake.state.currentUserId = uid;
+      const d = await saveEntryDraft(session, {
+        title: `${uid} piece`,
+        body: `Body from ${uid}.`,
+      });
+      drafts[uid] = d.id;
+      await submitEntry(d.id);
+    }
+
+    // Voting phase — palette derived from redacted feed collapses (no ids).
+    vi.setSystemTime(new Date(Date.now() + 75_000));
+    await advanceArenaRoundIfDue(session.id);
+    fake.state.currentUserId = VOTER_ID;
+    const blind = await listVotingEntries(session.id);
+    expect(blind).toHaveLength(3);
+    const blindPalette = buildAuthorshipPalette(
+      session.id,
+      blind.map((e) => e.author_id ?? ""),
+    );
+    expect(blindPalette.size).toBe(0);
+
+    // Everyone votes so awards can resolve, then host awards + finalizes.
+    const scores = {
+      originality: 4,
+      characterTruth: 4,
+      cinematicValue: 4,
+      emotionalImpact: 4,
+      craft: 4,
+    };
+    for (const voter of [HOST_ID, WRITER_ID, VOTER_ID, THIRD_ID]) {
+      fake.state.currentUserId = voter;
+      for (const uid of [HOST_ID, WRITER_ID, THIRD_ID]) {
+        await castArenaVote({ session, entryId: drafts[uid], scores });
+      }
+    }
+    fake.state.currentUserId = HOST_ID;
+    await awardArenaEntry({
+      session,
+      entry: { id: drafts[WRITER_ID] },
+      awardType: "best_dialogue",
+    });
+    await finalizeArenaRound(session.id);
+
+    // The canonical per-writer color: build once from the natural submission
+    // order the entries feed returns.
+    const revealedEntries = await listEntries(session.id);
+    const canonical = buildAuthorshipPalette(
+      session.id,
+      revealedEntries.map((e) => e.author_id),
+    );
+    expect(canonical.size).toBe(3);
+    // Distinct hues per writer — asserts no hidden collision that would
+    // make the ordering test vacuously pass.
+    const rails = [HOST_ID, WRITER_ID, THIRD_ID].map(
+      (u) => canonical.get(u)!.rail,
+    );
+    expect(new Set(rails).size).toBe(3);
+    for (const rail of rails) {
+      expect(rail).not.toBe(NEUTRAL_AUTHORSHIP_COLOR.rail);
+    }
+
+    const expectMatchesCanonical = (
+      label: string,
+      palette: Map<string, ReturnType<typeof buildAuthorshipPalette>["get"]>,
+    ) => {
+      for (const uid of [HOST_ID, WRITER_ID, THIRD_ID]) {
+        const got = (palette as Map<string, { rail: string } | undefined>).get(
+          uid,
+        );
+        expect(got, `${label}: missing color for ${uid}`).toBeTruthy();
+        expect(
+          got!.rail,
+          `${label}: rail drifted for ${uid}`,
+        ).toBe(canonical.get(uid)!.rail);
+      }
+    };
+
+    // 1. Reveal palette from the (now un-redacted) voting feed must match.
+    const revealedVoting = await listVotingEntries(session.id);
+    expectMatchesCanonical(
+      "voting-feed",
+      buildAuthorshipPalette(
+        session.id,
+        revealedVoting.map((e) => e.author_id ?? ""),
+      ) as unknown as Map<string, ReturnType<typeof buildAuthorshipPalette>["get"]>,
+    );
+
+    // 2. Palette derived from the awards feed (a different natural order)
+    //    must map each writer to the same rail.
+    const awards = await listSessionAwards(session.id);
+    expectMatchesCanonical(
+      "awards-feed",
+      buildAuthorshipPalette(
+        session.id,
+        awards.map((a) => a.awarded_to),
+      ) as unknown as Map<string, ReturnType<typeof buildAuthorshipPalette>["get"]>,
+    );
+
+    // 3. Every permutation of the writer ids must produce the same
+    //    per-writer color — order of submission / display cannot shift hues.
+    const perms: string[][] = [
+      [HOST_ID, WRITER_ID, THIRD_ID],
+      [HOST_ID, THIRD_ID, WRITER_ID],
+      [WRITER_ID, HOST_ID, THIRD_ID],
+      [WRITER_ID, THIRD_ID, HOST_ID],
+      [THIRD_ID, HOST_ID, WRITER_ID],
+      [THIRD_ID, WRITER_ID, HOST_ID],
+    ];
+    for (const p of perms) {
+      expectMatchesCanonical(
+        `perm ${p.join(">")}`,
+        buildAuthorshipPalette(session.id, p) as unknown as Map<
+          string,
+          ReturnType<typeof buildAuthorshipPalette>["get"]
+        >,
+      );
+    }
+  });
 });
+
 
 
