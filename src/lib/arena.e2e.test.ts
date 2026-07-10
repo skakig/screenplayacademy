@@ -367,6 +367,44 @@ const fake = vi.hoisted(() => {
       session.updated_at = now();
       return { data: session, error: null };
     }
+    if (name === "get_arena_voting_entries") {
+      if (!session)
+        return { data: null, error: new Error("ARENA: session not found") };
+      const entries = store.arena_entries.filter(
+        (e) => e.session_id === sessionId && e.status === "submitted",
+      );
+      const blind =
+        session.entry_reveal === "blind" && session.status !== "complete";
+      const rows = entries.map((e, i) => ({
+        entry_id: e.id,
+        session_id: sessionId,
+        anonymous_label: `Writer #${i + 1}`,
+        title: e.title,
+        body: e.body,
+        status: e.status,
+        author_id: blind ? null : e.author_id,
+        submitted_at: e.submitted_at ?? null,
+      }));
+      return { data: rows, error: null };
+    }
+    if (name === "get_project_member_identities") {
+      const ids = (params._user_ids as string[]) ?? [];
+      const directory: Record<string, { name: string; avatar: string | null }> =
+        {
+          [HOST_ID]: { name: "Ava Host", avatar: "https://x/ava.png" },
+          [WRITER_ID]: { name: "Bram Writer", avatar: null },
+          [VOTER_ID]: { name: "Cid Voter", avatar: null },
+        };
+      const rows = ids
+        .filter((id) => directory[id])
+        .map((id) => ({
+          user_id: id,
+          display_name: directory[id].name,
+          avatar_url: directory[id].avatar,
+        }));
+      return { data: rows, error: null };
+    }
+
 
     if (!session)
       return { data: null, error: new Error("ARENA: session not found") };
