@@ -7,6 +7,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { GuidedReturnBanner } from "@/components/guided/GuidedReturnBanner";
 import { StudioMenu } from "@/components/StudioMenu";
+import { BuyCreditsDialog } from "@/components/credits/BuyCreditsDialog";
+import { useCreditsUpsell } from "@/hooks/useCreditsUpsell";
 
 type Props = {
   children: ReactNode;
