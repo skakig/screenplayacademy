@@ -102,4 +102,67 @@ describe("AuthorshipRail accessibility", () => {
     expect(html).toContain(">You<");
     expect(html).toContain(">AH<");
   });
+
+  it("blind → revealed transition with missing identity falls back to i18n 'Unknown writer' / 'Project member'", () => {
+    // Simulate an entry whose profile lookup failed: no displayName, no role,
+    // no avatar. This happens when a member was removed from the project
+    // between submission and finalize, or when the identity RPC returns a
+    // partial row. The rail must still transition cleanly from blind to
+    // revealed without leaking placeholder English or crashing.
+    const unknownFallback = t("arena.identity.unknown");
+    const roleUnknownFallback = t("arena.identity.roleUnknown");
+    const anonymousLabel = t("arena.identity.anonymousLabel", { n: 3 });
+
+    // ---- Blind phase: identity is redacted regardless of missing profile.
+    const blindHtml = render(
+      <AuthorshipRail
+        color={color}
+        displayName=""
+        role={null}
+        anonymousLabel={anonymousLabel}
+        blind
+      >
+        <p>entry body</p>
+      </AuthorshipRail>,
+    );
+    expect(blindHtml).toContain(anonymousLabel);
+    expect(blindHtml).toContain(`aria-label="${t("arena.identity.hiddenAria")}"`);
+    // Fallbacks must not leak while blind — the anonymous label is the only
+    // identity string sighted users see.
+    expect(blindHtml).not.toContain(unknownFallback);
+    expect(blindHtml).not.toContain(roleUnknownFallback);
+    // Rail stays muted/neutral.
+    expect(blindHtml).toContain(NEUTRAL_AUTHORSHIP_COLOR.rail);
+
+    // ---- Revealed phase: identity resolves to i18n fallbacks, not blank
+    // or raw English literals in JSX.
+    const revealedHtml = render(
+      <AuthorshipRail
+        color={color}
+        displayName=""
+        role={null}
+        avatarUrl={null}
+      >
+        <p>entry body</p>
+      </AuthorshipRail>,
+    );
+
+    // Chip label uses the localized "Unknown writer" string.
+    expect(revealedHtml).toContain(unknownFallback);
+    // Aria-label mirrors it via the byAria template.
+    expect(revealedHtml).toContain(
+      `aria-label="${t("arena.identity.byAria", { name: unknownFallback })}"`,
+    );
+    // Popover detail surfaces the localized role fallback since role is null.
+    expect(revealedHtml).toContain(roleUnknownFallback);
+    // Anonymous label from the blind phase must NOT bleed into the revealed
+    // markup — the transition swaps identity cleanly.
+    expect(revealedHtml).not.toContain(anonymousLabel);
+    // Rail switches from neutral to the writer's assigned hue.
+    expect(revealedHtml).toContain(color.rail);
+    expect(revealedHtml).not.toContain(NEUTRAL_AUTHORSHIP_COLOR.rail);
+    // Keyboard trigger is still present so the (empty-profile) row is
+    // navigable and doesn't break the reveal interaction.
+    expect(revealedHtml).toMatch(/<button[^>]*type="button"[^>]*focus-visible:ring/);
+  });
 });
