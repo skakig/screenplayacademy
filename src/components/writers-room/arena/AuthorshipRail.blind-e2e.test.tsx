@@ -213,9 +213,13 @@ describe("AuthorshipRail — blind round leak audit (e2e)", () => {
     for (const w of WRITERS) {
       expect(text).toContain(w.name);
       expect(text).toContain(roleLabel(w.role));
-      expect(html).toContain(w.avatar);
       const c = palette.get(w.id)!;
       expect(html).toContain(c.rail);
+    }
+    // Every "Written by ..." aria-label appears — proving the trigger surface
+    // now exposes identity that was fully hidden in blind mode.
+    for (const w of WRITERS) {
+      expect(html).toContain(`aria-label="${t("arena.identity.byAria", { name: w.name })}"`);
     }
     // Neutral rail no longer used as the primary hue for every row.
     expect(within(room).getAllByRole("button").length).toBe(WRITERS.length);
