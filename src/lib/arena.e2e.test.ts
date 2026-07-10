@@ -684,4 +684,105 @@ describe("Arena Mode — full lifecycle", () => {
       }),
     ).rejects.toThrow(/already has an active Arena round/i);
   });
+
+  it("keeps the authorship rail muted while blind, then reveals correct initials and identity at results time", async () => {
+    // Host creates a BLIND round so voting must redact identity.
+    const session = await createArenaSession({
+      projectId: PROJECT_ID,
+      title: "Masked Monologues",
+      mode: "villain_monologue",
+      prompt: "Speak without a face.",
+      durationSeconds: 60,
+      entryReveal: "blind",
+    });
+    fake.state.currentUserId = WRITER_ID;
+    await joinArenaSession(session, "writer");
+    fake.state.currentUserId = VOTER_ID;
+    await joinArenaSession(session, "judge");
+
+    fake.state.currentUserId = HOST_ID;
+    await startArenaRound(session.id);
+
+    const hostDraft = await saveEntryDraft(session, {
+      title: "Host Piece",
+      body: "A whisper in the dark.",
+    });
+    await submitEntry(hostDraft.id);
+    fake.state.currentUserId = WRITER_ID;
+    const writerDraft = await saveEntryDraft(session, {
+      title: "Writer Piece",
+      body: "A shout in the light.",
+    });
+    await submitEntry(writerDraft.id);
+
+    // --- Voting phase: rail must be neutral / identity hidden ---
+    vi.setSystemTime(new Date(Date.now() + 75_000));
+    await advanceArenaRoundIfDue(session.id);
+
+    fake.state.currentUserId = VOTER_ID;
+    const blindEntries = await listVotingEntries(session.id);
+    expect(blindEntries).toHaveLength(2);
+    for (const row of blindEntries) {
+      // Server-side redaction: no author leaks into the voting feed.
+      expect(row.author_id).toBeNull();
+      expect(row.anonymous_label).toMatch(/^Writer #\d+$/);
+    }
+
+    // Palette built from redacted rows collapses everyone to the neutral slot,
+    // so no writer-specific hue can bleed through during voting.
+    const blindPalette = buildAuthorshipPalette(
+      session.id,
+      blindEntries.map((e) => e.author_id ?? ""),
+    );
+    // Empty ids skipped → no per-writer colors assigned while blind.
+    expect(blindPalette.size).toBe(0);
+
+    // Rank + finalize so results unlock.
+    const high = {
+      originality: 5,
+      characterTruth: 5,
+      cinematicValue: 5,
+      emotionalImpact: 5,
+      craft: 5,
+    };
+    const low = { ...high, originality: 2, characterTruth: 2, cinematicValue: 2, emotionalImpact: 2, craft: 2 };
+    // Use the plaintext entries feed to get real ids for voting bookkeeping.
+    fake.state.currentUserId = HOST_ID;
+    const plain = await listEntries(session.id);
+    const writerEntry = plain.find((e) => e.author_id === WRITER_ID)!;
+    const hostEntry = plain.find((e) => e.author_id === HOST_ID)!;
+    for (const voter of [HOST_ID, WRITER_ID, VOTER_ID]) {
+      fake.state.currentUserId = voter;
+      await castArenaVote({ session, entryId: writerEntry.id, scores: high });
+      await castArenaVote({ session, entryId: hostEntry.id, scores: low });
+    }
+    fake.state.currentUserId = HOST_ID;
+    const finalized = await finalizeArenaRound(session.id);
+    expect(finalized.status).toBe("complete");
+
+    // --- Results phase: identities resolve, palette assigns distinct slots ---
+    const authorIds = plain.map((e) => e.author_id);
+    const identities = await getProjectMemberIdentities(PROJECT_ID, authorIds);
+    expect(identities.get(HOST_ID)?.display_name).toBe("Ava Host");
+    expect(identities.get(WRITER_ID)?.display_name).toBe("Bram Writer");
+    expect(initialsFor(identities.get(HOST_ID)!.display_name)).toBe("AH");
+    expect(initialsFor(identities.get(WRITER_ID)!.display_name)).toBe("BW");
+
+    const namedPalette = buildAuthorshipPalette(session.id, authorIds);
+    const hostColor = namedPalette.get(HOST_ID)!;
+    const writerColor = namedPalette.get(WRITER_ID)!;
+    expect(hostColor).toBeTruthy();
+    expect(writerColor).toBeTruthy();
+    // Distinct writers get distinct rail hues — no color collision.
+    expect(hostColor.rail).not.toBe(writerColor.rail);
+    // And neither hue is the neutral slot (that's blind-only).
+    expect(hostColor.rail).not.toBe(NEUTRAL_AUTHORSHIP_COLOR.rail);
+    expect(writerColor.rail).not.toBe(NEUTRAL_AUTHORSHIP_COLOR.rail);
+
+    // Determinism: rebuilding the palette yields the same slots.
+    const rebuilt = buildAuthorshipPalette(session.id, authorIds);
+    expect(rebuilt.get(HOST_ID)!.rail).toBe(hostColor.rail);
+    expect(rebuilt.get(WRITER_ID)!.rail).toBe(writerColor.rail);
+  });
 });
+
