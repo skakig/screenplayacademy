@@ -374,7 +374,7 @@ const fake = vi.hoisted(() => {
         (e) => e.session_id === sessionId && e.status === "submitted",
       );
       const blind =
-        session.entry_reveal === "blind" && session.status !== "complete";
+        session.entry_reveal === "blind_until_results" && session.status !== "complete";
       const rows = entries.map((e, i) => ({
         entry_id: e.id,
         session_id: sessionId,
@@ -693,7 +693,7 @@ describe("Arena Mode — full lifecycle", () => {
       mode: "villain_monologue",
       prompt: "Speak without a face.",
       durationSeconds: 60,
-      entryReveal: "blind",
+      entryReveal: "blind_until_results",
     });
     fake.state.currentUserId = WRITER_ID;
     await joinArenaSession(session, "writer");
