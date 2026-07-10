@@ -28,6 +28,11 @@ const WRITER_ID = "user-writer";
 const VOTER_ID = "user-voter";
 const PROJECT_ID = "project-1";
 
+const state = vi.hoisted(() => ({
+  currentUserId: "user-host",
+  idSeq: 0,
+}));
+
 let currentUserId = HOST_ID;
 let idSeq = 0;
 const nextId = (prefix: string) => `${prefix}-${++idSeq}`;
