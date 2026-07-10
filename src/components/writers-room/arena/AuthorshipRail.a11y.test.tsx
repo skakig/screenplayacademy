@@ -158,6 +158,7 @@ describe("AuthorshipRail accessibility", () => {
     // hover/focus; it isn't rendered in static markup until opened).
     expect(revealedHtml).not.toContain(roleUnknownFallback);
     expect(revealedHtml).not.toMatch(/co_writer|producer|director/);
+    // Anonymous label from the blind phase must NOT bleed into the revealed
     // markup — the transition swaps identity cleanly.
     expect(revealedHtml).not.toContain(anonymousLabel);
     // Rail switches from neutral to the writer's assigned hue.
