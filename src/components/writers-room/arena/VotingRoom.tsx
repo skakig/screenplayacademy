@@ -155,7 +155,7 @@ export function VotingRoom({ session, role, projectId }: Props) {
               ? identitiesQ.data?.get(e.author_id)
               : null;
             const color =
-              (e.author_id && palette.get(e.author_id)) ??
+              (e.author_id ? palette.get(e.author_id) : undefined) ??
               NEUTRAL_AUTHORSHIP_COLOR;
             return (
               <EntryCard
