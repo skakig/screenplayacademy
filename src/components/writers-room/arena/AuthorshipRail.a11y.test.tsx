@@ -153,9 +153,11 @@ describe("AuthorshipRail accessibility", () => {
     expect(revealedHtml).toContain(
       `aria-label="${t("arena.identity.byAria", { name: unknownFallback })}"`,
     );
-    // Popover detail surfaces the localized role fallback since role is null.
-    expect(revealedHtml).toContain(roleUnknownFallback);
-    // Anonymous label from the blind phase must NOT bleed into the revealed
+    // Role slot in the chip is intentionally omitted when role is null (the
+    // popover detail surfaces the localized "Project member" fallback on
+    // hover/focus; it isn't rendered in static markup until opened).
+    expect(revealedHtml).not.toContain(roleUnknownFallback);
+    expect(revealedHtml).not.toMatch(/co_writer|producer|director/);
     // markup — the transition swaps identity cleanly.
     expect(revealedHtml).not.toContain(anonymousLabel);
     // Rail switches from neutral to the writer's assigned hue.
