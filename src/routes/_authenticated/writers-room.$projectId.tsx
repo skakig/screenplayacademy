@@ -22,9 +22,10 @@ import { ProductionBoardPanel } from "@/components/writers-room/board/Production
 import { SuggestionsPanel } from "@/components/writers-room/suggestions/SuggestionsPanel";
 import { useProjectSuggestions } from "@/components/writers-room/suggestions/useProjectSuggestions";
 import { LiveCollabLabPanel } from "@/components/writers-room/live/LiveCollabLabPanel";
+import { ArenaPanel } from "@/components/writers-room/arena/ArenaPanel";
 import { PresenceProvider, usePresence } from "@/lib/presence/PresenceProvider";
 import { PresencePanel } from "@/components/writers-room/presence/PresencePanel";
-import { useLiveSceneCollabEnabled } from "@/lib/featureFlags";
+import { useArenaEnabled, useLiveSceneCollabEnabled } from "@/lib/featureFlags";
 import { fetchProjectRole, wrKeys } from "@/lib/collab";
 import { t } from "@/lib/i18n/t";
 
