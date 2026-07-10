@@ -510,14 +510,22 @@ import {
   createArenaSession,
   endArenaRound,
   finalizeArenaRound,
+  getProjectMemberIdentities,
   joinArenaSession,
   listEntries,
   listSessionAwards,
+  listVotingEntries,
   promoteEntryToSuggestion,
   saveEntryDraft,
   startArenaRound,
   submitEntry,
 } from "@/lib/arena";
+import {
+  NEUTRAL_AUTHORSHIP_COLOR,
+  buildAuthorshipPalette,
+  initialsFor,
+} from "@/components/writers-room/arena/authorshipPalette";
+
 
 describe("Arena Mode — full lifecycle", () => {
   beforeEach(() => {
