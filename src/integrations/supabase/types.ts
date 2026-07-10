@@ -2718,6 +2718,7 @@ export type Database = {
       get_usage_snapshot: {
         Args: { _environment?: string }
         Returns: {
+          credits_remaining: number
           feature: string
           monthly_limit: number
           tier: string
