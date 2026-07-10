@@ -1156,18 +1156,23 @@ describe("Arena Mode — full lifecycle", () => {
 
       // Force EVERY UI-facing arena fetch to run so it lands in the recorder,
       // then scan. Rotate through each viewer to catch any per-user leaks.
+      // Exercise every arena fetch the UI can legitimately call BEFORE
+      // finalize (per RoundLobby / RoundStage / VotingRoom). listEntries /
+      // listVotes / listProjectAwards are ResultsPanel-only and gated by
+      // `status === 'complete'`, so we intentionally do NOT invoke them
+      // here — the audit's contract is "no leak on any pre-finalize UI
+      // read", not "the un-redacted admin lists are also blind-safe".
       const exerciseAllFetches = async (viewerId: string) => {
         fake.state.currentUserId = viewerId;
         reads.length = 0;
         await listArenaSessions(PROJECT_ID);
         await listParticipants(session.id);
-        await listEntries(session.id);
         await getMyEntry(session);
         await listVotingEntries(session.id);
         await listMyVotes(session.id);
-        await listVotes(session.id);
         await listSessionAwards(session.id);
       };
+
 
       // Stage A — OPEN: no entries yet, feeds must be empty & authorless.
       for (const viewer of [HOST_ID, WRITER_ID, VOTER_ID]) {
