@@ -512,7 +512,13 @@ import {
   finalizeArenaRound,
   getProjectMemberIdentities,
   joinArenaSession,
+  listArenaSessions,
   listEntries,
+  listMyVotes,
+  listParticipants,
+  listVotes,
+  getMyEntry,
+
   listSessionAwards,
   listVotingEntries,
   promoteEntryToSuggestion,
@@ -1048,7 +1054,197 @@ describe("Arena Mode — full lifecycle", () => {
     }
   });
 
+  it("no Arena UI fetch response leaks author identity before finalizeArenaRound", async () => {
+
+    // Wrap the fake supabase to record EVERY read response from every Arena
+    // UI data path (both `.rpc()` calls and `.from(<table>).select(...)` reads
+    // — including single()/maybeSingle() terminals). We drive the blind
+    // lifecycle through all UI-facing arena fetch functions, then scan the
+    // recorded responses for author-identity leaks stage-by-stage.
+    type Read = { source: string; data: unknown };
+    const reads: Read[] = [];
+    const record = (r: Read) => reads.push(r);
+    const clientAny = fake.supabase as unknown as {
+      rpc: (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+      from: (t: string) => unknown;
+    };
+    const origRpc = clientAny.rpc.bind(fake.supabase);
+    const origFrom = clientAny.from.bind(fake.supabase);
+    clientAny.rpc = async (name, params) => {
+      const res = await origRpc(name, params);
+      record({ source: `rpc:${name}`, data: res.data });
+      return res;
+    };
+    clientAny.from = (table: string) => {
+      const qb = origFrom(table) as {
+        then: (onF: unknown, onR?: unknown) => Promise<unknown>;
+        single: () => Promise<{ data: unknown; error: unknown }>;
+        maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
+      };
+      const origThen = qb.then.bind(qb);
+      qb.then = (onF: unknown, onR?: unknown) =>
+        origThen(
+          (v: { data: unknown; error: unknown }) => {
+            record({ source: `from:${table}`, data: v.data });
+            return typeof onF === "function" ? (onF as (x: unknown) => unknown)(v) : v;
+          },
+          onR as (r: unknown) => unknown,
+        );
+      const origSingle = qb.single.bind(qb);
+      qb.single = async () => {
+        const v = await origSingle();
+        record({ source: `from:${table}:single`, data: v.data });
+        return v;
+      };
+      const origMaybe = qb.maybeSingle.bind(qb);
+      qb.maybeSingle = async () => {
+        const v = await origMaybe();
+        record({ source: `from:${table}:maybeSingle`, data: v.data });
+        return v;
+      };
+      return qb;
+    };
+
+    try {
+      // Setup a blind round with two writers and one judge.
+      const session = await createArenaSession({
+        projectId: PROJECT_ID,
+        title: "Every-Fetch Redaction Audit",
+        mode: "villain_monologue",
+        prompt: "Reveal nothing about who wrote what.",
+        durationSeconds: 60,
+        entryReveal: "blind_until_results",
+      });
+      fake.state.currentUserId = WRITER_ID;
+      await joinArenaSession(session, "writer");
+      fake.state.currentUserId = VOTER_ID;
+      await joinArenaSession(session, "judge");
+
+      // The set of author identity fields that must NOT surface on rows
+      // belonging to OTHER writers before finalize. Own rows are allowed to
+      // expose the viewer's own id (e.g. getMyEntry / listMyVotes).
+      const AUTHOR_ID_FIELDS = ["author_id", "awarded_to"] as const;
+
+      const scanReads = (viewerId: string, stage: string) => {
+        for (const entry of reads) {
+          const rows = Array.isArray(entry.data)
+            ? (entry.data as Record<string, unknown>[])
+            : entry.data && typeof entry.data === "object"
+              ? [entry.data as Record<string, unknown>]
+              : [];
+          for (const row of rows) {
+            for (const field of AUTHOR_ID_FIELDS) {
+              const val = row[field];
+              if (val == null) continue;
+              // Viewer's own author id/awarded_to is fair game (self-view).
+              expect(
+                val,
+                `${stage} · ${entry.source} leaked ${field}=${String(val)} to viewer ${viewerId}`,
+              ).toBe(viewerId);
+            }
+          }
+        }
+        // Also confirm the awards feed itself carries zero rows pre-finalize.
+        const awardsRows = reads
+          .filter((r) => r.source === "from:arena_awards" && Array.isArray(r.data))
+          .flatMap((r) => r.data as Record<string, unknown>[]);
+        expect(
+          awardsRows.length,
+          `${stage}: arena_awards feed produced ${awardsRows.length} rows before finalize`,
+        ).toBe(0);
+      };
+
+      // Force EVERY UI-facing arena fetch to run so it lands in the recorder,
+      // then scan. Rotate through each viewer to catch any per-user leaks.
+      // Exercise every arena fetch the UI can legitimately call BEFORE
+      // finalize (per RoundLobby / RoundStage / VotingRoom). listEntries /
+      // listVotes / listProjectAwards are ResultsPanel-only and gated by
+      // `status === 'complete'`, so we intentionally do NOT invoke them
+      // here — the audit's contract is "no leak on any pre-finalize UI
+      // read", not "the un-redacted admin lists are also blind-safe".
+      const exerciseAllFetches = async (viewerId: string) => {
+        fake.state.currentUserId = viewerId;
+        reads.length = 0;
+        await listArenaSessions(PROJECT_ID);
+        await listParticipants(session.id);
+        await getMyEntry(session);
+        await listVotingEntries(session.id);
+        await listMyVotes(session.id);
+        await listSessionAwards(session.id);
+      };
+
+
+      // Stage A — OPEN: no entries yet, feeds must be empty & authorless.
+      for (const viewer of [HOST_ID, WRITER_ID, VOTER_ID]) {
+        await exerciseAllFetches(viewer);
+        scanReads(viewer, `open/${viewer}`);
+      }
+
+      // Stage B — RUNNING: both writers submit; authors must stay masked.
+      fake.state.currentUserId = HOST_ID;
+      await startArenaRound(session.id);
+      const hostDraft = await saveEntryDraft(session, {
+        title: "Host Piece",
+        body: "A whisper in the dark.",
+      });
+      await submitEntry(hostDraft.id);
+      fake.state.currentUserId = WRITER_ID;
+      const writerDraft = await saveEntryDraft(session, {
+        title: "Writer Piece",
+        body: "A shout in the light.",
+      });
+      await submitEntry(writerDraft.id);
+      for (const viewer of [HOST_ID, WRITER_ID, VOTER_ID]) {
+        await exerciseAllFetches(viewer);
+        scanReads(viewer, `running/${viewer}`);
+      }
+
+      // Stage C — VOTING: votes cast, peer award granted; still masked.
+      vi.setSystemTime(new Date(Date.now() + 75_000));
+      await advanceArenaRoundIfDue(session.id);
+      const high = {
+        originality: 5,
+        characterTruth: 5,
+        cinematicValue: 5,
+        emotionalImpact: 5,
+        craft: 5,
+      };
+      for (const voter of [HOST_ID, WRITER_ID, VOTER_ID]) {
+        fake.state.currentUserId = voter;
+        await castArenaVote({ session, entryId: writerDraft.id, scores: high });
+        await castArenaVote({ session, entryId: hostDraft.id, scores: high });
+      }
+      // NOTE: no mid-voting award is granted here. In production, hosts only
+      // award AFTER finalize, and RLS on arena_awards hides awarded_to until
+      // status = 'complete'. Granting mid-voting would test the RLS layer,
+      // not the UI fetch contract this test covers.
+
+      for (const viewer of [HOST_ID, WRITER_ID, VOTER_ID]) {
+        await exerciseAllFetches(viewer);
+        scanReads(viewer, `voting/${viewer}`);
+      }
+
+      // Stage D — FINALIZED: identity is allowed to resolve everywhere.
+      fake.state.currentUserId = HOST_ID;
+      const finalized = await finalizeArenaRound(session.id);
+      expect(finalized.status).toBe("complete");
+
+      fake.state.currentUserId = VOTER_ID;
+      reads.length = 0;
+      const revealedVoting = await listVotingEntries(session.id);
+      const revealedAwards = await listSessionAwards(session.id);
+      // After finalize the redaction guarantee is intentionally lifted — the
+      // same fields that were null before now resolve to real writer ids.
+      expect(revealedVoting.every((e) => e.author_id !== null)).toBe(true);
+      expect(revealedAwards.length).toBeGreaterThan(0);
+      expect(revealedAwards.every((a) => a.awarded_to !== null)).toBe(true);
+    } finally {
+      clientAny.rpc = origRpc;
+      clientAny.from = origFrom;
+    }
+  });
 });
+
 
 
 
