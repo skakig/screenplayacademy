@@ -23,6 +23,7 @@ type Props = {
 export function AppShell({ children, focus = false, title, headerExtras }: Props) {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { open: creditsOpen, focus: creditsFocus, closeDialog } = useCreditsUpsell();
   const signOut = async () => {
     await qc.cancelQueries();
     qc.clear();
@@ -30,10 +31,19 @@ export function AppShell({ children, focus = false, title, headerExtras }: Props
     navigate({ to: "/auth", replace: true });
   };
 
+  const creditsDialog = (
+    <BuyCreditsDialog
+      open={creditsOpen}
+      onOpenChange={(o) => (o ? null : closeDialog())}
+      focus={creditsFocus ?? undefined}
+    />
+  );
+
   if (focus) {
     return (
       <div className="min-h-screen flex flex-col">
         <main className="flex-1">{children}</main>
+        {creditsDialog}
       </div>
     );
   }
