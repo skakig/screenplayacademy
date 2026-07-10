@@ -201,8 +201,9 @@ async function handleWebhookEvent(event: { type: string; data: { object: any } }
       await handleChargeDispute(event.data.object, env);
       break;
     case "checkout.session.completed":
+      await handleCheckoutSessionCompleted(event.data.object, env);
+      break;
     case "customer.subscription.trial_will_end":
-      // Ack only — subscription.* events do the persistence.
       console.log("Ack event:", event.type);
       break;
     default:
