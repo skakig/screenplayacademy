@@ -22,9 +22,10 @@ import { ProductionBoardPanel } from "@/components/writers-room/board/Production
 import { SuggestionsPanel } from "@/components/writers-room/suggestions/SuggestionsPanel";
 import { useProjectSuggestions } from "@/components/writers-room/suggestions/useProjectSuggestions";
 import { LiveCollabLabPanel } from "@/components/writers-room/live/LiveCollabLabPanel";
+import { ArenaPanel } from "@/components/writers-room/arena/ArenaPanel";
 import { PresenceProvider, usePresence } from "@/lib/presence/PresenceProvider";
 import { PresencePanel } from "@/components/writers-room/presence/PresencePanel";
-import { useLiveSceneCollabEnabled } from "@/lib/featureFlags";
+import { useArenaEnabled, useLiveSceneCollabEnabled } from "@/lib/featureFlags";
 import { fetchProjectRole, wrKeys } from "@/lib/collab";
 import { t } from "@/lib/i18n/t";
 
@@ -170,10 +171,12 @@ function WritersRoomTabs({
   const openSuggestionCount = openSuggestions.data?.length ?? 0;
   const [tab, setTab] = useState("team");
   const liveEnabled = useLiveSceneCollabEnabled();
+  const arenaEnabled = useArenaEnabled();
   const prevLiveEnabled = useRef(liveEnabled);
+  const prevArenaEnabled = useRef(arenaEnabled);
 
-  // If the experimental switch flips off mid-session, leave the Live tab
-  // gracefully so the panel unmounts (which tears down any active session).
+  // If an experimental switch flips off mid-session, leave that tab
+  // gracefully so its panel unmounts.
   useEffect(() => {
     if (prevLiveEnabled.current && !liveEnabled) {
       if (tab === "live") setTab("team");
@@ -181,6 +184,12 @@ function WritersRoomTabs({
     }
     prevLiveEnabled.current = liveEnabled;
   }, [liveEnabled, tab]);
+  useEffect(() => {
+    if (prevArenaEnabled.current && !arenaEnabled) {
+      if (tab === "arena") setTab("team");
+    }
+    prevArenaEnabled.current = arenaEnabled;
+  }, [arenaEnabled, tab]);
 
   const { setActiveArea } = usePresence();
   useEffect(() => {
@@ -225,6 +234,14 @@ function WritersRoomTabs({
               {t("collab.tabs.live")}
               <span className="rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] px-1.5 py-0.5 leading-none uppercase tracking-wider">
                 {t("collab.live.experimental")}
+              </span>
+            </TabsTrigger>
+          )}
+          {arenaEnabled && (
+            <TabsTrigger value="arena" className="gap-2">
+              {t("collab.tabs.arena")}
+              <span className="rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] px-1.5 py-0.5 leading-none uppercase tracking-wider">
+                {t("arena.badge.experimental")}
               </span>
             </TabsTrigger>
           )}
@@ -279,6 +296,11 @@ function WritersRoomTabs({
         {liveEnabled && (
           <TabsContent value="live" className="mt-0">
             <LiveCollabLabPanel projectId={projectId} role={role} />
+          </TabsContent>
+        )}
+        {arenaEnabled && (
+          <TabsContent value="arena" className="mt-0">
+            <ArenaPanel projectId={projectId} role={role} />
           </TabsContent>
         )}
       </Tabs>

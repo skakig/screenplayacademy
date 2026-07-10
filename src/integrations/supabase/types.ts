@@ -141,6 +141,282 @@ export type Database = {
           },
         ]
       }
+      arena_awards: {
+        Row: {
+          award_type: Database["public"]["Enums"]["arena_award_type"]
+          awarded_to: string
+          created_at: string
+          entry_id: string
+          id: string
+          project_id: string
+          session_id: string
+          title: string | null
+        }
+        Insert: {
+          award_type: Database["public"]["Enums"]["arena_award_type"]
+          awarded_to: string
+          created_at?: string
+          entry_id: string
+          id?: string
+          project_id: string
+          session_id: string
+          title?: string | null
+        }
+        Update: {
+          award_type?: Database["public"]["Enums"]["arena_award_type"]
+          awarded_to?: string
+          created_at?: string
+          entry_id?: string
+          id?: string
+          project_id?: string
+          session_id?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_awards_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "arena_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_awards_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_awards_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "arena_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      arena_entries: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          project_id: string
+          session_id: string
+          status: Database["public"]["Enums"]["arena_entry_status"]
+          submitted_at: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body?: string
+          created_at?: string
+          id?: string
+          project_id: string
+          session_id: string
+          status?: Database["public"]["Enums"]["arena_entry_status"]
+          submitted_at?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          project_id?: string
+          session_id?: string
+          status?: Database["public"]["Enums"]["arena_entry_status"]
+          submitted_at?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_entries_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "arena_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      arena_participants: {
+        Row: {
+          id: string
+          joined_at: string
+          project_id: string
+          role: Database["public"]["Enums"]["arena_participant_role"]
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          project_id: string
+          role?: Database["public"]["Enums"]["arena_participant_role"]
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          project_id?: string
+          role?: Database["public"]["Enums"]["arena_participant_role"]
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_participants_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "arena_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      arena_sessions: {
+        Row: {
+          created_at: string
+          created_by: string
+          duration_seconds: number
+          ends_at: string | null
+          entry_reveal: Database["public"]["Enums"]["arena_entry_reveal"]
+          id: string
+          judging_mode: Database["public"]["Enums"]["arena_judging_mode"]
+          mode: Database["public"]["Enums"]["arena_mode"]
+          project_id: string
+          prompt: string
+          rules: Json
+          stakes: Database["public"]["Enums"]["arena_stakes"]
+          starts_at: string | null
+          status: Database["public"]["Enums"]["arena_status"]
+          submission_grace_seconds: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          duration_seconds: number
+          ends_at?: string | null
+          entry_reveal?: Database["public"]["Enums"]["arena_entry_reveal"]
+          id?: string
+          judging_mode?: Database["public"]["Enums"]["arena_judging_mode"]
+          mode: Database["public"]["Enums"]["arena_mode"]
+          project_id: string
+          prompt: string
+          rules?: Json
+          stakes?: Database["public"]["Enums"]["arena_stakes"]
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["arena_status"]
+          submission_grace_seconds?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          duration_seconds?: number
+          ends_at?: string | null
+          entry_reveal?: Database["public"]["Enums"]["arena_entry_reveal"]
+          id?: string
+          judging_mode?: Database["public"]["Enums"]["arena_judging_mode"]
+          mode?: Database["public"]["Enums"]["arena_mode"]
+          project_id?: string
+          prompt?: string
+          rules?: Json
+          stakes?: Database["public"]["Enums"]["arena_stakes"]
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["arena_status"]
+          submission_grace_seconds?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_sessions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      arena_votes: {
+        Row: {
+          comment: string | null
+          created_at: string
+          entry_id: string
+          id: string
+          score_character_truth: number
+          score_cinematic_value: number
+          score_craft: number
+          score_emotional_impact: number
+          score_originality: number
+          session_id: string
+          voter_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          entry_id: string
+          id?: string
+          score_character_truth: number
+          score_cinematic_value: number
+          score_craft: number
+          score_emotional_impact: number
+          score_originality: number
+          session_id: string
+          voter_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          entry_id?: string
+          id?: string
+          score_character_truth?: number
+          score_cinematic_value?: number
+          score_craft?: number
+          score_emotional_impact?: number
+          score_originality?: number
+          session_id?: string
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_votes_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "arena_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_votes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "arena_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audio_assets: {
         Row: {
           audio_url: string | null
@@ -2723,6 +2999,34 @@ export type Database = {
           status: string
         }[]
       }
+      advance_arena_round_if_due: {
+        Args: { _session_id: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          duration_seconds: number
+          ends_at: string | null
+          entry_reveal: Database["public"]["Enums"]["arena_entry_reveal"]
+          id: string
+          judging_mode: Database["public"]["Enums"]["arena_judging_mode"]
+          mode: Database["public"]["Enums"]["arena_mode"]
+          project_id: string
+          prompt: string
+          rules: Json
+          stakes: Database["public"]["Enums"]["arena_stakes"]
+          starts_at: string | null
+          status: Database["public"]["Enums"]["arena_status"]
+          submission_grace_seconds: number
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "arena_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       can_accept_suggestion: { Args: { _project_id: string }; Returns: boolean }
       can_archive_suggestion: {
         Args: { _project_id: string }
@@ -2757,6 +3061,62 @@ export type Database = {
         Args: { check_env?: string; user_uuid: string }
         Returns: string
       }
+      end_arena_round: {
+        Args: { _session_id: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          duration_seconds: number
+          ends_at: string | null
+          entry_reveal: Database["public"]["Enums"]["arena_entry_reveal"]
+          id: string
+          judging_mode: Database["public"]["Enums"]["arena_judging_mode"]
+          mode: Database["public"]["Enums"]["arena_mode"]
+          project_id: string
+          prompt: string
+          rules: Json
+          stakes: Database["public"]["Enums"]["arena_stakes"]
+          starts_at: string | null
+          status: Database["public"]["Enums"]["arena_status"]
+          submission_grace_seconds: number
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "arena_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      finalize_arena_round: {
+        Args: { _session_id: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          duration_seconds: number
+          ends_at: string | null
+          entry_reveal: Database["public"]["Enums"]["arena_entry_reveal"]
+          id: string
+          judging_mode: Database["public"]["Enums"]["arena_judging_mode"]
+          mode: Database["public"]["Enums"]["arena_mode"]
+          project_id: string
+          prompt: string
+          rules: Json
+          stakes: Database["public"]["Enums"]["arena_stakes"]
+          starts_at: string | null
+          status: Database["public"]["Enums"]["arena_status"]
+          submission_grace_seconds: number
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "arena_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_usage_snapshot: {
         Args: { _environment?: string }
         Returns: {
@@ -2781,6 +3141,34 @@ export type Database = {
       is_project_member: { Args: { _project_id: string }; Returns: boolean }
       owns_project: { Args: { _project_id: string }; Returns: boolean }
       project_role: { Args: { _project_id: string }; Returns: string }
+      start_arena_round: {
+        Args: { _session_id: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          duration_seconds: number
+          ends_at: string | null
+          entry_reveal: Database["public"]["Enums"]["arena_entry_reveal"]
+          id: string
+          judging_mode: Database["public"]["Enums"]["arena_judging_mode"]
+          mode: Database["public"]["Enums"]["arena_mode"]
+          project_id: string
+          prompt: string
+          rules: Json
+          stakes: Database["public"]["Enums"]["arena_stakes"]
+          starts_at: string | null
+          status: Database["public"]["Enums"]["arena_status"]
+          submission_grace_seconds: number
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "arena_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       update_my_project_last_seen: {
         Args: { _project_id: string }
         Returns: undefined
@@ -2792,6 +3180,36 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      arena_award_type:
+        | "best_line"
+        | "best_dialogue"
+        | "best_twist"
+        | "best_character_truth"
+        | "funniest"
+        | "most_cinematic"
+        | "audience_choice"
+        | "studio_winner"
+      arena_entry_reveal: "named" | "blind_until_results"
+      arena_entry_status: "draft" | "submitted" | "withdrawn"
+      arena_judging_mode: "peer" | "host" | "panel" | "hybrid"
+      arena_mode:
+        | "dialogue_duel"
+        | "rewrite_relay"
+        | "scene_rescue"
+        | "adlib_character"
+        | "comedy_punchup"
+        | "villain_monologue"
+        | "pitch_blitz"
+        | "freewrite"
+      arena_participant_role: "writer" | "judge" | "viewer"
+      arena_stakes: "practice" | "ranked" | "showcase"
+      arena_status:
+        | "draft"
+        | "open"
+        | "running"
+        | "voting"
+        | "complete"
+        | "archived"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2920,6 +3338,39 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      arena_award_type: [
+        "best_line",
+        "best_dialogue",
+        "best_twist",
+        "best_character_truth",
+        "funniest",
+        "most_cinematic",
+        "audience_choice",
+        "studio_winner",
+      ],
+      arena_entry_reveal: ["named", "blind_until_results"],
+      arena_entry_status: ["draft", "submitted", "withdrawn"],
+      arena_judging_mode: ["peer", "host", "panel", "hybrid"],
+      arena_mode: [
+        "dialogue_duel",
+        "rewrite_relay",
+        "scene_rescue",
+        "adlib_character",
+        "comedy_punchup",
+        "villain_monologue",
+        "pitch_blitz",
+        "freewrite",
+      ],
+      arena_participant_role: ["writer", "judge", "viewer"],
+      arena_stakes: ["practice", "ranked", "showcase"],
+      arena_status: [
+        "draft",
+        "open",
+        "running",
+        "voting",
+        "complete",
+        "archived",
+      ],
     },
   },
 } as const
