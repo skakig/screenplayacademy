@@ -5,6 +5,8 @@ import { Check, Loader2 } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { useSubscription } from "@/hooks/useSubscription";
 import { TIER_LABEL } from "@/lib/entitlements";
+import { packByPriceId } from "@/lib/creditPacks";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/checkout/success")({
   ssr: false,
@@ -14,10 +16,16 @@ export const Route = createFileRoute("/checkout/success")({
       { name: "robots", content: "noindex" },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    session_id: typeof search.session_id === "string" ? search.session_id : undefined,
+    pack: typeof search.pack === "string" ? search.pack : undefined,
+  }),
   component: CheckoutSuccess,
 });
 
 function CheckoutSuccess() {
+  const { pack: packPriceId } = Route.useSearch();
+  const pack = packByPriceId(packPriceId);
   // Stripe checkout returns the user to us right after payment, but the subscription
   // row is created by the async webhook — usually within 1–5s. Poll every
   // 1.5s (up to ~30s) so the user sees their new plan appear instead of a
