@@ -49,8 +49,12 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       userId?: string;
       returnUrl: string;
       environment: StripeEnv;
+      promotionCode?: string;
     }) => {
       if (!/^[a-zA-Z0-9_-]+$/.test(data.priceId)) throw new Error("Invalid priceId");
+      if (data.promotionCode !== undefined && !/^[a-zA-Z0-9_-]{2,64}$/.test(data.promotionCode)) {
+        throw new Error("Invalid promotionCode");
+      }
       return data;
     },
   )

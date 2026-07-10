@@ -164,6 +164,14 @@ export const generateTableRead = createServerFn({ method: "POST" })
     const estimatedMinutes = Math.max(1, Math.ceil(totalWords / 150));
     await consumeUsage(supabase, "tableread_minutes", estimatedMinutes);
 
+    // ElevenLabs bills per character — meter that directly BEFORE any TTS
+    // call so an over-quota user can't drain the character pool via a
+    // long dialogue run that squeaks under the minutes cap.
+    const totalCharacters = lines.reduce((s, l) => s + l.text.length, 0);
+    if (totalCharacters > 0) {
+      await consumeUsage(supabase, "tts_characters", totalCharacters);
+    }
+
 
 
     // Create a pending row up front so the UI shows progress and we get an id
