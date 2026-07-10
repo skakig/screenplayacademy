@@ -3230,6 +3230,14 @@ export type Database = {
           entries_with_votes: number
         }[]
       }
+      get_project_member_identities: {
+        Args: { _project_id: string; _user_ids: string[] }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          user_id: string
+        }[]
+      }
       get_usage_snapshot: {
         Args: { _environment?: string }
         Returns: {
