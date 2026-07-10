@@ -7,6 +7,9 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { getStripeEnvironment, isStripeConfigured } from "@/lib/stripe";
 import { supabase } from "@/integrations/supabase/client";
+import { useSubscription } from "@/hooks/useSubscription";
+import { createCustomerPortalSession } from "@/lib/customerPortal.functions";
+import { useServerFn } from "@tanstack/react-start";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/pricing")({
