@@ -775,6 +775,14 @@ export const i18nStrings = {
   "arena.toast.finalized": "Round finalized.",
   "arena.toast.archived": "Round archived.",
   "arena.toast.awarded": "Award given.",
+  "arena.identity.you": "You",
+  "arena.identity.youChip": "You",
+  "arena.identity.unknown": "Unknown writer",
+  "arena.identity.hidden": "Hidden until results",
+  "arena.identity.hiddenAria": "Writer hidden until results are revealed",
+  "arena.identity.byAria": "Written by {{name}}",
+  "arena.identity.roleUnknown": "Project member",
+  "arena.identity.anonymousLabel": "Writer #{{n}}",
 } as const;
 
 export type I18nKey = keyof typeof i18nStrings;
