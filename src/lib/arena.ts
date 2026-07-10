@@ -1,19 +1,15 @@
 /**
  * Arena Mode v1 — timed creative writing games.
  *
- * Data access + client fetchers. Lifecycle transitions (start/end/finalize)
- * go through SECURITY DEFINER RPCs on the database so a round can never be
- * left in a partial state.
+ * All lifecycle-critical calls (create, join, submit, award, promote,
+ * archive, start/end/finalize) go through SECURITY DEFINER RPCs so the
+ * browser cannot forge project_id / awarded_to / winner values or race
+ * duplicate promotions. Ordinary reads still use RLS-scoped Data API.
  *
- * Arena data lives in its own tables. Nothing here mutates canonical
- * screenplay content — promotion into a script always flows through
- * `createSuggestion` in `@/lib/suggestions`.
+ * Nothing in this file mutates canonical screenplay content — promotion
+ * only writes to `public.suggestions`.
  */
 import { supabase } from "@/integrations/supabase/client";
-import {
-  createSuggestion,
-  type SuggestionType,
-} from "@/lib/suggestions";
 
 export type ArenaMode =
   | "dialogue_duel"
@@ -34,9 +30,7 @@ export type ArenaStatus =
   | "archived";
 
 export type ArenaParticipantRole = "writer" | "judge" | "viewer";
-
 export type ArenaEntryStatus = "draft" | "submitted" | "withdrawn";
-
 export type ArenaAwardType =
   | "best_line"
   | "best_dialogue"
@@ -46,6 +40,9 @@ export type ArenaAwardType =
   | "most_cinematic"
   | "audience_choice"
   | "studio_winner";
+export type ArenaJudgingMode = "peer" | "host" | "panel" | "hybrid";
+export type ArenaEntryReveal = "named" | "blind_until_results";
+export type ArenaStakes = "practice" | "ranked" | "showcase";
 
 export const ARENA_MODES: ArenaMode[] = [
   "dialogue_duel",
@@ -57,9 +54,7 @@ export const ARENA_MODES: ArenaMode[] = [
   "pitch_blitz",
   "freewrite",
 ];
-
 export const ARENA_DURATION_PRESETS = [180, 300, 420, 600, 900] as const;
-
 export const ARENA_AWARD_TYPES: ArenaAwardType[] = [
   "best_line",
   "best_dialogue",
@@ -83,9 +78,9 @@ export interface ArenaSessionRow {
   starts_at: string | null;
   ends_at: string | null;
   rules: Record<string, unknown>;
-  judging_mode: "peer" | "host" | "panel" | "hybrid";
-  entry_reveal: "named" | "blind_until_results";
-  stakes: "practice" | "ranked" | "showcase";
+  judging_mode: ArenaJudgingMode;
+  entry_reveal: ArenaEntryReveal;
+  stakes: ArenaStakes;
   submission_grace_seconds: number;
   created_at: string;
   updated_at: string;
@@ -113,6 +108,19 @@ export interface ArenaEntryRow {
   updated_at: string;
 }
 
+/** Blind-safe entry row returned by get_arena_voting_entries. */
+export interface ArenaVotingEntry {
+  entry_id: string;
+  session_id: string;
+  anonymous_label: string;
+  title: string | null;
+  body: string;
+  status: ArenaEntryStatus;
+  /** null when blind mode redacts identity */
+  author_id: string | null;
+  submitted_at: string | null;
+}
+
 export interface ArenaVoteRow {
   id: string;
   session_id: string;
@@ -138,6 +146,19 @@ export interface ArenaAwardRow {
   created_at: string;
 }
 
+export interface ArenaVotingProgress {
+  eligible_voters: number;
+  completed_voters: number;
+  entries_with_votes: number;
+  current_user_has_voted: boolean;
+}
+
+export interface ProjectMemberIdentity {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+}
+
 export const ARENA_LIMITS = {
   title: 120,
   prompt: 2000,
@@ -152,19 +173,30 @@ export const arenaKeys = {
   participants: (sessionId: string) =>
     ["arena", "participants", sessionId] as const,
   entries: (sessionId: string) => ["arena", "entries", sessionId] as const,
+  votingEntries: (sessionId: string) =>
+    ["arena", "voting-entries", sessionId] as const,
   votes: (sessionId: string) => ["arena", "votes", sessionId] as const,
+  myVotes: (sessionId: string) => ["arena", "votes", "mine", sessionId] as const,
+  progress: (sessionId: string) => ["arena", "progress", sessionId] as const,
   awards: (projectId: string) => ["arena", "awards", projectId] as const,
   sessionAwards: (sessionId: string) =>
     ["arena", "awards", "session", sessionId] as const,
+  identities: (projectId: string) =>
+    ["arena", "identities", projectId] as const,
 };
 
-// Loose row shape returned by generic supabase reads on these new tables.
-// The generated types file will pick these up on the next regeneration; we
-// cast here so we compile cleanly today.
-type Row = Record<string, unknown>;
-type SB = typeof supabase;
+// Loose generic client alias so we compile against generated types that
+// don't yet include the new RPCs / return shapes.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const tbl = (name: string) => (supabase as unknown as any).from(name) as any;
+type RpcClient = {
+  rpc: (
+    name: string,
+    params?: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { message?: string } | null }>;
+};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const rpc = (): RpcClient => supabase as unknown as any;
 
 // ----- Sessions -----------------------------------------------------------
 
@@ -197,111 +229,65 @@ export interface CreateArenaSessionInput {
   mode: ArenaMode;
   prompt: string;
   durationSeconds: number;
+  submissionGraceSeconds?: number;
+  judgingMode?: ArenaJudgingMode;
+  entryReveal?: ArenaEntryReveal;
+  stakes?: ArenaStakes;
   rules?: Record<string, unknown>;
 }
 
 export async function createArenaSession(
   input: CreateArenaSessionInput,
 ): Promise<ArenaSessionRow> {
-  const { data: userResp, error: userErr } = await supabase.auth.getUser();
-  if (userErr || !userResp?.user) throw userErr ?? new Error("Not signed in");
-  const title = input.title.trim();
-  const prompt = input.prompt.trim();
-  if (!title) throw new Error("Give the round a title.");
-  if (title.length > ARENA_LIMITS.title)
-    throw new Error(`Title too long (max ${ARENA_LIMITS.title}).`);
-  if (!prompt) throw new Error("Add a prompt for the round.");
-  if (prompt.length > ARENA_LIMITS.prompt)
-    throw new Error(`Prompt too long (max ${ARENA_LIMITS.prompt}).`);
-  if (input.durationSeconds < 60 || input.durationSeconds > 3600)
-    throw new Error("Duration must be between 1 and 60 minutes.");
-
-  const { data, error } = await tbl("arena_sessions")
-    .insert({
-      project_id: input.projectId,
-      created_by: userResp.user.id,
-      title,
-      mode: input.mode,
-      prompt,
-      duration_seconds: input.durationSeconds,
-      rules: input.rules ?? {},
-      status: "open",
-    })
-    .select("*")
-    .single();
-  if (error) throw error;
-
-  // Auto-enroll the host as a writer so they can also compete.
-  await tbl("arena_participants")
-    .insert({
-      session_id: (data as ArenaSessionRow).id,
-      project_id: input.projectId,
-      user_id: userResp.user.id,
-      role: "writer",
-    })
-    .then((r: { error: unknown }) => {
-      // ignore unique conflict if re-called
-      if (
-        r.error &&
-        (r.error as { code?: string }).code &&
-        (r.error as { code?: string }).code !== "23505"
-      ) {
-        // eslint-disable-next-line no-console
-        console.warn("host auto-join failed", r.error);
-      }
-    });
-
+  const { data, error } = await rpc().rpc("create_arena_session", {
+    _project_id: input.projectId,
+    _title: input.title.trim(),
+    _mode: input.mode,
+    _prompt: input.prompt.trim(),
+    _duration_seconds: input.durationSeconds,
+    _submission_grace_seconds: input.submissionGraceSeconds ?? 10,
+    _judging_mode: input.judgingMode ?? "peer",
+    _entry_reveal: input.entryReveal ?? "named",
+    _stakes: input.stakes ?? "practice",
+    _rules: input.rules ?? {},
+  });
+  if (error) {
+    const msg = error.message ?? "";
+    if (/one_active_per_project|duplicate key/i.test(msg)) {
+      throw new Error(
+        "This project already has an active Arena round. Finish or archive it first.",
+      );
+    }
+    throw new Error(msg || "Could not create round");
+  }
   return data as ArenaSessionRow;
 }
 
-export async function archiveArenaSession(sessionId: string) {
-  const { error } = await tbl("arena_sessions")
-    .update({ status: "archived" })
-    .eq("id", sessionId);
-  if (error) throw error;
+export async function archiveArenaSession(
+  sessionId: string,
+): Promise<ArenaSessionRow> {
+  const { data, error } = await rpc().rpc("archive_arena_session", {
+    _session_id: sessionId,
+  });
+  if (error) throw new Error(error.message ?? "Could not archive round");
+  return data as ArenaSessionRow;
 }
 
 // ----- Lifecycle RPCs -----------------------------------------------------
 
-export async function startArenaRound(
-  sessionId: string,
-): Promise<ArenaSessionRow> {
-  const { data, error } = await (supabase as unknown as {
-    rpc: (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
-  }).rpc("start_arena_round", { _session_id: sessionId });
-  if (error) throw error as Error;
+async function callLifecycle(name: string, sessionId: string) {
+  const { data, error } = await rpc().rpc(name, { _session_id: sessionId });
+  if (error) throw new Error(error.message ?? `Could not ${name}`);
   return data as ArenaSessionRow;
 }
-
-export async function advanceArenaRoundIfDue(
-  sessionId: string,
-): Promise<ArenaSessionRow> {
-  const { data, error } = await (supabase as unknown as {
-    rpc: (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
-  }).rpc("advance_arena_round_if_due", { _session_id: sessionId });
-  if (error) throw error as Error;
-  return data as ArenaSessionRow;
-}
-
-export async function endArenaRound(
-  sessionId: string,
-): Promise<ArenaSessionRow> {
-  const { data, error } = await (supabase as unknown as {
-    rpc: (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
-  }).rpc("end_arena_round", { _session_id: sessionId });
-  if (error) throw error as Error;
-  return data as ArenaSessionRow;
-}
-
-export async function finalizeArenaRound(
-  sessionId: string,
-): Promise<ArenaSessionRow> {
-  const { data, error } = await (supabase as unknown as {
-    rpc: (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
-  }).rpc("finalize_arena_round", { _session_id: sessionId });
-  if (error) throw error as Error;
-  return data as ArenaSessionRow;
-}
+export const startArenaRound = (id: string) =>
+  callLifecycle("start_arena_round", id);
+export const advanceArenaRoundIfDue = (id: string) =>
+  callLifecycle("advance_arena_round_if_due", id);
+export const endArenaRound = (id: string) =>
+  callLifecycle("end_arena_round", id);
+export const finalizeArenaRound = (id: string) =>
+  callLifecycle("finalize_arena_round", id);
 
 // ----- Participants -------------------------------------------------------
 
@@ -319,20 +305,13 @@ export async function listParticipants(
 export async function joinArenaSession(
   session: Pick<ArenaSessionRow, "id" | "project_id">,
   role: ArenaParticipantRole = "writer",
-): Promise<void> {
-  const { data: userResp } = await supabase.auth.getUser();
-  if (!userResp?.user) throw new Error("Not signed in");
-  const { error } = await tbl("arena_participants")
-    .upsert(
-      {
-        session_id: session.id,
-        project_id: session.project_id,
-        user_id: userResp.user.id,
-        role,
-      },
-      { onConflict: "session_id,user_id" },
-    );
-  if (error) throw error;
+): Promise<ArenaParticipantRow> {
+  const { data, error } = await rpc().rpc("join_arena_session", {
+    _session_id: session.id,
+    _role: role,
+  });
+  if (error) throw new Error(error.message ?? "Could not join round");
+  return data as ArenaParticipantRow;
 }
 
 export async function leaveArenaSession(sessionId: string): Promise<void> {
@@ -389,7 +368,7 @@ export async function saveEntryDraft(
       .eq("id", existing.id)
       .select("*")
       .single();
-    if (error) throw error;
+    if (error) throw new Error(mapEntryError(error));
     return data as ArenaEntryRow;
   }
 
@@ -404,16 +383,27 @@ export async function saveEntryDraft(
     })
     .select("*")
     .single();
-  if (error) throw error;
+  if (error) throw new Error(mapEntryError(error));
   return data as ArenaEntryRow;
 }
 
-export async function submitEntry(entryId: string): Promise<void> {
-  const { error } = await tbl("arena_entries")
-    .update({ status: "submitted", submitted_at: new Date().toISOString() })
-    .eq("id", entryId)
-    .eq("status", "draft");
-  if (error) throw error;
+function mapEntryError(err: unknown): string {
+  const msg = (err as { message?: string })?.message ?? "";
+  if (/submission window has closed/i.test(msg))
+    return "Submission window has closed.";
+  if (/submitted entries cannot be modified/i.test(msg))
+    return "Your entry is already submitted.";
+  if (/cannot edit draft outside running round/i.test(msg))
+    return "This round is not currently running.";
+  return msg || "Could not save entry";
+}
+
+export async function submitEntry(entryId: string): Promise<ArenaEntryRow> {
+  const { data, error } = await rpc().rpc("submit_arena_entry", {
+    _entry_id: entryId,
+  });
+  if (error) throw new Error(mapEntryError(error));
+  return data as ArenaEntryRow;
 }
 
 // ----- Votes --------------------------------------------------------------
@@ -452,12 +442,54 @@ export async function castArenaVote(input: {
   if (error) throw error;
 }
 
+/** Blind-safe entries feed used during voting. */
+export async function listVotingEntries(
+  sessionId: string,
+): Promise<ArenaVotingEntry[]> {
+  const { data, error } = await rpc().rpc("get_arena_voting_entries", {
+    _session_id: sessionId,
+  });
+  if (error) throw new Error(error.message ?? "Could not load entries");
+  return (data ?? []) as ArenaVotingEntry[];
+}
+
+/** Own votes only — safe to read during voting. */
+export async function listMyVotes(
+  sessionId: string,
+): Promise<ArenaVoteRow[]> {
+  const { data: userResp } = await supabase.auth.getUser();
+  if (!userResp?.user) return [];
+  const { data, error } = await tbl("arena_votes")
+    .select("*")
+    .eq("session_id", sessionId)
+    .eq("voter_id", userResp.user.id);
+  if (error) throw error;
+  return (data ?? []) as ArenaVoteRow[];
+}
+
+/** Full votes — only readable after status = 'complete' (enforced by RLS). */
 export async function listVotes(sessionId: string): Promise<ArenaVoteRow[]> {
   const { data, error } = await tbl("arena_votes")
     .select("*")
     .eq("session_id", sessionId);
   if (error) throw error;
   return (data ?? []) as ArenaVoteRow[];
+}
+
+export async function getVotingProgress(
+  sessionId: string,
+): Promise<ArenaVotingProgress> {
+  const { data, error } = await rpc().rpc("get_arena_voting_progress", {
+    _session_id: sessionId,
+  });
+  if (error) throw new Error(error.message ?? "Could not load progress");
+  const row = Array.isArray(data) ? data[0] : data;
+  return (row ?? {
+    eligible_voters: 0,
+    completed_voters: 0,
+    entries_with_votes: 0,
+    current_user_has_voted: false,
+  }) as ArenaVotingProgress;
 }
 
 // ----- Awards -------------------------------------------------------------
@@ -486,77 +518,73 @@ export async function listProjectAwards(
 }
 
 export async function awardArenaEntry(input: {
-  session: Pick<ArenaSessionRow, "id" | "project_id">;
-  entry: Pick<ArenaEntryRow, "id" | "author_id">;
+  session: Pick<ArenaSessionRow, "id">;
+  entry: Pick<ArenaEntryRow, "id">;
   awardType: ArenaAwardType;
   title?: string | null;
 }): Promise<ArenaAwardRow> {
-  const { data, error } = await tbl("arena_awards")
-    .insert({
-      session_id: input.session.id,
-      project_id: input.session.project_id,
-      entry_id: input.entry.id,
-      awarded_to: input.entry.author_id,
-      award_type: input.awardType,
-      title: input.title ?? null,
-    })
-    .select("*")
-    .single();
-  if (error) throw error;
+  const { data, error } = await rpc().rpc("award_arena_entry", {
+    _session_id: input.session.id,
+    _entry_id: input.entry.id,
+    _award_type: input.awardType,
+    _title: input.title ?? null,
+  });
+  if (error) throw new Error(error.message ?? "Could not award entry");
   return data as ArenaAwardRow;
+}
+
+/**
+ * Resolve database-authoritative winners (co-winners supported).
+ */
+export async function resolveArenaWinners(
+  sessionId: string,
+): Promise<ArenaAwardRow[]> {
+  const { data, error } = await tbl("arena_awards")
+    .select("*")
+    .eq("session_id", sessionId)
+    .eq("award_type", "studio_winner")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as ArenaAwardRow[];
 }
 
 // ----- Promote to Suggestions --------------------------------------------
 
-/**
- * Promotes an Arena entry into the project's Suggestions queue. Never
- * writes to canonical script — the Suggestions flow owns any later
- * script mutation.
- *
- * Idempotency: guarded by checking existing suggestions with the same
- * arena metadata.
- */
 export async function promoteEntryToSuggestion(input: {
-  session: Pick<ArenaSessionRow, "id" | "project_id" | "title" | "mode">;
-  entry: Pick<ArenaEntryRow, "id" | "author_id" | "title" | "body">;
-  suggestionType?: Extract<SuggestionType, "structure_note" | "rewrite_scene">;
-}) {
-  const suggestionType = input.suggestionType ?? "structure_note";
-
-  const { data: existing } = await tbl("suggestions")
-    .select("id")
-    .eq("project_id", input.session.project_id)
-    .contains("metadata", {
-      source: "arena",
-      arena_session_id: input.session.id,
-      arena_entry_id: input.entry.id,
-    })
-    .maybeSingle();
-
-  if (existing) {
-    return { id: (existing as { id: string }).id, alreadyExisted: true };
-  }
-
-  const created = await createSuggestion({
-    projectId: input.session.project_id,
-    suggestionType,
-    source: "human",
-    title:
-      input.entry.title ??
-      `Arena · ${input.session.title}`,
-    rationale: `Promoted from Arena round "${input.session.title}" (${input.session.mode.replace("_", " ")}).`,
-    after: {
-      text: input.entry.body,
-      arena_entry_title: input.entry.title,
-    },
-    metadata: {
-      source: "arena",
-      arena_session_id: input.session.id,
-      arena_entry_id: input.entry.id,
-      arena_original_author_id: input.entry.author_id,
-    },
+  session: Pick<ArenaSessionRow, "id">;
+  entry: Pick<ArenaEntryRow, "id">;
+  suggestionType?: "structure_note" | "rewrite_scene";
+}): Promise<{ id: string; alreadyExisted: boolean }> {
+  const { data, error } = await rpc().rpc("promote_arena_entry", {
+    _session_id: input.session.id,
+    _entry_id: input.entry.id,
+    _suggestion_type: input.suggestionType ?? "structure_note",
   });
-  return { id: created.id, alreadyExisted: false };
+  if (error) throw new Error(error.message ?? "Could not promote entry");
+  const row = Array.isArray(data) ? data[0] : data;
+  const r = row as { id: string; already_existed: boolean } | null;
+  if (!r) throw new Error("Promotion returned no row");
+  return { id: r.id, alreadyExisted: !!r.already_existed };
+}
+
+// ----- Identity resolution -----------------------------------------------
+
+export async function getProjectMemberIdentities(
+  projectId: string,
+  userIds: string[],
+): Promise<Map<string, ProjectMemberIdentity>> {
+  const out = new Map<string, ProjectMemberIdentity>();
+  const unique = Array.from(new Set(userIds.filter(Boolean)));
+  if (unique.length === 0) return out;
+  const { data, error } = await rpc().rpc("get_project_member_identities", {
+    _project_id: projectId,
+    _user_ids: unique,
+  });
+  if (error) return out; // graceful — UI falls back to "Unknown writer"
+  for (const row of (data ?? []) as ProjectMemberIdentity[]) {
+    out.set(row.user_id, row);
+  }
+  return out;
 }
 
 // ----- Utils --------------------------------------------------------------
@@ -588,7 +616,3 @@ export function computeEntryScores(
   }
   return out;
 }
-
-// Suppress unused-linter friction on the generic helper alias
-export type __SB = SB;
-export type __Row = Row;
