@@ -40,7 +40,7 @@ type PriceId =
 
 type Tier = {
   name: string;
-  monthly: { price: string; cadence: string; priceId?: PriceId };
+  monthly: { price: string; cadence: string; priceId?: PriceId; note?: string };
   yearly: { price: string; cadence: string; priceId?: PriceId; note?: string };
   features: string[];
   cta: string;
