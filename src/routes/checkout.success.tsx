@@ -72,11 +72,13 @@ function CheckoutSuccess() {
             {confirmed ? "Your studio is open" : stillWaiting ? "Almost there" : "Confirmation pending"}
           </p>
           <h1 className="font-display text-4xl font-bold tracking-tight">
-            {confirmed
-              ? `Welcome to the ${TIER_LABEL[tier]} plan.`
-              : stillWaiting
-                ? "Confirming your subscription…"
-                : "Payment received."}
+            {pack
+              ? `${pack.label} added.`
+              : confirmed
+                ? `Welcome to the ${TIER_LABEL[tier]} plan.`
+                : stillWaiting
+                  ? "Confirming your subscription…"
+                  : "Payment received."}
           </h1>
           <p className="text-muted-foreground mt-3">
             {confirmed
