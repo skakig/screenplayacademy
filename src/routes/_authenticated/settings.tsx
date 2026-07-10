@@ -118,6 +118,90 @@ function PlanCard() {
   );
 }
 
+const USAGE_LABELS: Record<string, string> = {
+  ai_assists: "AI assists",
+  storyboard_panels: "Storyboard panels",
+  tableread_minutes: "Table read minutes",
+  ai_tokens: "AI tokens",
+  tts_characters: "Table read characters",
+};
+
+interface UsageRow {
+  feature: string;
+  used: number;
+  monthly_limit: number;
+  tier: string;
+  credits_remaining: number;
+}
+
+function UsageCard() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["usage-snapshot"],
+    queryFn: async (): Promise<UsageRow[]> => {
+      const { data, error } = await supabase.rpc("get_usage_snapshot", {
+        _environment: "live",
+      });
+      if (error) throw error;
+      return (data ?? []) as UsageRow[];
+    },
+    staleTime: 30_000,
+  });
+
+  return (
+    <Card className="p-6 space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-primary" />
+          <h2 className="font-display text-lg font-semibold">This month's usage</h2>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => openCreditsDialog()}>
+          Buy more credits
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading usage…</p>
+      ) : (
+        <div className="space-y-3">
+          {(data ?? []).map((row) => {
+            const label = USAGE_LABELS[row.feature] ?? row.feature;
+            const limit = row.monthly_limit ?? 0;
+            const pct = limit > 0 ? Math.min(100, Math.round((row.used / limit) * 100)) : 0;
+            const overflow = row.used > limit;
+            return (
+              <div key={row.feature} className="space-y-1">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{label}</span>
+                  <span>
+                    {row.used.toLocaleString()} / {limit.toLocaleString()}
+                    {row.credits_remaining > 0
+                      ? ` · +${row.credits_remaining.toLocaleString()} credits`
+                      : ""}
+                  </span>
+                </div>
+                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                  <div
+                    className={
+                      "h-full transition-all " +
+                      (overflow ? "bg-amber-500" : "bg-primary")
+                    }
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <p className="text-[11px] text-muted-foreground">
+        Credits are used automatically once your monthly plan cap is reached.
+        They never expire.
+      </p>
+    </Card>
+  );
+}
+
 function Settings() {
   const qc = useQueryClient();
   const { data: profile } = useQuery({
