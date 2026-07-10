@@ -298,6 +298,11 @@ function WritersRoomTabs({
             <LiveCollabLabPanel projectId={projectId} role={role} />
           </TabsContent>
         )}
+        {arenaEnabled && (
+          <TabsContent value="arena" className="mt-0">
+            <ArenaPanel projectId={projectId} role={role} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
