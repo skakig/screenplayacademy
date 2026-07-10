@@ -70,10 +70,13 @@ export const aiAssist = createServerFn({ method: "POST" })
       .from("projects").select("id").eq("id", data.projectId).maybeSingle();
     if (pe || !p) throw new Error("Project not found");
 
-    // Meter monthly AI assists. Throws USAGE_LIMIT when the tier cap is reached.
+    // Meter monthly AI assists (call count). Throws USAGE_LIMIT when the tier cap is reached.
     await consumeUsage(context.supabase, "ai_assists", 1);
+    // Pre-flight a conservative token budget so a user near the ai_tokens
+    // cap can't sneak through the assist gate and drain the remainder.
+    await consumeUsage(context.supabase, "ai_tokens", MAX_OUTPUT_TOKENS_ASSIST);
 
-
+    const tier = await tierForUser(context.supabase, context.userId);
     const gateway = createLovableAiGatewayProvider(key);
     const toolGuidance = TOOL_PROMPTS[data.tool] ?? "";
     const prompt = [
@@ -83,18 +86,24 @@ export const aiAssist = createServerFn({ method: "POST" })
     ].filter(Boolean).join("\n\n");
 
     try {
-      const { text } = await generateText({
-        model: gateway("google/gemini-3-flash-preview"),
+      const { text, usage } = await generateText({
+        model: gateway(modelForTier(tier)),
         system: SYSTEM,
         prompt,
+        maxOutputTokens: MAX_OUTPUT_TOKENS_ASSIST,
       });
+
+      // Record actual usage minus the pre-flight reservation. Never negative.
+      const actual = Math.ceil(usage?.totalTokens ?? MAX_OUTPUT_TOKENS_ASSIST);
+      const delta = actual - MAX_OUTPUT_TOKENS_ASSIST;
+      if (delta > 0) await recordUsage(context.supabase, "ai_tokens", delta);
 
       await context.supabase.from("ai_requests").insert({
         user_id: context.userId,
         project_id: data.projectId,
         request_type: data.tool,
         input: { prompt: data.prompt },
-        output: { text },
+        output: { text, tokens: actual, model: modelForTier(tier) },
         status: "ok",
       });
 
@@ -123,9 +132,10 @@ export const generatePitchPackage = createServerFn({ method: "POST" })
     const { data: project } = await context.supabase.from("projects").select("*").eq("id", data.projectId).maybeSingle();
     if (!project) throw new Error("Project not found");
 
-    // Pitch generation is a heavier call — bills as 10 AI assists.
+    // Pitch generation is a heavier call — bills as 10 AI assists AND a
+    // per-request pitch token budget so it can't blow through ai_tokens.
     await consumeUsage(context.supabase, "ai_assists", 10);
-
+    await consumeUsage(context.supabase, "ai_tokens", MAX_OUTPUT_TOKENS_PITCH);
 
     const { data: characters = [] } = await context.supabase.from("characters").select("name, role, archetype, external_goal, internal_need, wound").eq("project_id", data.projectId);
     const { data: blocks = [] } = await context.supabase.from("script_blocks").select("block_type, content").eq("project_id", data.projectId).order("order_index").limit(800);
@@ -133,12 +143,20 @@ export const generatePitchPackage = createServerFn({ method: "POST" })
     const script = (blocks ?? []).filter((b: any) => b.block_type !== "note").map((b: any) => `[${b.block_type}] ${b.content}`).join("\n").slice(0, 12000);
     const chars = (characters ?? []).map((c: any) => `${c.name} — ${c.role ?? ""} (${c.archetype ?? ""})`).join("\n");
 
+    // Pitch always uses the strongest model available at the caller's tier,
+    // and is capped by ai_tokens above.
+    const tier = await tierForUser(context.supabase, context.userId);
     const gateway = createLovableAiGatewayProvider(key);
-    const { text } = await generateText({
-      model: gateway("google/gemini-3-flash-preview"),
+    const { text, usage } = await generateText({
+      model: gateway(modelForTier(tier)),
       system: PITCH_SYSTEM,
       prompt: `Title: ${project.title}\nType: ${project.project_type}\nGenre: ${project.genre ?? ""}\nTone: ${project.tone ?? ""}\nLogline: ${project.logline ?? ""}\n\nCharacters:\n${chars}\n\nScript excerpt:\n${script}`,
+      maxOutputTokens: MAX_OUTPUT_TOKENS_PITCH,
     });
+
+    const actual = Math.ceil(usage?.totalTokens ?? MAX_OUTPUT_TOKENS_PITCH);
+    const delta = actual - MAX_OUTPUT_TOKENS_PITCH;
+    if (delta > 0) await recordUsage(context.supabase, "ai_tokens", delta);
 
     let parsed: any = {};
     try { parsed = JSON.parse(text.replace(/^```json\s*|\s*```$/g, "")); } catch { parsed = { treatment: text }; }
