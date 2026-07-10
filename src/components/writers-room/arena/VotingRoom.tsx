@@ -26,12 +26,18 @@ import {
   arenaKeys,
   castArenaVote,
   finalizeArenaRound,
-  listEntries,
-  listVotes,
-  type ArenaEntryRow,
+  getProjectMemberIdentities,
+  listMyVotes,
+  listVotingEntries,
   type ArenaSessionRow,
+  type ArenaVotingEntry,
   type VoteScores,
 } from "@/lib/arena";
+import { AuthorshipRail } from "./AuthorshipRail";
+import {
+  NEUTRAL_AUTHORSHIP_COLOR,
+  buildAuthorshipPalette,
+} from "./authorshipPalette";
 
 interface Props {
   session: ArenaSessionRow;
@@ -55,28 +61,37 @@ export function VotingRoom({ session, role, projectId }: Props) {
   }, []);
 
   const entriesQ = useQuery({
-    queryKey: arenaKeys.entries(session.id),
-    queryFn: () => listEntries(session.id),
+    queryKey: arenaKeys.votingEntries(session.id),
+    queryFn: () => listVotingEntries(session.id),
+    refetchInterval: 5000,
   });
-  const votesQ = useQuery({
-    queryKey: arenaKeys.votes(session.id),
-    queryFn: () => listVotes(session.id),
-    refetchInterval: 4000,
+  const myVotesQ = useQuery({
+    queryKey: arenaKeys.myVotes(session.id),
+    queryFn: () => listMyVotes(session.id),
   });
 
-  const submitted = useMemo(
-    () => (entriesQ.data ?? []).filter((e) => e.status === "submitted"),
-    [entriesQ.data],
+  const entries = entriesQ.data ?? [];
+  const identityIds = useMemo(
+    () =>
+      entries
+        .map((e) => e.author_id)
+        .filter((v): v is string => typeof v === "string"),
+    [entries],
+  );
+  const identitiesQ = useQuery({
+    queryKey: [...arenaKeys.identities(projectId), identityIds],
+    queryFn: () => getProjectMemberIdentities(projectId, identityIds),
+    enabled: identityIds.length > 0,
+  });
+
+  const palette = useMemo(
+    () => buildAuthorshipPalette(session.id, identityIds),
+    [session.id, identityIds],
   );
 
   const myVotes = useMemo(
-    () =>
-      new Map(
-        (votesQ.data ?? [])
-          .filter((v) => v.voter_id === uid)
-          .map((v) => [v.entry_id, v]),
-      ),
-    [votesQ.data, uid],
+    () => new Map((myVotesQ.data ?? []).map((v) => [v.entry_id, v])),
+    [myVotesQ.data],
   );
 
   const canFinalize =
@@ -128,21 +143,35 @@ export function VotingRoom({ session, role, projectId }: Props) {
         )}
       </div>
 
-      {submitted.length === 0 ? (
+      {entries.length === 0 ? (
         <p className="text-sm italic text-muted-foreground">
           {t("arena.voting.noEntries")}
         </p>
       ) : (
         <ul className="space-y-4">
-          {submitted.map((e) => (
-            <EntryCard
-              key={e.id}
-              entry={e}
-              session={session}
-              selfId={uid}
-              existingVote={myVotes.get(e.id) ?? null}
-            />
-          ))}
+          {entries.map((e) => {
+            const blind = e.author_id === null;
+            const identity = e.author_id
+              ? identitiesQ.data?.get(e.author_id)
+              : null;
+            const color =
+              (e.author_id && palette.get(e.author_id)) ??
+              NEUTRAL_AUTHORSHIP_COLOR;
+            return (
+              <EntryCard
+                key={e.entry_id}
+                entry={e}
+                session={session}
+                selfId={uid}
+                color={color}
+                identityName={identity?.display_name ?? ""}
+                identityAvatar={identity?.avatar_url ?? null}
+                identityRole={null}
+                blind={blind}
+                existingVote={myVotes.get(e.entry_id) ?? null}
+              />
+            );
+          })}
         </ul>
       )}
     </Card>
@@ -153,11 +182,23 @@ function EntryCard({
   entry,
   session,
   selfId,
+  color,
+  identityName,
+  identityAvatar,
+  identityRole,
+  blind,
   existingVote,
 }: {
-  entry: ArenaEntryRow;
+  entry: ArenaVotingEntry;
   session: ArenaSessionRow;
   selfId: string | null;
+  color: ReturnType<typeof buildAuthorshipPalette> extends Map<string, infer C>
+    ? C
+    : never;
+  identityName: string;
+  identityAvatar: string | null;
+  identityRole: string | null;
+  blind: boolean;
   existingVote: {
     score_originality: number;
     score_character_truth: number;
@@ -168,7 +209,7 @@ function EntryCard({
   } | null;
 }) {
   const qc = useQueryClient();
-  const isMine = entry.author_id === selfId;
+  const isMine = !blind && entry.author_id === selfId;
   const [scores, setScores] = useState<VoteScores>(
     existingVote
       ? {
@@ -186,86 +227,88 @@ function EntryCard({
     mutationFn: () =>
       castArenaVote({
         session,
-        entryId: entry.id,
+        entryId: entry.entry_id,
         scores,
         comment,
       }),
     onSuccess: () => {
       toast(t("arena.toast.voted"));
-      qc.invalidateQueries({ queryKey: arenaKeys.votes(session.id) });
+      qc.invalidateQueries({ queryKey: arenaKeys.myVotes(session.id) });
     },
     onError: (e) => toast.error((e as Error).message || t("arena.error.save")),
   });
 
   return (
-    <li className="border border-border/60 rounded-lg p-4 bg-background/50">
-      <div className="flex items-center justify-between gap-3 mb-2">
-        <div>
-          <div className="font-medium">
-            {entry.title || "Untitled entry"}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {isMine
-              ? t("arena.voting.selfEntry")
-              : t("arena.voting.byLine", {
-                  name: entry.author_id.slice(0, 8),
-                })}
-          </div>
+    <li>
+      <AuthorshipRail
+        color={color}
+        displayName={identityName}
+        avatarUrl={identityAvatar}
+        role={identityRole}
+        anonymousLabel={entry.anonymous_label}
+        blind={blind}
+        isSelf={isMine}
+        meta={
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            {existingVote ? t("arena.voting.voted") : t("arena.voting.notVoted")}
+          </span>
+        }
+      >
+        <div className="mb-1 font-medium text-sm">
+          {entry.title || "Untitled entry"}
         </div>
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-          {existingVote ? t("arena.voting.voted") : t("arena.voting.notVoted")}
-        </span>
-      </div>
-      <p className="text-sm whitespace-pre-wrap font-mono bg-muted/40 p-3 rounded max-h-72 overflow-y-auto">
-        {entry.body}
-      </p>
+        <p className="text-sm whitespace-pre-wrap font-mono bg-muted/40 p-3 rounded max-h-72 overflow-y-auto">
+          {entry.body}
+        </p>
 
-      {!isMine && (
-        <div className="mt-4 space-y-3">
-          {(
-            [
-              ["originality", "arena.voting.score.originality"],
-              ["characterTruth", "arena.voting.score.characterTruth"],
-              ["cinematicValue", "arena.voting.score.cinematicValue"],
-              ["emotionalImpact", "arena.voting.score.emotionalImpact"],
-              ["craft", "arena.voting.score.craft"],
-            ] as [keyof VoteScores, I18nKey][]
-          ).map(([key, label]) => (
-            <div key={key} className="flex items-center gap-3">
-              <div className="w-40 text-xs text-muted-foreground">
-                {t(label)}
+        {!isMine && (
+          <div className="mt-4 space-y-3">
+            {(
+              [
+                ["originality", "arena.voting.score.originality"],
+                ["characterTruth", "arena.voting.score.characterTruth"],
+                ["cinematicValue", "arena.voting.score.cinematicValue"],
+                ["emotionalImpact", "arena.voting.score.emotionalImpact"],
+                ["craft", "arena.voting.score.craft"],
+              ] as [keyof VoteScores, I18nKey][]
+            ).map(([key, label]) => (
+              <div key={key} className="flex items-center gap-3">
+                <div className="w-40 text-xs text-muted-foreground">
+                  {t(label)}
+                </div>
+                <Slider
+                  value={[scores[key]]}
+                  onValueChange={([v]) => setScores({ ...scores, [key]: v })}
+                  min={1}
+                  max={5}
+                  step={1}
+                  className="flex-1"
+                />
+                <div className="w-6 text-right text-sm font-mono">
+                  {scores[key]}
+                </div>
               </div>
-              <Slider
-                value={[scores[key]]}
-                onValueChange={([v]) => setScores({ ...scores, [key]: v })}
-                min={1}
-                max={5}
-                step={1}
-                className="flex-1"
-              />
-              <div className="w-6 text-right text-sm font-mono">
-                {scores[key]}
-              </div>
+            ))}
+            <Textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder={t("arena.voting.commentPlaceholder")}
+              rows={2}
+              maxLength={1000}
+            />
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                onClick={() => voteM.mutate()}
+                disabled={voteM.isPending}
+              >
+                {existingVote ? t("arena.voting.recast") : t("arena.voting.cast")}
+              </Button>
             </div>
-          ))}
-          <Textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder={t("arena.voting.commentPlaceholder")}
-            rows={2}
-            maxLength={1000}
-          />
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              onClick={() => voteM.mutate()}
-              disabled={voteM.isPending}
-            >
-              {existingVote ? t("arena.voting.recast") : t("arena.voting.cast")}
-            </Button>
           </div>
-        </div>
-      )}
+        )}
+      </AuthorshipRail>
     </li>
   );
 }
+
