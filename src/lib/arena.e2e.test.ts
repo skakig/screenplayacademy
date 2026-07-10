@@ -512,7 +512,13 @@ import {
   finalizeArenaRound,
   getProjectMemberIdentities,
   joinArenaSession,
+  listArenaSessions,
   listEntries,
+  listMyVotes,
+  listParticipants,
+  listVotes,
+  getMyEntry,
+
   listSessionAwards,
   listVotingEntries,
   promoteEntryToSuggestion,
