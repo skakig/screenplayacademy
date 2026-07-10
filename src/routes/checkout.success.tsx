@@ -34,6 +34,12 @@ function CheckoutSuccess() {
   const [waited, setWaited] = useState(0);
 
   useEffect(() => {
+    if (pack) {
+      toast.success(`Added ${pack.label}`, {
+        description: "Your credits are ready to use.",
+      });
+      return;
+    }
     if (tier !== "free") return;
     if (waited >= 30_000) return;
     const t = setTimeout(() => {
@@ -41,9 +47,9 @@ function CheckoutSuccess() {
       setWaited((w) => w + 1500);
     }, 1500);
     return () => clearTimeout(t);
-  }, [tier, waited, refetch]);
+  }, [pack, tier, waited, refetch]);
 
-  const confirmed = tier !== "free";
+  const confirmed = !!pack || tier !== "free";
   const stillWaiting = !confirmed && waited < 30_000;
 
   return (
