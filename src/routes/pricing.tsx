@@ -7,6 +7,9 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { getStripeEnvironment, isStripeConfigured } from "@/lib/stripe";
 import { supabase } from "@/integrations/supabase/client";
+import { useSubscription } from "@/hooks/useSubscription";
+import { createCustomerPortalSession } from "@/lib/customerPortal.functions";
+import { useServerFn } from "@tanstack/react-start";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/pricing")({
@@ -81,6 +84,9 @@ function Pricing() {
   // (pre-go-live production builds).
   const checkoutBlocked = !isStripeConfigured();
 
+  const { isActive: hasActiveSub, tier: currentTier } = useSubscription();
+  const openPortal = useServerFn(createCustomerPortalSession);
+
   const handleBuy = async (tier: Tier) => {
     if (!tier.priceId) return;
     if (checkoutBlocked) {
@@ -90,6 +96,24 @@ function Pricing() {
     if (!user) {
       toast.info("Sign in to subscribe.");
       navigate({ to: "/auth" });
+      return;
+    }
+    // Prevent stacking a second subscription: route existing subscribers
+    // to the Customer Portal to change/cancel their plan instead.
+    if (hasActiveSub) {
+      setPending(tier.priceId);
+      try {
+        const result = await openPortal({
+          data: { environment: getStripeEnvironment(), returnUrl: window.location.href },
+        });
+        if ("error" in result) throw new Error(result.error);
+        toast.info(`You're already on ${currentTier}. Opening your billing portal to change plans.`);
+        window.open(result.url, "_blank", "noopener,noreferrer");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Couldn't open billing portal");
+      } finally {
+        setPending(null);
+      }
       return;
     }
     setPending(tier.priceId);

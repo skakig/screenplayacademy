@@ -41,7 +41,7 @@ function formatDate(iso: string | null | undefined): string {
 
 function PlanCard() {
   const openPortal = useServerFn(createCustomerPortalSession);
-  const { loading, subscription, tier, isActive, isPastDue, isCanceledInGrace } = useSubscription();
+  const { loading, subscription, tier, isActive, isPastDue, isCanceledInGrace, refetch } = useSubscription();
   const [busy, setBusy] = useState(false);
 
   const handlePortal = async () => {
@@ -53,6 +53,10 @@ function PlanCard() {
       });
       if ("error" in result) throw new Error(result.error);
       window.open(result.url, "_blank", "noopener,noreferrer");
+      // Refetch shortly after — the user typically returns quickly
+      // and the webhook race can otherwise leave stale plan data.
+      setTimeout(() => refetch(), 2000);
+      setTimeout(() => refetch(), 8000);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not open billing portal");
     } finally {

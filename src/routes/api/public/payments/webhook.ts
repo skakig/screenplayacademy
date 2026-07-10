@@ -119,6 +119,63 @@ async function handleInvoicePaymentFailed(invoice: any, env: StripeEnv) {
   if (error) throw new WebhookRetryable(error.message);
 }
 
+async function handleInvoicePaid(invoice: any, env: StripeEnv) {
+  // Belt-and-suspenders renewal refresh: if `customer.subscription.updated`
+  // is delayed, this keeps `current_period_end` fresh so entitlement checks
+  // don't flap during the retry window.
+  const subId = typeof invoice.subscription === "string"
+    ? invoice.subscription
+    : invoice.subscription?.id;
+  if (!subId) return;
+  const line = invoice.lines?.data?.[0];
+  const periodEnd = line?.period?.end;
+  const periodStart = line?.period?.start;
+  const { error } = await getSupabase()
+    .from("subscriptions")
+    .update({
+      status: "active",
+      ...(periodStart && { current_period_start: new Date(periodStart * 1000).toISOString() }),
+      ...(periodEnd && { current_period_end: new Date(periodEnd * 1000).toISOString() }),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_subscription_id", subId)
+    .eq("environment", env);
+  if (error) throw new WebhookRetryable(error.message);
+}
+
+async function handleChargeRefunded(charge: any, env: StripeEnv) {
+  // Product decision: preserve access until `current_period_end` so a
+  // refund doesn't yank features mid-session. Just flag past_due so the
+  // UI shows a warning and the customer can resubscribe/cancel cleanly.
+  const subId =
+    charge.invoice && typeof charge.invoice === "object"
+      ? charge.invoice.subscription
+      : null;
+  if (!subId || typeof subId !== "string") {
+    console.log("charge.refunded without subscription context:", charge.id);
+    return;
+  }
+  const { error } = await getSupabase()
+    .from("subscriptions")
+    .update({ status: "past_due", updated_at: new Date().toISOString() })
+    .eq("stripe_subscription_id", subId)
+    .eq("environment", env);
+  if (error) throw new WebhookRetryable(error.message);
+}
+
+async function handleChargeDispute(dispute: any, env: StripeEnv) {
+  // Chargebacks are rare and manual — log with enough context for
+  // support to investigate. Don't auto-revoke; Stripe handles the funds
+  // side and support decides on access.
+  console.warn("charge.dispute.created", {
+    disputeId: dispute.id,
+    charge: dispute.charge,
+    amount: dispute.amount,
+    reason: dispute.reason,
+    env,
+  });
+}
+
 async function handleWebhookEvent(event: { type: string; data: { object: any } }, env: StripeEnv) {
   switch (event.type) {
     case "customer.subscription.created":
@@ -133,10 +190,18 @@ async function handleWebhookEvent(event: { type: string; data: { object: any } }
     case "invoice.payment_failed":
       await handleInvoicePaymentFailed(event.data.object, env);
       break;
-    case "checkout.session.completed":
     case "invoice.paid":
-      // Subscription created / renewed — the customer.subscription.* events
-      // do the actual persistence. Log for observability only.
+      await handleInvoicePaid(event.data.object, env);
+      break;
+    case "charge.refunded":
+      await handleChargeRefunded(event.data.object, env);
+      break;
+    case "charge.dispute.created":
+      await handleChargeDispute(event.data.object, env);
+      break;
+    case "checkout.session.completed":
+    case "customer.subscription.trial_will_end":
+      // Ack only — subscription.* events do the persistence.
       console.log("Ack event:", event.type);
       break;
     default:
