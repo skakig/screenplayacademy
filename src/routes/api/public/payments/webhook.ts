@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { type StripeEnv, verifyWebhook } from "@/lib/stripe.server";
+import { packByPriceId } from "@/lib/creditPacks";
 
 let _supabase: ReturnType<typeof createClient<Database>> | null = null;
 function getSupabase() {
@@ -176,6 +177,48 @@ async function handleChargeDispute(dispute: any, env: StripeEnv) {
   });
 }
 
+async function handleCheckoutSessionCompleted(session: any, env: StripeEnv) {
+  // Only one-time payments create credit grants. Subscription checkouts
+  // are handled by customer.subscription.created / .updated events.
+  if (session.mode !== "payment") return;
+  if (session.payment_status !== "paid") {
+    console.log("checkout.session.completed unpaid, skipping:", session.id);
+    return;
+  }
+  const userId: string | undefined = session.metadata?.userId;
+  const packPriceId: string | undefined = session.metadata?.packPriceId;
+  if (!userId || !packPriceId) {
+    console.log("Non-pack one-time payment (no userId/packPriceId), skipping:", session.id);
+    return;
+  }
+  // Server-authoritative pack resolution — never trust client-supplied amounts.
+  const pack = packByPriceId(packPriceId);
+  if (!pack) {
+    console.warn("Unknown pack priceId on completed session:", packPriceId, session.id);
+    return;
+  }
+  const { error } = await getSupabase()
+    .from("usage_credit_grants")
+    .insert({
+      user_id: userId,
+      environment: env,
+      feature: pack.feature,
+      amount_granted: pack.amount,
+      stripe_session_id: session.id,
+      price_id: pack.priceId,
+    });
+  if (error) {
+    // Unique-violation on stripe_session_id means we've already granted
+    // credits for this session — safe to ignore for idempotency.
+    if ((error as { code?: string }).code === "23505") {
+      console.log("Credit grant already exists for session:", session.id);
+      return;
+    }
+    throw new WebhookRetryable(error.message);
+  }
+  console.log(`Granted ${pack.amount} ${pack.feature} to user ${userId} (session ${session.id})`);
+}
+
 async function handleWebhookEvent(event: { type: string; data: { object: any } }, env: StripeEnv) {
   switch (event.type) {
     case "customer.subscription.created":
@@ -200,8 +243,9 @@ async function handleWebhookEvent(event: { type: string; data: { object: any } }
       await handleChargeDispute(event.data.object, env);
       break;
     case "checkout.session.completed":
+      await handleCheckoutSessionCompleted(event.data.object, env);
+      break;
     case "customer.subscription.trial_will_end":
-      // Ack only — subscription.* events do the persistence.
       console.log("Ack event:", event.type);
       break;
     default:

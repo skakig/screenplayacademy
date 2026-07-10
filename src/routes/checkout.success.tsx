@@ -5,6 +5,8 @@ import { Check, Loader2 } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { useSubscription } from "@/hooks/useSubscription";
 import { TIER_LABEL } from "@/lib/entitlements";
+import { packByPriceId } from "@/lib/creditPacks";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/checkout/success")({
   ssr: false,
@@ -14,10 +16,16 @@ export const Route = createFileRoute("/checkout/success")({
       { name: "robots", content: "noindex" },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    session_id: typeof search.session_id === "string" ? search.session_id : undefined,
+    pack: typeof search.pack === "string" ? search.pack : undefined,
+  }),
   component: CheckoutSuccess,
 });
 
 function CheckoutSuccess() {
+  const { pack: packPriceId } = Route.useSearch();
+  const pack = packByPriceId(packPriceId);
   // Stripe checkout returns the user to us right after payment, but the subscription
   // row is created by the async webhook — usually within 1–5s. Poll every
   // 1.5s (up to ~30s) so the user sees their new plan appear instead of a
@@ -26,6 +34,12 @@ function CheckoutSuccess() {
   const [waited, setWaited] = useState(0);
 
   useEffect(() => {
+    if (pack) {
+      toast.success(`Added ${pack.label}`, {
+        description: "Your credits are ready to use.",
+      });
+      return;
+    }
     if (tier !== "free") return;
     if (waited >= 30_000) return;
     const t = setTimeout(() => {
@@ -33,9 +47,9 @@ function CheckoutSuccess() {
       setWaited((w) => w + 1500);
     }, 1500);
     return () => clearTimeout(t);
-  }, [tier, waited, refetch]);
+  }, [pack, tier, waited, refetch]);
 
-  const confirmed = tier !== "free";
+  const confirmed = !!pack || tier !== "free";
   const stillWaiting = !confirmed && waited < 30_000;
 
   return (
@@ -58,11 +72,13 @@ function CheckoutSuccess() {
             {confirmed ? "Your studio is open" : stillWaiting ? "Almost there" : "Confirmation pending"}
           </p>
           <h1 className="font-display text-4xl font-bold tracking-tight">
-            {confirmed
-              ? `Welcome to the ${TIER_LABEL[tier]} plan.`
-              : stillWaiting
-                ? "Confirming your subscription…"
-                : "Payment received."}
+            {pack
+              ? `${pack.label} added.`
+              : confirmed
+                ? `Welcome to the ${TIER_LABEL[tier]} plan.`
+                : stillWaiting
+                  ? "Confirming your subscription…"
+                  : "Payment received."}
           </h1>
           <p className="text-muted-foreground mt-3">
             {confirmed

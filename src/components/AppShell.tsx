@@ -7,6 +7,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { GuidedReturnBanner } from "@/components/guided/GuidedReturnBanner";
 import { StudioMenu } from "@/components/StudioMenu";
+import { BuyCreditsDialog } from "@/components/credits/BuyCreditsDialog";
+import { useCreditsUpsell } from "@/hooks/useCreditsUpsell";
 
 type Props = {
   children: ReactNode;
@@ -21,6 +23,7 @@ type Props = {
 export function AppShell({ children, focus = false, title, headerExtras }: Props) {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { open: creditsOpen, focus: creditsFocus, closeDialog } = useCreditsUpsell();
   const signOut = async () => {
     await qc.cancelQueries();
     qc.clear();
@@ -28,10 +31,19 @@ export function AppShell({ children, focus = false, title, headerExtras }: Props
     navigate({ to: "/auth", replace: true });
   };
 
+  const creditsDialog = (
+    <BuyCreditsDialog
+      open={creditsOpen}
+      onOpenChange={(o) => (o ? null : closeDialog())}
+      focus={creditsFocus ?? undefined}
+    />
+  );
+
   if (focus) {
     return (
       <div className="min-h-screen flex flex-col">
         <main className="flex-1">{children}</main>
+        {creditsDialog}
       </div>
     );
   }
@@ -63,6 +75,7 @@ export function AppShell({ children, focus = false, title, headerExtras }: Props
       </header>
       <GuidedReturnBanner />
       <main className="flex-1">{children}</main>
+      {creditsDialog}
     </div>
   );
 }
