@@ -1045,8 +1045,11 @@ describe("Arena Mode — full lifecycle", () => {
         `perm ${p.join(">")}`,
         buildAuthorshipPalette(session.id, p),
       );
+    }
+  });
 
   it("no Arena UI fetch response leaks author identity before finalizeArenaRound", async () => {
+
     // Wrap the fake supabase to record EVERY read response from every Arena
     // UI data path (both `.rpc()` calls and `.from(<table>).select(...)` reads
     // — including single()/maybeSingle() terminals). We drive the blind
