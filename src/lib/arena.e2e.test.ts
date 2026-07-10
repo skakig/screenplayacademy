@@ -532,7 +532,7 @@ describe("Arena Mode — full lifecycle", () => {
     await submitEntry(hostDraft.id);
 
     // 5. Clock expires → advance transitions to voting.
-    vi.setSystemTime(new Date(Date.now() + 61_000));
+    vi.setSystemTime(new Date(Date.now() + 75_000));
     const advanced = await advanceArenaRoundIfDue(session.id);
     expect(advanced.status).toBe("voting");
 
