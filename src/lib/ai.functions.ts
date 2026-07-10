@@ -1,9 +1,37 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { consumeUsage } from "@/lib/usage.functions";
+import { consumeUsage, recordUsage } from "@/lib/usage.functions";
+import { modelForTier, tierFromPriceId, type Tier } from "@/lib/entitlements";
+import { serverStripeEnv } from "@/lib/stripeEnv.server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { generateText } from "ai";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+
+// Per-call hard ceilings — prevents a runaway single request from
+// draining a month of tokens. Tuned per tool.
+const MAX_OUTPUT_TOKENS_ASSIST = 1024;
+const MAX_OUTPUT_TOKENS_PITCH = 4096;
+
+async function tierForUser(supabase: SupabaseClient, userId: string): Promise<Tier> {
+  const environment = serverStripeEnv();
+  const { data: row } = await supabase
+    .from("subscriptions")
+    .select("price_id, status, current_period_end")
+    .eq("user_id", userId)
+    .eq("environment", environment)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!row) return "free";
+  const periodOk =
+    !row.current_period_end ||
+    new Date(row.current_period_end as string).getTime() > Date.now();
+  const active =
+    (["active", "trialing", "past_due"].includes(row.status as string) && periodOk) ||
+    (row.status === "canceled" && periodOk);
+  return active ? tierFromPriceId(row.price_id as string | null) : "free";
+}
 
 const Input = z.object({
   projectId: z.string().uuid(),

@@ -3,6 +3,13 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { serverStripeEnv } from "@/lib/stripeEnv.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+export type MeteredFeature =
+  | "ai_assists"
+  | "storyboard_panels"
+  | "tableread_minutes"
+  | "ai_tokens"
+  | "tts_characters";
+
 /**
  * Increment a metered feature counter for the current user. Called from
  * other server functions (which already have a request-scoped supabase
@@ -12,7 +19,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  */
 export async function consumeUsage(
   supabase: SupabaseClient,
-  feature: "ai_assists" | "storyboard_panels" | "tableread_minutes",
+  feature: MeteredFeature,
   amount = 1,
 ): Promise<number> {
   const environment = serverStripeEnv();
@@ -23,6 +30,27 @@ export async function consumeUsage(
   });
   if (error) throw new Error(error.message);
   return data as number;
+}
+
+/**
+ * Best-effort post-hoc metering. Use when a call has already succeeded
+ * and we want to record actual usage (like token totals returned by the
+ * AI SDK) without throwing on cap — the pre-flight `consumeUsage` guard
+ * has already gated the call.
+ */
+export async function recordUsage(
+  supabase: SupabaseClient,
+  feature: MeteredFeature,
+  amount: number,
+): Promise<void> {
+  if (!Number.isFinite(amount) || amount <= 0) return;
+  try {
+    await consumeUsage(supabase, feature, Math.ceil(amount));
+  } catch {
+    // Ignore cap errors on post-hoc recording — the counter still increments
+    // up to the cap inside `consume_usage`, and we don't want to fail the
+    // request after the AI call already completed.
+  }
 }
 
 export const getUsageSnapshot = createServerFn({ method: "GET" })

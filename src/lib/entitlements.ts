@@ -51,13 +51,41 @@ export const FEATURE_LABEL: Record<Feature, string> = {
 export function tierFromPriceId(priceId: string | null | undefined): Tier {
   switch (priceId) {
     case "studio_monthly":
+    case "studio_yearly":
       return "studio";
     case "pro_monthly":
+    case "pro_yearly":
       return "pro";
     case "creator_monthly":
+    case "creator_yearly":
       return "creator";
     default:
       return "free";
+  }
+}
+
+export type Cadence = "monthly" | "yearly";
+
+export function cadenceFromPriceId(priceId: string | null | undefined): Cadence {
+  return typeof priceId === "string" && priceId.endsWith("_yearly") ? "yearly" : "monthly";
+}
+
+/**
+ * Pick a Lovable AI Gateway model appropriate to the subscriber's tier.
+ * Free/creator get the cheapest fast model; pro gets a balanced flash;
+ * studio unlocks the strongest generalist. Keeps API spend proportional
+ * to plan revenue.
+ */
+export function modelForTier(tier: Tier): string {
+  switch (tier) {
+    case "studio":
+      return "google/gemini-2.5-pro";
+    case "pro":
+      return "google/gemini-3.5-flash";
+    case "creator":
+    case "free":
+    default:
+      return "google/gemini-3.1-flash-lite";
   }
 }
 
