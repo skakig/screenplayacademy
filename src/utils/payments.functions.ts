@@ -117,7 +117,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
           payment_intent_data: { description: productDescription },
         }),
         ...(data.userId && {
-          metadata: { userId: data.userId },
+          // packPriceId lets the webhook resolve one-time credit-pack
+          // purchases against the server-side CREDIT_PACKS catalog
+          // without a follow-up Stripe API call.
+          metadata: { userId: data.userId, packPriceId: data.priceId },
           ...(isRecurring && {
             subscription_data: { metadata: { userId: data.userId } },
           }),
