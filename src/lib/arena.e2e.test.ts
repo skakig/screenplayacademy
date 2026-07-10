@@ -993,17 +993,14 @@ describe("Arena Mode — full lifecycle", () => {
 
     const expectMatchesCanonical = (
       label: string,
-      palette: Map<string, ReturnType<typeof buildAuthorshipPalette>["get"]>,
+      palette: ReturnType<typeof buildAuthorshipPalette>,
     ) => {
       for (const uid of [HOST_ID, WRITER_ID, THIRD_ID]) {
-        const got = (palette as Map<string, { rail: string } | undefined>).get(
-          uid,
-        );
+        const got = palette.get(uid);
         expect(got, `${label}: missing color for ${uid}`).toBeTruthy();
-        expect(
-          got!.rail,
-          `${label}: rail drifted for ${uid}`,
-        ).toBe(canonical.get(uid)!.rail);
+        expect(got!.rail, `${label}: rail drifted for ${uid}`).toBe(
+          canonical.get(uid)!.rail,
+        );
       }
     };
 
@@ -1014,7 +1011,7 @@ describe("Arena Mode — full lifecycle", () => {
       buildAuthorshipPalette(
         session.id,
         revealedVoting.map((e) => e.author_id ?? ""),
-      ) as unknown as Map<string, ReturnType<typeof buildAuthorshipPalette>["get"]>,
+      ),
     );
 
     // 2. Palette derived from the awards feed (a different natural order)
@@ -1025,7 +1022,7 @@ describe("Arena Mode — full lifecycle", () => {
       buildAuthorshipPalette(
         session.id,
         awards.map((a) => a.awarded_to),
-      ) as unknown as Map<string, ReturnType<typeof buildAuthorshipPalette>["get"]>,
+      ),
     );
 
     // 3. Every permutation of the writer ids must produce the same
@@ -1041,13 +1038,11 @@ describe("Arena Mode — full lifecycle", () => {
     for (const p of perms) {
       expectMatchesCanonical(
         `perm ${p.join(">")}`,
-        buildAuthorshipPalette(session.id, p) as unknown as Map<
-          string,
-          ReturnType<typeof buildAuthorshipPalette>["get"]
-        >,
+        buildAuthorshipPalette(session.id, p),
       );
     }
   });
+
 });
 
 
