@@ -1014,16 +1014,21 @@ describe("Arena Mode — full lifecycle", () => {
       ),
     );
 
-    // 2. Palette derived from the awards feed (a different natural order)
-    //    must map each writer to the same rail.
+    // 2. Awards feed only covers awardees, so verify each awardee still
+    //    maps to the canonical color — no drift when the ordering is a
+    //    subset of the roster.
     const awards = await listSessionAwards(session.id);
-    expectMatchesCanonical(
-      "awards-feed",
-      buildAuthorshipPalette(
-        session.id,
-        awards.map((a) => a.awarded_to),
-      ),
+    expect(awards.length).toBeGreaterThan(0);
+    const awardsPalette = buildAuthorshipPalette(
+      session.id,
+      awards.map((a) => a.awarded_to),
     );
+    for (const a of awards) {
+      expect(awardsPalette.get(a.awarded_to)!.rail).toBe(
+        canonical.get(a.awarded_to)!.rail,
+      );
+    }
+
 
     // 3. Every permutation of the writer ids must produce the same
     //    per-writer color — order of submission / display cannot shift hues.
