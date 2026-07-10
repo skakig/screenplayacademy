@@ -9,12 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Save, User as UserIcon, Languages, CreditCard, ExternalLink } from "lucide-react";
+import { Save, User as UserIcon, Languages, CreditCard, ExternalLink, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { ModeSettings } from "@/components/settings/ModeSettings";
 import { useSubscription } from "@/hooks/useSubscription";
 import { TIER_LABEL } from "@/lib/entitlements";
 import { createCustomerPortalSession } from "@/lib/customerPortal.functions";
+import { openCreditsDialog } from "@/hooks/useCreditsUpsell";
 import {
   SUPPORTED_LANGUAGES,
   LANGUAGE_LABEL,
