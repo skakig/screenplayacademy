@@ -1,387 +1,516 @@
-# Buy More Credits — Plan
+# Arena Mode v1 — Timed Creative Writing Games for Writers' Room
 
-Let users buy one-time top-ups when they hit (or want to pre-empt) a monthly cap. Same Stripe rails as subscriptions — no new payment processor, no seat/quota complexity.
+## Vision
 
-## Scope
+Arena Mode turns collaboration into a screenwriter's sport. Instead of fragile multiplayer typing on canonical script, collaborators enter timed rounds, submit competing entries, vote, and promote winners into Suggestions. Safe by construction — canonical screenplay is never mutated by Arena.
 
-Only the two metered resources that actually map to real API spend:
+Three-layer collaboration model this fits into:
 
-- **AI credits** — top up `ai_tokens` (drives `ai_assists`, pitch, script brain, coaching, etc.)
-- **Table Read credits** — top up `tts_characters` (drives ElevenLabs minutes)
+1. **Vault** — canonical writing (existing)
+2. **Live Room** — trusted co-writing (existing lab)
+3. **Arena** — timed creative games (this pass)
 
-Storyboard panels are already gated by AI tokens under the hood, so no separate pack.
+## Guardrails (Non-Negotiable)
 
-## Packs (one-time, USD)
+- Writer's Desk editor is not touched.
+- No canonical script mutation. Arena entries live in Arena tables only.
+- No live cursor / live block sync required — each writer drafts independently.
+- Promotion to script is always via Suggestions, never direct insert.
+- Double-gated feature flag (env + per-browser switch), same pattern as Live Collab Lab.
 
+## Feature Flag
 
-| Pack                | Price | Grants                 |
-| ------------------- | ----- | ---------------------- |
-| `ai_credits_small`  | $9    | 100,000 ai_tokens      |
-| `ai_credits_medium` | $29   | 500,000 ai_tokens      |
-| `ai_credits_large`  | $79   | 1,750,000 ai_tokens    |
-| `tts_credits_small` | $9    | 15,000 tts_characters  |
-| `tts_credits_large` | $29   | 100,000 tts_characters |
+Add to `src/lib/featureFlags.ts`:
 
+- Env gate: `VITE_COLLAB_ARENA_MODE`
+- localStorage key: `scenesmith.experimental.arena.enabled`
+- Helpers: `isArenaAvailable()`, `isArenaUserEnabled()`, `setArenaUserEnabled()`, `isArenaEnabled()`, `useArenaEnabled()`
+- Surface the switch in `ExperimentalFeaturesCard.tsx` under a second toggle row.
 
+## Data Model (Migration)
 
-|                    |        |                       |
-| ------------------ | ------ | --------------------- |
-| tts_credits_medium | $19    | 40,000 tts_characters |
-| &nbsp;             | &nbsp; | &nbsp;                |
+Five new tables, all in `public`, all with RLS + explicit GRANTs to `authenticated` and `service_role`.
 
+### `arena_sessions`
 
-Prices match the per-token/char spend of the tiers so packs never subsidize free users past cost.
+`id, project_id, created_by, title, mode, prompt, status, duration_seconds, starts_at, ends_at, created_at, updated_at`
 
-Do not ship the credit pack plan as-is.
+- `mode`: `dialogue_duel | rewrite_relay | scene_rescue | adlib_character | comedy_punchup | villain_monologue | pitch_blitz | freewrite`
+- `status`: `draft | open | running | voting | complete | archived`
 
-The ledger/data model is good, but we need to revise pricing, consumption behavior, and product semantics before implementation.
+### `arena_participants`
 
-## Required changes
+`id, session_id, project_id, user_id, role, joined_at`
 
-### 1. Fix the AI assist cap issue
+- `role`: `writer | judge | viewer | host`
+- Unique `(session_id, user_id)`
 
-Current AI calls consume `ai_assists` before `ai_tokens`.
+### `arena_entries`
 
-If a user hits the `ai_assists` cap, buying `ai_tokens` will not help them.
+`id, session_id, project_id, author_id, title, body, status, submitted_at, created_at, updated_at`
 
-Choose one:
+- `status`: `draft | submitted | withdrawn | winner`
 
-Option A:
+### `arena_votes`
 
-Purchased AI credits cover both `ai_assists` and `ai_tokens`.
+`id, session_id, entry_id, voter_id, score_originality, score_character_truth, score_cinematic_value, score_emotional_impact, score_craft, comment, created_at`
 
-Option B:
+- Unique `(session_id, entry_id, voter_id)`
+- CHECK each score 1–5
 
-Once a user has purchased AI credits, `ai_assists` becomes a rate-limit/abuse guard, while `ai_tokens` becomes the true paid overflow meter.
+### `arena_awards`
 
-Do not show “Buy AI Credits” for a limit that credits cannot resolve.
+`id, session_id, project_id, entry_id, awarded_to, award_type, title, created_at`
 
-### 2. Reduce pack grants
+- `award_type`: `best_line | best_dialogue | best_twist | best_character_truth | funniest | most_cinematic | audience_choice | studio_winner`
 
-Use safer v1 packs:
+### RLS Policies
 
-```ts id="kl3ml7"
+Reuse existing security-definer helpers: `is_project_member`, `can_edit_project`, `project_role`, `owns_project`.
 
-ai_credits_small:  $9  → 100_000 ai_tokens
+- **SELECT** (all Arena tables): `is_project_member(project_id)`
+- **INSERT session**: `project_role(project_id) IN ('owner','co_writer','editor','producer','assistant')`
+- **UPDATE/DELETE session**: creator OR `owns_project(project_id)` (host/owner controls lifecycle)
+- **INSERT participant**: self-join if member and role allowed (`owner,co_writer,editor,producer,commenter,assistant,actor_reader`)
+- **INSERT entry**: `author_id = auth.uid()` AND member is a participant with `role='writer'` AND session `status='running'`
+- **UPDATE entry**: author only, only while `status='draft'` and session `status='running'`
+- **INSERT vote**: `voter_id = auth.uid()`, session `status='voting'`, cannot vote on own entry
+- **INSERT award**: only session host or project owner, session `status IN ('voting','complete')`
 
-ai_credits_medium: $29 → 500_000 ai_tokens
+## Server Functions
 
-ai_credits_large:  $79 → 1_750_000 ai_tokens
+New file `src/lib/arena.functions.ts` (all `.middleware([requireSupabaseAuth])`):
 
-tts_credits_small:  $9  → 15_000 tts_characters
+- `createArenaSession({ projectId, mode, title, prompt, durationSeconds })`
+- `joinArenaSession({ sessionId, role })`
+- `startArenaRound({ sessionId })` — sets `status=running`, `starts_at=now()`, `ends_at=now()+duration`
+- `saveArenaEntryDraft({ sessionId, entryId?, title, body })`
+- `submitArenaEntry({ entryId })`
+- `endArenaRound({ sessionId })` — flips to `voting` (server-computed; also allowed after `ends_at`)
+- `castArenaVote({ sessionId, entryId, scores, comment? })`
+- `finalizeArenaRound({ sessionId })` — computes winner from vote totals, marks entry `status=winner`, session `complete`
+- `awardArenaEntry({ sessionId, entryId, awardType, title })`
+- `promoteArenaEntryToSuggestion({ sessionId, entryId, suggestionType })` — inserts a row into existing `suggestions` table with `source='human'`, `metadata={ source:'arena', arena_session_id, arena_entry_id }`. No script mutation.
+- `listArenaSessions({ projectId, status? })`
+- `getArenaSession({ sessionId })` — returns session + participants + entries + vote tallies + awards
 
-tts_credits_medium: $19 → 40_000 tts_characters
-
-tts_credits_large:  $39 → 100_000 tts_characters
-
-## Data model
-
-New table `usage_credit_grants` — an append-only ledger of purchased credits per feature:
-
-```
-id, user_id, environment, feature ('ai_tokens'|'tts_characters'),
-amount_granted int, amount_consumed int default 0,
-stripe_session_id text unique, price_id text, expires_at timestamptz null,
-created_at, updated_at
-```
-
-Grants never expire (null `expires_at`) for v1. RLS: user reads own; only `service_role` inserts (webhook).
-
-## Consumption logic
-
-Update `consume_usage(_feature, _amount, _environment)`:
-
-1. Increment `usage_counters` as today.
-2. If `count_used > monthly_limit`, compute overflow = `count_used - monthly_limit`.
-3. Debit overflow from `usage_credit_grants` for `(user_id, environment, feature)` where `amount_consumed < amount_granted`, oldest first. Update `amount_consumed`.
-4. If credits can't cover overflow, roll back the counter (same behavior as today) and raise `USAGE_LIMIT`.
-5. Otherwise return `count_used`.
-
-`get_usage_snapshot` also returns `credits_remaining` per feature so the UI shows "500k / 500k monthly · +250k credits" style.
-
-`ai_assists` cap stays call-count based (no per-call token pre-flight is meaningful for it); the pre-flight `ai_tokens` reservation already funnels overflow through credits.
-
-## Stripe
-
-- Create 5 one-time prices via `payments--batch_create_product` with tax code `txcd_10000000` (general digital goods).
-- Reuse `createCheckoutSession` — it already handles `mode: "payment"` (non-recurring) and `automatic_tax`. No changes.
-- Webhook handler adds a `checkout.session.completed` branch:
-  - Look up price by `lookup_key`, map to `(feature, amount)` via a server-side constant.
-  - Insert row into `usage_credit_grants` keyed by `session.id` for idempotency (existing `processed_webhook_events` still guards outer replay).
+Realtime is out of scope for v1 — poll session state every 3s while the round is running or in voting; use TanStack Query invalidation on writes.
 
 ## UI
 
-1. **Settings → Usage** — under each of the AI and Table Read usage bars, show `Credits: {remaining}` and a "Buy more" button that opens the pack picker.
-2. **Pack picker dialog** (`BuyCreditsDialog.tsx`) — 3 AI packs + 2 TTS packs as cards; clicking one opens embedded Stripe checkout via the existing `useStripeCheckout` hook.
-3. **Inline upsell** — when a server fn throws `USAGE_LIMIT: ai_tokens ...` or `USAGE_LIMIT: tts_characters ...`, surface a toast with a "Buy credits" action that opens the dialog (wire through a small `useCreditsUpsell` hook so any component can trigger it).
-4. **Success page** — `/checkout/success` already refetches; add a one-time toast when the completed session's mode is `payment` ("250,000 AI credits added").
+New Writers' Room tab **Arena**, gated by `useArenaEnabled()`, mounted in `writers-room.$projectId.tsx` next to Live.
+
+Files under `src/components/writers-room/arena/`:
+
+- `ArenaPanel.tsx` — root, holds sub-sections
+- `ActiveArenaCard.tsx` — currently open/running round with countdown
+- `CreateRoundDialog.tsx` — mode select, title, prompt textarea, duration presets (3/5/7/10/15 min)
+- `RoundLobby.tsx` — participants list, join button, host "Start Round" control
+- `RoundStage.tsx` — countdown timer, prompt, `EntryComposer`, submit lock
+- `EntryComposer.tsx` — autosaving draft (debounced), submit button
+- `VotingRoom.tsx` — list of submitted entries (author names shown; anonymous voting deferred), 5 score sliders, comment
+- `AwardsWall.tsx` — past winners and awards for the project
+- `PromoteToSuggestionDialog.tsx` — host/editor promotes an entry
+
+Cinematic copy per spec: "The Arena", "Start Round", "The Clock Is Running", "Submit Scene", "Voting Room", "Awards Wall", "Best Line", "Studio Winner". All strings go through `t()` keys (`arena.*`) per i18n rule; add to `src/lib/i18n/keys.ts` and coverage test.
+
+Visual style follows `visualdesign.md` — reuse Card/Tabs/Button/Slider primitives, no new gaming chrome, keep the existing amber "Experimental" badge treatment for the tab label.
+
+## Tests
+
+- `arena.functions.test.ts` (Vitest) — lifecycle: create → join → start → submit → vote → finalize → award → promote; guard rails (vote on own entry rejected, non-writer submit rejected, script untouched).
+- RLS test in the same style as `write-tools.rls.test.ts` for member/non-member reads and role gating.
+- `keys.test.ts` extended for `arena.*` keys.
+
+Absolutely. I would **not** replace Lovable’s plan—I would append this as an **Architecture Review Addendum** so it enhances the implementation without invalidating the work already planned.
 
 &nbsp;
 
-Added notes:
+**Architecture Review Addendum (Required Before Implementation)**
 
-I would **not approve this plan as-is**. The architecture is close, but the economics and usage logic need tightening.
+Before implementing Arena Mode v1, update the design with the following architectural improvements. These changes are intended to improve data integrity, scalability, and long-term maintainability without changing the overall product vision.
 
-The big issue is not only “are the credits profitable?” It is also: **what exactly does an AI credit buy, and does buying it actually unlock the thing the user hit the limit on?**
+**1. Atomic Server Lifecycle (Required)**
 
-**Main problem: AI token credits may not bypass the real AI cap**
+Several Arena operations change multiple database records and must execute atomically.
 
-Current aiAssist consumes **two** resources before running the model:
+Move these lifecycle transitions into PostgreSQL RPCs (or equivalent transactional server procedures):
 
-ai_assists → call-count cap
+- start_arena_round
+- advance_arena_round_if_due
+- finalize_arena_round
+- promote_arena_entry
+- award_arena_entry
 
-ai_tokens → token budget cap
+TanStack server functions should call these RPCs instead of manually performing multiple sequential database updates.
 
-The code consumes ai_assists first, then reserves ai_tokens.
-
-So if the user hits the ai_assists monthly cap, buying ai_tokens may **not help them**. Lovable’s plan says “AI assists cap stays call-count based,” but that means the upsell could be broken for the user’s most common limit.
-
-My recommendation: either top-ups must cover both ai_assists and ai_tokens, or paid AI credits should become the overflow mechanism while ai_assists becomes an abuse/rate-limit guard, not a hard blocker.
-
-**The proposed AI credits are too generous from a product/value standpoint**
-
-Current model routing is tier-based:
-
-Free / Creator → google/gemini-3.1-flash-lite
-
-Pro → google/gemini-3.5-flash
-
-Studio → google/gemini-2.5-pro
-
-That matters because the same “1,000,000 ai_tokens” can be much more expensive if consumed by a Studio user on a stronger model. Google lists Gemini 3.1 Flash-Lite at $0.25 input / $1.50 output per 1M tokens, Gemini 3.5 Flash at $1.50 input / $9 output, and Gemini 2.5 Pro at $1.25 input / $10 output for standard prompts under 200k tokens.      
-
-The plan’s $79 → 3.5M ai_tokens is probably still profitable on raw API cost, but it is way too much product utility for one payment. At the current 1,024-token AI assist reservation, 3.5M tokens can represent thousands of lightweight assists if the call-count cap is not also enforced. That can cannibalize subscriptions.
-
-**TTS margins are thinner**
-
-The Table Read side is more dangerous. Your code uses ElevenLabs eleven_multilingual_v2.  It meters both tableread_minutes and tts_characters, consuming characters before making TTS calls.
-
-ElevenLabs says V2 Multilingual is generally 1 text character = 1 credit, with some discounted models ranging 0.5–1 credit per character.   Their Pro plan is $99 for 600k credits and Creator is $22 for 121k credits, so your rough COGS is about **$0.165–$0.18 per 1,000 characters** before any platform overhead.
-
-At $29 → 100,000 tts_characters, after Stripe fees you net about $27.86, and the ElevenLabs cost could be around $16.50–$18.00. That is profitable, but not a huge margin once failed generations, storage, support, refunds, taxes, and disputes are considered. Stripe’s standard domestic card fee is 2.9% + 30¢ per successful transaction.
-
-**My revised pack suggestion**
-
-I’d make credits profitable **and** protect subscriptions by reducing grants:
-
-
-|                    |           |                        |
-| ------------------ | --------- | ---------------------- |
-| **Pack**           | **Price** | **Grants**             |
-| ai_credits_small   | $9        | 100,000 ai_tokens      |
-| ai_credits_medium  | $29       | 500,000 ai_tokens      |
-| ai_credits_large   | $79       | 1,750,000 ai_tokens    |
-| tts_credits_small  | $9        | 15,000 tts_characters  |
-| tts_credits_medium | $19       | 40,000 tts_characters  |
-| tts_credits_large  | $39       | 100,000 tts_characters |
-
-
-That feels much safer.
-
-The original AI packs:
-
-$9 → 250k
-
-$29 → 1M
-
-$79 → 3.5M
-
-are too generous. I’d cut them roughly in half or more.
-
-The original TTS packs:
-
-$9 → 25k
-
-$29 → 100k
-
-are borderline okay, but I’d make TTS more conservative because audio is more directly tied to vendor cost.
-
-**Architecture amendments I’d send Lovable**
-
-Do not ship the credit pack plan as-is.
+No lifecycle transition should leave the database in a partially completed state.
 
 &nbsp;
 
-The ledger/data model is good, but we need to revise pricing, consumption behavior, and product semantics before implementation.
+**2. Explicit State Machine**
+
+Arena sessions must enforce valid lifecycle transitions.
+
+Allowed:
+
+draft → open
+
+open → running
+
+running → voting
+
+voting → complete
+
+draft/open/complete → archived
+
+Disallow:
+
+complete → running
+
+voting → draft
+
+archived → running
+
+Enforce these transitions server-side.
 
 &nbsp;
 
-## Required changes
+**3. Timer Advancement**
+
+Polling every few seconds should refresh UI only.
+
+Polling must **not** be the authority that changes session state.
+
+Required behavior:
+
+- Before ends_at, only the host may manually end the writing period.
+- Once ends_at has passed, any participant may trigger an idempotent advance_arena_round_if_due() transition.
+- Multiple callers must never create duplicate transitions.
 
 &nbsp;
 
-### 1. Fix the AI assist cap issue
+**4. One Entry Per Writer**
+
+Arena v1 should enforce:
+
+UNIQUE(session_id, author_id)
+
+Each participant has one entry.
+
+Future game modes may intentionally support multiple submissions.
 
 &nbsp;
 
-Current AI calls consume `ai_assists` before `ai_tokens`.
+**5. Session / Project Integrity**
+
+Child tables currently contain both:
+
+- session_id
+- project_id
+
+The database must guarantee they always match.
+
+Do not trust client input.
+
+Use one of:
+
+- composite foreign keys
+- validation trigger
+- generated value
+
+Likewise ensure:
+
+arena_votes.entry_id
+
+always belongs to the same session referenced by:
+
+arena_votes.session_id
 
 &nbsp;
 
-If a user hits the `ai_assists` cap, buying `ai_tokens` will not help them.
+**6. Host Model**
+
+Do not overload participant roles.
+
+Recommended model:
+
+Arena Session:
+
+created_by = session host
+
+Arena Participant:
+
+role =
+
+writer
+
+judge
+
+viewer
+
+Host authority comes from the session itself.
+
+A host may also participate as a writer.
+
+Automatically insert the host as a participant when the session is created.
 
 &nbsp;
 
-Choose one:
+**7. Voting Rules**
+
+Voting permissions must be explicit.
+
+Recommended:
+
+- writers may vote on other entries
+- judges may vote
+- viewers may not vote
+- host authority is independent of voting authority
+
+Disallow self-voting.
+
+Allow vote edits only while:
+
+session.status = voting
+
+Freeze all votes once the round is finalized.
 
 &nbsp;
 
-Option A:
+**8. Hidden Vote Totals**
 
-Purchased AI credits cover both `ai_assists` and `ai_tokens`.
+Do not reveal running vote totals.
 
-&nbsp;
+During voting show only:
 
-Option B:
+- who has voted
+- remaining voters
+- voting progress
 
-Once a user has purchased AI credits, `ai_assists` becomes a rate-limit/abuse guard, while `ai_tokens` becomes the true paid overflow meter.
+Reveal scores only after finalization.
 
-&nbsp;
-
-Do not show “Buy AI Credits” for a limit that credits cannot resolve.
-
-&nbsp;
-
-### 2. Reduce pack grants
+This reduces bandwagon bias.
 
 &nbsp;
 
-Use safer v1 packs:
+**9. Tie Resolution**
+
+Define deterministic tie rules.
+
+Recommended:
+
+Primary:
+
+Average score
+
+Tie-break 1:
+
+Character Truth
+
+Tie-break 2:
+
+Cinematic Value
+
+Final tie:
+
+Co-Winners
+
+Do not use submission time as a tie breaker.
 
 &nbsp;
 
-```ts id="kl3ml7"
+**10. Rules / Constraints Engine**
 
-ai_credits_small:  $9  → 100_000 ai_tokens
+Arena rounds should support optional creative constraints.
 
-ai_credits_medium: $29 → 500_000 ai_tokens
+Add:
 
-ai_credits_large:  $79 → 1_750_000 ai_tokens
+rules jsonb
 
-&nbsp;
+Example:
 
-tts_credits_small:  $9  → 15_000 tts_characters
+{
 
-tts_credits_medium: $19 → 40_000 tts_characters
+  "max_words": 500,
 
-tts_credits_large:  $39 → 100_000 tts_characters
+  "required_line": "You knew the whole time.",
 
-Do not use the original 3.5M AI-token large pack for v1.
+  "tone": "dark comedy",
 
-**3. Do not call the user-facing unit “tokens”**
+  "required_character": "Mara",
 
-Users do not understand tokens.
+  "dialogue_only": true
 
-Display:
+}
 
-AI Credits
-
-Table Read Credits
-
-Internally we can still store:
-
-ai_tokens
-
-tts_characters
-
-But the UI should say things like:
-
-Good for roughly 40–80 AI assists depending on request size.
-
-Good for roughly 10–15 minutes of table read audio depending on dialogue density.
-
-**4. Server-side pack authority**
-
-Client catalog may display packs, but the webhook must use a server-only pack map.
-
-Do not trust client metadata for:
-
-- feature
-- amount_granted
-- price_id
-- lookup_key
-
-Webhook should map Stripe lookup_key or [price.id](http://price.id) to a server-side constant.
-
-**5. Model-tier cost protection**
-
-Because different tiers use different models, the same token grant has different COGS.
-
-At minimum, add comments/tests acknowledging:
-
-free/creator → cheaper model
-
-pro → flash model
-
-studio → expensive model
-
-Future-safe option:
-
-Use ai_credit_units instead of raw ai_tokens, where stronger models debit more units per token.
-
-Do not implement that if it makes v1 too big, but design the ledger so this migration is possible.
-
-**6. TTS should be more conservative**
-
-ElevenLabs costs are much closer to revenue than Gemini text generation.
-
-Use smaller TTS grants and add a server-side hard maximum per generation so one table read cannot consume a huge paid balance accidentally.
-
-**7. Credits should not be literally “never expire” without a migration path**
-
-For v1, non-expiring is user-friendly, but it creates an accounting/product liability if vendor prices rise.
-
-At minimum, make expires_at nullable as planned, but put copy in the code comments:
-
-v1 credits do not expire; future packs may include expiration.
-
-Do not promise “lifetime credits forever” in marketing copy.
-
-**Revised acceptance**
-
-- Buying credits actually resolves the limit that triggered the upsell.
-- AI credits do not accidentally leave ai_assists blocking the user.
-- Pack grants are smaller and profitable.
-- Webhook grants are server-authoritative.
-- UI does not expose raw token language.
-- TTS packs preserve margin after Stripe + ElevenLabs + failures.
-- No subscription cannibalization by massive one-time packs.
-
-## Bottom line
+Arena should become a creative challenge platform, not just a timed textarea.
 
 &nbsp;
 
-The ledger idea is good. The Stripe flow is fine. The migration shape is reasonable.
+**11. Submission Grace Period**
+
+When the timer expires:
+
+Do not immediately reject the final autosave.
+
+Recommended:
+
+submission_grace_seconds = 10
+
+After that:
+
+- drafts become locked
+- submitted entries remain valid
+- unsubmitted drafts are excluded
 
 &nbsp;
 
-But the original pack sizes are too generous, and the `ai_assists` vs `ai_tokens` issue is a real product bug waiting to happen.
+**12. Separate Lifecycle From Awards**
+
+Do not overload:
+
+entry.status = winner
+
+Recommended:
+
+Entry lifecycle:
+
+draft
+
+submitted
+
+withdrawn
+
+Awards determine winners:
+
+studio_winner
+
+best_dialogue
+
+best_twist
+
+audience_choice
+
+...
+
+This allows one entry to receive multiple awards.
 
 &nbsp;
 
-I’d approve the feature **only after** Lovable adjusts the pack amounts and fixes the “buy credits but still blocked by call-count cap” problem.
+**13. Idempotent Promotion**
 
-## Files
+Promotion into Suggestions must be repeat-safe.
 
-New:
+Store metadata:
 
-- `src/components/credits/BuyCreditsDialog.tsx`
-- `src/components/credits/UsageWithCredits.tsx` (replaces plain progress rows)
-- `src/hooks/useCreditsUpsell.ts`
-- `src/lib/credits.ts` — pack catalog constant (client-safe, single source of truth for pack → feature/amount mapping; server re-imports)
+arena_session_id
 
-Edited:
+arena_entry_id
 
-- `supabase/migrations/…` — `usage_credit_grants` table + updated `consume_usage` + updated `get_usage_snapshot`
-- `src/routes/api/public/payments/webhook.ts` — `checkout.session.completed` handler
-- `src/routes/_authenticated/settings.tsx` — swap usage rows for `UsageWithCredits`
-- `src/lib/ai.functions.ts`, `src/lib/tableread.functions.ts` — surface `USAGE_LIMIT` errors with a machine-parseable prefix so the UI can offer the upsell (already done for `USAGE_LIMIT:`; just make the client handler branch on it)
+arena_award_type
 
-## Out of scope (later)
+original_author_id
 
-- Subscription-tier auto-refill
-- Credits expiry / rollover rules
-- Team-shared credits (waits for Studio seats)
-- Refunding unused credits on cancel
+Prevent duplicate Suggestions from repeated button presses.
 
-Approve and I'll ship it in one pass, starting with the migration.
+&nbsp;
+
+**Recommended Additional Fields**
+
+Arena Session
+
+judging_mode
+
+entry_reveal
+
+stakes
+
+Allowed values:
+
+judging_mode
+
+&nbsp;
+
+peer
+
+host
+
+panel
+
+hybrid
+
+entry_reveal
+
+&nbsp;
+
+named
+
+blind_until_results
+
+stakes
+
+&nbsp;
+
+practice
+
+ranked
+
+showcase
+
+Default:
+
+peer
+
+named
+
+practice
+
+&nbsp;
+
+**Long-Term Vision**
+
+Arena Mode is **not** simply multiplayer editing.
+
+Arena is the foundation for:
+
+- Timed Writing Challenges
+- Dialogue Duels
+- Rewrite Relays
+- Comedy Punch-Up Battles
+- Character Challenges
+- Story Festivals
+- Studio Leagues
+- Public Competitions
+- Annual ScreenSmith Studio Awards
+
+The canonical screenplay remains protected.
+
+Arena exists to generate outstanding creative material which can later be promoted into Suggestions and, ultimately, into the Writer’s Desk through deliberate editorial review.
+
+&nbsp;
+
+## Out of Scope (v1)
+
+- Realtime channels / presence inside Arena
+- Anonymous voting (deferred; wire `self_vote_allowed` / anonymity later)
+- AI craft judge auto-notes (stub the panel, no LLM call)
+- Community-wide (cross-project) arenas
+- Mobile-optimized voting flow
+
+## Acceptance
+
+- Env + local switch both required to see the tab
+- Permitted member creates a round, others join, host starts
+- Writers submit entries; timer flips to voting
+- Participants score entries; host finalizes; winner marked
+- Awards can be assigned; winning entry promotable to Suggestions
+- No changes to `ScreenplayDocumentEditor` / `useScreenplayDocument` / any editor file
+- Typecheck, lint, and new tests pass
+
+## Files Touched / Added
+
+**Migration:** 1 new SQL migration (5 tables + GRANTs + RLS + indexes).
+**New:** `src/lib/arena.functions.ts`, `src/lib/arena.ts` (shared types/keys), 9 components under `src/components/writers-room/arena/`, `arena.functions.test.ts`.
+**Edited:** `src/lib/featureFlags.ts`, `src/components/writers-room/ExperimentalFeaturesCard.tsx`, `src/routes/_authenticated/writers-room.$projectId.tsx`, `src/lib/i18n/keys.ts`, `src/lib/i18n/keys.test.ts`.
+**Untouched:** all `src/components/editor/**`, all `src/lib/editor/**`, `screenplayPersistence.ts`, `useScreenplayDocument.ts`.
