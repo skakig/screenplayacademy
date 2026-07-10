@@ -75,6 +75,7 @@ export function AppShell({ children, focus = false, title, headerExtras }: Props
       </header>
       <GuidedReturnBanner />
       <main className="flex-1">{children}</main>
+      {creditsDialog}
     </div>
   );
 }
