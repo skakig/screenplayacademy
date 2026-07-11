@@ -469,6 +469,8 @@ export const i18nStrings = {
   "collab.presence.onBlock": "On {{blockLabel}}",
   "collab.presence.notOnScript": "Not in the script right now",
   "collab.presence.typingNow": "Typing…",
+  "collab.presence.hereNow": "Here now",
+  "collab.presence.onThisScene": "On this scene",
 
   // Pass 7 — Live Scene Collaboration (experimental)
   "collab.tabs.live": "Live Lab",
