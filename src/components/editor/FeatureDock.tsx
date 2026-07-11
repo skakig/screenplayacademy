@@ -37,6 +37,7 @@ export function FeatureDock({ projectId }: Props) {
     try {
       const rows = (await listChars({ data: { projectId } })) as Array<{ id: string; name?: string | null }>;
       let characterId = rows?.[0]?.id;
+      const createdFresh = !characterId;
       if (!characterId) {
         const created = (await createChar({
           data: { project_id: projectId, patch: { name: "New Character" } },
@@ -44,6 +45,11 @@ export function FeatureDock({ projectId }: Props) {
         characterId = created?.row?.id ?? created?.id;
       }
       if (!characterId) throw new Error("Could not resolve character");
+      if (createdFresh) {
+        toast.success("First character created", {
+          description: "Let's build them together in the guided builder.",
+        });
+      }
       navigate({
         to: "/characters/$projectId/build/$characterId",
         params: { projectId, characterId },
@@ -54,6 +60,7 @@ export function FeatureDock({ projectId }: Props) {
       setCharLoading(false);
     }
   };
+
 
   const cardClass =
     "group relative overflow-hidden rounded-lg border border-border/50 bg-card/50 p-3 hover:border-primary/40 hover:bg-card/80 transition-all text-left";
