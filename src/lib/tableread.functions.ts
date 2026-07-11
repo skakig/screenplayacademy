@@ -266,6 +266,10 @@ export const generateTableRead = createServerFn({ method: "POST" })
         ) as any,
         status: "generating",
         cache_key: cacheKey,
+        lines_total: lines.length,
+        lines_done: 0,
+        current_line_label: lines[0] ? `${lines[0].speaker} (1/${lines.length})` : null,
+        error_message: null,
       } as any)
       .select()
       .single();
@@ -285,13 +289,24 @@ export const generateTableRead = createServerFn({ method: "POST" })
     }
 
     try {
-      // Sequentially TTS each line with prosody stitching context
+      // Sequentially TTS each line with prosody stitching context, updating
+      // progress on the audio_assets row so the UI can render a live queue.
       const chunks: Uint8Array[] = [];
       for (let i = 0; i < lines.length; i++) {
+        await supabaseAdmin
+          .from("audio_assets")
+          .update({
+            current_line_label: `${lines[i].speaker} (${i + 1}/${lines.length})`,
+          } as any)
+          .eq("id", pendingRow.id);
         const prev = lines[i - 1]?.text;
         const next = lines[i + 1]?.text;
         const buf = await ttsLine(apiKey, lines[i].voiceId, lines[i].text, prev, next);
         chunks.push(buf);
+        await supabaseAdmin
+          .from("audio_assets")
+          .update({ lines_done: i + 1 } as any)
+          .eq("id", pendingRow.id);
       }
 
       // Concatenate MP3 frames
