@@ -35,15 +35,13 @@ import {
 import { useState, type ComponentProps } from "react";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { useSubscription } from "@/hooks/useSubscription";
-import {
-  FEATURE_MIN_TIER,
-  TIER_LABEL,
-  TIER_RANK,
-  type Feature,
-  type Tier,
-} from "@/lib/entitlements";
+import { TIER_LABEL, type Feature, type Tier } from "@/lib/entitlements";
 import { isStripeConfigured } from "@/lib/stripe";
 import { supabase } from "@/integrations/supabase/client";
+import { MENU_MANIFEST } from "./studioMenuManifest";
+import { useProjectReadiness } from "@/lib/readiness/useProjectReadiness";
+import { resolveMenuGate } from "@/lib/readiness/menuGate";
+import { useCurrentProjectId } from "@/lib/readiness/useMenuGate";
 
 /**
  * Fire-and-forget menu telemetry. Emits studio_menu_item_clicked with the
@@ -189,28 +187,22 @@ const GROUPS: { key: string; label: string; items: Item[] }[] = [
   },
 ];
 
-function useProjectId(): string | null {
-  const matches = useRouterState({ select: (s) => s.matches });
-  for (let i = matches.length - 1; i >= 0; i--) {
-    const p = (matches[i].params as Record<string, unknown> | undefined)?.projectId;
-    if (typeof p === "string" && p.length > 0) return p;
-  }
-  return null;
-}
-
-function hasFeatureTier(tier: Tier, feature: Feature | undefined): boolean {
-  if (!feature) return true;
-  return TIER_RANK[tier] >= TIER_RANK[FEATURE_MIN_TIER[feature]];
-}
-
 export function StudioMenu() {
   const [open, setOpen] = useState(false);
-  const projectId = useProjectId();
+  const projectId = useCurrentProjectId();
   const { data: onboarding } = useOnboarding();
   const isGuided = onboarding?.preferred_mode === "guided";
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const { tier, loading: subLoading } = useSubscription();
   const stripeReady = isStripeConfigured();
+  const { data: counts } = useProjectReadiness(projectId);
+  const ctx = {
+    tier,
+    stripeReady,
+    isGuided,
+    projectId,
+    counts: counts ?? null,
+  };
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -250,22 +242,31 @@ export function StudioMenu() {
                 <div className="space-y-0.5">
                   {items.map((it) => {
                     const Icon = it.icon;
-                    const missingProject = Boolean(it.needsProject && !projectId);
-                    const locked = !hasFeatureTier(tier, it.feature);
-                    const params = it.needsProject && projectId ? { projectId } : undefined;
-                    const href = typeof it.to === "string" && projectId
-                      ? it.to.replace("$projectId", projectId)
+                    // One source of truth for gating — same function the destination
+                    // route uses via RouteReadinessGate.
+                    const gate = resolveMenuGate(
+                      {
+                        to: it.to as string,
+                        needsProject: it.needsProject,
+                        guidedOnly: it.guidedOnly,
+                        feature: it.feature,
+                        experimental: it.experimental,
+                        setupRequires: it.setupRequires,
+                        needsData: it.needsData,
+                      },
+                      ctx,
+                    );
+                    const href = projectId
+                      ? (it.to as string).replace("$projectId", projectId)
                       : (it.to as string);
                     const active = currentPath === href;
-
-                    const requiredTier = it.feature ? FEATURE_MIN_TIER[it.feature] : null;
-                    const setupRequired = it.setupRequires === "billing" && !stripeReady;
+                    const dimmed = gate.blockedBy === "pick_project" || gate.blockedBy === "needs_data";
 
                     const inner = (
                       <div className={`flex items-start gap-3 rounded-md px-2.5 py-2 transition-colors ${
                         active
                           ? "bg-primary/10 text-foreground"
-                          : missingProject
+                          : dimmed
                           ? "opacity-60"
                           : "hover:bg-secondary text-foreground/90"
                       }`}
@@ -277,12 +278,12 @@ export function StudioMenu() {
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-sm font-medium truncate">{it.label}</span>
                             <StateBadges
-                              locked={locked}
-                              requiredTier={requiredTier}
-                              experimental={it.experimental}
-                              setupRequired={setupRequired}
-                              missingProject={missingProject}
-                              needsData={it.needsData}
+                              locked={gate.locked}
+                              requiredTier={gate.requiredTier}
+                              experimental={gate.experimental}
+                              setupRequired={gate.setupRequired}
+                              missingProject={gate.missingProject}
+                              needsData={gate.needsData ?? undefined}
                             />
                           </div>
                           <div className="text-[11px] text-muted-foreground leading-snug line-clamp-2">
@@ -297,48 +298,30 @@ export function StudioMenu() {
                         label: it.label,
                         to: String(it.to),
                         tier,
-                        locked,
-                        required_tier: requiredTier,
-                        experimental: Boolean(it.experimental),
-                        setup_required: setupRequired,
-                        missing_project: missingProject,
-                        needs_data: it.needsData ?? null,
+                        locked: gate.locked,
+                        required_tier: gate.requiredTier,
+                        experimental: gate.experimental,
+                        setup_required: gate.setupRequired,
+                        missing_project: gate.missingProject,
+                        needs_data: gate.needsData,
                       });
                       setOpen(false);
                     };
 
-                    // Missing-project items route to /projects with a helper toast context
-                    if (missingProject) {
-                      return (
-                        <Link
-                          key={it.label}
-                          to="/projects"
-                          onClick={handleClick}
-                          aria-label={`${it.label} — pick a project first`}
-                        >
-                          {inner}
-                        </Link>
-                      );
-                    }
-                    // Locked items route to /pricing
-                    if (locked) {
-                      return (
-                        <Link
-                          key={it.label}
-                          to="/pricing"
-                          onClick={handleClick}
-                          aria-label={`${it.label} — upgrade to ${requiredTier ? TIER_LABEL[requiredTier] : "unlock"}`}
-                        >
-                          {inner}
-                        </Link>
-                      );
-                    }
+                    const ariaLabel =
+                      gate.blockedBy === "pick_project"
+                        ? `${it.label} — pick a project first`
+                        : gate.blockedBy === "tier"
+                          ? `${it.label} — upgrade to ${gate.requiredTierLabel ?? "unlock"}`
+                          : undefined;
+
                     return (
                       <Link
                         key={it.label}
-                        to={it.to as any}
-                        params={params as any}
+                        to={gate.targetTo as any}
+                        params={gate.targetParams as any}
                         onClick={handleClick}
+                        aria-label={ariaLabel}
                       >
                         {inner}
                       </Link>

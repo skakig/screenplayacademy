@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
@@ -16,7 +17,7 @@ import { upsertStoryArc } from "@/lib/arc.functions";
 
 export const Route = createFileRoute("/_authenticated/story-arc/$projectId")({
   head: () => ({ meta: [{ title: "Story Arc — SceneSmith AI" }] }),
-  component: StoryArcPage,
+  component: () => (<RouteReadinessGate to="/story-arc/$projectId"><StoryArcPage /></RouteReadinessGate>),
   errorComponent: ({ error, reset }) => (
     <div className="p-8 text-center text-sm text-muted-foreground">
       {error?.message} <button onClick={reset} className="text-primary underline ml-2">Retry</button>

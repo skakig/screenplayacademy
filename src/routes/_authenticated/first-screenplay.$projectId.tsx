@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef } from "react";
@@ -12,7 +13,7 @@ import { updateGuidedStep, seedGuidedSteps } from "@/lib/academy.functions";
 
 export const Route = createFileRoute("/_authenticated/first-screenplay/$projectId")({
   head: () => ({ meta: [{ title: "First Screenplay Path — SceneSmith AI" }] }),
-  component: FirstScreenplayPage,
+  component: () => (<RouteReadinessGate to="/first-screenplay/$projectId"><FirstScreenplayPage /></RouteReadinessGate>),
 });
 
 // Thresholds for auto-detecting editor step completion

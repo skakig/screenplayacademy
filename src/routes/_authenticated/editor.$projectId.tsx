@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,7 +69,7 @@ export const Route = createFileRoute("/_authenticated/editor/$projectId")({
     step: typeof s.step === "string" ? s.step : undefined,
     block: typeof s.block === "string" ? s.block : undefined,
   }),
-  component: EditorRoute,
+  component: () => (<RouteReadinessGate to="/editor/$projectId"><EditorRoute /></RouteReadinessGate>),
   errorComponent: ({ error, reset }) => (
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="max-w-md text-center space-y-3">

@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +20,7 @@ import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/scenes/$projectId")({
   head: () => ({ meta: [{ title: "Scene Board — SceneSmith Studio" }] }),
-  component: ScenesPage,
+  component: () => (<RouteReadinessGate to="/scenes/$projectId"><ScenesPage /></RouteReadinessGate>),
   errorComponent: RouteErrorBoundary,
 });
 

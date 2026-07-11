@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -33,7 +34,7 @@ import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/characters/$projectId")({
   head: () => ({ meta: [{ title: "Casting Wall — SceneSmith Studio" }] }),
-  component: CharactersPage,
+  component: () => (<RouteReadinessGate to="/characters/$projectId"><CharactersPage /></RouteReadinessGate>),
   errorComponent: RouteErrorBoundary,
 });
 

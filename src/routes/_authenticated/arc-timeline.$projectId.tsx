@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -17,7 +18,7 @@ import { AlertTriangle, ArrowRight, Loader2, Activity } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/arc-timeline/$projectId")({
   head: () => ({ meta: [{ title: "Arc Timeline — SceneSmith AI" }] }),
-  component: ArcTimelinePage,
+  component: () => (<RouteReadinessGate to="/arc-timeline/$projectId"><ArcTimelinePage /></RouteReadinessGate>),
   errorComponent: ({ error, reset }) => (
     <div className="p-8 text-center">
       <p className="text-sm text-muted-foreground mb-2">{error?.message ?? "Failed to load timeline"}</p>

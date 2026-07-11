@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +22,7 @@ import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/tableread/$projectId")({
   head: () => ({ meta: [{ title: "Table Read — SceneSmith Studio" }] }),
-  component: GatedTableRead,
+  component: () => (<RouteReadinessGate to="/tableread/$projectId"><GatedTableRead /></RouteReadinessGate>),
   errorComponent: RouteErrorBoundary,
 });
 
