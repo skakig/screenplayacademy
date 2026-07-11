@@ -2,28 +2,31 @@
 // Cinematic full-screen route inspired by the approved iPad mockup.
 // See docs/CHARACTERS_REBUILD.md.
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sparkles, ChevronLeft, ChevronRight, ChevronDown, Loader2, Check, X,
   ArrowLeft, ArrowRight, Star, HelpCircle, Rocket, Crosshair, Clock,
   MessageCircle, Shield, Lightbulb, Save, Eye, Wand2, Image as ImageIcon,
-  GraduationCap, Flame, Users, BookOpen,
+  GraduationCap, Flame, Users, BookOpen, AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { upsertCharacter, generateFullCharacter, generatePortrait } from "@/lib/characters.functions";
+import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenStatus } from "@/lib/characters.functions";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
+import { t } from "@/lib/i18n/t";
 
 export const Route = createFileRoute(
   "/_authenticated/characters/$projectId/build/$characterId",
 )({
-  head: () => ({ meta: [{ title: "Build Character — SceneSmith Studio" }] }),
+  head: () => ({ meta: [{ title: t("characters.builder.headTitle") }] }),
   component: GuidedBuilderPage,
   errorComponent: RouteErrorBoundary,
 });
@@ -38,10 +41,46 @@ type Step = {
   starters: string[];
   coach: string[];
   beginnerHint?: string;
-  kind?: "text" | "textarea" | "portrait";
+  kind?: "identity" | "text" | "textarea" | "portrait";
 };
 
+const IMPORTANCE_OPTIONS = [
+  { value: "main", label: t("characters.builder.importance.main") },
+  { value: "supporting", label: t("characters.builder.importance.supporting") },
+  { value: "minor", label: t("characters.builder.importance.minor") },
+  { value: "unassigned", label: t("characters.builder.importance.unassigned") },
+];
+
+const STORY_FUNCTION_OPTIONS = [
+  { value: "protagonist", label: t("characters.builder.function.protagonist") },
+  { value: "antagonist", label: t("characters.builder.function.antagonist") },
+  { value: "mentor", label: t("characters.builder.function.mentor") },
+  { value: "ally", label: t("characters.builder.function.ally") },
+  { value: "love_interest", label: t("characters.builder.function.loveInterest") },
+  { value: "comic_relief", label: t("characters.builder.function.comicRelief") },
+  { value: "custom", label: t("characters.builder.function.custom") },
+];
+
 const STEPS: Step[] = [
+  {
+    field: "identity",
+    title: t("characters.builder.identity.title"),
+    subtitle: t("characters.builder.identity.subtitle"),
+    question: () => t("characters.builder.identity.question"),
+    whyItMatters: t("characters.builder.identity.why"),
+    placeholder: t("characters.builder.identity.namePlaceholder"),
+    starters: [
+      t("characters.builder.identity.nameStarter"),
+      t("characters.builder.identity.importanceStarter"),
+      t("characters.builder.identity.functionStarter"),
+    ],
+    coach: [
+      t("characters.builder.identity.coach1"),
+      t("characters.builder.identity.coach2"),
+    ],
+    beginnerHint: t("characters.builder.identity.beginnerHint"),
+    kind: "identity",
+  },
   {
     field: "role",
     title: "Role",
@@ -184,6 +223,69 @@ function initials(name?: string | null): string {
   return (parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "");
 }
 
+function stepIsFilled(step: Step, character: any): boolean {
+  if (!character) return false;
+  if (step.kind === "identity") {
+    return Boolean(
+      String(character.name ?? "").trim() &&
+      String(character.importance ?? "").trim() &&
+      String(character.story_function ?? "").trim(),
+    );
+  }
+  return Boolean(character?.[step.field] && String(character[step.field]).trim());
+}
+
+function BuilderRouteState({
+  projectId,
+  title,
+  body,
+  tone = "muted",
+  showCreate = false,
+}: {
+  projectId: string;
+  title: string;
+  body: string;
+  tone?: "loading" | "danger" | "muted";
+  showCreate?: boolean;
+}) {
+  const iconClass = tone === "danger" ? "text-destructive" : tone === "loading" ? "text-primary" : "text-muted-foreground";
+  const shellClass = tone === "danger" ? "border-destructive/40 bg-destructive/10" : "border-border bg-card/60";
+
+  return (
+    <div className="min-h-dvh bg-background text-foreground grid place-items-center px-6">
+      <div className="max-w-md text-center space-y-5">
+        <div className={`mx-auto h-12 w-12 rounded-full border grid place-items-center ${shellClass}`}>
+          {tone === "loading" ? (
+            <Loader2 className={`h-6 w-6 animate-spin ${iconClass}`} />
+          ) : (
+            <AlertCircle className={`h-6 w-6 ${iconClass}`} />
+          )}
+        </div>
+        <div>
+          <h1 className="font-display text-3xl font-semibold">{title}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{body}</p>
+        </div>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button asChild variant="outline">
+            <Link to="/characters/$projectId" params={{ projectId }}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              {t("characters.builder.returnToCharacters")}
+            </Link>
+          </Button>
+          {showCreate && (
+            <Button asChild>
+              <Link to="/characters/$projectId/build" params={{ projectId }}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                {t("characters.builder.createCharacter")}
+              </Link>
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GuidedBuilderPage() {
   const { projectId, characterId } = Route.useParams();
   const navigate = useNavigate();
@@ -191,6 +293,7 @@ function GuidedBuilderPage() {
   const callUpsert = useServerFn(upsertCharacter);
   const callFull = useServerFn(generateFullCharacter);
   const callPortrait = useServerFn(generatePortrait);
+  const callImageStatus = useServerFn(getImageGenStatus);
   const { data: onboarding } = useOnboarding();
 
   const experience = String(onboarding?.writer_experience_level ?? "").toLowerCase();
@@ -203,40 +306,24 @@ function GuidedBuilderPage() {
       (await supabase.from("projects").select("title").eq("id", projectId).maybeSingle()).data,
   });
 
-  const { data: character, isLoading: characterLoading } = useQuery<any>({
-    queryKey: ["character", characterId],
+  const { data: character, isLoading: characterLoading, isError: characterIsError, error: characterError } = useQuery<any>({
+    queryKey: ["character", projectId, characterId],
     refetchOnMount: "always",
-    queryFn: async (): Promise<any> =>
-      (await supabase.from("characters").select("*").eq("id", characterId).maybeSingle()).data,
+    queryFn: async (): Promise<any> => {
+      const { data, error } = await supabase
+        .from("characters")
+        .select("*")
+        .eq("id", characterId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
   });
 
-  // Auto-create: if the URL characterId doesn't resolve to a real row, create
-  // the first character for this project and redirect into its builder.
-  const autoCreateRef = useRef(false);
-  useEffect(() => {
-    if (characterLoading) return;
-    if (character) return;
-    if (autoCreateRef.current) return;
-    autoCreateRef.current = true;
-    (async () => {
-      try {
-        const row: any = await callUpsert({
-          data: { project_id: projectId, patch: { name: "New Character" } },
-        });
-        if (!row?.id) throw new Error("Could not create character");
-        toast.success("Created your first character — let's build them.");
-        qc.invalidateQueries({ queryKey: ["characters", projectId] });
-        navigate({
-          to: "/characters/$projectId/build/$characterId",
-          params: { projectId, characterId: row.id },
-          replace: true,
-        });
-      } catch (e: any) {
-        autoCreateRef.current = false;
-        toast.error(e?.message ?? "Could not create character");
-      }
-    })();
-  }, [character, characterLoading, projectId, callUpsert, navigate, qc]);
+  const { data: imageStatus, isLoading: imageStatusLoading } = useQuery({
+    queryKey: ["image-generation-status"],
+    queryFn: async () => callImageStatus(),
+  });
 
   const [step, setStep] = useState(0);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -246,12 +333,15 @@ function GuidedBuilderPage() {
 
   const current = STEPS[step];
   const isPortrait = current.kind === "portrait";
-  const currentValue = drafts[current.field] ?? (character?.[current.field] ?? "");
-  const hasExisting = !!(character?.[current.field] && String(character[current.field]).trim());
-  const charCount = currentValue.length;
+  const isIdentity = current.kind === "identity";
+  const currentValue = isIdentity ? "" : drafts[current.field] ?? (character?.[current.field] ?? "");
+  const hasExisting = isIdentity
+    ? stepIsFilled(current, character)
+    : !!(character?.[current.field] && String(character[current.field]).trim());
+  const charCount = isIdentity ? String(drafts.name ?? character?.name ?? "").length : currentValue.length;
 
   const strengths = useMemo(
-    () => STEPS.filter((s) => character?.[s.field] && String(character[s.field]).trim()).length,
+    () => STEPS.filter((s) => stepIsFilled(s, character)).length,
     [character],
   );
   const gaps = STEPS.length - strengths;
@@ -275,15 +365,33 @@ function GuidedBuilderPage() {
       qc.invalidateQueries({ queryKey: ["character", characterId] });
       qc.invalidateQueries({ queryKey: ["characters", projectId] });
     },
-    onError: (e: any) => toast.error(e?.message ?? "Save failed"),
+    onError: (e: any) => toast.error(e?.message ?? t("characters.builder.toast.saveFailed")),
   });
 
+  const buildCurrentPatch = () => {
+    const patch: Record<string, any> = {};
+    if (isPortrait) return patch;
+
+    if (isIdentity) {
+      const name = String(drafts.name ?? character?.name ?? "").trim();
+      const importanceValue = String(drafts.importance ?? character?.importance ?? "").trim();
+      const storyFunctionValue = String(drafts.story_function ?? character?.story_function ?? "").trim();
+
+      if (name && name !== (character?.name ?? "")) patch.name = name;
+      if (importanceValue && importanceValue !== (character?.importance ?? "")) patch.importance = importanceValue;
+      if (storyFunctionValue && storyFunctionValue !== (character?.story_function ?? "")) patch.story_function = storyFunctionValue;
+      return patch;
+    }
+
+    const trimmed = (drafts[current.field] ?? "").trim();
+    if (trimmed && trimmed !== (character?.[current.field] ?? "")) patch[current.field] = trimmed;
+    return patch;
+  };
+
   const commitStep = async (nextIndex: number) => {
-    if (!isPortrait) {
-      const trimmed = (drafts[current.field] ?? "").trim();
-      if (trimmed && trimmed !== (character?.[current.field] ?? "")) {
-        await save.mutateAsync({ [current.field]: trimmed });
-      }
+    const patch = buildCurrentPatch();
+    if (Object.keys(patch).length) {
+      await save.mutateAsync(patch);
     }
     setStep(Math.max(0, Math.min(STEPS.length - 1, nextIndex)));
     setExpandedCoach(0);
@@ -291,13 +399,13 @@ function GuidedBuilderPage() {
 
   const saveDraft = async () => {
     if (isPortrait) return;
-    const trimmed = (drafts[current.field] ?? "").trim();
-    if (!trimmed || trimmed === (character?.[current.field] ?? "")) {
-      toast.info("Nothing new to save.");
+    const patch = buildCurrentPatch();
+    if (!Object.keys(patch).length) {
+      toast.info(t("characters.builder.toast.nothingToSave"));
       return;
     }
-    await save.mutateAsync({ [current.field]: trimmed });
-    toast.success("Draft saved");
+    await save.mutateAsync(patch);
+    toast.success(t("characters.builder.toast.saved"));
   };
 
   const insertStarter = (s: string) => {
@@ -309,9 +417,9 @@ function GuidedBuilderPage() {
   };
 
   const helpMeWrite = async (mode: "example" | "sharper" | "simpler" | "academy") => {
-    if (isPortrait) return;
+    if (isPortrait || isIdentity) return;
     if (hasExisting && mode !== "sharper" && mode !== "simpler") {
-      toast.info("This field has content. Try 'Make it sharper' or clear it first.");
+      toast.info(t("characters.builder.toast.fieldHasContent"));
       return;
     }
     setBusy(true);
@@ -320,27 +428,35 @@ function GuidedBuilderPage() {
       const suggestion = out?.row?.[current.field];
       if (suggestion) {
         setDrafts((d) => ({ ...d, [current.field]: String(suggestion) }));
-        toast.success(out?.demo ? "Suggested (demo)" : "Suggested");
+        toast.success(out?.demo ? t("characters.builder.toast.suggestedDemo") : t("characters.builder.toast.suggested"));
       } else {
-        toast.info("No suggestion available for this field.");
+        toast.info(t("characters.builder.toast.noSuggestion"));
       }
       qc.invalidateQueries({ queryKey: ["character", characterId] });
     } catch (e: any) {
-      toast.error(e?.message ?? "Suggestion failed");
+      toast.error(e?.message ?? t("characters.builder.toast.suggestionFailed"));
     } finally {
       setBusy(false);
     }
   };
 
   const generatePortraitNow = async () => {
+    if (imageStatus?.configured === false) {
+      toast.info(t("characters.builder.portrait.unavailable"));
+      return;
+    }
     setPortraitBusy(true);
     try {
       const out: any = await callPortrait({ data: { characterId } });
       qc.invalidateQueries({ queryKey: ["character", characterId] });
       qc.invalidateQueries({ queryKey: ["characters", projectId] });
-      if (out?.row?.portrait_url) toast.success("Portrait generated");
+      if (out?.configured === false) {
+        toast.info(t("characters.builder.portrait.unavailable"));
+      } else if (out?.row?.portrait_url) {
+        toast.success(t("characters.builder.portrait.generated"));
+      }
     } catch (e: any) {
-      toast.error(e?.message ?? "Portrait generation failed");
+      toast.error(e?.message ?? t("characters.builder.portrait.failed"));
     } finally {
       setPortraitBusy(false);
     }
@@ -348,6 +464,51 @@ function GuidedBuilderPage() {
 
   const exitTo = () =>
     navigate({ to: "/characters/$projectId", params: { projectId } });
+
+  if (characterLoading) {
+    return (
+      <BuilderRouteState
+        projectId={projectId}
+        title={t("characters.builder.loadingTitle")}
+        body={t("characters.builder.loadingBody")}
+        tone="loading"
+      />
+    );
+  }
+
+  if (characterIsError) {
+    return (
+      <BuilderRouteState
+        projectId={projectId}
+        title={t("characters.builder.errorTitle")}
+        body={characterError instanceof Error ? characterError.message : t("characters.builder.errorBody")}
+        tone="danger"
+      />
+    );
+  }
+
+  if (!character) {
+    return (
+      <BuilderRouteState
+        projectId={projectId}
+        title={t("characters.builder.notFoundTitle")}
+        body={t("characters.builder.notFoundBody")}
+        tone="muted"
+        showCreate
+      />
+    );
+  }
+
+  if (character.project_id && character.project_id !== projectId) {
+    return (
+      <BuilderRouteState
+        projectId={projectId}
+        title={t("characters.builder.projectMismatchTitle")}
+        body={t("characters.builder.projectMismatchBody")}
+        tone="danger"
+      />
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-background text-foreground flex flex-col">
@@ -394,7 +555,7 @@ function GuidedBuilderPage() {
           </div>
           <ol className="space-y-1">
             {STEPS.map((s, i) => {
-              const filled = !!(character?.[s.field] && String(character[s.field]).trim());
+              const filled = stepIsFilled(s, character);
               const active = i === step;
               return (
                 <li key={s.field}>
@@ -514,7 +675,77 @@ function GuidedBuilderPage() {
               Current prompt
             </div>
 
-            {isPortrait ? (
+            {isIdentity ? (
+              <>
+                <h2 className="mt-3 font-display text-3xl sm:text-4xl font-semibold text-foreground leading-tight">
+                  {current.question(displayName)}
+                </h2>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  <span className="text-primary font-medium">Why this matters: </span>
+                  {current.whyItMatters}
+                </p>
+
+                <div className="mt-6 grid gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="character-identity-name">{t("characters.builder.identity.nameLabel")}</Label>
+                    <Input
+                      id="character-identity-name"
+                      value={drafts.name ?? character?.name ?? ""}
+                      autoFocus
+                      placeholder={t("characters.builder.identity.namePlaceholder")}
+                      onChange={(e) => setDrafts((d) => ({ ...d, name: e.target.value }))}
+                      className="h-12 text-base"
+                    />
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{t("characters.builder.identity.importanceLabel")}</Label>
+                      <Select
+                        value={drafts.importance ?? character?.importance ?? "main"}
+                        onValueChange={(value) => setDrafts((d) => ({ ...d, importance: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {IMPORTANCE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("characters.builder.identity.storyFunctionLabel")}</Label>
+                      <Select
+                        value={drafts.story_function ?? character?.story_function ?? "custom"}
+                        onValueChange={(value) => setDrafts((d) => ({ ...d, story_function: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STORY_FUNCTION_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {!isExperienced && (
+                  <div className="mt-6 space-y-2">
+                    {current.coach.map((line, i) => (
+                      <div key={i} className="rounded-lg border border-border/60 bg-secondary/30 px-3 py-2.5 text-sm text-foreground/90 flex gap-2">
+                        <Lightbulb className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                        <span>{line}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : isPortrait ? (
               <>
                 <h2 className="mt-3 font-display text-3xl sm:text-4xl font-semibold text-foreground leading-tight">
                   {current.question(displayName)}
@@ -551,7 +782,21 @@ function GuidedBuilderPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <Button onClick={generatePortraitNow} disabled={portraitBusy} className="w-full sm:w-auto">
+                    <div className={`rounded-lg border px-3 py-2 text-xs ${imageStatus?.configured === false ? "border-amber-500/40 bg-amber-500/10 text-amber-500" : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"}`}>
+                      {imageStatusLoading
+                        ? t("characters.builder.portrait.statusLoading")
+                        : imageStatus?.configured === false
+                        ? t("characters.builder.portrait.notConfigured")
+                        : t("characters.builder.portrait.ready")}
+                      {imageStatus?.configured === false && (
+                        <p className="mt-1 text-muted-foreground">{t("characters.builder.portrait.notConfiguredBody")}</p>
+                      )}
+                    </div>
+                    <Button
+                      onClick={generatePortraitNow}
+                      disabled={portraitBusy || imageStatusLoading || imageStatus?.configured === false}
+                      className="w-full sm:w-auto"
+                    >
                       {portraitBusy
                         ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         : <Wand2 className="h-4 w-4 mr-2" />}
@@ -670,10 +915,10 @@ function GuidedBuilderPage() {
                 )}
 
                 <div className="mt-6 flex flex-wrap gap-2">
-                  <ActionPill icon={Lightbulb} label="Need an example" onClick={() => helpMeWrite("example")} disabled={busy} />
-                  <ActionPill icon={Crosshair} label="Make it sharper" onClick={() => helpMeWrite("sharper")} disabled={busy} />
-                  <ActionPill icon={Eye} label="Keep it simple" onClick={() => helpMeWrite("simpler")} disabled={busy} />
-                  <ActionPill icon={BookOpen} label="Use Academy guidance" onClick={() => helpMeWrite("academy")} disabled={busy} />
+                    <ActionPill icon={Lightbulb} label="Need an example" onClick={() => helpMeWrite("example")} disabled={busy} />
+                    <ActionPill icon={Crosshair} label="Make it sharper" onClick={() => helpMeWrite("sharper")} disabled={busy} />
+                    <ActionPill icon={Eye} label="Keep it simple" onClick={() => helpMeWrite("simpler")} disabled={busy} />
+                    <ActionPill icon={BookOpen} label="Use Academy guidance" onClick={() => helpMeWrite("academy")} disabled={busy} />
                 </div>
               </>
             )}
@@ -699,7 +944,7 @@ function GuidedBuilderPage() {
                 <Button
                   onClick={async () => {
                     await commitStep(step);
-                    toast.success("Character saved");
+                    toast.success(t("characters.builder.toast.characterSaved"));
                     exitTo();
                   }}
                   disabled={save.isPending}
