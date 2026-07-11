@@ -47,6 +47,7 @@ function CharactersPage() {
   const search = useSearch({ from: "/_authenticated/characters/$projectId" }) as { merge?: string };
   const mergeDebug = search.merge === "1";
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
   const qc = useQueryClient();
   const callUpsert = useServerFn(upsertCharacter);
   const callDel = useServerFn(deleteCharacter);
