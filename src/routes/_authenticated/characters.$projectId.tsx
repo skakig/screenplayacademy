@@ -275,10 +275,8 @@ function CharactersPage() {
               )}
             </section>
 
-            <section>
-              <DetectedSpeakersPanel projectId={projectId} existingNames={characters.map((c) => c.name || "")} />
-            </section>
           </main>
+
 
           {/* INSPECTOR */}
           <aside className="space-y-3">
