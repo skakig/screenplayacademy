@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, Clock, ArrowRight, Check } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { GraduationCap, Clock, ArrowRight, Check, BookOpen, PenLine, Compass, Megaphone } from "lucide-react";
 import { t } from "@/lib/i18n/t";
 
 export const Route = createFileRoute("/_authenticated/academy/")({
@@ -19,7 +21,34 @@ export const Route = createFileRoute("/_authenticated/academy/")({
   component: AcademyIndex,
 });
 
+// Pillars map to the 4-pillar Studio Menu (School / Editor / Coach / Producer).
+// Modules are grouped by their slug so a DB migration is not required.
+type Pillar = "school" | "editor" | "coach" | "producer";
+
+const PILLAR_FOR_SLUG: Record<string, Pillar> = {
+  "start-here": "school",
+  "screenplay-basics": "school",
+  "foundations": "school",
+  "scene-craft": "editor",
+  "story-engine": "editor",
+  "story-architecture": "editor",
+  "character-creation": "coach",
+};
+
+function pillarFor(slug: string): Pillar {
+  return PILLAR_FOR_SLUG[slug] ?? "school";
+}
+
+const PILLARS: { key: Pillar; icon: typeof BookOpen }[] = [
+  { key: "school", icon: BookOpen },
+  { key: "editor", icon: PenLine },
+  { key: "coach", icon: Compass },
+  { key: "producer", icon: Megaphone },
+];
+
 function AcademyIndex() {
+  const [track, setTrack] = useState<"all" | Pillar>("all");
+
   const { data: modules = [], isLoading } = useQuery({
     queryKey: ["academy-modules-with-progress"],
     queryFn: async () => {
@@ -39,9 +68,15 @@ function AcademyIndex() {
         if (completedSet.has(l.id)) entry.done += 1;
         byModule.set(l.module_id, entry);
       });
-      return (mods ?? []).map((m) => ({ ...m, ...(byModule.get(m.id) ?? { total: 0, done: 0 }) }));
+      return (mods ?? []).map((m) => ({
+        ...m,
+        ...(byModule.get(m.id) ?? { total: 0, done: 0 }),
+        pillar: pillarFor(m.slug),
+      }));
     },
   });
+
+  const visibleModules = track === "all" ? modules : modules.filter((m) => m.pillar === track);
 
   return (
     <AppShell>
@@ -50,13 +85,32 @@ function AcademyIndex() {
           <GraduationCap className="h-7 w-7 text-primary" aria-hidden="true" />
           <h1 className="font-display text-3xl font-bold">{t("academy.title")}</h1>
         </div>
-        <p className="text-muted-foreground mb-8">{t("academy.subtitle")}</p>
+        <p className="text-muted-foreground mb-6">{t("academy.subtitle")}</p>
+
+        <Tabs value={track} onValueChange={(v) => setTrack(v as "all" | Pillar)} className="mb-6">
+          <TabsList className="flex flex-wrap gap-1 h-auto">
+            <TabsTrigger value="all">{t("academy.tracks.all")}</TabsTrigger>
+            {PILLARS.map(({ key, icon: Icon }) => (
+              <TabsTrigger key={key} value={key} className="gap-1.5">
+                <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                {t(`academy.tracks.${key}`)}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {PILLARS.map(({ key }) => (
+            <TabsContent key={key} value={key} className="mt-4">
+              <p className="text-sm text-muted-foreground">{t(`academy.tracks.${key}.description`)}</p>
+            </TabsContent>
+          ))}
+        </Tabs>
 
         {isLoading ? (
           <div className="text-muted-foreground">{t("academy.loading")}</div>
+        ) : visibleModules.length === 0 ? (
+          <Card className="p-6 text-center text-sm text-muted-foreground">{t("academy.tracks.empty")}</Card>
         ) : (
           <div className="grid md:grid-cols-2 gap-4">
-            {modules.map((m) => {
+            {visibleModules.map((m) => {
               const pct = m.total ? Math.round((m.done / m.total) * 100) : 0;
               const allDone = m.total > 0 && m.done === m.total;
               const lessonsLabel = m.total === 1
@@ -65,8 +119,13 @@ function AcademyIndex() {
               return (
                 <Link key={m.id} to="/academy/$moduleSlug" params={{ moduleSlug: m.slug }}>
                   <Card className="p-5 h-full hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10 transition cursor-pointer">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-display text-lg font-semibold">{m.title}</h3>
+                    <div className="flex items-start justify-between mb-2 gap-2">
+                      <div className="flex-1">
+                        <Badge variant="outline" className="mb-2 text-[10px] uppercase tracking-wider">
+                          {t(`academy.tracks.${m.pillar}`)}
+                        </Badge>
+                        <h3 className="font-display text-lg font-semibold">{m.title}</h3>
+                      </div>
                       {allDone && (
                         <Badge className="bg-primary/15 text-primary border-primary/30">
                           <Check className="h-3 w-3 mr-1" aria-hidden="true" />

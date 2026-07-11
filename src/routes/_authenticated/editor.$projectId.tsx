@@ -416,12 +416,24 @@ function Editor() {
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const [toolsDrawerOpen, setToolsDrawerOpen] = useState(false);
+  const [coachPinned, setCoachPinnedState] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const v = window.localStorage.getItem("editor:coach-pinned");
+    return v === null ? true : v === "1";
+  });
+  const setCoachPinned = useCallback((v: boolean) => {
+    setCoachPinnedState(v);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("editor:coach-pinned", v ? "1" : "0");
+    }
+  }, []);
   const writeMode = useWriteMode();
   const focus = writeMode.on;
 
   const { data: onboarding } = useOnboarding();
   const isBasic = onboarding?.preferred_mode === "guided";
   const coachDefaultTab = isBasic ? "builder" : "coach";
+  const showCoachRail = coachPinned && !focus;
 
   // Esc exits Focus Mode; Cmd/Ctrl+. toggles Focus Mode from anywhere.
   // Ignore when a modal/menu/popover has consumed the event (Radix marks
@@ -625,7 +637,7 @@ function Editor() {
       )}
 
       {/* Advanced Mode: manuscript is single-column; panels are summoned. */}
-      <div className="grid grid-cols-1 max-w-[1600px] mx-auto">
+      <div className={`grid max-w-[1600px] mx-auto ${showCoachRail ? "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px]" : "grid-cols-1"}`}>
         <section className="min-h-[calc(100vh-64px)] min-w-0 flex flex-col p-4 sm:p-6 lg:p-8 screenplay-canvas">
           {isLoglineStep ? (
             <div className="max-w-[760px] mx-auto pt-4">
@@ -816,6 +828,38 @@ function Editor() {
             </>
           )}
         </section>
+        {showCoachRail && (
+          <aside className="hidden xl:block border-l border-border/40 bg-background/40">
+            <div className="sticky top-16 max-h-[calc(100vh-64px)] overflow-auto">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-background/60">
+                <span className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground">Coach Rail</span>
+                <button
+                  onClick={() => setCoachPinned(false)}
+                  className="text-[10px] text-muted-foreground hover:text-foreground transition"
+                  title="Unpin the Coach rail"
+                >
+                  Unpin
+                </button>
+              </div>
+              <CoachPane
+                projectId={projectId}
+                blocks={blocks as any}
+                activeBlockId={activeBlockId}
+                activeBlockType={activeBlockType}
+                defaultTab={coachDefaultTab}
+                onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
+                aiTools={AI_TOOLS}
+                aiTool={aiTool}
+                setAiTool={setAiTool}
+                aiPrompt={aiPrompt}
+                setAiPrompt={setAiPrompt}
+                aiOutput={aiOutput}
+                aiLoading={aiLoading}
+                onRunAi={runAi}
+              />
+            </div>
+          </aside>
+        )}
       </div>
 
       {/* Summoned panels: Script Map & Director's Chair as right-side drawers. */}
@@ -841,6 +885,18 @@ function Editor() {
       {!focus && (
         <Sheet open={rightDrawerOpen} onOpenChange={setRightDrawerOpen}>
           <SheetContent side="right" className="w-[380px] p-0 overflow-auto">
+            {!coachPinned && (
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border/40">
+                <span className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground">Coach</span>
+                <button
+                  onClick={() => { setCoachPinned(true); setRightDrawerOpen(false); }}
+                  className="text-[10px] text-primary hover:underline"
+                  title="Pin Coach as persistent side rail"
+                >
+                  Pin to side
+                </button>
+              </div>
+            )}
             <CoachPane
               projectId={projectId}
               blocks={blocks as any}
