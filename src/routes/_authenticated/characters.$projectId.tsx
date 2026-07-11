@@ -1,6 +1,6 @@
 // Characters Rebuild — Pass 3 (Cast landing).
 // See docs/CHARACTERS_REBUILD.md.
-import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, useSearch, useNavigate } from "@tanstack/react-router";
 import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
