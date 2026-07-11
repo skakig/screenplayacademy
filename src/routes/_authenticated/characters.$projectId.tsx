@@ -321,6 +321,7 @@ function CharactersPage() {
         characterId={selectedId}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        initialPillar={dialogPillar}
       />
     </AppShell>
   );
