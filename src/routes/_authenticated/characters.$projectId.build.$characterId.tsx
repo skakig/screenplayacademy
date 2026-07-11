@@ -362,7 +362,7 @@ function GuidedBuilderPage() {
     mutationFn: async (patch: Record<string, any>) =>
       callUpsert({ data: { id: characterId, project_id: projectId, patch } }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["character", characterId] });
+      qc.invalidateQueries({ queryKey: ["character", projectId, characterId] });
       qc.invalidateQueries({ queryKey: ["characters", projectId] });
     },
     onError: (e: any) => toast.error(e?.message ?? t("characters.builder.toast.saveFailed")),
@@ -432,7 +432,7 @@ function GuidedBuilderPage() {
       } else {
         toast.info(t("characters.builder.toast.noSuggestion"));
       }
-      qc.invalidateQueries({ queryKey: ["character", characterId] });
+      qc.invalidateQueries({ queryKey: ["character", projectId, characterId] });
     } catch (e: any) {
       toast.error(e?.message ?? t("characters.builder.toast.suggestionFailed"));
     } finally {
@@ -448,7 +448,7 @@ function GuidedBuilderPage() {
     setPortraitBusy(true);
     try {
       const out: any = await callPortrait({ data: { characterId } });
-      qc.invalidateQueries({ queryKey: ["character", characterId] });
+      qc.invalidateQueries({ queryKey: ["character", projectId, characterId] });
       qc.invalidateQueries({ queryKey: ["characters", projectId] });
       if (out?.configured === false) {
         toast.info(t("characters.builder.portrait.unavailable"));
