@@ -34,8 +34,9 @@ Before implementing World Building work, read:
 4. `docs/SCENESMITH_ACADEMY.md`
 5. `docs/CHARACTER_TRUTH_ENGINE.md`
 6. `docs/CHARACTER_TRUTH_ENGINE_SOURCE_SYSTEMS.md`
-7. `docs/SCENESMITH_VOICE_STUDIO.md` when spoken worldbuilding or voice import is involved
-8. the relevant import, editor, collaboration, privacy, database, assets, i18n, and project-type documents
+7. `docs/ITS_PfHU_Importation.md` when importing prior works, building continuation packages, populating Character/World candidates, adapting series onboarding, or reviewing a new draft against imported canon
+8. `docs/SCENESMITH_VOICE_STUDIO.md` when spoken worldbuilding or voice import is involved
+9. the relevant import, editor, collaboration, privacy, database, assets, i18n, and project-type documents
 
 The Writer's Desk remains the center of gravity.
 
@@ -186,6 +187,8 @@ The import pipeline must not silently:
 - erase contradictory source material
 - overwrite the current project's approved world
 
+For corpus ingestion, source authority, adaptive series onboarding, writer knowledge mapping, Character/World population proposals, and imported-canon editorial review, `docs/ITS_PfHU_Importation.md` is authoritative.
+
 ## 3.4 The story remains primary
 
 A writer must be able to write before the World Bible is complete.
@@ -239,504 +242,227 @@ SceneSmith should support importing material the user owns, created, licensed, o
 
 The product must not encourage unauthorized scraping, piracy, or circumvention of access controls.
 
-For third-party franchises or existing works, the user is responsible for lawful access and appropriate rights.
+---
 
-The system should preserve source metadata and permit private analysis without falsely granting commercial rights to generated continuations.
+# 4. Operating modes
+
+World Building should support six modes.
+
+```text
+IMPORT    Understand existing authorized works.
+DISCOVER  Notice the world emerging from current writing.
+BUILD     Guide the creator through meaningful world decisions.
+EXPLORE   See locations, history, factions, rules, and relationships.
+PROTECT   Detect canon, chronology, and continuity conflicts.
+PRODUCE   Translate approved world canon into visual and production assets.
+```
+
+These modes share one evidence and canon model.
+
+They must not become six disconnected tools.
 
 ---
 
-# 4. The World Building operating model
+# 5. Import and corpus workflow
 
-SceneSmith World Building has six connected operating modes.
+World Building must eventually support authorized source corpora containing:
 
-```text
-IMPORT      Understand an existing body of work.
-DISCOVER    Notice the world emerging from current writing.
-BUILD       Guide the creator through meaningful world decisions.
-EXPLORE     Let the creator see places, people, systems, and history together.
-PROTECT     Detect continuity conflicts and canon drift.
-PRODUCE     Translate approved world canon into visual and production assets.
-```
+- screenplays and teleplays
+- episode and season scripts
+- novels and manuscripts
+- series bibles
+- lore documents
+- transcripts
+- audiobook and audio-drama transcripts
+- production notes
+- approved editorial decisions
 
-## 4.1 Import
+The full corpus pipeline is defined by `docs/ITS_PfHU_Importation.md`.
 
-Purpose: reconstruct a reviewable world model from one or more authorized source works.
+At the world level, importation may propose:
 
-Supported source types may eventually include:
-
-- Fountain
-- Final Draft
-- PDF screenplay or teleplay
-- plain text
-- DOCX
-- EPUB
-- manuscript files
-- subtitle or caption files
-- audiobook or audio-drama transcript
-- uploaded audio with transcription
-- series bible
-- pitch deck
-- notes and production documents
-
-Imports must preserve source identity and edition.
-
-## 4.2 Discover
-
-Purpose: detect world elements while the creator writes.
-
-Examples:
-
-- location names
-- geographic relationships
-- institutions
-- governments
-- religions
-- cultures
-- technologies
-- magic or supernatural rules
-- artifacts
-- species
-- historical events
-- laws and customs
-- currencies
-- languages
-- recurring visual motifs
-
-Discovery must be quiet, reversible, and evidence-backed.
-
-## 4.3 Build
-
-Purpose: provide an adaptive guided worldbuilding experience.
-
-The Academy, ITS, and PfHU layers should ask one relevant question at a time.
-
-Examples:
-
-- What makes this place different from everywhere else in the story?
-- Who benefits from this law?
-- What does this culture celebrate that outsiders misunderstand?
-- What rule of magic cannot be broken without cost?
-- What historical event do two groups remember differently?
-- What does the protagonist believe about this world that is not entirely true?
-
-The guide should stop when the creator has enough to return to the story.
-
-## 4.4 Explore
-
-Purpose: let the creator understand the world at a glance.
-
-Possible views include:
-
-- World Overview
-- Atlas / Location Network
-- Timeline
-- Factions and Institutions
-- Cultures and Languages
-- Rules and Systems
-- Objects, Technologies, and Artifacts
-- Species and Creatures
-- Character-to-World connections
-- Unresolved Questions
-- Continuity Alerts
-- Visual Library
-
-## 4.5 Protect
-
-Purpose: preserve continuity across drafts, episodes, books, seasons, media, and writers.
-
-Protection includes:
-
-- timeline checks
-- travel-time checks
-- location-state continuity
-- rule consistency
-- faction allegiance changes
-- cultural and language consistency
-- technology availability by era
-- character knowledge versus world truth
-- object ownership and location
-- political and institutional changes
-- alternate continuity handling
-
-Warnings must remain advisory and link to evidence.
-
-## 4.6 Produce
-
-Purpose: translate approved world canon into production-ready descriptions and assets.
-
-Possible outputs include:
-
-- location brief
-- visual reference pack
-- moodboard
-- environment prompt package
-- map brief
-- prop or artifact brief
-- costume-cultural reference
-- shot or scene visual aids
-- pitch-deck world pages
-- production-design package
-- generator-specific image or video instructions
-
-Generated assets are proposals until approved.
-
----
-
-# 5. Importing existing stories and series
-
-This is a core professional use case.
-
-A creator continuing a series should be able to import prior authorized works and ask SceneSmith to reconstruct the story world.
-
-## 5.1 Corpus import workflow
-
-```text
-Upload sources
-→ identify source type and edition
-→ segment into works / episodes / chapters / scenes
-→ preserve raw source
-→ extract entity candidates
-→ resolve identity candidates
-→ build evidence links
-→ identify contradictions and uncertainty
-→ review proposed canon
-→ approve World Graph and Character Bible entries
-```
-
-## 5.2 Corpus structure
-
-A corpus may include:
-
-- film 1, film 2, film 3
-- season 1 episodes 1–10
-- book 1–7
-- screenplay plus novel adaptation
-- audiobook transcript plus manuscript
-- series bible plus produced episodes
-- creator scripts plus published videos
-
-The system must preserve:
-
-- source title
-- source type
-- edition or draft
-- release or chronology order
-- canonical priority
-- language
-- rights/ownership metadata
-- import date
-- parser version
-
-## 5.3 Extracted candidates
-
-The import pipeline may propose:
-
-- characters and aliases
-- relationships
 - locations
-- factions and institutions
-- events
-- chronology
-- world rules
+- regions
+- factions
+- institutions
 - cultures
 - languages
-- objects and artifacts
 - technologies
+- magic systems
 - species
-- unresolved plot threads
-- promises and payoffs
-- character knowledge states
-- visual motifs
-- themes and values
+- artifacts
+- historical events
+- laws
+- political control
+- travel constraints
+- unresolved lore
 
-Each candidate must include source evidence and confidence.
-
-## 5.4 Identity resolution
-
-Entity resolution must account for:
-
-- spelling variants
-- titles and ranks
-- aliases
-- translations
-- transliterations
-- younger/older versions
-- disguises
-- code names
-- locations with renamed eras
-- institutions that split or merge
-- objects that change owners
-
-The system may propose a merge.
-
-It must not merge established canonical entities without human approval.
-
-A confirmed **keep separate** decision must be remembered.
-
-## 5.5 Conflicting sources
-
-Series material often disagrees.
-
-The system must support:
-
-```text
-hard canon
-soft canon
-adaptation canon
-production canon
-character belief
-rumor
-retcon
-alternate timeline
-non-canonical source
-unresolved contradiction
-```
-
-Do not flatten conflict into one answer.
-
-Show the creator the competing evidence and let authorized users determine canon priority.
-
-## 5.6 Audio and audiovisual sources
-
-Audiobooks, audio dramas, podcasts, and videos may require transcription before extraction.
-
-The Voice Studio doctrine governs audio preservation, transcription, speaker attribution, and provider neutrality.
-
-Visual or audiovisual analysis may later identify locations, costumes, props, and recurring designs, but those observations remain proposals.
+No proposal becomes canon before review.
 
 ---
 
-# 6. The World Graph
+# 6. World Graph
 
-The World Graph is the structured model connecting world entities to story evidence and time.
+The World Graph represents structured, time-aware world knowledge.
 
-It is related to, but not identical to, the Story Graph.
+Possible entity types include:
 
-```text
-Story Graph
-Who wants what, what happens, and what changes.
+- universe
+- world
+- region
+- territory
+- location
+- building
+- room
+- route
+- faction
+- institution
+- culture
+- language
+- religion or belief system
+- species
+- technology
+- magic system
+- law
+- social rule
+- artifact
+- object
+- resource
+- event
+- era
+- myth
+- secret
 
-World Graph
-Where and when it happens, what systems govern it, what entities exist, and how the world changes.
-```
+Possible relationship types include:
 
-The graphs must interoperate.
+- contains
+- borders
+- controls
+- occupies
+- founded
+- destroyed
+- rebuilt
+- allied with
+- at war with
+- trades with
+- worships
+- speaks
+- prohibits
+- requires
+- created
+- owns
+- hides
+- knows
+- believes
+- travels through
+- changed by
 
-## 6.1 Core world entities
-
-### World / Universe
-
-The top-level continuity container.
-
-### Realm / Region / Territory
-
-Geographic, political, dimensional, or conceptual area.
-
-### Location
-
-A place used, referenced, or planned in the story.
-
-### Faction / Institution / Organization
-
-Governments, companies, militaries, religions, schools, gangs, guilds, families, movements, and creator organizations.
-
-### Culture / Community
-
-Shared customs, values, symbols, language, history, and social behavior.
-
-### Language / Dialect / Register
-
-Spoken, written, signed, coded, or ritual communication systems.
-
-### Rule / System
-
-Physics, magic, technology, law, economy, religion, social structure, genre contract, or narrative-world constraint.
-
-### Event
-
-Historical or story-time occurrence.
-
-### Era / Period
-
-A bounded state of the world.
-
-### Object / Artifact / Prop
-
-Items with story, cultural, symbolic, or production significance.
-
-### Technology / Capability
-
-Available tools, infrastructure, weapons, communication, transport, medicine, or supernatural abilities.
-
-### Species / Creature / Population
-
-Biological, artificial, supernatural, or invented beings.
-
-### Concept / Belief / Myth
-
-Ideas held by groups or characters, which may or may not be objectively true.
-
-## 6.2 Core relationships
-
-Examples:
-
-```text
-LOCATION located_in REGION
-FACTION controls LOCATION
-CHARACTER belongs_to FACTION
-CHARACTER believes MYTH
-EVENT occurred_at LOCATION
-EVENT caused EVENT
-RULE applies_in ERA
-TECHNOLOGY available_during ERA
-OBJECT owned_by CHARACTER
-CULTURE speaks LANGUAGE
-FACTION opposes FACTION
-LOCATION changed_after EVENT
-SOURCE supports WORLD_FACT
-```
-
-Relationships may be time-bound, uncertain, disputed, or source-specific.
-
-## 6.3 Temporal world state
-
-World facts often change.
-
-SceneSmith must distinguish:
-
-- timeless canon
-- valid from/to dates or story positions
-- state before an event
-- state after an event
-- public belief
-- secret truth
-- character-specific knowledge
-- alternate timeline state
-
-A location is not merely one static card.
-
-It may have:
-
-- pre-war state
-- occupation state
-- destroyed state
-- rebuilt state
-- dream or imagined state
-- production location interpretation
+Every relationship may be time-bound and evidence-backed.
 
 ---
 
 # 7. Conceptual data model
 
-The exact schema must be designed after repository audit.
+The exact schema may evolve, but these conceptual separations are mandatory.
 
-The conceptual separation is mandatory.
-
-## 7.1 Source corpus
+## 7.1 Universes
 
 ```text
-world_sources
+story_universes
 - id
-- project_id or universe_id
+- owner_id
 - title
-- source_type
-- edition
-- language
-- chronology_order
-- release_order
-- canon_priority
-- storage_asset_id
-- rights_metadata
-- import_status
-- parser_version
-- created_by
-- created_at
+- summary
+- canon policy
+- current era
+- project links
 ```
 
-## 7.2 Source segments
-
-```text
-world_source_segments
-- id
-- source_id
-- segment_type
-- sequence
-- label
-- start_offset / end_offset
-- text
-- timestamp range when audio/video
-- checksum
-```
-
-## 7.3 World entities
+## 7.2 World entities
 
 ```text
 world_entities
 - id
 - universe_id
-- project_id when project-scoped
 - entity_type
 - canonical_name
 - display_name
+- aliases
 - summary
 - status
-- canon_level
-- valid_from
-- valid_to
 - created_by
 - approved_by
-- created_at
-- updated_at
+- supersedes_id
 ```
 
-## 7.4 Aliases
+## 7.3 World facts
 
 ```text
-world_entity_aliases
+world_facts
+- id
 - entity_id
-- alias
-- alias_type
-- language
-- era
-- source_id
-- confidence
-- approved
-```
-
-## 7.5 World relationships
-
-```text
-world_relationships
-- source_entity_id
-- relation_type
-- target_entity_id
+- fact_type
+- value
 - valid_from
 - valid_to
 - certainty
-- source_evidence_ids
-- canon_status
+- status
+- source authority
+- approved_by
+- supersedes_id
 ```
 
-## 7.6 World facts and proposals
+## 7.4 World relationships
 
 ```text
-world_fact_proposals
+world_relationships
 - id
-- entity_id
-- field_path or fact_type
-- proposed_value
-- source_type
-- source_evidence_ids
-- confidence
-- inference_type
+- from_entity_id
+- to_entity_id
+- relationship_type
+- direction
+- valid_from
+- valid_to
 - status
-- created_by or source_engine
+- evidence ids
+```
+
+## 7.5 World events
+
+```text
+world_events
+- id
+- universe_id
+- title
+- description
+- event_type
+- start time
+- end time
+- certainty
+- chronology position
+- affected entities
+- status
+```
+
+## 7.6 World proposals
+
+```text
+world_proposals
+- id
+- project_id
+- universe_id
+- proposal_type
+- target_entity_id
+- proposed payload
+- source evidence ids
+- confidence
+- status
 - resolved_by
 - resolved_at
 - supersedes_id
 ```
 
-## 7.7 Evidence
+## 7.7 World evidence
 
 ```text
 world_evidence
@@ -1021,6 +747,8 @@ After importing prior works, the system should produce a reviewable continuation
 - visual canon references
 - continuity risks for the new work
 
+The detailed ingestion, knowledge-map, adaptive-onboarding, and review behavior is defined by `docs/ITS_PfHU_Importation.md`.
+
 ## 10.2 New-writer onboarding
 
 A writer joining an existing series should be able to ask:
@@ -1039,781 +767,455 @@ Answers must cite source evidence.
 
 Professional teams need configurable source authority.
 
-Example:
+Examples:
 
 ```text
-Produced episode
-> locked final script
-> approved series bible
+showrunner-approved series bible
+> locked production script
+> released episode
+> approved screenplay draft
 > writers' room decision
-> draft
+> early draft
 > brainstorm note
 ```
 
-The hierarchy must be explicit and project-configurable.
+Authority must not be inferred merely from upload order.
 
-## 10.4 Editorial approval
+## 10.4 Retcons and alternate continuity
 
-World canon changes may require:
+Continuity conflicts may be classified as:
 
-- writer proposal
-- story editor review
-- senior editor approval
-- showrunner approval
-- producer awareness
+- error
+- retcon
+- unreliable narration
+- character lie
+- dream or hallucination
+- alternate timeline
+- adaptation difference
+- production change
 
-World Building must use the same auditable governance principles as Editorial Review.
+The system should preserve history and explanation.
 
 ---
 
 # 11. Visual World Building
 
-Visual generation should help creators see the world without allowing generated imagery to redefine it silently.
+World Building should help creators see the world without turning it into an image gallery.
 
-## 11.1 Visual brief compiler
+Possible visual assets:
 
-Approved world facts should compile into provider-neutral visual briefs for:
-
-- locations
-- regions
-- interiors
-- institutions
-- artifacts
-- vehicles
+- location portraits
+- interiors and exteriors
+- maps
+- floorplans
+- political diagrams
+- faction symbols
+- architecture references
+- artifacts and props
 - creatures
-- cultures
-- architecture
-- wardrobe environments
-- recurring visual motifs
+- technology concepts
+- wardrobe and cultural references
+- moodboards
+- color palettes
 
-The user should review the brief before generation.
-
-## 11.2 World Style Contract
-
-A project or universe may define a visual style contract:
-
-- medium
-- era
-- region
-- palette
-- lighting
-- lens and composition tendencies
-- architecture
-- material language
-- weather
-- texture
-- negative instructions
-
-The style contract supports consistency across characters, locations, storyboards, pitch materials, and generated scenes.
-
-It remains editable and versioned.
-
-## 11.3 Visual asset states
-
-Distinguish:
-
-```text
-reference inspiration
-AI concept
-alternate concept
-approved visual canon
-production interpretation
-scene-specific state
-generator-specific output
-```
-
-A generated image is not automatically canonical.
-
-## 11.4 Location reference packs
-
-A location pack may include:
-
-- canonical exterior
-- canonical interior
-- day/night states
-- seasonal states
-- pre/post-event state
-- floorplan or spatial relationships
-- architecture/material notes
-- color and lighting
-- recurring props
-- camera or production constraints
-- prompt package
-
-## 11.5 Maps and diagrams
-
-The creator may generate or upload:
-
-- world map
-- city map
-- building plan
-- relationship map
-- political map
-- travel route
-- timeline diagram
-- system diagram
-
-The system must retain scale, certainty, and canon status where relevant.
-
----
-
-# 12. YouTube, creator, and short-form visual aids
-
-World Building should serve creators who do not need a traditional film studio.
-
-A YouTube creator may need:
-
-- recurring set bible
-- host/character continuity
-- location list
-- prop list
-- episode visual references
-- B-roll plan
-- graphic explainers
-- map animation brief
-- thumbnail background
-- downloadable visual-aid package
-- short generated establishing clip
-
-Future outputs may include short clips such as 5–10 second:
-
-- establishing shots
-- location reveals
-- historical reconstructions
-- map flyovers
-- prop or artifact rotations
-- atmospheric transitions
-- world-rule explainers
-
-These must be generated through provider adapters with:
-
-- source world snapshot
-- project style contract
-- prompt package
-- provider/model/version
-- cost
-- creator approval
-- rights metadata
-- downstream usage record
-
-This is a future production phase, not an immediate World Building MVP.
-
----
-
-# 13. AI film studio and generator integration
-
-World Building becomes foundational to SceneSmith's future AI and hybrid production pipeline.
-
-The system should compile approved world state into generator-ready packages.
+Workflow:
 
 ```text
 approved World Graph
-+ approved Character Bible
-+ active scene state
-+ project visual style
-+ production profile
-→ Scene Compiler
+→ editable visual brief
 → provider adapter
-→ image / video / audio / 3D output
+→ generated candidates
+→ human approval
+→ visual canon or alternate interpretation
 ```
 
-Generator adapters must not own canon.
-
-The World Graph must remain provider-neutral.
-
-## 13.1 Scene-specific world state
-
-A generated scene may require:
-
-- location version
-- date/time
-- weather
-- political control
-- damage state
-- available technology
-- cultural details
-- crowd composition
-- props
-- signage and language
-- character knowledge
-- continuity from previous shot
-
-SceneSmith should compile these facts rather than asking the user to rewrite them for every provider.
-
-## 13.2 Asset lineage
-
-Every generated visual or clip should answer:
-
-```text
-Which world version was used?
-Which location state was used?
-Which character states were used?
-Which source canon supported the prompt?
-Which model and settings generated it?
-Who approved it?
-What superseded it?
-```
+Generated visuals do not redefine canon automatically.
 
 ---
 
-# 14. Academy, ITS, PfHU, TMH, and Character Truth
+# 12. YouTube, creator, and AI-native production outputs
+
+Future creator workflows may produce:
+
+- downloadable script visual aids
+- location cards
+- maps and diagrams
+- timeline graphics
+- character/world reference sheets
+- thumbnail concepts
+- B-roll prompts
+- establishing images
+- 5–10 second establishing clips
+- atmospheric transitions
+- map flyovers
+- generator-ready prompt packages
+
+The same system should scale from low-budget creator output to studio production planning.
+
+Production profiles may include:
+
+```text
+YouTube / Creator
+Indie
+Studio
+Animation
+AI-native
+Hybrid
+```
+
+The World Graph remains authoritative across profiles.
+
+---
+
+# 13. Location intelligence
+
+World Building should distinguish fictional-world design from real-world production location search.
+
+A fictional location may have:
+
+- canonical geography
+- story function
+- visual identity
+- history
+- political control
+- access rules
+- weather
+- temporal states
+
+A production-location package may include:
+
+- real-world candidates
+- budget tier
+- travel
+- permits
+- weather
+- accessibility
+- visual match
+- production constraints
+
+Do not let real-world production assumptions overwrite fictional canon.
+
+---
+
+# 14. Integration with SceneSmith intelligence
 
 ## 14.1 Academy
 
-Academy should teach worldbuilding through the current project, not detached lessons.
-
-It should help the creator make the next meaningful decision and return to writing.
+Academy guides the next meaningful world decision and returns the creator to writing.
 
 ## 14.2 ITS
 
-The tutoring system may determine:
-
-- which world concept is currently blocking the story
-- whether the creator needs an example
-- whether a contradiction is intentional
-- when a rule needs clarification
-- when enough worldbuilding exists for the current scene
+ITS may determine which world concept must be understood next and which misconception needs repair.
 
 ## 14.3 PfHU
 
-The system may adapt:
+PfHU may adapt explanation depth, order, format, and interruption frequency.
 
-- visual versus verbal representation
-- depth
-- pacing
-- question style
-- amount of structure
-- tolerance for ambiguity
+## 14.4 TMH and Character Truth
 
-It must not make hidden psychological judgments.
+World systems create moral and relational pressure.
 
-## 14.4 TMH
+SceneSmith may analyze how institutions, scarcity, law, culture, and power affect character behavior.
 
-TMH may help model:
+It must not morally grade cultures or creators.
 
-- institutional moral level
-- cultural incentives
-- social regression under pressure
-- laws and systems
-- conflict between personal and collective morality
-- what a society rewards or punishes
+## 14.5 ITS/PfHU Importation
 
-TMH must not be used to label a culture or real-world group as morally inferior.
+`docs/ITS_PfHU_Importation.md` governs how imported corpora become evidence-backed knowledge maps, adaptive role-based briefings, Character/World proposals, continuation packages, and editorial-review inputs.
 
-It is an analytical framework for story behavior, consequences, and pressure.
+## 14.6 Story Graph
 
-## 14.5 Character Truth
+The Story Graph represents dramatic movement.
 
-World rules create behavioral constraints.
+The World Graph represents the environment, systems, history, and state in which that movement occurs.
 
-Character Truth may ask:
+## 14.7 Production Graph
 
-- Does this character know this fact yet?
-- Would their culture permit this action?
-- Does their rank grant this access?
-- Does the current era support this technology?
-- Is this moral choice plausible within the institution shaping them?
-
-Warnings remain evidence-backed and advisory.
+Approved world entities and states may compile into production requirements and generator instructions.
 
 ---
 
-# 15. Voice Studio integration
+# 15. Permissions, collaboration, and governance
 
-Voice Studio should become one of the most natural ways to build a world.
+Roles should control:
 
-A creator may say:
+- who may import sources
+- who may review candidates
+- who may edit canon
+- who may approve facts
+- who may resolve contradictions
+- who may generate visual assets
+- who may approve visual canon
+- who may configure source authority
+- who may export the World Bible
 
-> The city used to be a mining colony, but after the flood the guild took control of the upper district. People in the lower district still use the old language at funerals.
-
-Voice Studio may propose:
-
-- City location entry
-- Mining-colony historical era
-- Flood timeline event
-- Guild faction
-- Upper/Lower District locations
-- Old language
-- funeral custom
-- control relationship
-
-The original audio and transcript remain preserved.
-
-Every extracted world item remains a proposal until approved.
+Professional teams should retain decision and authorship history.
 
 ---
 
-# 16. Collaboration, permissions, and governance
+# 16. Rights, privacy, and safety
 
-World Building must respect project and universe roles.
+World and source materials may contain valuable unreleased intellectual property.
 
-Permissions may distinguish:
-
-- view world canon
-- propose world facts
-- edit draft facts
-- approve canon
-- merge entities
-- resolve contradictions
-- generate visual assets
-- approve visual canon
-- import sources
-- export the World Bible
-- delete sources or assets
-
-Professional roles may include:
-
-- writer
-- worldbuilder
-- story editor
-- continuity editor
-- senior editor
-- showrunner
-- producer
-- production designer
-- location manager
-- viewer
-
-Every approval and merge must preserve authorship and audit history.
-
----
-
-# 17. Privacy, intellectual property, and rights
-
-Imported worlds may contain unreleased scripts, manuscripts, franchise bibles, private research, and commercially sensitive intellectual property.
-
-World Building must provide:
+Required controls:
 
 - project isolation
-- role-based access
-- secure source storage
-- configurable source retention
-- deletion of source files and derived data
-- export
+- private storage
+- durable asset identity
+- RLS
+- signed access
 - audit history
-- provider-processing disclosure
-- no model-training assumption without explicit policy and consent
+- deletion and export
+- provider disclosure
 - rights metadata
-- private-by-default corpus analysis
-
-The user must understand:
-
-- which source is uploaded
-- which provider processes it
-- whether the source leaves SceneSmith infrastructure
-- which derived facts are stored
-- who can access the world
-- how to delete the source and derivatives
+- no training assumption without explicit policy
+- participant consent for recorded sources
 
 ---
 
-# 18. Multilingual worlds
-
-World Building must support:
-
-- source works in multiple languages
-- code-switching
-- transliterated names
-- translated location names
-- canonical original-language names
-- aliases by language and era
-- invented languages
-- pronunciation guides
-- writing systems
-- dialects and registers
-
-Rules:
-
-- preserve original-language source evidence
-- do not replace original names with translations silently
-- store language-specific aliases
-- make transliteration reviewable
-- allow project-specific vocabulary and pronunciation memory
-- distinguish translation choices from canon
-
-All user-facing interface copy must use i18n keys.
-
----
-
-# 19. Cost and monetization
-
-World Building can support meaningful premium value.
-
-Cost-bearing operations may include:
-
-- long-document extraction
-- corpus-scale semantic analysis
-- audiobook transcription
-- cross-source entity resolution
-- continuity analysis
-- map generation
-- image generation
-- video generation
-- storage
-- visual-reference exports
+# 17. Cost and monetization
 
 Track:
 
-- source pages, words, or minutes
-- extraction provider/model
-- interpretation cost
+- pages and words imported
+- audio minutes transcribed
+- extraction cost
+- embeddings
 - storage
-- visual generation cost
-- video generation cost
-- user credits charged
-- retries
-- gross margin
+- continuity-analysis cost
+- map, image, and video generation
+- user credits
+- margin
 
-Suggested product structure:
-
-## Free / Trial
-
-- small world overview
-- limited entities
-- basic manual world cards
-- sample extraction
+Possible tiers:
 
 ## Creator
 
-- project-aware world discovery
-- guided World Builder
-- locations, factions, timeline, rules
-- moderate import limits
-- basic visual references
+- guided world setup
+- basic locations and rules
+- limited visual concepts
 
 ## Pro
 
-- multi-source corpus import
+- deeper World Graph
+- timelines and factions
 - continuity analysis
-- advanced World Graph
-- visual reference packs
-- series continuation tools
-- multilingual canon
+- multi-document import
+- downloadable visual aids
 
 ## Studio
 
-- shared universe
-- multi-project canon
-- approvals and governance
-- team roles
-- showrunner and continuity workflows
-- large corpus imports
-- production integrations
-- asset and provider lineage
-
-Do not finalize pricing until actual provider and storage costs are measured.
+- series corpus
+- source authority
+- team governance
+- franchise continuity
+- advanced visual and production packages
 
 ---
 
-# 20. Implementation sequence
+# 18. Implementation sequence
 
-Do not build the complete World Building platform in one pass.
+## Phase 0 — Audit and contracts
 
-## Phase 0 — Repository audit and contracts
-
-Before code, inventory:
-
-- existing project types
-- import pipelines
-- character candidates and identity resolution
-- scenes and script blocks
-- Story Graph or graph-like tables
-- locations and scene headings
-- timeline and arc data
-- assets and storage
-- suggestions, approvals, and provenance
-- permissions and RLS helpers
-- current visual generation
-- current pitch/storyboard integration
-
-Return:
-
-- reusable systems
-- missing systems
-- proposed World Graph contracts
-- source/canon model
+- current schema and import audit
 - entity registry
-- relationship registry
-- project-type adapters
-- RLS matrix
-- privacy/retention proposal
-- cost model
+- canon lifecycle
+- evidence contract
+- source-rights model
+- provider-neutral interfaces
 - UX wireframes
-- phased plan
 
-No implementation code in Phase 0.
+## Phase 1 — Discovery foundation
 
-## Phase 1 — World Discovery Foundation
-
-Implement only:
-
-- manual world entities
-- location candidates from scene headings
-- evidence links
-- World Review Inbox
-- approve / ignore / merge / keep separate
-- World Overview
-- no AI visual generation
-
-Acceptance:
-
-- writing a new location creates a candidate, not canon
-- approval creates one location entity with evidence
-- ignored candidate stays ignored
-- duplicate names are proposed, not silently merged
+- detect locations and world elements from current writing
+- create candidates
+- attach evidence
+- review inbox
 
 ## Phase 2 — Guided World Builder
 
-Implement:
-
-- contextual Academy prompts
-- locations
-- factions
-- rules
-- events
-- unresolved questions
-- role-scaled depth by project type
-
-Acceptance:
-
-- creator can build enough world context for a current scene without filling exhaustive forms
-- every answer is saved as canon or proposal according to explicit user action
+- project-scope-aware prompts
+- ITS/PfHU adaptation
+- basic World Overview
 
 ## Phase 3 — Single-source import
 
-Implement one authorized source type end to end.
-
-Recommended first source:
-
-- Fountain or Final Draft screenplay already supported by the import pipeline
-
-Add:
-
-- source record
+- authorized source upload
 - segmentation
-- location, character, institution, event, and rule candidates
-- evidence
-- review
+- character/world candidates
+- evidence review
 
-Do not claim PDF, novel, or audiobook support until each passes its own acceptance test.
+Detailed corpus behavior follows `docs/ITS_PfHU_Importation.md`.
 
 ## Phase 4 — Multi-source series corpus
 
-Implement:
-
-- multiple works
-- source priority
-- identity resolution
+- authority rules
 - contradictions
+- retcons
 - chronology
-- unresolved threads
 - continuation package
 
-Acceptance:
+## Phase 5 — Atlas, timeline, and continuity
 
-- import two episodes or books
-- preserve source boundaries
-- resolve confirmed aliases
-- show conflicting facts without flattening them
-- generate a reviewable series continuation overview
-
-## Phase 5 — Atlas, Timeline, and Continuity
-
-Implement:
-
-- location network
+- entity pages
+- maps and network views
 - timeline
-- time-bound world state
-- travel and rule checks
-- evidence-backed continuity findings
+- contextual Writer's Desk support
 
 ## Phase 6 — Visual World Building
 
-Implement:
+- visual briefs
+- image candidates
+- approval and lineage
+- location packs
 
-- visual brief compiler
-- style contract
-- location concept generation
-- candidate comparison
-- canonical approval
-- alternates
-- permanent storage paths
-- provider/model/cost lineage
+## Phase 7 — Cross-format and Voice Studio integration
 
-## Phase 7 — Cross-format and Voice integration
-
-Implement:
-
-- novel/manuscript adapter
-- audiobook transcript adapter
-- skit and YouTube adapter
-- Voice Studio world sessions
-- multilingual source support
+- novels
+- skits
+- YouTube
+- audio
+- spoken worldbuilding
 
 ## Phase 8 — Production and generator integration
 
-Implement:
-
-- location packs
-- production-design packs
-- map and visual-aid exports
-- short establishing-clip packages
-- generator adapters
-- Production Graph proposals
-
-Each phase must pass behavioral acceptance tests before the next begins.
+- location intelligence
+- production packages
+- visual aids
+- short clips
+- Scene Compiler and provider adapters
 
 ---
 
-# 21. Required acceptance tests
+# 19. Acceptance tests
 
-## 21.1 Discovery while writing
+## 19.1 Current-writing discovery
 
-1. Create a new scene heading with an unknown location.
-2. Continue writing without interruption.
-3. Confirm a location candidate appears later.
-4. Confirm no canonical location was created automatically.
-5. Approve the candidate.
-6. Confirm the location links back to the source scene.
-
-## 21.2 Series import
-
-Import two authorized episodes containing:
-
-- one character with title/name variants
-- one renamed location
-- one contradictory historical date
-- one unresolved thread
+Write a new scene in an unknown location.
 
 Expected:
 
-- separate sources preserved
-- merge proposals with evidence
-- no silent canonical merge
-- contradiction displayed with both sources
-- unresolved thread included in continuation package
+- quiet location candidate
+- evidence points to the scene heading
+- writing remains uninterrupted
+- no automatic canon
 
-## 21.3 Character knowledge versus world truth
+## 19.2 Source import
 
-A character states a false belief about the world.
-
-Expected:
-
-- dialogue remains source evidence
-- belief may be attached to the character
-- statement is not promoted as objective world canon
-
-## 21.4 Timeline
-
-Add two events with impossible ordering.
+Import an authorized prior screenplay.
 
 Expected:
 
-- warning cites both events and sources
-- user may correct, explain, mark uncertain, or keep as intentional contradiction
+- original retained
+- locations, factions, events, and rules proposed
+- no direct canonical inserts
+- source evidence visible
 
-## 21.5 Visual generation
+## 19.3 Character belief versus objective fact
 
-Generate a location concept from approved canon.
+A character states a false rumor.
 
 Expected:
 
-- visual brief visible before generation
-- provider/model/cost recorded
-- output remains a concept
-- user explicitly approves canonical visual
-- storage path remains durable
+- character-belief proposal
+- no objective world-fact promotion
 
-## 21.6 Permissions
+## 19.4 Timeline conflict
 
-- viewer cannot change canon
-- commenter can create permitted notes only
-- writer can propose according to policy
-- editor can resolve according to role policy
-- non-member cannot access source files, world facts, or assets
-- studio approval roles follow configured governance
+Two sources give different dates.
 
-## 21.7 Large corpus
+Expected:
 
-Test a corpus with:
+- authority-aware contradiction
+- evidence from both sources
+- no silent winner
 
-- multiple works
-- hundreds of characters and locations
-- repeated aliases
-- conflicting facts
-- long timelines
+## 19.5 Series continuation
 
-Entity matching and graph rendering must not require all-pairs comparison in the browser.
+Import a season or book series.
+
+Expected:
+
+- reviewable continuation package
+- current world state
+- unresolved threads
+- required writer knowledge
+- source citations
+
+## 19.6 Visual generation
+
+Generate a location concept.
+
+Expected:
+
+- editable brief
+- provider/model lineage
+- cost
+- proposed asset
+- no automatic visual canon
+
+## 19.7 Permissions
+
+Test owner, editor, co-writer, commenter, viewer, and non-member.
+
+Expected:
+
+- role-appropriate source, canon, proposal, and asset access
 
 ---
 
-# 22. Do not build
+# 20. Do not build
 
 Do not build:
 
-- a blank wiki with hundreds of fields
-- a map disconnected from story evidence
-- automatic canon from imported dialogue
-- automatic destructive entity merges
-- one static location card for all eras
+- a blank lore wiki
+- automatic canon from imports
+- one giant JSON world blob
+- a map with no evidence or story meaning
+- visual generation before identity and canon foundations
 - a screenplay-only world schema
-- a provider-specific canonical model
-- image generation before canon and asset lineage exist
-- short videos with no connection to approved world state
-- a hidden source-rights assumption
-- a continuity score with no evidence
-- a system that demands world completion before writing
-- a world guide that asks endless questions
-- a graph visualization that is beautiful but unusable
-- temporary signed URLs as permanent asset identity
+- provider-specific canonical fields
+- uncited continuity answers
+- blocking world questionnaires
+- unauthorized source acquisition
+- a production-location database that overwrites fictional-world truth
 
 ---
 
-# 23. Canonical terminology
+# 21. Canonical terminology
 
-Use these terms consistently:
+Use:
 
-- **World Building** — the complete SceneSmith capability
-- **World Bible** — the human-readable approved reference
-- **World Graph** — the structured network of entities, relationships, evidence, and time
-- **World Entity** — a location, faction, rule, event, object, culture, language, species, technology, belief, or other approved world object
-- **World Candidate** — an imported or detected item awaiting review
-- **World Fact Proposal** — a proposed statement or field value awaiting resolution
-- **World Evidence** — the exact source supporting a candidate or fact
-- **World Review Inbox** — the unified place to review discoveries, duplicates, and conflicts
-- **World State** — what is true at a particular time, era, episode, chapter, scene, or continuity branch
-- **Continuation Package** — the reviewed knowledge needed to continue an existing series
-- **Visual World Asset** — an image, map, diagram, or clip linked to an approved world snapshot
-- **World Style Contract** — the shared visual rules for a project or universe
-
-Avoid reducing the system to:
-
-- Locations
-- Lore Wiki
-- AI World Generator
-- Map Maker
-
-Those labels describe individual tools, not the platform capability.
+- **World Building** — complete platform capability
+- **World Bible** — human-readable approved world reference
+- **World Graph** — structured, temporal, evidence-backed world model
+- **World Entity** — location, faction, culture, rule, artifact, event, or other world object
+- **World Proposal** — detected or generated item awaiting review
+- **World Fact** — time-bound claim about an entity
+- **World State** — collection of facts valid at a particular story time
+- **World Review Inbox** — candidate and contradiction review
+- **Visual Canon** — human-approved visual reference
+- **Continuation Package** — evidence-backed state of the world for the next work
 
 ---
 
-# 24. Final doctrine
+# 22. Final doctrine
 
-SceneSmith World Building exists to help creators see the worlds emerging from their stories, understand what is established, continue complex series responsibly, and translate approved canon into consistent creative and production assets.
+SceneSmith World Building exists to help creators discover, understand, continue, protect, and eventually produce the worlds their stories require.
 
 Its enduring principles are:
 
 ```text
 Let the story create the need for worldbuilding.
-Preserve every source and uncertainty.
 Extract candidates, not automatic truth.
 Keep canon explicit and evidence-backed.
-Connect characters, places, history, systems, and time.
-Help the writer see the world without leaving the page for long.
+Model the world across time.
+Connect world, character, and story.
+Use ITS/PfHU to guide rather than overwhelm.
+Use ITS/PfHU Importation to teach the system and the writer from authorized prior works.
+Help the writer see the world while writing.
 Keep providers replaceable.
-Generate visuals from approved world state.
-Protect authorship, rights, and continuity.
-Return the creator to the story.
+Keep generated assets traceable and human-approved.
 ```
 
-World Building succeeds when a creator can import or write a body of work, understand the world that already exists, make intentional additions, and continue the story without losing canon, imagination, or control.
+World Building succeeds when a creator can import or write a story, see the living world emerge, understand how its parts connect, continue it without avoidable contradiction, and translate approved canon into useful visual and production outputs without losing authorship.
