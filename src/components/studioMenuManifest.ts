@@ -48,7 +48,7 @@ export const MENU_MANIFEST: MenuGroupManifest[] = [
       { to: "/scenes/$projectId", label: "Scene Board", desc: "See every scene on one wall.", iconName: "LayoutGrid", needsProject: true, needsData: "scenes" },
       { to: "/vault/$projectId", label: "Scene Vault", desc: "Stash scenes, fragments, and alt takes.", iconName: "Archive", needsProject: true },
       { to: "/story-arc/$projectId", label: "Story Spine", desc: "Beats and turning points across three acts.", iconName: "GitBranch", needsProject: true },
-      { to: "/characters/$projectId", label: "Characters", desc: "Character profiles, wants, wounds.", iconName: "Users", needsProject: true, needsData: "characters" },
+      { to: "/characters/$projectId", label: "Characters", desc: "Character profiles, wants, wounds.", iconName: "Users", needsProject: true },
       { to: "/arc-timeline/$projectId", label: "Dramatic Pulse", desc: "Tension and stakes scene-by-scene.", iconName: "Activity", needsProject: true, needsData: "scenes" },
     ],
   },

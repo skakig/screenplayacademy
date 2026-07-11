@@ -118,7 +118,7 @@ describe("StudioMenu destinations — project-state expectations", () => {
     { label: "Scene Board empty → needs scenes", to: "/scenes/$projectId", state: "empty", expectNeedsData: "scenes" },
     { label: "Scene Board partial → satisfied", to: "/scenes/$projectId", state: "partial", expectNeedsData: null },
     { label: "Scene Board populated → satisfied", to: "/scenes/$projectId", state: "populated", expectNeedsData: null },
-    { label: "Characters partial (scenes only) → needs characters", to: "/characters/$projectId", state: "partial", expectNeedsData: "characters" },
+    { label: "Characters partial (scenes only) → open builder", to: "/characters/$projectId", state: "partial", expectNeedsData: null },
     { label: "Characters populated → satisfied", to: "/characters/$projectId", state: "populated", expectNeedsData: null },
     { label: "Pitch empty → needs script", to: "/pitch/$projectId", state: "empty", expectNeedsData: "script" },
     { label: "Pitch partial → needs script", to: "/pitch/$projectId", state: "partial", expectNeedsData: "script" },
