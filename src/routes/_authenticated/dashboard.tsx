@@ -206,6 +206,10 @@ function Dashboard() {
           ))}
         </div>
 
+        <div className="mb-8">
+          <VoiceCreditsPanel />
+        </div>
+
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="font-display text-2xl font-semibold">{t("dashboard.in_production")}</h2>
           <span className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground">
