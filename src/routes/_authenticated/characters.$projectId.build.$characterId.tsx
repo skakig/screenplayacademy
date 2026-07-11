@@ -324,7 +324,11 @@ function EmptyProjectAutoCreate({ projectId }: { projectId: string; onNotEmpty?:
         });
       } catch (e: any) {
         started.v = false;
-        setError(e?.message ?? t("characters.builder.resolver.error"));
+        const message = e?.message ?? t("characters.builder.resolver.error");
+        toast.error(t("characters.builder.resolver.errorTitle"), {
+          description: message,
+        });
+        setError(message);
       }
     })();
   }
