@@ -32,6 +32,7 @@ export function RouteReadinessGate({
   fallback?: (gate: NonNullable<ReturnType<typeof useRouteGate>>) => ReactNode;
 }) {
   const gate = useRouteGate(to, projectId);
+  const activeProjectId = projectId ?? null;
 
   // Unknown route in manifest — never gate.
   if (!gate) return <>{children}</>;
@@ -59,9 +60,10 @@ export function RouteReadinessGate({
           ? FolderKanban
           : Sparkles;
 
+  const routerProjectId = gate.targetParams?.projectId ?? activeProjectId;
   const fixLinkProps: Record<string, unknown> = { to: gate.fixTo };
-  if (gate.fixTo.includes("$projectId") && gate.projectId) {
-    fixLinkProps.params = { projectId: gate.projectId };
+  if (gate.fixTo.includes("$projectId") && routerProjectId) {
+    fixLinkProps.params = { projectId: routerProjectId };
   }
 
   return (
