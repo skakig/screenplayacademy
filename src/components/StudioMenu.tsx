@@ -35,15 +35,13 @@ import {
 import { useState, type ComponentProps } from "react";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { useSubscription } from "@/hooks/useSubscription";
-import {
-  FEATURE_MIN_TIER,
-  TIER_LABEL,
-  TIER_RANK,
-  type Feature,
-  type Tier,
-} from "@/lib/entitlements";
+import { TIER_LABEL, type Feature, type Tier } from "@/lib/entitlements";
 import { isStripeConfigured } from "@/lib/stripe";
 import { supabase } from "@/integrations/supabase/client";
+import { MENU_MANIFEST } from "./studioMenuManifest";
+import { useProjectReadiness } from "@/lib/readiness/useProjectReadiness";
+import { resolveMenuGate } from "@/lib/readiness/menuGate";
+import { useCurrentProjectId } from "@/lib/readiness/useMenuGate";
 
 /**
  * Fire-and-forget menu telemetry. Emits studio_menu_item_clicked with the
