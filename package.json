@@ -12,7 +12,9 @@
     "test": "vitest run",
     "format": "prettier --write .",
     "route-matrix": "bun run scripts/generate-route-matrix.ts",
-    "route-matrix:check": "bun run scripts/generate-route-matrix.ts --check"
+    "route-matrix:check": "bun run scripts/generate-route-matrix.ts --check",
+    "i18n:verify": "bun run scripts/i18n-verify.ts",
+    "i18n:verify:strict": "bun run scripts/i18n-verify.ts --strict"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.48",
