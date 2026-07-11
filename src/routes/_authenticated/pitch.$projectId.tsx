@@ -75,6 +75,38 @@ function Pitch() {
 
   const [loading, setLoading] = useState(false);
   const [exportingTimeline, setExportingTimeline] = useState(false);
+  const [exportingDeck, setExportingDeck] = useState(false);
+
+  const exportDeck = async () => {
+    if (!pitch) {
+      toast.error("Generate the pitch package first.");
+      return;
+    }
+    setExportingDeck(true);
+    try {
+      const sections: PitchDeckSection[] = SECTIONS
+        .map((s) => ({ key: s.key, label: s.label, value: String((pitch as any)[s.key] ?? "") }))
+        .filter((s) => s.value.trim().length > 0);
+      if (sections.length === 0) {
+        toast.error("Pitch package is empty — regenerate it first.");
+        return;
+      }
+      downloadPitchDeckPdf({
+        projectTitle: project?.title ?? "Untitled Project",
+        projectType: (project as any)?.project_type ?? null,
+        genre: (project as any)?.genre ?? null,
+        tone: (project as any)?.tone ?? null,
+        logline: (pitch as any)?.logline ?? (project as any)?.logline ?? null,
+        sections,
+        generatedAt: (pitch as any)?.generated_at ?? null,
+      });
+      toast.success("Pitch deck downloaded");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't export pitch deck");
+    } finally {
+      setExportingDeck(false);
+    }
+  };
 
   const exportTimeline = async () => {
     if (!takes || takes.length === 0) {
