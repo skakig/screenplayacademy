@@ -1186,6 +1186,15 @@ function GuidedBuilderPage() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={() => setImportDialogOpen(true)}
+                              className="text-xs"
+                              title="Reuse portrait + voice from a character in another project"
+                            >
+                              Import style
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => void autoSuggestVoice()}
                               disabled={voiceBusy}
                               className="text-xs"
