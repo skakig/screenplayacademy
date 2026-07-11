@@ -122,10 +122,14 @@ export function usePresenceChannel({ projectId, role, self }: Options) {
     const sync = () => {
       const raw = channel.presenceState() as Record<string, ProjectPresenceState[]>;
       const out: PresencePeer[] = [];
+      const now = Date.now();
       for (const list of Object.values(raw)) {
         const latest = list[list.length - 1];
         if (!latest || !latest.user_id) continue;
-        out.push({ ...latest, is_self: latest.user_id === self.user_id });
+        const lastActive = Date.parse(latest.last_active_at ?? "") || 0;
+        const isSelf = latest.user_id === self.user_id;
+        const isIdle = !isSelf && lastActive > 0 && now - lastActive > IDLE_AFTER_MS;
+        out.push({ ...latest, is_self: isSelf, is_idle: isIdle });
       }
       // Deduplicate by user_id keeping the most recent last_active_at.
       const byUser = new Map<string, PresencePeer>();
