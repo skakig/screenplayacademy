@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -171,7 +171,30 @@ function TableRead() {
             <Card className="p-12 text-center border-dashed">
               <Mic className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <h3 className="font-semibold mb-1">No table reads yet</h3>
-              <p className="text-sm text-muted-foreground">Pick a scene, assign voices, and generate your first read.</p>
+              {scenes.length === 0 || characters.length === 0 ? (
+                <>
+                  <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+                    A table read needs {scenes.length === 0 && characters.length === 0 ? "scenes and characters" : scenes.length === 0 ? "at least one scene" : "at least one character"} so we know what to perform and who's speaking.
+                  </p>
+                  <div className="flex items-center gap-2 justify-center flex-wrap">
+                    {scenes.length === 0 && (
+                      <Button size="sm" asChild>
+                        <Link to="/scenes/$projectId" params={{ projectId }}>Add a scene</Link>
+                      </Button>
+                    )}
+                    {characters.length === 0 && (
+                      <Button size="sm" variant={scenes.length === 0 ? "outline" : "default"} asChild>
+                        <Link to="/characters/$projectId" params={{ projectId }}>Add characters</Link>
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" asChild>
+                      <Link to="/editor/$projectId" params={{ projectId }}>Open editor</Link>
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Pick a scene, assign voices, and generate your first read.</p>
+              )}
             </Card>
           ) : (
             <div className="space-y-3">
