@@ -2298,6 +2298,7 @@ export type Database = {
           genre: string | null
           id: string
           logline: string | null
+          metadata: Json
           project_language: string
           project_type: string
           screenplay_language: string
@@ -2314,6 +2315,7 @@ export type Database = {
           genre?: string | null
           id?: string
           logline?: string | null
+          metadata?: Json
           project_language?: string
           project_type?: string
           screenplay_language?: string
@@ -2330,6 +2332,7 @@ export type Database = {
           genre?: string | null
           id?: string
           logline?: string | null
+          metadata?: Json
           project_language?: string
           project_type?: string
           screenplay_language?: string
