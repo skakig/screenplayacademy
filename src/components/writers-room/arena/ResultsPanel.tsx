@@ -27,6 +27,7 @@ import {
   listSessionAwards,
   listVotes,
   promoteEntryToSuggestion,
+  resolveArenaWinners,
   type ArenaAwardType,
   type ArenaEntryRow,
   type ArenaSessionRow,
