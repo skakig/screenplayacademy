@@ -78,12 +78,12 @@ function TableRead() {
   useEffect(() => { if (!sceneId && scenes.length) setSceneId(scenes[0].id); }, [scenes, sceneId]);
 
   // Poll audio_assets while any row is still generating (fallback if realtime
-  // isn't wired for this project).
+  // isn't wired for this project). Poll fast so progress feels live.
   useEffect(() => {
     if (!audios.some((a: any) => a.status === "generating")) return;
     const t = setInterval(() => {
       qc.invalidateQueries({ queryKey: ["audios", projectId] });
-    }, 4000);
+    }, 1500);
     return () => clearInterval(t);
   }, [audios, projectId, qc]);
 
