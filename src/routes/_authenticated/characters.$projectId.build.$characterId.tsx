@@ -364,7 +364,9 @@ function EmptyProjectAutoCreate({ projectId }: { projectId: string; onNotEmpty?:
   );
 }
 
+function GuidedBuilderPage() {
   const { projectId, characterId } = Route.useParams();
+
   const navigate = useNavigate();
   const qc = useQueryClient();
   const callUpsert = useServerFn(upsertCharacter);
