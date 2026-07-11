@@ -382,7 +382,7 @@ function CharactersPage() {
                 bulkMode={bulkMode}
                 bulkSelected={bulkSelected.has(c.id)}
                 onBulkToggle={() => toggleBulk(c.id)}
-                onOpen={() => { setSelectedId(c.id); setDialogOpen(true); }}
+                onOpen={() => navigate({ to: "/characters/$projectId/build/$characterId", params: { projectId, characterId: c.id } })}
                 onRename={() => {
                   const next = window.prompt("Rename character", c.name || "");
                   if (next && next.trim() && next !== c.name) renameOne.mutate({ id: c.id, name: next.trim() });
