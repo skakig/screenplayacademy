@@ -119,6 +119,18 @@ function CharactersPage() {
     return m;
   }, [characters]);
 
+  const arcStatus = useMemo(() => {
+    let resolved = 0, developing = 0, seed = 0;
+    for (const c of characters) {
+      const pct = completenessPct(c);
+      if (pct >= 75) resolved++;
+      else if (pct >= 25) developing++;
+      else seed++;
+    }
+    return { resolved, developing, seed };
+  }, [characters]);
+
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return characters.filter((c) => {
