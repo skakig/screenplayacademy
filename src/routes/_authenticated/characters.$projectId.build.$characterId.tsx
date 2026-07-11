@@ -15,7 +15,7 @@ import {
   Sparkles, ChevronLeft, ChevronRight, ChevronDown, Loader2, Check, X,
   ArrowLeft, ArrowRight, Star, HelpCircle, Rocket, Crosshair, Clock,
   MessageCircle, Shield, Lightbulb, Save, Eye, Wand2, Image as ImageIcon,
-  GraduationCap, Flame, Users, BookOpen, AlertCircle,
+  GraduationCap, Flame, Users, BookOpen, AlertCircle, Volume2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenStatus, setCastStylePreset, refreshPortraitUrl, setProjectVisualStyle, suggestCharacterVoice, generatePortraitCandidates, approvePortraitCandidate } from "@/lib/characters.functions";
