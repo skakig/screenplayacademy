@@ -14,6 +14,8 @@ Voice capture, dictation, spoken brainstorming, conversational guidance, meeting
 
 World discovery, corpus import, World Bible, World Graph, series continuation, locations, factions, timelines, lore, world continuity, maps, visual-world generation, and world-to-production work must follow `docs/SCENESMITH_WORLD_BUILDING.md`: extract candidates rather than truth, attach evidence, keep canon explicit, and help the writer see the world without blocking the page.
 
+Epic fantasy, space opera, shared-universe, multi-book saga, multi-era franchise, World Atlas, cosmology, magic-system, genealogy, character-knowledge, travel, logistics, adaptation-branch, and universe-scale continuity work must also follow `docs/SCENESMITH_EPIC_FANTASY_UNIVERSE_PLATFORM.md`: keep the Writer’s Desk primary, model truth across time and continuity, use maps as views over the World Graph, preserve human canon control, and never imitate a living author’s voice or persona.
+
 Authorized source ingestion, corpus extraction, adaptive series onboarding, writer knowledge mapping, Character/World population proposals, source authority, and evidence-backed continuity or editorial review must follow `docs/ITS_PfHU_Importation.md`: preserve the source, attach evidence, let humans control identity and canon, use ITS to determine what must be understood, and use PfHU to determine how that understanding is presented.
 
 ## Prime Directive
@@ -52,6 +54,8 @@ For Story Graph, Production Graph, Scene Compiler, generator adapters, assets, c
 For Voice Studio, speech-to-text, dictation, spoken brainstorming, scene/chapter/skit construction, character interviews, worldbuilding sessions, revision notes, writers' room recording, production voice notes, or conversational voice guidance, `docs/SCENESMITH_VOICE_STUDIO.md` is the canonical product doctrine.
 
 For World Building, source-corpus import, series continuation, World Bible, World Graph, world entities, locations, factions, institutions, cultures, languages, timelines, artifacts, technologies, species, world rules, maps, visual-world assets, or world continuity, `docs/SCENESMITH_WORLD_BUILDING.md` is the canonical product doctrine.
+
+For epic fantasy, space opera, shared universes, multi-book sagas, multi-era worlds, World Atlas, nested maps, calendars, cosmology, magic or technology systems, cultures, dynasties, genealogy, artifacts, travel, logistics, character knowledge, spoiler-aware continuity, adaptation branches, retcons, or universe-scale performance, `docs/SCENESMITH_EPIC_FANTASY_UNIVERSE_PLATFORM.md` is the canonical deep specification and acceptance standard.
 
 For ITS/PfHU Importation, authorized corpus ingestion, character or world auto-population proposals, identity resolution from prior works, source authority, adaptive series onboarding, writer knowledge maps, continuation packages, or imported-canon editorial review, `docs/ITS_PfHU_Importation.md` is the canonical product doctrine.
 
@@ -100,6 +104,8 @@ Do not skip ahead. Build in this order:
 Voice Studio must follow the phased sequence in `docs/SCENESMITH_VOICE_STUDIO.md` and must not preempt the local-first editor, stable project artifacts, permissions, or approval foundations it depends on.
 
 World Building must follow the phased sequence in `docs/SCENESMITH_WORLD_BUILDING.md`. Do not begin visual-world or generator work before source evidence, candidates, canon governance, entity identity, permissions, and World Graph foundations are proven.
+
+Epic Fantasy & Universe Platform work must follow the phased sequence in `docs/SCENESMITH_EPIC_FANTASY_UNIVERSE_PLATFORM.md`. Do not begin Atlas spectacle, simulation-heavy systems, or universe-scale AI generation before universe identity, continuity branches, temporal canon, evidence, proposals, RLS, and Writer’s Desk isolation are proven.
 
 ITS/PfHU Importation must follow the phased sequence in `docs/ITS_PfHU_Importation.md`. Source preservation, segmentation, evidence, candidate review, identity decisions, source authority, and canon governance must be proven before adaptive onboarding, continuation guidance, or imported-canon editorial review is treated as authoritative.
 
