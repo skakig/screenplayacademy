@@ -407,12 +407,31 @@ export function ScreenplayLine({
   const projectId = routeParams.projectId;
   const linkedCharacter = useMemo(() => {
     if (!isCharBlock) return null;
-    const raw = (block.content || "").trim().toUpperCase();
-    if (!raw) return null;
-    // Strip parentheticals like "(V.O.)" or "(CONT'D)" from the display name.
-    const core = raw.replace(/\s*\([^)]*\)\s*$/g, "").trim();
+    const normalize = (s: string) =>
+      s
+        .toUpperCase()
+        // Strip all () and [] groups anywhere in the line (V.O.), (CONT'D), [OS], etc.
+        .replace(/[\(\[][^\)\]]*[\)\]]/g, " ")
+        // Strip trailing/dash stage directions: "JANE - V.O.", "JANE — CONT'D"
+        .replace(/\s*[-–—]\s*(V\.?O\.?|O\.?S\.?|O\.?C\.?|CONT'?D|CONTINUED|SUBTITLE|SOTTO|PRE-?LAP|FILTERED|ON PHONE|INTO PHONE)\b.*$/g, " ")
+        // Strip trailing bare modifiers: "JANE V.O."
+        .replace(/\s+(V\.?O\.?|O\.?S\.?|O\.?C\.?|CONT'?D|CONTINUED)\.?\s*$/g, " ")
+        .replace(/[.,;:*]+$/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    const core = normalize(block.content || "");
     if (!core) return null;
-    return characters.find((c) => c.name.trim().toUpperCase() === core) ?? null;
+    return (
+      characters.find((c) => normalize(c.name) === core) ??
+      // Fallback: some writers append aliases like "JANE (V.O.) (CONT'D)" or
+      // "JANE THE ELDER" — match on first token if unique.
+      (() => {
+        const first = core.split(" ")[0];
+        if (!first) return null;
+        const matches = characters.filter((c) => normalize(c.name).split(" ")[0] === first);
+        return matches.length === 1 ? matches[0] : null;
+      })()
+    );
   }, [isCharBlock, block.content, characters]);
 
 
