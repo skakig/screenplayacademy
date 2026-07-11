@@ -187,36 +187,54 @@ function CharactersPage() {
     <AppShell>
       <ProjectNav projectId={projectId} title={project?.title} />
       <div className="max-w-[1600px] mx-auto px-4 py-6">
-        <div className="flex items-baseline justify-between mb-5 flex-wrap gap-3">
-          <div>
-            <h1 className="font-display text-3xl">Characters</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Build your cast and protect character truth.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setInboxOpen(true)}>
-              <Inbox className="h-4 w-4 mr-2" />
-              Inbox
-              {pendingCandidateCount > 0 && (
-                <Badge className="ml-2 text-[10px]" variant="secondary">{pendingCandidateCount}</Badge>
-              )}
-            </Button>
-            <Button
-              variant={bulkMode ? "secondary" : "outline"}
-              size="sm"
-              onClick={() => { setBulkMode((b) => !b); setBulkSelected(new Set()); }}
-            >
-              <CheckSquare className="h-4 w-4 mr-2" />{bulkMode ? "Exit select" : "Select"}
-            </Button>
-            <Button onClick={() => create.mutate()} disabled={create.isPending}>
-              <Plus className="h-4 w-4 mr-2" />New Character
-            </Button>
-            {mergeDebug && (
-              <Button variant="outline" size="sm" onClick={() => setMergeOpen(true)}>
-                <Scale className="h-4 w-4 mr-2" />Merge review (debug)
+        {/* Pass 3 — Ensemble Wall header */}
+        <div className="mb-6 rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 py-4 sm:flex sm:flex-wrap sm:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
+              <h1 className="font-display text-2xl font-semibold text-primary truncate">Cast &amp; Characters</h1>
+              <div className="hidden sm:block h-4 w-px bg-border/60" />
+              <div className="hidden sm:flex gap-1 text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
+                <span className="text-primary/80 truncate max-w-[160px]">{project?.title ?? "Untitled"}</span>
+                <span>/</span>
+                <span>{characters.length} in ensemble</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Filter ensemble…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="pl-8 h-9 w-48 focus:w-64 transition-all bg-secondary/40"
+                />
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setInboxOpen(true)}>
+                <Inbox className="h-4 w-4 mr-2" />
+                Inbox
+                {pendingCandidateCount > 0 && (
+                  <Badge className="ml-2 text-[10px]" variant="secondary">{pendingCandidateCount}</Badge>
+                )}
               </Button>
-            )}
+              <Button
+                variant={bulkMode ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => { setBulkMode((b) => !b); setBulkSelected(new Set()); }}
+              >
+                <CheckSquare className="h-4 w-4 mr-2" />{bulkMode ? "Exit select" : "Select"}
+              </Button>
+              <Button onClick={() => create.mutate()} disabled={create.isPending}>
+                <Plus className="h-4 w-4 mr-2" />New Character
+              </Button>
+              {mergeDebug && (
+                <Button variant="outline" size="sm" onClick={() => setMergeOpen(true)}>
+                  <Scale className="h-4 w-4 mr-2" />Merge review
+                </Button>
+              )}
+            </div>
           </div>
         </div>
+
         <MergeReviewDialog projectId={projectId} open={mergeOpen} onOpenChange={setMergeOpen} />
 
         {/* Pass 2: unified inbox drawer replaces cleanup + detection panels */}
