@@ -167,8 +167,8 @@ function CharactersPage() {
       <div className="max-w-[1600px] mx-auto px-4 py-6">
         <div className="flex items-baseline justify-between mb-5 flex-wrap gap-3">
           <div>
-            <h1 className="font-display text-3xl">Your Cast</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Build a living cast. Pressure reveals character.</p>
+            <h1 className="font-display text-3xl">Characters</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Build your cast and protect character truth.</p>
           </div>
           <div className="flex items-center gap-2">
             <Button
