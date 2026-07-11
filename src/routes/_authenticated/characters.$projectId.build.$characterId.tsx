@@ -1130,7 +1130,72 @@ function GuidedBuilderPage() {
                               {voiceBusy ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
                               {(character as any)?.elevenlabs_voice_id ? "Reassign voice" : "Auto-assign voice"}
                             </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => void exploreCandidates()}
+                              disabled={candidatesBusy || portraitBusy || imageStatus?.configured === false || !ready || (portraitsLimit > 0 && portraitsRemaining < 4)}
+                              title="Generate 4 portrait variants and approve the best one"
+                            >
+                              {candidatesBusy
+                                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                : <ImageIcon className="h-4 w-4 mr-2" />}
+                              Explore 4 variants
+                            </Button>
                           </div>
+
+                          {(candidatesBusy || candidates) && (
+                            <div className="rounded-lg border border-border/60 bg-secondary/30 p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                                  Portrait candidates — pick one to approve
+                                </div>
+                                {candidates && (
+                                  <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => setCandidates(null)}>
+                                    <X className="h-3 w-3 mr-1" />Dismiss
+                                  </Button>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                {(candidatesBusy && !candidates ? Array.from({ length: 4 }, (_, i) => ({ seed: -1 - i, url: null, path: null, index: i, error: null } as PortraitCandidate)) : candidates ?? []).map((cand) => {
+                                  const isApproving = approvingSeed === cand.seed;
+                                  const isSelected = character?.portrait_seed === cand.seed;
+                                  return (
+                                    <div key={`${cand.seed}-${cand.index}`} className={`relative rounded-md overflow-hidden border ${isSelected ? "border-primary ring-2 ring-primary/40" : "border-border/60"} bg-black/40 aspect-square`}>
+                                      {cand.url ? (
+                                        <>
+                                          <img src={cand.url} alt={`Candidate ${cand.index + 1}`} className="h-full w-full object-cover" />
+                                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-2 flex items-center justify-between gap-2">
+                                            <span className="text-[10px] text-white/70 font-mono">seed {cand.seed}</span>
+                                            <Button
+                                              size="sm"
+                                              className="h-7 text-xs"
+                                              onClick={() => void approveCandidate(cand)}
+                                              disabled={isApproving || approvingSeed !== null}
+                                            >
+                                              {isApproving ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Check className="h-3 w-3 mr-1" />}
+                                              {isSelected ? "Current" : "Approve"}
+                                            </Button>
+                                          </div>
+                                        </>
+                                      ) : cand.error ? (
+                                        <div className="flex h-full items-center justify-center p-3 text-center text-[11px] text-rose-400">
+                                          <AlertCircle className="h-4 w-4 mr-1" />Failed
+                                        </div>
+                                      ) : (
+                                        <div className="flex h-full items-center justify-center">
+                                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <p className="mt-2 text-[10px] text-muted-foreground/80">
+                                Each variant costs one portrait credit. Only the approved variant becomes this character's portrait.
+                              </p>
+                            </div>
+                          )}
+
 
 
 
