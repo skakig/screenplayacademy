@@ -29,6 +29,7 @@ import {
   Archive,
   Lock,
   FlaskConical,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import { useState, type ComponentProps } from "react";
@@ -52,9 +53,64 @@ type Item = {
   guidedOnly?: boolean;
   feature?: Feature;
   experimental?: boolean;
+  /** Requires an external integration to be configured before it will work end-to-end. */
+  setupRequires?: "billing";
   /** Hint shown as a "needs …" chip when a project exists but likely has no data yet. */
   needsData?: "scenes" | "characters" | "script";
 };
+
+/**
+ * Standardized state chips rendered in a fixed order across every Studio Menu item:
+ *   1. Tier lock  →  2. Beta  →  3. Setup required  →  4. Pick a project  →  5. Needs data
+ * Colors and sizes are tokenized so Free/Creator/Pro/Studio see the same visual language.
+ */
+function StateBadges(props: {
+  locked: boolean;
+  requiredTier: Tier | null;
+  experimental?: boolean;
+  setupRequired?: boolean;
+  missingProject: boolean;
+  needsData?: Item["needsData"];
+}) {
+  const { locked, requiredTier, experimental, setupRequired, missingProject, needsData } = props;
+  return (
+    <>
+      {locked && requiredTier && (
+        <Badge
+          variant="outline"
+          className="text-[9px] px-1.5 py-0 gap-0.5 border-amber-500/40 text-amber-600 dark:text-amber-400"
+        >
+          <Lock className="h-2.5 w-2.5" />
+          {TIER_LABEL[requiredTier]}
+        </Badge>
+      )}
+      {experimental && (
+        <Badge
+          variant="outline"
+          className="text-[9px] px-1.5 py-0 gap-0.5 border-purple-500/40 text-purple-600 dark:text-purple-400"
+        >
+          <FlaskConical className="h-2.5 w-2.5" />
+          Beta
+        </Badge>
+      )}
+      {setupRequired && (
+        <Badge
+          variant="outline"
+          className="text-[9px] px-1.5 py-0 gap-0.5 border-sky-500/40 text-sky-600 dark:text-sky-400"
+        >
+          <Wrench className="h-2.5 w-2.5" />
+          Setup
+        </Badge>
+      )}
+      {missingProject && (
+        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Pick a project</Badge>
+      )}
+      {!missingProject && needsData && (
+        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Needs {needsData}</Badge>
+      )}
+    </>
+  );
+}
 
 const GROUPS: { key: string; label: string; items: Item[] }[] = [
   {
@@ -82,9 +138,9 @@ const GROUPS: { key: string; label: string; items: Item[] }[] = [
     label: "Producer — Ship the screenplay",
     items: [
       { to: "/pitch/$projectId", label: "Pitch Deck", desc: "Logline, synopsis, treatment, pitch email.", icon: Sparkles, needsProject: true, feature: "pitch", needsData: "script" },
-      { to: "/tableread/$projectId", label: "Table Read", desc: "Hear it read aloud with AI voices.", icon: Mic, needsProject: true, feature: "table_read", needsData: "characters" },
-      { to: "/storyboard/$projectId", label: "Shot Wall", desc: "Visualize scenes as storyboards.", icon: ImageIcon, needsProject: true, feature: "storyboard", needsData: "scenes" },
-      { to: "/writers-room/$projectId", label: "Writers' Room", desc: "Invite collaborators, notes, sessions.", icon: UsersRound, needsProject: true, feature: "writers_room" },
+      { to: "/tableread/$projectId", label: "Table Read", desc: "Hear it read aloud with AI voices.", icon: Mic, needsProject: true, feature: "table_read", needsData: "characters", experimental: true },
+      { to: "/storyboard/$projectId", label: "Shot Wall", desc: "Visualize scenes as storyboards.", icon: ImageIcon, needsProject: true, feature: "storyboard", needsData: "scenes", experimental: true },
+      { to: "/writers-room/$projectId", label: "Writers' Room", desc: "Invite collaborators, notes, sessions.", icon: UsersRound, needsProject: true, feature: "writers_room", experimental: true },
     ],
   },
   {
@@ -94,7 +150,7 @@ const GROUPS: { key: string; label: string; items: Item[] }[] = [
       { to: "/dashboard", label: "Studio Lobby", desc: "Your home base.", icon: Home },
       { to: "/projects", label: "Script Vault", desc: "All your projects.", icon: FolderKanban },
       { to: "/settings", label: "Studio Settings", desc: "Preferences and account.", icon: Settings },
-      { to: "/pricing", label: "Pricing", desc: "Plans and billing.", icon: CreditCard },
+      { to: "/pricing", label: "Pricing", desc: "Plans and billing.", icon: CreditCard, setupRequires: "billing" },
     ],
   },
 ];
@@ -169,6 +225,7 @@ export function StudioMenu() {
                     const active = currentPath === href;
 
                     const requiredTier = it.feature ? FEATURE_MIN_TIER[it.feature] : null;
+                    const setupRequired = it.setupRequires === "billing" && !stripeReady;
 
                     const inner = (
                       <div className={`flex items-start gap-3 rounded-md px-2.5 py-2 transition-colors ${
@@ -185,24 +242,14 @@ export function StudioMenu() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-sm font-medium truncate">{it.label}</span>
-                            {locked && requiredTier && (
-                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-0.5 border-amber-500/40 text-amber-600 dark:text-amber-400">
-                                <Lock className="h-2.5 w-2.5" />
-                                {TIER_LABEL[requiredTier]}
-                              </Badge>
-                            )}
-                            {it.experimental && (
-                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-0.5 border-purple-500/40 text-purple-600 dark:text-purple-400">
-                                <FlaskConical className="h-2.5 w-2.5" />
-                                Beta
-                              </Badge>
-                            )}
-                            {missingProject && (
-                              <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Pick a project</Badge>
-                            )}
-                            {!missingProject && it.needsData && (
-                              <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Needs {it.needsData}</Badge>
-                            )}
+                            <StateBadges
+                              locked={locked}
+                              requiredTier={requiredTier}
+                              experimental={it.experimental}
+                              setupRequired={setupRequired}
+                              missingProject={missingProject}
+                              needsData={it.needsData}
+                            />
                           </div>
                           <div className="text-[11px] text-muted-foreground leading-snug line-clamp-2">
                             {it.desc}
