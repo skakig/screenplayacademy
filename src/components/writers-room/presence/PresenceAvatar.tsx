@@ -14,15 +14,22 @@ export function PresenceAvatar({ peer, size = "sm", className, ring = true }: Pr
   const name = presenceDisplayName(peer);
   const sizing = size === "md" ? "h-9 w-9 text-sm" : "h-7 w-7 text-[10px]";
   const typing = !!peer.is_typing_scene_id;
+  const idle = !!peer.is_idle && !typing;
   return (
     <div
-      className={cn("relative inline-flex shrink-0", typing && "presence-typing-ring", className)}
-      title={name}
+      className={cn(
+        "relative inline-flex shrink-0 transition-opacity",
+        typing && "presence-typing-ring",
+        idle && "opacity-60",
+        className,
+      )}
+      title={idle ? `${name} · idle` : name}
     >
       <Avatar
         className={cn(
           sizing,
           ring && "ring-2 ring-background",
+          idle && "grayscale",
         )}
       >
         {peer.avatar_url ? (
@@ -36,7 +43,7 @@ export function PresenceAvatar({ peer, size = "sm", className, ring = true }: Pr
         aria-hidden
         className={cn(
           "absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-2 ring-background",
-          typing ? "bg-primary" : "bg-emerald-500",
+          typing ? "bg-primary" : idle ? "bg-muted-foreground/60" : "bg-emerald-500",
         )}
       />
     </div>
