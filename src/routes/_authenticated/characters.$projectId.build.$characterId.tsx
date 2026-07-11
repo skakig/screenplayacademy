@@ -1175,6 +1175,19 @@ function GuidedBuilderPage() {
                               {(character as any)?.elevenlabs_voice_id ? "Reassign voice" : "Auto-assign voice"}
                             </Button>
                             <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void previewVoiceNow()}
+                              disabled={previewBusy || !(character as any)?.elevenlabs_voice_id}
+                              className="text-xs"
+                              title="Play a short greeting in this character's voice (cached for instant replay)"
+                            >
+                              {previewBusy
+                                ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                : <Volume2 className="h-3 w-3 mr-1" />}
+                              Preview voice
+                            </Button>
+                            <Button
                               variant="outline"
                               onClick={() => void exploreCandidates()}
                               disabled={candidatesBusy || portraitBusy || imageStatus?.configured === false || !ready || (portraitsLimit > 0 && portraitsRemaining < 4)}
