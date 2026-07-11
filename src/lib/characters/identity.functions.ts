@@ -422,7 +422,7 @@ export const rememberKeepSeparate = createServerFn({ method: "POST" })
       if (c.project_id !== data.projectId) throw new Error("cross_project_refused");
     }
     for (const c of chars) {
-      const other = chars.find((o) => o.id !== c.id)!;
+      const other = chars.find((o: any) => o.id !== c.id)!;
       await supabaseAdmin.from("project_alias_memory").upsert(
         {
           project_id: data.projectId,
