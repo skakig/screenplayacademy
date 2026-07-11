@@ -201,15 +201,30 @@ export function usePresenceChannel({ projectId, role, self }: Options) {
     (sceneId: string | null) => {
       const s = stateRef.current;
       if (!s) return;
-      if (s.is_typing_scene_id !== sceneId) {
-        s.is_typing_scene_id = sceneId;
-        scheduleTrack();
+
+      // Only broadcast on the OFF→ON transition, and only after a minimum
+      // quiet window since the last OFF. All subsequent keystrokes while
+      // "typing" just extend the local clear timer — zero network traffic.
+      const now = Date.now();
+      const wasTyping = s.is_typing_scene_id === sceneId && sceneId !== null;
+      if (!wasTyping) {
+        const quietFor = now - lastTypingOffAt.current;
+        if (lastTypingOffAt.current === 0 || quietFor >= TYPING_MIN_OFF_MS) {
+          s.is_typing_scene_id = sceneId;
+          scheduleTrack();
+        } else {
+          // Still in cooldown; skip the transition entirely to prevent flicker.
+          return;
+        }
       }
+
       if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
       typingClearTimer.current = setTimeout(() => {
         const cur = stateRef.current;
         if (!cur) return;
+        if (cur.is_typing_scene_id === null) return;
         cur.is_typing_scene_id = null;
+        lastTypingOffAt.current = Date.now();
         scheduleTrack();
       }, TYPING_CLEAR_MS);
     },
