@@ -709,6 +709,60 @@ function GuidedBuilderPage() {
     }
   };
 
+  const playVoicePreview = async () => {
+    // Toggle if already playing
+    if (voicePreviewPlaying && voiceAudioRef.current) {
+      voiceAudioRef.current.pause();
+      setVoicePreviewPlaying(false);
+      return;
+    }
+    // Reuse cached URL
+    if (voicePreviewUrl && voiceAudioRef.current) {
+      try {
+        voiceAudioRef.current.currentTime = 0;
+        await voiceAudioRef.current.play();
+        setVoicePreviewPlaying(true);
+      } catch { /* ignore */ }
+      return;
+    }
+    setVoicePreviewBusy(true);
+    try {
+      const out: any = await callVoicePreview({ data: { characterId } });
+      if (out?.configured === false) {
+        toast.info("Voice preview isn't available — the ElevenLabs voice service isn't configured.");
+        return;
+      }
+      if (!out?.audioBase64) {
+        toast.error("Could not generate a voice preview");
+        return;
+      }
+      const url = `data:${out.mime || "audio/mpeg"};base64,${out.audioBase64}`;
+      setVoicePreviewUrl(url);
+      const audio = new Audio(url);
+      voiceAudioRef.current = audio;
+      audio.onended = () => setVoicePreviewPlaying(false);
+      audio.onpause = () => setVoicePreviewPlaying(false);
+      await audio.play();
+      setVoicePreviewPlaying(true);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Voice preview failed");
+    } finally {
+      setVoicePreviewBusy(false);
+    }
+  };
+
+  // Clear cached preview when the character's assigned voice changes
+  useEffect(() => {
+    if (voiceAudioRef.current) {
+      voiceAudioRef.current.pause();
+      voiceAudioRef.current = null;
+    }
+    setVoicePreviewUrl(null);
+    setVoicePreviewPlaying(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(character as any)?.elevenlabs_voice_id]);
+
+
 
   const exitTo = () =>
     navigate({ to: "/characters/$projectId", params: { projectId } });
