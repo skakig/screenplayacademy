@@ -6,7 +6,9 @@ ScreenPlay Pro / Screenplay Academy is an AI-native collaborative screenplay stu
 
 It is not a generic dashboard, note-taking app, chatbot wrapper, or disconnected collection of panels.
 
-The central user experience is writing a screenplay. Every feature must support writing, revising, understanding, collaborating on, pitching, teaching, performing, or exporting the screenplay.
+The central user experience is writing a screenplay. Every feature must support writing, revising, understanding, collaborating on, pitching, teaching, performing, producing, or exporting the screenplay.
+
+Long-term production work must follow `docs/SCENESMITH_STORY_PRODUCTION_PLATFORM.md`: SceneSmith may orchestrate changing human and AI production tools, but the screenplay, Story Graph, approvals, authorship, and provider-neutral project model remain authoritative.
 
 ## Prime Directive
 
@@ -26,17 +28,20 @@ Before implementing a feature, Lovable and all coding agents must read:
 
 1. `AGENTS.md`
 2. `docs/SCENESMITH_INTELLIGENCE_PLATFORM_VISION.md`
-3. `docs/lovable/00_DEEP_RESEARCH_SCREENPLAY_PRO.md`
-4. `docs/lovable/01_IMPLEMENTATION_ROADMAP.md`
-5. `docs/lovable/10_I18N.md`
-6. `docs/lovable/11_DATABASE_AND_RLS.md`
-7. The feature-specific file for the requested task.
+3. `docs/SCENESMITH_STORY_PRODUCTION_PLATFORM.md`
+4. `docs/lovable/00_DEEP_RESEARCH_SCREENPLAY_PRO.md`
+5. `docs/lovable/01_IMPLEMENTATION_ROADMAP.md`
+6. `docs/lovable/10_I18N.md`
+7. `docs/lovable/11_DATABASE_AND_RLS.md`
+8. The feature-specific file for the requested task.
 
 For Academy, Coach, Script Review, The Message, or series-continuity work, also read:
 
 - `docs/SCENESMITH_ACADEMY.md`
 - `docs/CHARACTER_TRUTH_ENGINE.md`
 - `docs/CHARACTER_TRUTH_ENGINE_SOURCE_SYSTEMS.md`
+
+For Story Graph, Production Graph, Scene Compiler, generator adapters, assets, cinematography, locations, budgets, production approvals, or studio-department work, `docs/SCENESMITH_STORY_PRODUCTION_PLATFORM.md` is the canonical product doctrine.
 
 For current Stage 1 editor work, also read:
 
