@@ -575,6 +575,15 @@ function GuidedBuilderPage() {
   const [styleDialogOpen, setStyleDialogOpen] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [previewBusy, setPreviewBusy] = useState(false);
+  type PreviewError =
+    | { kind: "no_voice" }
+    | { kind: "not_configured"; message?: string }
+    | { kind: "quota"; message?: string }
+    | { kind: "provider_quota"; message?: string }
+    | { kind: "rate_limited"; retryAfterSeconds: number; message?: string }
+    | { kind: "generic"; message: string };
+  const [previewError, setPreviewError] = useState<PreviewError | null>(null);
+  const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
   const [candidatesBusy, setCandidatesBusy] = useState(false);
   const [approvingSeed, setApprovingSeed] = useState<number | null>(null);
   type PortraitCandidate = { seed: number; url: string | null; path: string | null; index: number; error: string | null };
