@@ -64,7 +64,7 @@ type Item = {
  *   1. Tier lock  →  2. Beta  →  3. Setup required  →  4. Pick a project  →  5. Needs data
  * Colors and sizes are tokenized so Free/Creator/Pro/Studio see the same visual language.
  */
-function StateBadges(props: {
+export function StateBadges(props: {
   locked: boolean;
   requiredTier: Tier | null;
   experimental?: boolean;
