@@ -48,7 +48,7 @@ import { buildOutline, estimatePages } from "@/lib/editor/manuscriptAnalyzer";
 import { BookOpen, Map as MapIcon, Clapperboard } from "lucide-react";
 import { useWriterEvents } from "@/hooks/useWriterEvents";
 import { useWriteMode } from "@/hooks/use-write-mode";
-import { FocusPill } from "@/components/editor/FocusPill";
+import { FocusAccessoryBar } from "@/components/editor/FocusAccessoryBar";
 import { FirstRunModeDialog } from "@/components/editor/FirstRunModeDialog";
 import { BasicProgressPill } from "@/components/editor/BasicProgressPill";
 import { EditorSummonBar } from "@/components/editor/EditorSummonBar";
