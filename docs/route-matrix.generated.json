@@ -98,7 +98,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "feature": null,
       "requiredTier": null,
@@ -9105,7 +9105,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "no_project",
@@ -9125,7 +9125,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "no_project",
@@ -9145,7 +9145,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "no_project",
@@ -9165,7 +9165,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "no_project",
@@ -9185,7 +9185,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "empty_project",
@@ -9205,7 +9205,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "empty_project",
@@ -9225,7 +9225,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "empty_project",
@@ -9245,7 +9245,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "empty_project",
@@ -9265,7 +9265,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "has_scenes",
@@ -9285,7 +9285,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "has_scenes",
@@ -9305,7 +9305,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "has_scenes",
@@ -9325,7 +9325,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "has_scenes",
@@ -9345,7 +9345,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "has_scenes_and_characters",
@@ -9363,7 +9363,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "has_scenes_and_characters",
@@ -9381,7 +9381,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "has_scenes_and_characters",
@@ -9399,7 +9399,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "has_scenes_and_characters",
@@ -9417,7 +9417,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "populated",
@@ -9435,7 +9435,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "populated",
@@ -9453,7 +9453,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "populated",
@@ -9471,7 +9471,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "free",
       "scenario": "populated",
@@ -9489,7 +9489,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "no_project",
@@ -9509,7 +9509,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "no_project",
@@ -9529,7 +9529,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "no_project",
@@ -9549,7 +9549,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "no_project",
@@ -9569,7 +9569,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "empty_project",
@@ -9589,7 +9589,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "empty_project",
@@ -9609,7 +9609,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "empty_project",
@@ -9629,7 +9629,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "empty_project",
@@ -9649,7 +9649,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "has_scenes",
@@ -9669,7 +9669,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "has_scenes",
@@ -9689,7 +9689,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "has_scenes",
@@ -9709,7 +9709,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "has_scenes",
@@ -9729,7 +9729,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "has_scenes_and_characters",
@@ -9747,7 +9747,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "has_scenes_and_characters",
@@ -9765,7 +9765,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "has_scenes_and_characters",
@@ -9783,7 +9783,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "has_scenes_and_characters",
@@ -9801,7 +9801,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "populated",
@@ -9819,7 +9819,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "populated",
@@ -9837,7 +9837,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "populated",
@@ -9855,7 +9855,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "creator",
       "scenario": "populated",
@@ -9873,7 +9873,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "no_project",
@@ -9893,7 +9893,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "no_project",
@@ -9913,7 +9913,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "no_project",
@@ -9933,7 +9933,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "no_project",
@@ -9953,7 +9953,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "empty_project",
@@ -9973,7 +9973,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "empty_project",
@@ -9993,7 +9993,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "empty_project",
@@ -10013,7 +10013,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "empty_project",
@@ -10033,7 +10033,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "has_scenes",
@@ -10053,7 +10053,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "has_scenes",
@@ -10073,7 +10073,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "has_scenes",
@@ -10093,7 +10093,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "has_scenes",
@@ -10113,7 +10113,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "has_scenes_and_characters",
@@ -10131,7 +10131,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "has_scenes_and_characters",
@@ -10149,7 +10149,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "has_scenes_and_characters",
@@ -10167,7 +10167,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "has_scenes_and_characters",
@@ -10185,7 +10185,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "populated",
@@ -10203,7 +10203,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "populated",
@@ -10221,7 +10221,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "populated",
@@ -10239,7 +10239,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "pro",
       "scenario": "populated",
@@ -10257,7 +10257,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "no_project",
@@ -10277,7 +10277,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "no_project",
@@ -10297,7 +10297,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "no_project",
@@ -10317,7 +10317,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "no_project",
@@ -10337,7 +10337,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "empty_project",
@@ -10357,7 +10357,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "empty_project",
@@ -10377,7 +10377,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "empty_project",
@@ -10397,7 +10397,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "empty_project",
@@ -10417,7 +10417,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "has_scenes",
@@ -10437,7 +10437,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "has_scenes",
@@ -10457,7 +10457,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "has_scenes",
@@ -10477,7 +10477,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "has_scenes",
@@ -10497,7 +10497,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "has_scenes_and_characters",
@@ -10515,7 +10515,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "has_scenes_and_characters",
@@ -10533,7 +10533,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "has_scenes_and_characters",
@@ -10551,7 +10551,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "has_scenes_and_characters",
@@ -10569,7 +10569,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "populated",
@@ -10587,7 +10587,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "populated",
@@ -10605,7 +10605,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "populated",
@@ -10623,7 +10623,7 @@
     },
     {
       "group": "editor",
-      "label": "Casting Wall",
+      "label": "Characters",
       "to": "/characters/$projectId",
       "tier": "studio",
       "scenario": "populated",
