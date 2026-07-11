@@ -161,7 +161,7 @@ const GROUPS: { key: string; label: string; items: Item[] }[] = [
       { to: "/scenes/$projectId", label: "Scene Board", desc: "See every scene on one wall.", icon: LayoutGrid, needsProject: true, needsData: "scenes" },
       { to: "/vault/$projectId", label: "Scene Vault", desc: "Stash scenes, fragments, and alt takes.", icon: Archive, needsProject: true },
       { to: "/story-arc/$projectId", label: "Story Spine", desc: "Beats and turning points across three acts.", icon: GitBranch, needsProject: true },
-      { to: "/characters/$projectId", label: "Casting Wall", desc: "Character profiles, wants, wounds.", icon: Users, needsProject: true, needsData: "characters" },
+      { to: "/characters/$projectId", label: "Characters", desc: "Character profiles, wants, wounds.", icon: Users, needsProject: true, needsData: "characters" },
       { to: "/arc-timeline/$projectId", label: "Dramatic Pulse", desc: "Tension and stakes scene-by-scene.", icon: Activity, needsProject: true, needsData: "scenes" },
     ],
   },

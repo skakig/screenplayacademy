@@ -21,7 +21,7 @@ Legend: **Locked tiers** = plans where the item is tier-gated. **Blocking scenar
 | `/scenes/$projectId` (Scene Board) | — | — | — | — | scenes | — | — | no_project, empty_project |
 | `/vault/$projectId` (Scene Vault) | — | — | — | — | — | — | — | no_project |
 | `/story-arc/$projectId` (Story Spine) | — | — | — | — | — | — | — | no_project |
-| `/characters/$projectId` (Casting Wall) | — | — | — | — | characters | — | — | no_project, empty_project, has_scenes |
+| `/characters/$projectId` (Characters) | — | — | — | — | characters | — | — | no_project, empty_project, has_scenes |
 | `/arc-timeline/$projectId` (Dramatic Pulse) | — | — | — | — | scenes | — | — | no_project, empty_project |
 
 ## Producer — Ship the screenplay

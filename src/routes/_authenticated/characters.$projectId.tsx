@@ -33,7 +33,7 @@ import { upsertCharacter, deleteCharacter, bulkDeleteCharacters, restoreCharacte
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/characters/$projectId")({
-  head: () => ({ meta: [{ title: "Casting Wall — SceneSmith Studio" }] }),
+  head: () => ({ meta: [{ title: "Characters — SceneSmith Studio" }] }),
   component: () => (<RouteReadinessGate to="/characters/$projectId"><CharactersPage /></RouteReadinessGate>),
   errorComponent: RouteErrorBoundary,
 });
@@ -53,7 +53,7 @@ function CharactersPage() {
 
   const { data: characters = [] } = useQuery<any[]>({
     queryKey: ["characters", projectId],
-    queryFn: async (): Promise<any[]> => (await supabase.from("characters").select("*").eq("project_id", projectId).order("created_at")).data ?? [],
+    queryFn: async (): Promise<any[]> => (await supabase.from("characters").select("*").eq("project_id", projectId).is("quarantined_at", null).order("created_at")).data ?? [],
   });
 
   const { data: relCounts = {} } = useQuery<Record<string, number>>({
@@ -167,8 +167,8 @@ function CharactersPage() {
       <div className="max-w-[1600px] mx-auto px-4 py-6">
         <div className="flex items-baseline justify-between mb-5 flex-wrap gap-3">
           <div>
-            <h1 className="font-display text-3xl">Your Cast</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Build a living cast. Pressure reveals character.</p>
+            <h1 className="font-display text-3xl">Characters</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Build your cast and protect character truth.</p>
           </div>
           <div className="flex items-center gap-2">
             <Button

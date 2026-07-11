@@ -31,7 +31,7 @@ export function CastCleanupPanel({
   const callBulk = useServerFn(bulkDeleteCharacters);
   const callUpsert = useServerFn(upsertCharacter);
   const callRestore = useServerFn(restoreCharacters);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState<null | { ids: string[]; label: string }>(null);
   const [renaming, setRenaming] = useState<Record<string, string>>({});
