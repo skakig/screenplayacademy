@@ -462,6 +462,13 @@ export const i18nStrings = {
   "collab.presence.lastSeen": "Last active {{when}}",
   "collab.presence.connectionLost": "Presence connection lost",
   "collab.presence.collaborator": "Collaborator",
+  "collab.presence.teammates": "Teammates",
+  "collab.presence.teammatesTitle": "Who's in the room",
+  "collab.presence.teammatesSubtitle": "See where each collaborator is working right now.",
+  "collab.presence.selfSuffix": "(you)",
+  "collab.presence.onBlock": "On {{blockLabel}}",
+  "collab.presence.notOnScript": "Not in the script right now",
+  "collab.presence.typingNow": "Typing…",
 
   // Pass 7 — Live Scene Collaboration (experimental)
   "collab.tabs.live": "Live Lab",
