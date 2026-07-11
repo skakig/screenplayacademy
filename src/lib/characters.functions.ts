@@ -332,6 +332,7 @@ export const suggestSceneUse = createServerFn({ method: "POST" })
 const PortraitInput = z.object({
   characterId: z.string().uuid(),
   presetKey: z.string().optional(),
+  rerollSeed: z.boolean().optional(),
 });
 
 export const generatePortrait = createServerFn({ method: "POST" })
@@ -356,6 +357,14 @@ export const generatePortrait = createServerFn({ method: "POST" })
       throw e;
     }
 
+    // Seed reuse for cross-take consistency. Keep the same seed unless the
+    // caller asked to reroll or the character has never had a portrait.
+    const existingSeed = Number((c as any).portrait_seed ?? 0);
+    const seed =
+      !data.rerollSeed && existingSeed > 0
+        ? existingSeed
+        : Math.floor(Math.random() * 2_000_000_000) + 1;
+
     // Compose deterministically from the full profile + selected cast style
     // preset so every character in the cast reads as one film.
     const { composePortraitPrompt } = await import("@/lib/characters/portraitPrompt");
@@ -371,11 +380,16 @@ export const generatePortrait = createServerFn({ method: "POST" })
     if (!prompt.trim()) {
       prompt = demoVisualPrompt(c);
     }
-    await context.supabase.from("characters").update({ image_prompt: prompt }).eq("id", c.id);
+    // Append seed tag — image models honour it as a stability hint.
+    prompt = `${prompt} Seed: ${seed}.`;
+    await context.supabase
+      .from("characters")
+      .update({ image_prompt: prompt, portrait_seed: seed } as any)
+      .eq("id", c.id);
     if (!key) {
       const { data: row } = await context.supabase
         .from("characters").select("*").eq("id", c.id).single();
-      return { row, demo: true, configured: false, preset: preset.key };
+      return { row, demo: true, configured: false, preset: preset.key, seed };
     }
     const res = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
       method: "POST",
@@ -393,12 +407,13 @@ export const generatePortrait = createServerFn({ method: "POST" })
       throw new Error("Portrait generation returned no image data. Try again or refine the visual prompt.");
     }
     let portraitUrl: string | null = null;
+    let portraitPath: string | null = null;
     if (b64) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
-      // Cache-bust the storage path so regenerations produce a new signed URL
-      // and the browser doesn't serve the previous portrait.
-      const path = `${c.project_id}/characters/${c.id}-${Date.now()}.png`;
+      // Path encodes seed + timestamp so regenerations remain uniquely
+      // addressable and the browser doesn't serve the previous portrait.
+      const path = `${c.project_id}/characters/${c.id}-${seed}-${Date.now()}.png`;
       const { error: upErr } = await supabaseAdmin.storage
         .from("storyboards")
         .upload(path, bytes, { contentType: "image/png", upsert: true });
@@ -406,6 +421,7 @@ export const generatePortrait = createServerFn({ method: "POST" })
       const { data: signed } = await supabaseAdmin.storage
         .from("storyboards").createSignedUrl(path, 60 * 60 * 24 * 30);
       portraitUrl = signed?.signedUrl ?? null;
+      portraitPath = path;
     } else if (url) {
       portraitUrl = url;
     }
@@ -413,10 +429,42 @@ export const generatePortrait = createServerFn({ method: "POST" })
       throw new Error("Portrait was generated but could not be stored. Please retry.");
     }
     const { data: row } = await context.supabase
-      .from("characters").update({ portrait_url: portraitUrl, image_prompt: prompt })
-      .eq("id", c.id).select().single();
-    return { row, demo: false, preset: preset.key };
+      .from("characters")
+      .update({
+        portrait_url: portraitUrl,
+        image_prompt: prompt,
+        portrait_seed: seed,
+        ...(portraitPath ? { portrait_path: portraitPath } : {}),
+      } as any)
+      .eq("id", c.id)
+      .select()
+      .single();
+    return { row, demo: false, preset: preset.key, seed };
   });
+
+// ============= Refresh portrait signed URL =============
+
+const RefreshInput = z.object({ characterId: z.string().uuid() });
+
+export const refreshPortraitUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => RefreshInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const c = await loadOwnedCharacter(context, data.characterId);
+    const path = (c as any).portrait_path as string | null;
+    if (!path) return { url: (c as any).portrait_url ?? null, refreshed: false };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from("storyboards")
+      .createSignedUrl(path, 60 * 60 * 24 * 30);
+    if (error || !signed?.signedUrl) return { url: (c as any).portrait_url ?? null, refreshed: false };
+    await context.supabase
+      .from("characters")
+      .update({ portrait_url: signed.signedUrl })
+      .eq("id", c.id);
+    return { url: signed.signedUrl, refreshed: true };
+  });
+
 
 // ============= Cast style preset (per project) =============
 
@@ -438,6 +486,80 @@ export const setCastStylePreset = createServerFn({ method: "POST" })
       .from("projects").update({ metadata: meta } as any).eq("id", data.projectId);
     if (upErr) throw new Error(upErr.message);
     return { ok: true, presetKey: data.presetKey };
+  });
+
+// ============= Set project-wide visual style overrides =============
+const VisualStyleInput = z.object({
+  projectId: z.string().uuid(),
+  visualStyle: z.record(z.string(), z.any()),
+});
+
+export const setProjectVisualStyle = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => VisualStyleInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: project, error } = await context.supabase
+      .from("projects").select("id, metadata").eq("id", data.projectId).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!project) throw new Error("Project not found");
+    const meta = { ...((project as any).metadata ?? {}), visual_style: data.visualStyle };
+    const { error: upErr } = await context.supabase
+      .from("projects").update({ metadata: meta } as any).eq("id", data.projectId);
+    if (upErr) throw new Error(upErr.message);
+    return { ok: true, visualStyle: data.visualStyle };
+  });
+
+// ============= Auto-suggest a unique ElevenLabs voice for a character =============
+// Picks a voice from the curated allowlist that isn't already used by another
+// character in the same project. Persists the assignment when found.
+const CURATED_MALE = [
+  "JBFqnCBsd6RMkjVDRZzb", // George
+  "TX3LPaxmHKxFdv7VOQHJ", // Liam
+  "IKne3meq5aSn9XLyUdCD", // Charlie
+  "N2lVS1w4EtoT3dr4eOWO", // Callum
+  "onwK4e9ZLuTAKqWW03F9", // Daniel
+  "nPczCjzI2devNBz1zQrb", // Brian
+  "bIHbv24MWmeRgasZH58o", // Will
+];
+const CURATED_FEMALE = [
+  "EXAVITQu4vr4xnSDxMaL", // Sarah
+  "Xb7hH8MSUJpSbSDYk0k2", // Alice
+  "cgSgspJ2msm6clMCkdW9", // Jessica
+  "pFZP5JQG7iQjIQuC4Bku", // Lily
+  "FGY2WhTYpPnrIDTdsKH5", // Laura
+  "XrExE9yKIg1WjnnlVkGX", // Matilda
+];
+const CURATED_ALL = [...CURATED_MALE, ...CURATED_FEMALE];
+
+const VoiceSuggestInput = z.object({ characterId: z.string().uuid() });
+
+export const suggestCharacterVoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => VoiceSuggestInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const c = await loadOwnedCharacter(context, data.characterId);
+    if ((c as any).elevenlabs_voice_id) {
+      return { voiceId: (c as any).elevenlabs_voice_id as string, changed: false };
+    }
+    const { data: peers } = await context.supabase
+      .from("characters")
+      .select("id, elevenlabs_voice_id")
+      .eq("project_id", c.project_id)
+      .not("elevenlabs_voice_id", "is", null);
+    const used = new Set((peers ?? []).map((p: any) => p.elevenlabs_voice_id));
+
+    // Naive gender inference from profile — falls back to full pool.
+    const bag = `${(c as any).gender ?? ""} ${(c as any).pronouns ?? ""}`.toLowerCase();
+    const pool =
+      /\b(she|her|female|woman|girl)\b/.test(bag) ? CURATED_FEMALE
+      : /\b(he|him|male|man|boy)\b/.test(bag) ? CURATED_MALE
+      : CURATED_ALL;
+
+    const pick = [...pool, ...CURATED_ALL].find((v) => !used.has(v)) ?? null;
+    if (!pick) return { voiceId: null as string | null, changed: false };
+    await context.supabase
+      .from("characters").update({ elevenlabs_voice_id: pick }).eq("id", c.id);
+    return { voiceId: pick, changed: true };
   });
 
 // ============= List characters for a project (for autocomplete) =============

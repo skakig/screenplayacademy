@@ -1,86 +1,58 @@
-## Two fixes in one pass
+## Pass 5 — what's already shipped vs. what remains
 
-### A) Focus Mode toolbar alignment + clarity
+Earlier passes already delivered from `.lovable/plan.md`:
 
-**Problem (from screenshot):**
+- Section A (Focus Mode `FocusAccessoryBar` + suppressing in-page chips) — done.
+- Section B partially: Portrait is the final builder step, `portraitPrompt.ts` composer exists, per-project `cast_style_preset` and 7 presets (Ultra-Realistic, Cinematic Noir, Painterly Art, Concept Art, Graphic Comic, Anime, Watercolor), plan-based portrait metering, retry toast.
 
-- The Scene Heading chip strip renders inside the page column, wrapping raw placeholder text (``INT. . . . . AFRICAN DESERT`)` into the toolbar and colliding with the black chip pill above it.
-- The bottom accessory row stacks three separate floating clusters (`NOW: Parenthetical`, `Focus Mode / Exit Focus / Press Esc`, `AI continue`, `Vault (0)`, language pill) that were positioned independently, so on tablet widths they overlap the "AI continue" button and the Vault chip.
-- In Focus Mode the user cannot tell what each toolbar does — labels are truncated and the block-type pills are cut off at the top of the page.
-
-**Solution — single "Keyboard Accessory Bar" pattern (industry standard: iOS/Notion/Highland):**
-
-1. Introduce `FocusAccessoryBar.tsx` — one fixed bottom bar, safe-area padded, `env(safe-area-inset-bottom)`, height 56px, that hosts three grouped zones with clear dividers:
-  - **Left — Context**: current block-type pill (`Parenthetical`) + inline block-type cycler (chevrons ← → replacing the top floating cycler).
-  - **Center — Contextual chips**: SceneHeadingChips / RecentCharacterChips render *inside* this bar (not inside the page column) when the active block calls for them. Chips scroll horizontally with fades on both sides so nothing wraps.
-  - **Right — Actions**: `AI Continue`, `Vault`, language — collapsed into a single overflow menu on <900px so nothing overlaps.
-2. Remove the in-page chip strip render path in Focus Mode. The chips only live in the accessory bar; the manuscript page stays clean (matches iA Writer / Highland behavior).
-3. Replace the current three floating clusters with one `FocusToolbar` at the top center: `Focus Mode · Exit Focus · ⌘. toggle`, sized to content, never overlapping content because the manuscript gains `padding-top: 56px` in Focus.
-4. Add a subtle 1px border-t and `bg-background/85 backdrop-blur` so the bar reads as chrome, not content — same treatment top and bottom for visual pair.
-5. All strings routed through `t(...)` (`editor.focus.*`) — no hardcoded labels.
-6. Aria: bar gets `role="toolbar"` + `aria-label="Focus mode toolbar"`; chip strip inside is a nested `role="group"`.
-
-**Files touched (UI only):**
-
-- New: `src/components/editor/FocusAccessoryBar.tsx`, `src/components/editor/FocusToolbar.tsx`
-- Edit: `src/routes/_authenticated/editor.$projectId.tsx` (render new bars only when `focus === true`; drop the three legacy floaters in that branch).
-- Edit: `src/components/editor/ScreenplayLine.tsx` — suppress in-page `SceneHeadingChips` / `RecentCharacterChips` when `focus === true` (they render in the bar instead).
-- Add i18n keys under `editor.focus.*` in `src/lib/i18n/keys.ts`.
-
-**Out of scope:** the regular (non-Focus) editor chrome. No behavior change to typing, Enter/Tab, save, or coach.
+This pass closes the four gaps left in Section B.
 
 ---
 
-### B) Character Builder — Portrait becomes the final step, powered by the full profile
+### 1. Seed reuse + Reroll seed
 
-**Problem:** Portrait is currently a mid-flow step. Users generate before they've defined wound/lie/voice/arc, so images drift and re-generation is wasted credits. There's also no shared style contract, so two characters from the same project don't visually belong to the same film.
+- Migration: `characters.portrait_seed int`.
+- `generatePortrait` accepts optional `rerollSeed: boolean`. If no seed exists or reroll is requested, generate a new int; otherwise reuse. Include `seed: <int>` in the prompt tail (Gemini image models honor it as a stability hint) and persist.
+- Portrait step UI: split button "Regenerate (same seed)" / "Reroll seed" replaces the current single button, both share the plan-cap gate.
 
-**Best-in-class solution (mirrors Midjourney "sref" + Character.ai "definition" pattern):**
+### 2. Permanent storage path
 
-1. **Reorder steps.** Move `portrait_url` to the last position in `STEPS[]` inside `characters.$projectId.build.$characterId.tsx`. Identity → Role → Want → Pressure → Fear → Wound → Lie → Relationships → Voice → Arc → **Portrait**.
-2. **Portrait step gate.** Show a readiness meter: portrait unlocks with a soft "Recommended: complete 7+ steps for a truthful portrait." Users can still generate early with a warning toast, but the default CTA only lights up when strengths ≥ 7.
-3. **Project Style Contract (new, project-scoped).** Store one row per project on `projects.visual_style` (jsonb) with:
-  - `medium` (photographic / painterly / graphic novel / anime)
-  - `era` + `region` (auto-suggested from scene headings)
-  - `palette` (3 hex tokens)
-  - `lighting` (natural / high-key / chiaroscuro / neon)
-  - `lens` (35mm / 50mm / 85mm / anamorphic)
-  - `grain`, `aspect`, `negative_prompt`
-   First character generation opens a one-time "Set your film's look" dialog; subsequent characters inherit it (editable per-project from Settings → Look).
-4. **Prompt Composer (`src/lib/characters/portraitPrompt.ts`).** Deterministic builder that merges Style Contract + character profile into a single prompt:
-  ```
-   {medium} portrait of {name}, {age_hint from role}, {physicality from voice/role},
-   {emotional_truth from wound + lie}, {wardrobe from era/region + importance},
-   {lens} lens, {lighting}, {palette} palette, {grain}, aspect {aspect}.
-   Negative: {negative_prompt}, no text, no logos, no watermark.
-  ```
-   Same builder is reused for every character so the cast looks like one film.
-5. **Seed reuse for consistency.** Store `portrait_seed` (int) per character; regeneration keeps the seed unless the user clicks "Reroll seed". Cross-character consistency comes from Style Contract + shared negative prompt; individual identity comes from the character-specific tokens + fixed seed.
-6. **Model & endpoint.** Use existing `generatePortrait` server fn — swap its internal prompt assembly to call the composer. Model stays `openai/gpt-image-2`, `quality: "low"`, `stream: true`, `partial_images: 1`, so users see progressive frames with the blur→sharp reveal.
-7. **Permanent storage.** Upload each finalized PNG to `character-portraits` bucket at `projects/{projectId}/characters/{characterId}/{seed}.png`; store `portrait_path` (permanent) + `portrait_url` (signed, refreshed on read). Fixes the "expired URL" fallback we already ship.
-8. **UI on the Portrait step.**
-  - Left: live preview with 3 partial → final frames.
-  - Right: the composed prompt shown read-only with an "Edit style" link that opens the Style Contract dialog (not the raw prompt — protects consistency).
-  - Bottom: "Regenerate (same seed)" and "Reroll seed" split button; credit cost surfaced.
-9. Use character information created in the Character Builder to suggest a good voice from ElevenLabs so it's auto selected, and each character must have a unique ID so we don't get duplicate voices... (Hans already has voiceID: 97493o098u, etc... so that's reserved for Hans. Stephan needs a different voiceID so he is unique.)
+- Migration: `characters.portrait_path text`.
+- `generatePortrait` writes to `storyboards/{projectId}/characters/{characterId}/{seed}.png` (keep existing bucket — already owner-scoped), stores `portrait_path`, and returns a fresh 30-day signed URL on every read.
+- New `refreshPortraitUrl` server fn (auth) that, given a character with `portrait_path`, returns a new signed URL. Character builder calls it on mount when `portrait_url` is missing or a load `onError` fires. Fixes the expired-URL fallback.
 
-**Files touched:**
+### 3. Style Contract dialog (project-level look override)
 
-- Edit: `src/routes/_authenticated/characters.$projectId.build.$characterId.tsx` (reorder STEPS, gate + new Portrait panel).
-- New: `src/lib/characters/portraitPrompt.ts` + tests.
+- New `src/components/characters/StyleContractDialog.tsx`: opens from an "Edit style" link on the Portrait step. Fields: `medium`, `era`, `region`, `palette` (3 hex swatches), `lighting`, `lens`, `grain`, `aspect`, `negative_prompt`. Preset dropdown seeds initial values; user overrides persist to `projects.metadata.visual_style` via a new `setProjectVisualStyle` server fn.
+- `composePortraitPrompt` already merges `{ ...preset.contract, ...visual_style }`; no change to composer. Read-only prompt preview stays as-is with the new "Edit style" link.
+- All strings under `characters.style.*` i18n keys.
+
+### 4. ElevenLabs voice auto-assign (unique per character)
+
+- Migration: `characters.voice_id text` (nullable) with a `UNIQUE (project_id, voice_id)` partial index (where `voice_id is not null`) so no two characters in a project share a voice.
+- New `suggestCharacterVoice` server fn: reads character (age, gender/role hints, voice_notes, wound/lie tone), pulls the current ElevenLabs voice list via existing integration, filters out voice IDs already reserved by any character in the same project, ranks by tag match (gender, age, timbre keywords from `voice_notes`), returns top choice + 3 alternates. Called automatically the first time the user enters the Portrait step if `voice_id` is null; user can accept, pick an alternate, or open the full picker.
+- Table Read reads `characters.voice_id` directly — dedupe is now enforced at write time instead of at synthesis time.
+
+---
+
+### Files touched
+
+- Migration: `characters.portrait_seed int`, `characters.portrait_path text`, `characters.voice_id text`, `UNIQUE (project_id, voice_id)` partial index.
+- Edit: `src/lib/characters.functions.ts` — seed handling, `portrait_path` write, `refreshPortraitUrl`, `setProjectVisualStyle`, `suggestCharacterVoice`.
+- Edit: `src/routes/_authenticated/characters.$projectId.build.$characterId.tsx` — split regenerate/reroll button, "Edit style" link, voice auto-suggest on Portrait step mount, portrait URL refresh on error.
 - New: `src/components/characters/StyleContractDialog.tsx`.
-- Edit: `src/lib/characters.functions.ts` — `generatePortrait` uses composer, writes `portrait_path` + `portrait_seed`.
-- Migration: add `projects.visual_style jsonb`, `characters.portrait_path text`, `characters.portrait_seed int`, `character-portraits` storage bucket with owner RLS + `service_role` ALL grant.
-- i18n: `characters.builder.portrait.*` and `characters.style.*` keys.
+- New: `src/components/characters/VoicePickerInline.tsx` (accept/alternates/open full picker).
+- i18n: `characters.style.*`, `characters.builder.portrait.reroll*`, `characters.voice.*`.
 
-**Out of scope:** multi-candidate portrait grids, video, storyboard reuse — a follow-up pass once the single-portrait + style contract flow is proven.
+### Out of scope
 
----
+- Multi-candidate portrait grids, video, storyboard reuse.
+- Cross-project cast style import.
+- Real-time voice preview inside the builder (Table Read remains the audition surface).
 
-### Validation checklist
+### Acceptance
 
-- Focus Mode on tablet width shows exactly two chrome bars (top pill, bottom accessory) with no overlap; chips scroll horizontally, never wrap.
-- No in-page chip strip appears while Focus is active.
-- Portrait step is step 10 of 10; disabled state explains the gate.
-- Second character in the same project inherits the Style Contract and produces a visually related portrait.
-- Reload restores the stored portrait via `portrait_path` + fresh signed URL.
+- Regenerate keeps the same face across takes; Reroll seed visibly changes it.
+- Portrait survives a hard refresh even after the previous signed URL expires.
+- Editing the Style Contract on one character re-composes prompts for every future portrait in that project.
+- Creating a second character in the same project never assigns Hans's voice ID; the picker excludes reserved voices.

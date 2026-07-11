@@ -18,7 +18,8 @@ import {
   GraduationCap, Flame, Users, BookOpen, AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenStatus, setCastStylePreset } from "@/lib/characters.functions";
+import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenStatus, setCastStylePreset, refreshPortraitUrl, setProjectVisualStyle, suggestCharacterVoice } from "@/lib/characters.functions";
+import { StyleContractDialog } from "@/components/characters/StyleContractDialog";
 import { getUsageSnapshot } from "@/lib/usage.functions";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
@@ -561,7 +562,12 @@ function GuidedBuilderPage() {
     }
   };
 
-  const generatePortraitNow = async () => {
+  const callRefreshPortrait = useServerFn(refreshPortraitUrl);
+  const callSuggestVoice = useServerFn(suggestCharacterVoice);
+  const [styleDialogOpen, setStyleDialogOpen] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+
+  const generatePortraitNow = async (opts?: { rerollSeed?: boolean }) => {
     if (imageStatus?.configured === false) {
       toast.info(t("characters.builder.portrait.unavailable"));
       return;
@@ -574,23 +580,28 @@ function GuidedBuilderPage() {
     }
     setPortraitBusy(true);
     try {
-      const out: any = await callPortrait({ data: { characterId, presetKey } });
+      const out: any = await callPortrait({
+        data: { characterId, presetKey, rerollSeed: !!opts?.rerollSeed },
+      });
       qc.invalidateQueries({ queryKey: ["character", projectId, characterId] });
       qc.invalidateQueries({ queryKey: ["characters", projectId] });
       void refetchUsage();
       if (out?.configured === false) {
         toast.info(t("characters.builder.portrait.unavailable"));
       } else if (out?.row?.portrait_url) {
-        toast.success(t("characters.builder.portrait.generated"));
+        toast.success(
+          opts?.rerollSeed
+            ? "New portrait rerolled with a fresh seed"
+            : t("characters.builder.portrait.generated"),
+        );
       }
     } catch (e: any) {
-      // Keep the user's inputs intact and offer a one-click retry.
       toast.error(e?.message ?? t("characters.builder.portrait.failed"), {
         description: t("characters.builder.portrait.retryHint"),
         action: {
           label: t("characters.builder.portrait.tryAgain"),
           onClick: () => {
-            void generatePortraitNow();
+            void generatePortraitNow(opts);
           },
         },
         duration: 10000,
@@ -599,6 +610,40 @@ function GuidedBuilderPage() {
       setPortraitBusy(false);
     }
   };
+
+  const handlePortraitLoadError = async () => {
+    setPortraitBroken(true);
+    // Signed URLs expire — attempt a silent refresh from portrait_path.
+    try {
+      const out: any = await callRefreshPortrait({ data: { characterId } });
+      if (out?.refreshed) {
+        setPortraitBroken(false);
+        qc.invalidateQueries({ queryKey: ["character", projectId, characterId] });
+      }
+    } catch {
+      /* ignore — user can regenerate */
+    }
+  };
+
+  const autoSuggestVoice = async () => {
+    setVoiceBusy(true);
+    try {
+      const out: any = await callSuggestVoice({ data: { characterId } });
+      if (out?.changed && out.voiceId) {
+        toast.success("Voice auto-assigned");
+        qc.invalidateQueries({ queryKey: ["character", projectId, characterId] });
+      } else if (!out?.voiceId) {
+        toast.info("No unique voice available for this project");
+      } else {
+        toast.info("Character already has a voice");
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not assign a voice");
+    } finally {
+      setVoiceBusy(false);
+    }
+  };
+
 
   const exitTo = () =>
     navigate({ to: "/characters/$projectId", params: { projectId } });
@@ -759,7 +804,7 @@ function GuidedBuilderPage() {
                   src={character.portrait_url}
                   alt={`${displayName} portrait`}
                   className="h-20 w-20 rounded-2xl object-cover border border-primary/40"
-                  onError={() => setPortraitBroken(true)}
+                  onError={handlePortraitLoadError}
                 />
               ) : (
                 <div className="h-20 w-20 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/20 to-primary/5 grid place-items-center font-display text-3xl text-primary">
@@ -902,7 +947,7 @@ function GuidedBuilderPage() {
                         src={character.portrait_url}
                         alt={`${displayName} portrait`}
                         className="h-full w-full object-cover"
-                        onError={() => setPortraitBroken(true)}
+                        onError={handlePortraitLoadError}
                       />
                     ) : (
                       <div className="text-center px-4">
@@ -988,16 +1033,47 @@ function GuidedBuilderPage() {
                             </div>
                           )}
 
-                          <Button
-                            onClick={generatePortraitNow}
-                            disabled={portraitBusy || imageStatusLoading || imageStatus?.configured === false || !ready || outOfCredits}
-                            className="w-full sm:w-auto"
-                          >
-                            {portraitBusy
-                              ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              : <Wand2 className="h-4 w-4 mr-2" />}
-                            {character?.portrait_url ? "Regenerate portrait" : "Generate portrait"}
-                          </Button>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              onClick={() => void generatePortraitNow()}
+                              disabled={portraitBusy || imageStatusLoading || imageStatus?.configured === false || !ready || outOfCredits}
+                              className="flex-1 sm:flex-none"
+                            >
+                              {portraitBusy
+                                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                : <Wand2 className="h-4 w-4 mr-2" />}
+                              {character?.portrait_url ? "Regenerate (same seed)" : "Generate portrait"}
+                            </Button>
+                            {character?.portrait_url && (
+                              <Button
+                                variant="outline"
+                                onClick={() => void generatePortraitNow({ rerollSeed: true })}
+                                disabled={portraitBusy || imageStatus?.configured === false || outOfCredits}
+                                title="Discard the current seed and generate a completely new take"
+                              >
+                                Reroll seed
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setStyleDialogOpen(true)}
+                              className="text-xs"
+                            >
+                              Edit style
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void autoSuggestVoice()}
+                              disabled={voiceBusy}
+                              className="text-xs"
+                            >
+                              {voiceBusy ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                              {(character as any)?.elevenlabs_voice_id ? "Reassign voice" : "Auto-assign voice"}
+                            </Button>
+                          </div>
+
 
 
                           <details className="rounded-lg border border-border/60 bg-secondary/30 p-3 text-xs">
@@ -1245,7 +1321,14 @@ function GuidedBuilderPage() {
           </Button>
         </div>
       </div>
+      <StyleContractDialog
+        open={styleDialogOpen}
+        onOpenChange={setStyleDialogOpen}
+        projectId={projectId}
+        initial={((project as any)?.metadata?.visual_style ?? {}) as any}
+      />
     </div>
+
   );
 }
 
