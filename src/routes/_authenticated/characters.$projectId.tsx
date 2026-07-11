@@ -22,14 +22,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Plus, User, Sparkles, Trash2, Mic, Image as ImageIcon, KeyRound, AlertTriangle,
-  ChevronRight, FileText, Users, Search, MoreVertical, PencilLine, CheckSquare, X, Scale, Star,
+  ChevronRight, FileText, Users, Search, MoreVertical, PencilLine, CheckSquare, X, Scale, Star, Inbox,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TMHBadge } from "@/components/characters/TMHBadge";
 import { GROUPS, completenessPct, tmhLabel } from "@/components/characters/tmh";
 import { CharacterProfileDialog } from "@/components/characters/CharacterProfileDialog";
-import { CastCleanupPanel } from "@/components/characters/CastCleanupPanel";
-import { DetectedSpeakersPanel } from "@/components/characters/DetectedSpeakersPanel";
+import { CharacterInboxDrawer } from "@/components/characters/CharacterInboxDrawer";
 import { upsertCharacter, deleteCharacter, bulkDeleteCharacters, restoreCharacters } from "@/lib/characters.functions";
 import { MergeReviewDialog } from "@/components/characters/MergeReviewDialog";
 import { useSearch } from "@tanstack/react-router";
@@ -48,7 +47,21 @@ function CharactersPage() {
   const search = useSearch({ from: "/_authenticated/characters/$projectId" }) as { merge?: string };
   const mergeDebug = search.merge === "1";
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
   const qc = useQueryClient();
+
+  const { data: pendingCandidateCount = 0 } = useQuery<number>({
+    queryKey: ["character-candidate-count", projectId],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("character_candidates")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("status", "pending");
+      return count ?? 0;
+    },
+    refetchInterval: 30000,
+  });
   const callUpsert = useServerFn(upsertCharacter);
   const callDel = useServerFn(deleteCharacter);
   const callBulk = useServerFn(bulkDeleteCharacters);
@@ -180,6 +193,13 @@ function CharactersPage() {
             <p className="text-sm text-muted-foreground mt-0.5">Build your cast and protect character truth.</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setInboxOpen(true)}>
+              <Inbox className="h-4 w-4 mr-2" />
+              Inbox
+              {pendingCandidateCount > 0 && (
+                <Badge className="ml-2 text-[10px]" variant="secondary">{pendingCandidateCount}</Badge>
+              )}
+            </Button>
             <Button
               variant={bulkMode ? "secondary" : "outline"}
               size="sm"
@@ -199,15 +219,16 @@ function CharactersPage() {
         </div>
         <MergeReviewDialog projectId={projectId} open={mergeOpen} onOpenChange={setMergeOpen} />
 
-        {/* CLEANUP */}
-        <div className="mb-4">
-          <CastCleanupPanel
-            projectId={projectId}
-            characters={characters}
-            relCounts={relCounts}
-            sceneCounts={sceneCounts}
-          />
-        </div>
+        {/* Pass 2: unified inbox drawer replaces cleanup + detection panels */}
+        <CharacterInboxDrawer
+          projectId={projectId}
+          open={inboxOpen}
+          onOpenChange={setInboxOpen}
+          characters={characters}
+          relCounts={relCounts}
+          sceneCounts={sceneCounts}
+        />
+
 
         <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_320px] gap-4">
           {/* SIDEBAR */}
@@ -274,10 +295,8 @@ function CharactersPage() {
               )}
             </section>
 
-            <section>
-              <DetectedSpeakersPanel projectId={projectId} existingNames={characters.map((c) => c.name || "")} />
-            </section>
           </main>
+
 
           {/* INSPECTOR */}
           <aside className="space-y-3">
