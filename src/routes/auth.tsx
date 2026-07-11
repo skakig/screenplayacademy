@@ -11,8 +11,8 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  validateSearch: (s: Record<string, unknown>) => ({
-    next: typeof s.next === "string" ? s.next : "",
+  validateSearch: (s: Record<string, unknown>): { next?: string } => ({
+    next: typeof s.next === "string" ? s.next : undefined,
   }),
   head: () => ({
     meta: [
@@ -32,8 +32,8 @@ export const Route = createFileRoute("/auth")({
 });
 
 // Only allow same-origin relative paths as post-auth redirect targets.
-function safeNext(next: string): string {
-  if (!next.startsWith("/") || next.startsWith("//")) return "/dashboard";
+function safeNext(next: string | undefined): string {
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return "/dashboard";
   return next;
 }
 

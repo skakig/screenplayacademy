@@ -26,6 +26,7 @@ type AcceptStatus =
   | "accepted_already"
   | "email_mismatch"
   | "missing_token"
+  | "needs_signin"
   | "unknown";
 
 interface RpcRow {
@@ -33,7 +34,11 @@ interface RpcRow {
   status: string | null;
 }
 
-export const Route = createFileRoute("/_authenticated/accept-invite")({
+export const Route = createFileRoute("/accept-invite")({
+  // Public route: unauthenticated visitors must be able to land here from an
+  // email link. We handle auth ourselves and bounce to /auth?next=… when
+  // needed so the token survives the sign-in round-trip.
+  ssr: false,
   validateSearch: (search) => searchSchema.parse(search),
   head: () => ({
     meta: [{ title: "Accept invite — SceneSmith Studio" }],
@@ -42,7 +47,7 @@ export const Route = createFileRoute("/_authenticated/accept-invite")({
 });
 
 function AcceptInvitePage() {
-  const { token } = useSearch({ from: "/_authenticated/accept-invite" });
+  const { token } = useSearch({ from: "/accept-invite" });
   const navigate = useNavigate();
   const [status, setStatus] = useState<AcceptStatus>("checking");
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -54,6 +59,17 @@ function AcceptInvitePage() {
         if (!cancelled) setStatus("missing_token");
         return;
       }
+
+      // Require an authenticated session before calling the RPC — otherwise
+      // it returns { status: "unauthenticated" } and the user sees a generic
+      // error instead of being sent to sign in.
+      const { data: userData } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (!userData.user) {
+        setStatus("needs_signin");
+        return;
+      }
+
       try {
         const { data, error } = await supabase.rpc(
           "accept_project_invite",
@@ -78,6 +94,13 @@ function AcceptInvitePage() {
       cancelled = true;
     };
   }, [token]);
+
+  // Bounce to /auth with a next= that returns here with the token intact.
+  useEffect(() => {
+    if (status !== "needs_signin") return;
+    const back = `/accept-invite${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+    void navigate({ to: "/auth", search: { next: back } });
+  }, [status, token, navigate]);
 
   // Auto-redirect on success.
   useEffect(() => {
@@ -128,11 +151,13 @@ function Content({ status, projectId, onSignOut, onOpenRoom }: ContentProps) {
   const view = useMemo(() => mapStatusToView(status), [status]);
   return (
     <>
-      {status === "checking" ? (
+      {status === "checking" || status === "needs_signin" ? (
         <div className="flex flex-col items-center gap-3 py-4">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            {t("collab.acceptInvite.checking")}
+            {status === "needs_signin"
+              ? t("collab.acceptInvite.needsSignIn")
+              : t("collab.acceptInvite.checking")}
           </p>
         </div>
       ) : (
@@ -179,12 +204,8 @@ function mapRpcStatus(s: string): AcceptStatus {
     case "email_mismatch":
       return "email_mismatch";
     case "unauthenticated":
-      // The _authenticated layout should have redirected to /auth before we
-      // got here; treat as unknown defensively.
-      return "unknown";
+      return "needs_signin";
     default:
-      // If the invite was already in a non-pending terminal state, the RPC
-      // returns the literal status. Map known ones; rest → accepted_already.
       return "accepted_already";
   }
 }
@@ -230,6 +251,7 @@ function mapStatusToView(status: AcceptStatus): {
         body: t("collab.acceptInvite.missingTokenBody"),
       };
     case "checking":
+    case "needs_signin":
     case "unknown":
     default:
       return {

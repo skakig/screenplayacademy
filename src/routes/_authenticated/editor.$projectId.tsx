@@ -53,17 +53,20 @@ import { FirstRunModeDialog } from "@/components/editor/FirstRunModeDialog";
 import { BasicProgressPill } from "@/components/editor/BasicProgressPill";
 import { EditorSummonBar } from "@/components/editor/EditorSummonBar";
 import { PresenceAvatarStack } from "@/components/writers-room/presence/PresenceAvatarStack";
+import { PresenceProvider, useOptionalPresence } from "@/lib/presence/PresenceProvider";
+import { InviteCollaboratorDialog } from "@/components/writers-room/InviteCollaboratorDialog";
+import { UserPlus } from "lucide-react";
 import { AutosaveIndicator } from "@/components/editor/AutosaveIndicator";
 import { WriterDeskNewMenu } from "@/components/vault/WriterDeskNewMenu";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Writer's Desk — Screenplay Academy" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { from?: string; step?: string; block?: string } => ({
     from: typeof s.from === "string" ? s.from : undefined,
     step: typeof s.step === "string" ? s.step : undefined,
     block: typeof s.block === "string" ? s.block : undefined,
   }),
-  component: Editor,
+  component: EditorRoute,
   errorComponent: ({ error, reset }) => (
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="max-w-md text-center space-y-3">
@@ -97,6 +100,15 @@ const AI_TOOLS = [
   "Make scene more visual", "Reduce exposition", "Increase tension",
   "Find plot holes", "Summarize scene", "Create storyboard prompt",
 ];
+
+function EditorRoute() {
+  const { projectId } = Route.useParams();
+  return (
+    <PresenceProvider projectId={projectId}>
+      <Editor />
+    </PresenceProvider>
+  );
+}
 
 function Editor() {
   const { projectId } = Route.useParams();
@@ -551,6 +563,22 @@ function Editor() {
   })();
   const activeScene = activeSceneIdx >= 0 ? outline[activeSceneIdx] : null;
 
+  // Presence: broadcast that this user is in the script editor, and which
+  // scene their caret is currently in. Payload carries no script content.
+  const presence = useOptionalPresence();
+  useEffect(() => {
+    presence?.setActiveArea("script");
+  }, [presence]);
+  useEffect(() => {
+    presence?.setActiveScene(
+      activeScene?.id ?? null,
+      activeScene?.title ?? null,
+    );
+  }, [presence, activeScene?.id, activeScene?.title]);
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+
+
   const jumpToBlock = useCallback((serverId: string) => {
     // jumpToServer also triggers the active-line viewport scroller so the
     // jumped-to block lands in the focus zone — no manual scrollIntoView here.
@@ -636,6 +664,18 @@ function Editor() {
   const headerExtras = (
     <div className="flex items-center gap-2">
       {!focus && <PresenceAvatarStack />}
+      {!focus && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => setInviteOpen(true)}
+          title="Invite a collaborator"
+        >
+          <UserPlus className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Invite</span>
+        </Button>
+      )}
       <WriterDeskModeToggle />
       <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
     </div>
@@ -643,6 +683,11 @@ function Editor() {
 
   return (
     <AppShell focus={focus} title={project?.title} headerExtras={headerExtras}>
+      <InviteCollaboratorDialog
+        projectId={projectId}
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+      />
       {!focus && fromGuided && (
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3">
           <Link
