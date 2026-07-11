@@ -71,7 +71,7 @@ export function resolveMenuGate(
 
   const entry = computeEntry({
     group: "", // group is irrelevant for gate resolution
-    item,
+    item: item as MenuItemManifest,
     tier: ctx.tier,
     scenario,
     stripeReady: ctx.stripeReady,
