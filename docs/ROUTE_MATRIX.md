@@ -29,10 +29,10 @@ A route is **not** marked Complete just because it renders. It must also:
 | --- | --- | --- | --- | --- | --- | --- |
 | `/editor/$projectId` | Pick a project | Complete | Complete | Complete | Complete | Local-first typing; presence + coach rail sync per plan. |
 | `/scenes/$projectId` | Needs scenes | Complete (empty prompt) | Complete | Complete | Complete | Empty state prompts outlining. |
-| `/vault/$projectId` | — | Partial | Partial | Partial | Partial | Vault renders but lacks an actionable "no vault scenes yet" callout that links back to editor. |
-| `/story-arc/$projectId` | — | Partial | Partial | Partial | Partial | Renders arc chart with zero states; needs explicit "add beats" CTA when `story_arcs` is empty. |
+| `/vault/$projectId` | — | Complete | Complete | Complete | Complete | Empty state prompts "New Vault Item" or opens the editor. |
+| `/story-arc/$projectId` | — | Complete | Complete | Complete | Complete | Empty-arc callout offers "Seed defaults" when scenes exist, or routes to Scene Board when they don't. |
 | `/characters/$projectId` | Needs characters | Complete | Complete | Complete | Complete | Casting Wall covers empty groups, detected speakers, and cleanup. |
-| `/arc-timeline/$projectId` | Needs scenes | Partial | Partial | Partial | Partial | Pulse chart shows placeholder for zero scenes; add a "generate arc from scenes" nudge. |
+| `/arc-timeline/$projectId` | Needs scenes | Complete | Complete | Complete | Complete | Distinguishes zero scenes, <3 scenes, and filter mismatch; each has its own actionable card. |
 
 ## Producer
 
@@ -65,10 +65,7 @@ A route is **not** marked Complete just because it renders. It must also:
 | `/editor-lab` | Experimental | Local-first editor sandbox; not linked from Studio Menu. |
 | `/sitemap.xml`, `/api/public/payments/webhook`, `/.well-known/*`, `/[.mcp]/*`, `/mcp` | Complete | Infra / integrations; not user-navigable. |
 
-## Follow-ups to close remaining "Partial" rows
+## Status
 
-- **Scene Vault:** show "No stashed scenes yet — send a scene from the editor" when `vault_scenes` is empty.
-- **Story Spine:** if `story_arcs` is empty, offer a one-click "generate spine from scenes" using the existing arc functions.
-- **Dramatic Pulse:** if `scenes.length < 3`, replace the empty chart with a prompt to add more scenes and link to Scene Board.
+All Studio Menu destinations are now Complete for their supported tier, with actionable empty states on empty projects.
 
-Once those three ship, every Studio Menu destination will be Complete for its supported tier and no room will render blank on an empty project.

@@ -1,11 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Archive, Plus, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { VaultCorkboard } from "@/components/vault/VaultCorkboard";
 import { VaultSceneDialog } from "@/components/vault/VaultSceneDialog";
@@ -130,6 +131,26 @@ function VaultPage() {
 
           {isLoading ? (
             <div className="text-sm text-muted-foreground">Loading the board…</div>
+          ) : scenes.length === 0 ? (
+            <Card className="p-12 text-center border-dashed max-w-2xl mx-auto">
+              <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                <Archive className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="font-semibold mb-1">No stashed scenes yet</h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
+                The Vault is for scenes, fragments, and alt takes that don't yet belong on the timeline. Pin something new, or send a scene here from the editor.
+              </p>
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <Button onClick={() => setCreating(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-1.5" /> New Vault Item
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/editor/$projectId" params={{ projectId }}>
+                    <FileText className="h-4 w-4 mr-1.5" /> Open editor
+                  </Link>
+                </Button>
+              </div>
+            </Card>
           ) : (
             <VaultCorkboard
               scenes={scenes}
