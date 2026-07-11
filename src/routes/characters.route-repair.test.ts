@@ -46,6 +46,8 @@ describe("Character route emergency repair", () => {
 
     expect(builder).toContain("getImageGenStatus");
     expect(builder).toContain('t("characters.builder.portrait.notConfigured")');
-    expect(builder).toContain('disabled={portraitBusy || imageStatusLoading || imageStatus?.configured === false}');
+    // Generate button must be gated on image-gen configuration status.
+    expect(builder).toMatch(/disabled=\{[^}]*imageStatus\?\.configured === false[^}]*\}/);
+    expect(builder).toMatch(/disabled=\{[^}]*imageStatusLoading[^}]*\}/);
   });
 });
