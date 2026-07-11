@@ -8,7 +8,8 @@ export type MeteredFeature =
   | "storyboard_panels"
   | "tableread_minutes"
   | "ai_tokens"
-  | "tts_characters";
+  | "tts_characters"
+  | "character_portraits";
 
 /**
  * Increment a metered feature counter for the current user. Called from
