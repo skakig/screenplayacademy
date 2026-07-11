@@ -121,9 +121,10 @@ function TableRead() {
           </div>
           <div>
             <Label>Scene</Label>
-            <Select value={sceneId} onValueChange={setSceneId}>
+            <Select value={sceneId ?? "__all__"} onValueChange={(v) => setSceneId(v === "__all__" ? undefined : v)}>
               <SelectTrigger><SelectValue placeholder="(pick a scene)" /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="__all__">Entire script</SelectItem>
                 {scenes.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.title || s.scene_heading || "Untitled"}</SelectItem>)}
               </SelectContent>
             </Select>
