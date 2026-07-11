@@ -396,6 +396,8 @@ function CharacterCard({
       {c.summary && <p className="text-xs text-muted-foreground mt-3 line-clamp-2">{c.summary}</p>}
 
       <div className="flex flex-wrap items-center gap-1.5 mt-3">
+        {c.importance && <ImportanceChip level={c.importance} />}
+        {c.story_function && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary/60 border border-border/60 text-foreground/80">{c.story_function}</span>}
         <TMHBadge level={c.tmh_baseline} />
         {c.tmh_stress && (
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive border border-destructive/30">
