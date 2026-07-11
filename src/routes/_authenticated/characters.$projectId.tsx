@@ -374,6 +374,7 @@ function CharactersPage() {
               <CharacterCard
                 key={c.id}
                 c={c}
+                projectId={projectId}
                 rels={relCounts[c.id] ?? 0}
                 scenes={sceneCounts[c.id] ?? 0}
                 selected={c.id === selectedId}
