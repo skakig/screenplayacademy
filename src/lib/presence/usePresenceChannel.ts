@@ -210,8 +210,19 @@ export function usePresenceChannel({ projectId, role, self }: Options) {
     [scheduleTrack],
   );
 
+  const setActiveBlock = useCallback(
+    (blockId: string | null) => {
+      const s = stateRef.current;
+      if (!s) return;
+      if (s.active_block_id === blockId) return;
+      s.active_block_id = blockId;
+      scheduleTrack();
+    },
+    [scheduleTrack],
+  );
+
   return useMemo(
-    () => ({ peers, connected, setActiveArea, setActiveScene, pingTyping }),
-    [peers, connected, setActiveArea, setActiveScene, pingTyping],
+    () => ({ peers, connected, setActiveArea, setActiveScene, pingTyping, setActiveBlock }),
+    [peers, connected, setActiveArea, setActiveScene, pingTyping, setActiveBlock],
   );
 }
