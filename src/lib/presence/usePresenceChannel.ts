@@ -161,8 +161,28 @@ export function usePresenceChannel({ projectId, role, self }: Options) {
       void supabase.rpc("update_my_project_last_seen", { _project_id: projectId });
     }, LAST_SEEN_TICK_MS);
 
+    // Slow ticker so idle status flips on its own without a fresh sync event.
+    // Only rewrites peers when at least one peer's derived idle state changed,
+    // which keeps re-renders (and any downstream flicker) to a minimum.
+    const idleTick = setInterval(() => {
+      const now = Date.now();
+      setPeers((prev) => {
+        let changed = false;
+        const next = prev.map((p) => {
+          if (p.is_self) return p;
+          const lastActive = Date.parse(p.last_active_at ?? "") || 0;
+          const idle = lastActive > 0 && now - lastActive > IDLE_AFTER_MS;
+          if (idle === !!p.is_idle) return p;
+          changed = true;
+          return { ...p, is_idle: idle };
+        });
+        return changed ? next : prev;
+      });
+    }, IDLE_TICK_MS);
+
     return () => {
       clearInterval(lastSeenInterval);
+      clearInterval(idleTick);
       if (pendingTrack.current) {
         clearTimeout(pendingTrack.current);
         pendingTrack.current = null;
