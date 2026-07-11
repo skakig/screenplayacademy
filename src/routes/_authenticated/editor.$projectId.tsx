@@ -416,12 +416,24 @@ function Editor() {
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const [toolsDrawerOpen, setToolsDrawerOpen] = useState(false);
+  const [coachPinned, setCoachPinnedState] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const v = window.localStorage.getItem("editor:coach-pinned");
+    return v === null ? true : v === "1";
+  });
+  const setCoachPinned = useCallback((v: boolean) => {
+    setCoachPinnedState(v);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("editor:coach-pinned", v ? "1" : "0");
+    }
+  }, []);
   const writeMode = useWriteMode();
   const focus = writeMode.on;
 
   const { data: onboarding } = useOnboarding();
   const isBasic = onboarding?.preferred_mode === "guided";
   const coachDefaultTab = isBasic ? "builder" : "coach";
+  const showCoachRail = coachPinned && !focus;
 
   // Esc exits Focus Mode; Cmd/Ctrl+. toggles Focus Mode from anywhere.
   // Ignore when a modal/menu/popover has consumed the event (Radix marks
