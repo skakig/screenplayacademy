@@ -182,7 +182,7 @@ describe("StudioMenu StateBadges — needs-data suppression", () => {
   });
 
   it("shows 'Needs …' when project exists", () => {
-    const item = MENU_ITEMS.find((i) => i.label === "Casting Wall")!;
+    const item = MENU_ITEMS.find((i) => i.label === "Characters")!;
     const html = renderBadges(item, "free", "p", true);
     expect(html).toContain("Needs characters");
     expect(html).not.toContain("Pick a project");
