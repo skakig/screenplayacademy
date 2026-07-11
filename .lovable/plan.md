@@ -1,68 +1,96 @@
-## Audit findings
+## Emergency Character Route Repair Plan
 
-1. **The Studio Menu still routes Characters to the cast grid**
-   - `src/components/StudioMenu.tsx` and `src/components/studioMenuManifest.ts` still define Characters as `/characters/$projectId`.
-   - That explains why clicking the editor/top Studio Menu can still show the grid instead of the guided builder.
+### Goal
+Restore access to the existing Character Builder and Character routes without changing the visual design or rebuilding unrelated character features.
 
-2. **The Characters route is incorrectly gated by “needs characters”**
-   - The menu manifest marks Characters with `needsData: "characters"`.
-   - `RouteReadinessGate` wraps `/characters/$projectId` and the new builder route, so empty projects can block the exact flow that should create the first character.
+### Scope for this pass
+- Fix the broken route composition.
+- Stop invalid character URLs from creating phantom records.
+- Add explicit builder states: loading, not found, permission/query error, ready.
+- Add an Identity first step to the guided builder.
+- Make portrait generation configuration visible and non-silent.
+- Add focused route-flow tests.
 
-3. **There is no “open/create first character” route for menu links**
-   - `/characters/$projectId/build/$characterId` requires a character ID.
-   - Menu links often only know the project ID, so they need a resolver route like `/characters/$projectId/build` that finds or creates the first character, then redirects to `/characters/$projectId/build/$characterId`.
+Out of scope for this emergency pass: multi-candidate portrait approval, relationship graph redesign, and full adaptive coaching rewrites. Those should come after routing is proven working.
 
-4. **Some internal links still point to the cast overview**
-   - `StoryBuilderPanel`, `CoachPane`, and Table Read empty-state links still point to `/characters/$projectId`.
-   - Those should point to the builder resolver when the action is “create/open a character.”
+### Implementation steps
 
-5. **Builder AI/portrait functions are at risk of runtime failure**
-   - `src/lib/characters.functions.ts` server function handlers reference module-scope helper functions in the same file. TanStack Start can strip those during server-function splitting, causing runtime `ReferenceError` even when TypeScript passes.
-   - This especially affects “Help me write this” and portrait generation.
+1. **Refactor Characters route hierarchy**
+   - Convert `characters.$projectId.tsx` into a layout route that renders only `<Outlet />`.
+   - Move the current cast landing/grid page into `characters.$projectId.index.tsx`.
+   - Keep the existing landing behavior and styling intact.
+   - Ensure child routes can render under:
+     ```text
+     /characters/$projectId
+     /characters/$projectId/build
+     /characters/$projectId/build/$characterId
+     /characters/$projectId/$characterId
+     /characters/$projectId/edit/$characterId
+     /characters/$projectId/profile/$characterId
+     ```
 
-## Recovery plan
+2. **Add explicit build resolver route**
+   - Create `characters.$projectId.build.index.tsx` for `/characters/$projectId/build`.
+   - This route is the only route allowed to auto-find or create a character.
+   - Behavior:
+     - If project has at least one character, redirect to that character’s builder.
+     - If project has none, create one intentionally, show a success toast, then redirect to its builder.
+     - If creation fails, show an actionable error and return link to Characters.
 
-1. **Add a builder resolver route**
-   - Create `/characters/$projectId/build`.
-   - It will:
-     - list existing project characters,
-     - create “New Character” if none exist,
-     - show a clear success toast for the first character,
-     - navigate to `/characters/$projectId/build/$characterId`.
+3. **Remove unsafe auto-create from `$characterId` builder route**
+   - Delete the effect that creates `New Character` when `characterId` does not resolve.
+   - A stale, deleted, invalid, unauthorized, or failed query must never create a character.
+   - The builder route should only load the requested character and render an appropriate state.
 
-2. **Make the editor/top Character menu open the guided builder**
-   - Update `StudioMenu.tsx` and `studioMenuManifest.ts` so the Characters menu item points to `/characters/$projectId/build`.
-   - Remove `needsData: "characters"` from the Characters item because Characters is the tool used to create that data.
-   - Keep the cast grid as a secondary “Cast Overview” surface, not the main Character editor destination.
+4. **Add route-level states to the builder**
+   - Add distinct UI paths for:
+     - Loading character.
+     - Character not found.
+     - Access/query error.
+     - Ready.
+   - Validate that loaded character belongs to the current project before rendering.
+   - Provide “Return to Characters” and “Create Character” actions where appropriate.
+   - Keep all user-facing strings in translation keys.
 
-3. **Fix route gating deadlocks**
-   - Remove or bypass `RouteReadinessGate` on:
-     - `/characters/$projectId`, because it must work even with zero characters,
-     - `/characters/$projectId/build/$characterId`, because an empty/new character should be buildable.
-   - Keep project/tier gates where appropriate, but do not block on missing character data.
+5. **Add Identity as guided step 1**
+   - Insert a first step before Role:
+     - Name
+     - Importance
+     - Story function
+   - Save these fields through the existing character save flow.
+   - Update progress/health calculations so Identity counts correctly.
+   - Preserve the current builder layout and visual language.
 
-4. **Update every internal character CTA**
-   - Links that mean “add/open/build a character” should use `/characters/$projectId/build`.
-   - Links tied to a specific character should use `/characters/$projectId/build/$characterId`.
-   - Links that explicitly mean “review the whole cast/inbox” can remain `/characters/$projectId`.
+6. **Surface portrait configuration clearly**
+   - Wire the existing image-generation status function into the Portrait step.
+   - Before generation, show either:
+     - Image generation ready, or
+     - Image generation is not configured.
+   - Disable the generate button when not configured.
+   - If the server returns `configured: false`, show a clear message instead of appearing idle.
+   - For this emergency pass, keep current single-image generation but prevent silent no-op behavior.
 
-5. **Stabilize the guided builder itself**
-   - Add a first-class identity/name step or make the first step clearly capture both name and role, so “New Character” can become a real character immediately.
-   - Add not-found handling if a character ID is invalid.
-   - Ensure Save, Save & Continue, AI suggestions, and portrait generation all refresh the right character query.
+7. **Fix portrait storage durability if schema supports it safely**
+   - Audit existing character/asset columns before changing storage shape.
+   - If suitable permanent path fields already exist, store and render via permanent path plus fresh signed/render URL.
+   - If not, defer the schema migration to the next portrait-workflow pass rather than destabilizing this emergency route repair.
+   - Do not keep expanding portrait workflow until routing is verified.
 
-6. **Refactor character server-function helpers safely**
-   - Move AI/helper logic used by server functions into a `.server.ts` helper module or inside each handler.
-   - This prevents TanStack server-function splitting from breaking Help-me-write, generation, delete/undo, and portrait flows at runtime.
+8. **Add focused automated coverage**
+   - Add tests for the route hierarchy and menu/link destinations:
+     - Characters landing renders at `/characters/$projectId`.
+     - “Open Character” / “Guided build” navigate to `/build/$characterId`.
+     - Builder route content replaces the grid.
+     - Legacy profile/edit routes redirect to builder.
+     - Invalid IDs render not-found/error state and do not call create.
+     - `/characters/$projectId/build` is the only resolver route that may create.
+   - Use existing test conventions and avoid broad unrelated test rewrites.
 
-7. **Add regression coverage**
-   - Test that the Studio Menu Characters item is not marked “Needs characters.”
-   - Test that empty-project character entry creates the first character and resolves to `/characters/$projectId/build/$characterId`.
-   - Test that no old tabbed dialog import remains.
-   - Test that legacy routes still redirect to the guided builder.
-
-8. **Verify in the preview**
-   - Fresh project: click Character from editor menu → first character is created → guided builder opens.
-   - Existing project: click Character from editor menu → guided builder opens for an existing character.
-   - Cast grid: Open Character and card portrait clicks open the guided builder.
-   - Builder: save text, use starter prompts, generate a suggestion, and attempt portrait generation with proper error/success messaging.
+### Validation checklist
+- Open Character visibly leaves the grid.
+- Guided Build opens the full-screen builder.
+- Save, exit, and reopen persist character data.
+- Invalid character IDs do not create records.
+- Portrait configuration status is visible.
+- If image generation is configured, generated portrait appears on the builder/card.
+- No visual redesign, no unrelated Character feature expansion.
