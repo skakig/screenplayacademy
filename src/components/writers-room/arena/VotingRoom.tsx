@@ -27,6 +27,7 @@ import {
   castArenaVote,
   finalizeArenaRound,
   getProjectMemberIdentities,
+  getVotingProgress,
   listMyVotes,
   listVotingEntries,
   type ArenaSessionRow,
@@ -68,6 +69,11 @@ export function VotingRoom({ session, role, projectId }: Props) {
   const myVotesQ = useQuery({
     queryKey: arenaKeys.myVotes(session.id),
     queryFn: () => listMyVotes(session.id),
+  });
+  const progressQ = useQuery({
+    queryKey: arenaKeys.progress(session.id),
+    queryFn: () => getVotingProgress(session.id),
+    refetchInterval: 5000,
   });
 
   const entries = entriesQ.data ?? [];
@@ -118,30 +124,63 @@ export function VotingRoom({ session, role, projectId }: Props) {
             {t("arena.voting.body")}
           </p>
         </div>
-        {canFinalize && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="sm">{t("arena.voting.finalize")}</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {t("arena.voting.finalizeConfirm.title")}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t("arena.voting.finalizeConfirm.body")}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => finalizeM.mutate()}>
-                  {t("arena.voting.finalize")}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
+        {canFinalize && (() => {
+          const p = progressQ.data;
+          const isEarly =
+            !!p &&
+            p.eligible_voters > 0 &&
+            p.completed_voters < p.eligible_voters;
+          return (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm">{t("arena.voting.finalize")}</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {t("arena.voting.finalizeConfirm.title")}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t("arena.voting.finalizeConfirm.body")}
+                    {isEarly && (
+                      <span className="mt-2 block text-amber-600 dark:text-amber-400">
+                        {t("arena.voting.finalizeConfirm.earlyWarning")}
+                      </span>
+                    )}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => finalizeM.mutate()}>
+                    {t("arena.voting.finalize")}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          );
+        })()}
       </div>
+
+      {progressQ.data && (
+        <div
+          data-testid="arena-voting-progress"
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"
+        >
+          <span>
+            {t("arena.voting.progress", {
+              completed: String(progressQ.data.completed_voters),
+              eligible: String(progressQ.data.eligible_voters),
+              entriesVoted: String(progressQ.data.entries_with_votes),
+            })}
+          </span>
+          <span aria-hidden>·</span>
+          <span>
+            {progressQ.data.current_user_has_voted
+              ? t("arena.voting.progressYouVoted")
+              : t("arena.voting.progressYouHaventVoted")}
+          </span>
+        </div>
+      )}
 
       {entries.length === 0 ? (
         <p className="text-sm italic text-muted-foreground">

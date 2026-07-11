@@ -3252,6 +3252,15 @@ export type Database = {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
       }
+      has_arena_entry_read_access: {
+        Args: {
+          _author_id: string
+          _project_id: string
+          _session_id: string
+          _status: Database["public"]["Enums"]["arena_entry_status"]
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

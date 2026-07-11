@@ -745,6 +745,13 @@ export const i18nStrings = {
   "arena.voting.finalizeConfirm.title": "Finalize the round?",
   "arena.voting.finalizeConfirm.body":
     "Voting closes and the Studio Winner is announced. Awards can still be assigned afterwards.",
+  "arena.voting.finalizeConfirm.earlyWarning":
+    "Not everyone has voted yet. Finalizing now will lock in the current tallies.",
+  "arena.voting.progress":
+    "{{completed}} of {{eligible}} voters · {{entriesVoted}} entries scored",
+  "arena.voting.progressYouVoted": "You’ve voted",
+  "arena.voting.progressYouHaventVoted": "You haven’t voted yet",
+  "arena.results.coWinners": "Co-Studio Winners",
   "arena.results.title": "Results",
   "arena.results.winner": "Studio Winner",
   "arena.results.runners": "Rankings",
