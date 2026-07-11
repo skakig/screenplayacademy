@@ -57,6 +57,7 @@ export const proposeCharacterMerges = createServerFn({ method: "POST" })
         .in("character_id", ids)
         .not("scene_id", "is", null);
       for (const b of blocks ?? []) {
+        if (!b.character_id || !b.scene_id) continue;
         const arr = sceneMap.get(b.character_id) ?? [];
         if (!arr.includes(b.scene_id)) arr.push(b.scene_id);
         sceneMap.set(b.character_id, arr);
