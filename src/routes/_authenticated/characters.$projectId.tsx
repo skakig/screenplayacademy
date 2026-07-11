@@ -267,7 +267,11 @@ function CharactersPage() {
 
           {/* INSPECTOR */}
           <aside className="space-y-3">
-            <Inspector c={selected} onOpen={() => selected && setDialogOpen(true)} />
+            <Inspector
+              c={selected}
+              onOpen={() => { if (selected) { setDialogPillar(null); setDialogOpen(true); } }}
+              onTruthCheck={() => { if (selected) { setDialogPillar("psychology"); setDialogOpen(true); } }}
+            />
           </aside>
         </div>
       </div>
