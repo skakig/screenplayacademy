@@ -203,12 +203,40 @@ function GuidedBuilderPage() {
       (await supabase.from("projects").select("title").eq("id", projectId).maybeSingle()).data,
   });
 
-  const { data: character } = useQuery<any>({
+  const { data: character, isLoading: characterLoading } = useQuery<any>({
     queryKey: ["character", characterId],
     refetchOnMount: "always",
     queryFn: async (): Promise<any> =>
       (await supabase.from("characters").select("*").eq("id", characterId).maybeSingle()).data,
   });
+
+  // Auto-create: if the URL characterId doesn't resolve to a real row, create
+  // the first character for this project and redirect into its builder.
+  const autoCreateRef = useRef(false);
+  useEffect(() => {
+    if (characterLoading) return;
+    if (character) return;
+    if (autoCreateRef.current) return;
+    autoCreateRef.current = true;
+    (async () => {
+      try {
+        const row: any = await callUpsert({
+          data: { project_id: projectId, patch: { name: "New Character" } },
+        });
+        if (!row?.id) throw new Error("Could not create character");
+        toast.success("Created your first character — let's build them.");
+        qc.invalidateQueries({ queryKey: ["characters", projectId] });
+        navigate({
+          to: "/characters/$projectId/build/$characterId",
+          params: { projectId, characterId: row.id },
+          replace: true,
+        });
+      } catch (e: any) {
+        autoCreateRef.current = false;
+        toast.error(e?.message ?? "Could not create character");
+      }
+    })();
+  }, [character, characterLoading, projectId, callUpsert, navigate, qc]);
 
   const [step, setStep] = useState(0);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
