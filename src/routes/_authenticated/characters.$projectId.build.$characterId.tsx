@@ -385,6 +385,8 @@ function GuidedBuilderPage() {
   const callFull = useServerFn(generateFullCharacter);
   const callPortrait = useServerFn(generatePortrait);
   const callImageStatus = useServerFn(getImageGenStatus);
+  const callSetPreset = useServerFn(setCastStylePreset);
+  const callUsageSnapshot = useServerFn(getUsageSnapshot);
   const { data: onboarding } = useOnboarding();
 
   const experience = String(onboarding?.writer_experience_level ?? "").toLowerCase();
@@ -392,10 +394,15 @@ function GuidedBuilderPage() {
   const isExperienced = /\b(experienced|pitching)\b/.test(experience);
 
   const { data: project } = useQuery({
-    queryKey: ["project-title", projectId],
+    queryKey: ["project-meta", projectId],
     queryFn: async () =>
-      (await supabase.from("projects").select("title").eq("id", projectId).maybeSingle()).data,
+      (await supabase.from("projects").select("title, metadata").eq("id", projectId).maybeSingle()).data,
   });
+
+  const savedPresetKey = ((project as any)?.metadata?.cast_style_preset ?? DEFAULT_CAST_STYLE_PRESET) as CastStylePresetKey;
+  const [presetKey, setPresetKey] = useState<CastStylePresetKey>(savedPresetKey);
+  // Keep local selection in sync when project loads/refetches.
+  useMemo(() => { setPresetKey(savedPresetKey); return null; }, [savedPresetKey]);
 
   const { data: character, isLoading: characterLoading, isError: characterIsError, error: characterError } = useQuery<any>({
     queryKey: ["character", projectId, characterId],
@@ -415,6 +422,17 @@ function GuidedBuilderPage() {
     queryKey: ["image-generation-status"],
     queryFn: async () => callImageStatus(),
   });
+
+  const { data: usageSnapshot, refetch: refetchUsage } = useQuery({
+    queryKey: ["usage-snapshot"],
+    queryFn: async () => callUsageSnapshot({ data: {} as any }),
+  });
+  const portraitUsage = (usageSnapshot as any[] | undefined)?.find(
+    (r) => r?.feature === "character_portraits",
+  );
+  const portraitsUsed = Number(portraitUsage?.used ?? 0);
+  const portraitsLimit = Number(portraitUsage?.monthly_limit ?? 0);
+  const portraitsRemaining = Math.max(0, portraitsLimit - portraitsUsed);
 
   const [step, setStep] = useState(0);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
