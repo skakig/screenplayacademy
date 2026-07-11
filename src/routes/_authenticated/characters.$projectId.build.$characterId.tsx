@@ -562,7 +562,12 @@ function GuidedBuilderPage() {
     }
   };
 
-  const generatePortraitNow = async () => {
+  const callRefreshPortrait = useServerFn(refreshPortraitUrl);
+  const callSuggestVoice = useServerFn(suggestCharacterVoice);
+  const [styleDialogOpen, setStyleDialogOpen] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+
+  const generatePortraitNow = async (opts?: { rerollSeed?: boolean }) => {
     if (imageStatus?.configured === false) {
       toast.info(t("characters.builder.portrait.unavailable"));
       return;
@@ -575,23 +580,28 @@ function GuidedBuilderPage() {
     }
     setPortraitBusy(true);
     try {
-      const out: any = await callPortrait({ data: { characterId, presetKey } });
+      const out: any = await callPortrait({
+        data: { characterId, presetKey, rerollSeed: !!opts?.rerollSeed },
+      });
       qc.invalidateQueries({ queryKey: ["character", projectId, characterId] });
       qc.invalidateQueries({ queryKey: ["characters", projectId] });
       void refetchUsage();
       if (out?.configured === false) {
         toast.info(t("characters.builder.portrait.unavailable"));
       } else if (out?.row?.portrait_url) {
-        toast.success(t("characters.builder.portrait.generated"));
+        toast.success(
+          opts?.rerollSeed
+            ? "New portrait rerolled with a fresh seed"
+            : t("characters.builder.portrait.generated"),
+        );
       }
     } catch (e: any) {
-      // Keep the user's inputs intact and offer a one-click retry.
       toast.error(e?.message ?? t("characters.builder.portrait.failed"), {
         description: t("characters.builder.portrait.retryHint"),
         action: {
           label: t("characters.builder.portrait.tryAgain"),
           onClick: () => {
-            void generatePortraitNow();
+            void generatePortraitNow(opts);
           },
         },
         duration: 10000,
@@ -600,6 +610,40 @@ function GuidedBuilderPage() {
       setPortraitBusy(false);
     }
   };
+
+  const handlePortraitLoadError = async () => {
+    setPortraitBroken(true);
+    // Signed URLs expire — attempt a silent refresh from portrait_path.
+    try {
+      const out: any = await callRefreshPortrait({ data: { characterId } });
+      if (out?.refreshed) {
+        setPortraitBroken(false);
+        qc.invalidateQueries({ queryKey: ["character", projectId, characterId] });
+      }
+    } catch {
+      /* ignore — user can regenerate */
+    }
+  };
+
+  const autoSuggestVoice = async () => {
+    setVoiceBusy(true);
+    try {
+      const out: any = await callSuggestVoice({ data: { characterId } });
+      if (out?.changed && out.voiceId) {
+        toast.success("Voice auto-assigned");
+        qc.invalidateQueries({ queryKey: ["character", projectId, characterId] });
+      } else if (!out?.voiceId) {
+        toast.info("No unique voice available for this project");
+      } else {
+        toast.info("Character already has a voice");
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not assign a voice");
+    } finally {
+      setVoiceBusy(false);
+    }
+  };
+
 
   const exitTo = () =>
     navigate({ to: "/characters/$projectId", params: { projectId } });
