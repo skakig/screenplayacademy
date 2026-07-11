@@ -47,6 +47,7 @@ import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as AuthenticatedAcademyModuleSlugLessonSlugRouteImport } from './routes/_authenticated/academy.$moduleSlug.$lessonSlug'
+import { Route as AuthenticatedCharactersProjectIdBuildCharacterIdRouteImport } from './routes/_authenticated/characters.$projectId.build.$characterId'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -257,6 +258,12 @@ const AuthenticatedAcademyModuleSlugLessonSlugRoute =
     path: '/$lessonSlug',
     getParentRoute: () => AuthenticatedAcademyModuleSlugRoute,
   } as any)
+const AuthenticatedCharactersProjectIdBuildCharacterIdRoute =
+  AuthenticatedCharactersProjectIdBuildCharacterIdRouteImport.update({
+    id: '/build/$characterId',
+    path: '/build/$characterId',
+    getParentRoute: () => AuthenticatedCharactersProjectIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -282,7 +289,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
-  '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
+  '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRouteWithChildren
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
   '/first-screenplay/$projectId': typeof AuthenticatedFirstScreenplayProjectIdRoute
   '/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
@@ -296,6 +303,7 @@ export interface FileRoutesByFullPath {
   '/academy/': typeof AuthenticatedAcademyIndexRoute
   '/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/characters/$projectId/build/$characterId': typeof AuthenticatedCharactersProjectIdBuildCharacterIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -321,7 +329,7 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
-  '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
+  '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRouteWithChildren
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
   '/first-screenplay/$projectId': typeof AuthenticatedFirstScreenplayProjectIdRoute
   '/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
@@ -335,6 +343,7 @@ export interface FileRoutesByTo {
   '/academy': typeof AuthenticatedAcademyIndexRoute
   '/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/characters/$projectId/build/$characterId': typeof AuthenticatedCharactersProjectIdBuildCharacterIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -362,7 +371,7 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   '/_authenticated/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
-  '/_authenticated/characters/$projectId': typeof AuthenticatedCharactersProjectIdRoute
+  '/_authenticated/characters/$projectId': typeof AuthenticatedCharactersProjectIdRouteWithChildren
   '/_authenticated/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
   '/_authenticated/first-screenplay/$projectId': typeof AuthenticatedFirstScreenplayProjectIdRoute
   '/_authenticated/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
@@ -376,6 +385,7 @@ export interface FileRoutesById {
   '/_authenticated/academy/': typeof AuthenticatedAcademyIndexRoute
   '/_authenticated/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/_authenticated/characters/$projectId/build/$characterId': typeof AuthenticatedCharactersProjectIdBuildCharacterIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -417,6 +427,7 @@ export interface FileRouteTypes {
     | '/academy/'
     | '/academy/$moduleSlug/$lessonSlug'
     | '/api/public/payments/webhook'
+    | '/characters/$projectId/build/$characterId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -456,6 +467,7 @@ export interface FileRouteTypes {
     | '/academy'
     | '/academy/$moduleSlug/$lessonSlug'
     | '/api/public/payments/webhook'
+    | '/characters/$projectId/build/$characterId'
   id:
     | '__root__'
     | '/'
@@ -496,6 +508,7 @@ export interface FileRouteTypes {
     | '/_authenticated/academy/'
     | '/_authenticated/academy/$moduleSlug/$lessonSlug'
     | '/api/public/payments/webhook'
+    | '/_authenticated/characters/$projectId/build/$characterId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -788,6 +801,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAcademyModuleSlugLessonSlugRouteImport
       parentRoute: typeof AuthenticatedAcademyModuleSlugRoute
     }
+    '/_authenticated/characters/$projectId/build/$characterId': {
+      id: '/_authenticated/characters/$projectId/build/$characterId'
+      path: '/build/$characterId'
+      fullPath: '/characters/$projectId/build/$characterId'
+      preLoaderRoute: typeof AuthenticatedCharactersProjectIdBuildCharacterIdRouteImport
+      parentRoute: typeof AuthenticatedCharactersProjectIdRoute
+    }
   }
 }
 
@@ -819,6 +839,21 @@ const AuthenticatedAcademyModuleSlugRouteWithChildren =
     AuthenticatedAcademyModuleSlugRouteChildren,
   )
 
+interface AuthenticatedCharactersProjectIdRouteChildren {
+  AuthenticatedCharactersProjectIdBuildCharacterIdRoute: typeof AuthenticatedCharactersProjectIdBuildCharacterIdRoute
+}
+
+const AuthenticatedCharactersProjectIdRouteChildren: AuthenticatedCharactersProjectIdRouteChildren =
+  {
+    AuthenticatedCharactersProjectIdBuildCharacterIdRoute:
+      AuthenticatedCharactersProjectIdBuildCharacterIdRoute,
+  }
+
+const AuthenticatedCharactersProjectIdRouteWithChildren =
+  AuthenticatedCharactersProjectIdRoute._addFileChildren(
+    AuthenticatedCharactersProjectIdRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
@@ -826,7 +861,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedAcademyModuleSlugRoute: typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   AuthenticatedArcTimelineProjectIdRoute: typeof AuthenticatedArcTimelineProjectIdRoute
-  AuthenticatedCharactersProjectIdRoute: typeof AuthenticatedCharactersProjectIdRoute
+  AuthenticatedCharactersProjectIdRoute: typeof AuthenticatedCharactersProjectIdRouteWithChildren
   AuthenticatedEditorProjectIdRoute: typeof AuthenticatedEditorProjectIdRoute
   AuthenticatedFirstScreenplayProjectIdRoute: typeof AuthenticatedFirstScreenplayProjectIdRoute
   AuthenticatedPitchProjectIdRoute: typeof AuthenticatedPitchProjectIdRoute
@@ -848,7 +883,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedAcademyModuleSlugRouteWithChildren,
   AuthenticatedArcTimelineProjectIdRoute:
     AuthenticatedArcTimelineProjectIdRoute,
-  AuthenticatedCharactersProjectIdRoute: AuthenticatedCharactersProjectIdRoute,
+  AuthenticatedCharactersProjectIdRoute:
+    AuthenticatedCharactersProjectIdRouteWithChildren,
   AuthenticatedEditorProjectIdRoute: AuthenticatedEditorProjectIdRoute,
   AuthenticatedFirstScreenplayProjectIdRoute:
     AuthenticatedFirstScreenplayProjectIdRoute,

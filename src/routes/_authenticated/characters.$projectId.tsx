@@ -1,6 +1,6 @@
 // Characters Rebuild — Pass 3 (Cast landing).
 // See docs/CHARACTERS_REBUILD.md.
-import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, useSearch, useNavigate } from "@tanstack/react-router";
 import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -23,7 +23,7 @@ import {
 import {
   Plus, User, Trash2, ChevronRight, Users, Search, MoreVertical, PencilLine,
   CheckSquare, X, Scale, Star, Inbox, AlertCircle, Bookmark, Zap, Target,
-  ArrowRight, FileText, Heart,
+  ArrowRight, FileText, Heart, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { completenessPct } from "@/components/characters/tmh";
@@ -63,6 +63,7 @@ const STORY_FUNCTIONS: { key: StoryFunctionKey; label: string }[] = [
 
 function CharactersPage() {
   const { projectId } = Route.useParams();
+  const navigate = useNavigate();
   const search = useSearch({ from: "/_authenticated/characters/$projectId" }) as { merge?: string };
   const mergeDebug = search.merge === "1";
   const [mergeOpen, setMergeOpen] = useState(false);
@@ -176,8 +177,11 @@ function CharactersPage() {
     mutationFn: async () => callUpsert({ data: { project_id: projectId, patch: { name: "New Character" } } }),
     onSuccess: (row: any) => {
       invalidate();
-      setSelectedId(row.id);
-      setDialogOpen(true);
+      // Pass 4: new characters go straight into the guided builder route.
+      navigate({
+        to: "/characters/$projectId/build/$characterId",
+        params: { projectId, characterId: row.id },
+      });
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -370,6 +374,7 @@ function CharactersPage() {
               <CharacterCard
                 key={c.id}
                 c={c}
+                projectId={projectId}
                 rels={relCounts[c.id] ?? 0}
                 scenes={sceneCounts[c.id] ?? 0}
                 selected={c.id === selectedId}
@@ -508,7 +513,7 @@ function FilterRow({
 }
 
 function CharacterCard({
-  c, rels, scenes, bulkMode, bulkSelected, onBulkToggle, onOpen, onRename, onDelete,
+  c, projectId, rels, scenes, bulkMode, bulkSelected, onBulkToggle, onOpen, onRename, onDelete,
 }: any) {
   const pct = completenessPct(c);
   const status = pct >= 75 ? "Strong" : pct >= 40 ? "Developing" : "Needs Work";
@@ -575,6 +580,14 @@ function CharacterCard({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onSelect={onOpen}><FileText className="h-3.5 w-3.5 mr-2" />Open profile</DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      to="/characters/$projectId/build/$characterId"
+                      params={{ projectId, characterId: c.id }}
+                    >
+                      <Sparkles className="h-3.5 w-3.5 mr-2" />Guided build
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onSelect={onRename}><PencilLine className="h-3.5 w-3.5 mr-2" />Rename</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
