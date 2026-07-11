@@ -1232,6 +1232,96 @@ function GuidedBuilderPage() {
                             </Button>
                           </div>
 
+                          {previewError && (
+                            <div
+                              role="alert"
+                              className="mt-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive-foreground"
+                            >
+                              <div className="flex items-start gap-2">
+                                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-destructive" />
+                                <div className="flex-1 space-y-2">
+                                  <div className="font-medium text-destructive">
+                                    {previewError.kind === "no_voice" && "No voice assigned yet"}
+                                    {previewError.kind === "not_configured" && "Voice preview unavailable"}
+                                    {previewError.kind === "rate_limited" && "Voice service is busy"}
+                                    {previewError.kind === "quota" && "Out of table-read credits"}
+                                    {previewError.kind === "provider_quota" && "Voice provider is out of credits"}
+                                    {previewError.kind === "generic" && "Preview failed"}
+                                  </div>
+                                  <div className="text-foreground/80">
+                                    {previewError.kind === "no_voice" && "Assign a voice to this character, then try again."}
+                                    {previewError.kind === "not_configured" && (previewError.message ?? "Ask an admin to connect the voice provider.")}
+                                    {previewError.kind === "rate_limited" && (
+                                      rateLimitCountdown > 0
+                                        ? `Retry in ${rateLimitCountdown}s — this usually clears within a moment.`
+                                        : "You can retry now."
+                                    )}
+                                    {previewError.kind === "quota" && "You've used this month's voice minutes. Top up credits to keep previewing and generate the table read."}
+                                    {previewError.kind === "provider_quota" && "Our voice provider ran out of credits. Try again shortly or top up your own credits to unblock."}
+                                    {previewError.kind === "generic" && previewError.message}
+                                  </div>
+                                  <div className="flex flex-wrap gap-2 pt-1">
+                                    {(previewError.kind === "rate_limited" ||
+                                      previewError.kind === "generic" ||
+                                      previewError.kind === "not_configured") && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => void previewVoiceNow()}
+                                        disabled={
+                                          previewBusy ||
+                                          (previewError.kind === "rate_limited" && rateLimitCountdown > 0)
+                                        }
+                                      >
+                                        {previewBusy ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                                        {previewError.kind === "rate_limited" && rateLimitCountdown > 0
+                                          ? `Retry in ${rateLimitCountdown}s`
+                                          : "Retry"}
+                                      </Button>
+                                    )}
+                                    {(previewError.kind === "quota" || previewError.kind === "provider_quota") && (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          onClick={() => openCreditsDialog("tts_characters")}
+                                        >
+                                          Buy voice credits
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => void previewVoiceNow()}
+                                          disabled={previewBusy}
+                                        >
+                                          Retry
+                                        </Button>
+                                      </>
+                                    )}
+                                    {previewError.kind === "no_voice" && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => void autoSuggestVoice()}
+                                        disabled={voiceBusy}
+                                      >
+                                        {voiceBusy ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                                        Auto-assign voice
+                                      </Button>
+                                    )}
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => setPreviewError(null)}
+                                    >
+                                      Dismiss
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+
                           {(candidatesBusy || candidates) && (
                             <div className="rounded-lg border border-border/60 bg-secondary/30 p-3">
                               <div className="flex items-center justify-between mb-2">
