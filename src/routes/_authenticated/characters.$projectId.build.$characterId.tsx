@@ -705,6 +705,43 @@ function GuidedBuilderPage() {
     }
   };
 
+  const previewVoiceNow = async () => {
+    const voiceId = (character as any)?.elevenlabs_voice_id as string | undefined;
+    if (!voiceId) {
+      toast.info("Assign a voice to this character first.");
+      return;
+    }
+    setPreviewBusy(true);
+    try {
+      // Client-side cache keyed by (voiceId, greeting text) — instant replay
+      // within the session with zero network calls. The server also caches
+      // to storage across sessions.
+      const cached = voicePreviewClientCache.get(voiceId);
+      if (cached && cached.audio) {
+        cached.audio.currentTime = 0;
+        await cached.audio.play().catch(() => {});
+        return;
+      }
+      const out: any = await callPreviewVoice({ data: { characterId } });
+      if (!out?.ok) {
+        if (out?.reason === "no_voice") toast.info("Assign a voice first.");
+        else if (out?.reason === "not_configured") toast.info("Voice preview is not configured for this project.");
+        else if (out?.reason === "quota") toast.error(out?.message ?? "You're out of table-read credits.");
+        else toast.error("Could not generate preview.");
+        return;
+      }
+      const audio = new Audio(out.url);
+      audio.preload = "auto";
+      voicePreviewClientCache.set(voiceId, { audio, url: out.url });
+      await audio.play().catch(() => {});
+      if (out.cached) toast.success("Loaded cached preview", { duration: 1200 });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not preview voice");
+    } finally {
+      setPreviewBusy(false);
+    }
+  };
+
 
   const exitTo = () =>
     navigate({ to: "/characters/$projectId", params: { projectId } });
