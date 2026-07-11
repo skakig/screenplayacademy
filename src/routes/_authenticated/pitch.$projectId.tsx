@@ -155,9 +155,20 @@ function Pitch() {
             <h1 className="text-3xl font-bold tracking-tight">Pitch Package</h1>
             <p className="text-muted-foreground">Industry-ready pitch in one click.</p>
           </div>
-          <Button onClick={run} disabled={loading} size="lg">
-            {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</> : <><Sparkles className="h-4 w-4 mr-2" />{pitch ? "Regenerate" : "Generate Pitch Package"}</>}
-          </Button>
+          <div className="flex items-center gap-2">
+            {pitch && (
+              <Button onClick={exportDeck} disabled={exportingDeck} size="lg" variant="outline">
+                {exportingDeck ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Preparing…</>
+                ) : (
+                  <><FileDown className="h-4 w-4 mr-2" />Download Pitch Deck</>
+                )}
+              </Button>
+            )}
+            <Button onClick={run} disabled={loading} size="lg">
+              {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</> : <><Sparkles className="h-4 w-4 mr-2" />{pitch ? "Regenerate" : "Generate Pitch Package"}</>}
+            </Button>
+          </div>
         </div>
 
         {!pitch ? (
