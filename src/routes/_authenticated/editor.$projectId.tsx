@@ -664,6 +664,18 @@ function Editor() {
   const headerExtras = (
     <div className="flex items-center gap-2">
       {!focus && <PresenceAvatarStack />}
+      {!focus && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => setInviteOpen(true)}
+          title="Invite a collaborator"
+        >
+          <UserPlus className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Invite</span>
+        </Button>
+      )}
       <WriterDeskModeToggle />
       <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
     </div>
@@ -671,6 +683,11 @@ function Editor() {
 
   return (
     <AppShell focus={focus} title={project?.title} headerExtras={headerExtras}>
+      <InviteCollaboratorDialog
+        projectId={projectId}
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+      />
       {!focus && fromGuided && (
         <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-3">
           <Link
