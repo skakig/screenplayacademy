@@ -128,7 +128,7 @@ const STEPS: Step[] = [
     ],
   },
   {
-    field: "relationships_note",
+    field: "relationships",
     title: "Relationships",
     subtitle: "Who shapes them",
     question: (n) => `Who is the one person who most challenges ${n}?`,
@@ -726,7 +726,7 @@ function GuidedBuilderPage() {
             />
             <SnapshotRow
               icon={Users} tone="text-primary" label="Key Relationship"
-              value={drafts.relationships_note ?? character?.relationships_note}
+              value={drafts.relationships ?? character?.relationships}
               empty="Add the person who challenges them."
             />
 
