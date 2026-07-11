@@ -114,6 +114,7 @@ export function CoachPane({
           <CoachModeToggle />
         </div>
         <CoachPanel sceneText={sceneText} blockCount={blocks.length} />
+        <LevelIntegrationPanel />
         <SceneDataCard projectId={projectId} activeSceneIndex={activeSceneIndex} />
         <WriterInsightsPanel projectId={projectId} />
         {aiOutput && (
