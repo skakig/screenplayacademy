@@ -32,8 +32,8 @@ export const Route = createFileRoute("/auth")({
 });
 
 // Only allow same-origin relative paths as post-auth redirect targets.
-function safeNext(next: string): string {
-  if (!next.startsWith("/") || next.startsWith("//")) return "/dashboard";
+function safeNext(next: string | undefined): string {
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return "/dashboard";
   return next;
 }
 
