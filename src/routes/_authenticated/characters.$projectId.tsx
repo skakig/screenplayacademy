@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Plus, User, Sparkles, Trash2, Mic, Image as ImageIcon, KeyRound, AlertTriangle,
-  ChevronRight, FileText, Users, Search, MoreVertical, PencilLine, CheckSquare, X,
+  ChevronRight, FileText, Users, Search, MoreVertical, PencilLine, CheckSquare, X, Scale, Star,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TMHBadge } from "@/components/characters/TMHBadge";
@@ -80,6 +80,7 @@ function CharactersPage() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogPillar, setDialogPillar] = useState<string | null>(null);
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState<null | { ids: string[]; label: string }>(null);
@@ -266,7 +267,11 @@ function CharactersPage() {
 
           {/* INSPECTOR */}
           <aside className="space-y-3">
-            <Inspector c={selected} onOpen={() => selected && setDialogOpen(true)} />
+            <Inspector
+              c={selected}
+              onOpen={() => { if (selected) { setDialogPillar(null); setDialogOpen(true); } }}
+              onTruthCheck={() => { if (selected) { setDialogPillar("psychology"); setDialogOpen(true); } }}
+            />
           </aside>
         </div>
       </div>
@@ -316,6 +321,7 @@ function CharactersPage() {
         characterId={selectedId}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        initialPillar={dialogPillar}
       />
     </AppShell>
   );
@@ -396,6 +402,8 @@ function CharacterCard({
       {c.summary && <p className="text-xs text-muted-foreground mt-3 line-clamp-2">{c.summary}</p>}
 
       <div className="flex flex-wrap items-center gap-1.5 mt-3">
+        {c.importance && <ImportanceChip level={c.importance} />}
+        {c.story_function && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary/60 border border-border/60 text-foreground/80">{c.story_function}</span>}
         <TMHBadge level={c.tmh_baseline} />
         {c.tmh_stress && (
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive border border-destructive/30">
@@ -446,7 +454,23 @@ function IconChip({ on, icon: Icon, title, tone }: { on: boolean; icon: any; tit
   );
 }
 
-function Inspector({ c, onOpen }: { c: any; onOpen: () => void }) {
+function ImportanceChip({ level }: { level: string }) {
+  const map: Record<string, { label: string; cls: string; stars: number }> = {
+    lead:       { label: "Lead",       cls: "bg-primary/15 text-primary border-primary/40",       stars: 3 },
+    supporting: { label: "Supporting", cls: "bg-accent/15 text-accent border-accent/40",         stars: 2 },
+    bit:        { label: "Bit",        cls: "bg-secondary text-foreground/80 border-border/60",  stars: 1 },
+    background: { label: "Background", cls: "bg-secondary/50 text-muted-foreground border-border/50", stars: 0 },
+  };
+  const cfg = map[level] ?? map.supporting;
+  return (
+    <span className={`text-[10px] px-1.5 py-0.5 rounded-full border inline-flex items-center gap-1 ${cfg.cls}`} title={`Story importance: ${cfg.label}`}>
+      {cfg.stars > 0 && <Star className="h-2.5 w-2.5 fill-current" />}
+      {cfg.label}
+    </span>
+  );
+}
+
+function Inspector({ c, onOpen, onTruthCheck }: { c: any; onOpen: () => void; onTruthCheck: () => void }) {
   if (!c) {
     return (
       <Card className="p-5 border-dashed text-center">
@@ -469,6 +493,8 @@ function Inspector({ c, onOpen }: { c: any; onOpen: () => void }) {
 
       <div className="flex flex-wrap gap-1.5 mt-3">
         <Badge variant="secondary" className="text-[10px]">{c.group_name ?? "Main Cast"}</Badge>
+        {c.importance && <ImportanceChip level={c.importance} />}
+        {c.story_function && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary/60 border border-border/60 text-foreground/80">{c.story_function}</span>}
         <TMHBadge level={c.tmh_baseline} />
       </div>
 
@@ -483,9 +509,14 @@ function Inspector({ c, onOpen }: { c: any; onOpen: () => void }) {
         <Row label="Voice" value={c.voice_summary ?? c.voice_style} />
       </dl>
 
-      <Button className="w-full mt-4" onClick={onOpen}>
-        <Sparkles className="h-3.5 w-3.5 mr-1.5" />Open full profile
-      </Button>
+      <div className="grid grid-cols-2 gap-2 mt-4">
+        <Button variant="outline" size="sm" onClick={onTruthCheck} title="Would they do this?">
+          <Scale className="h-3.5 w-3.5 mr-1.5" />Truth Check
+        </Button>
+        <Button size="sm" onClick={onOpen}>
+          <Sparkles className="h-3.5 w-3.5 mr-1.5" />Open profile
+        </Button>
+      </div>
     </Card>
   );
 }
