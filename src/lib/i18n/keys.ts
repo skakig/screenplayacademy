@@ -146,7 +146,7 @@ export const i18nStrings = {
   "dashboard.project.continue": "Continue path",
   "dashboard.project.editor": "Writer's Desk",
   "dashboard.lesson.title": "Suggested lesson",
-  "dashboard.lesson.school": "Screenplay School",
+  "dashboard.lesson.school": "SceneSmith Academy",
   "dashboard.lesson.upToDate": "You're up to date. Nice work.",
   "dashboard.director.title": "Director's Chair",
   "dashboard.director.body":

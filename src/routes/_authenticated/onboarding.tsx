@@ -42,7 +42,7 @@ const FLAVOR_OPTIONS: { value: Flavor; label: string; icon: typeof Drama }[] = [
 ];
 
 const COACHING_OPTIONS: { value: Coaching; label: string; description: string; icon: typeof Wand2 }[] = [
-  { value: "teaching", label: "Screenplay School", description: "Walk me through each concept as I write.", icon: Wand2 },
+  { value: "teaching", label: "Teach me as I go", description: "Walk me through each concept as I write.", icon: Wand2 },
   { value: "active", label: "Director's Chair, always on", description: "Suggest craft improvements as I go.", icon: MessageCircle },
   { value: "gentle", label: "Only when I call action", description: "Stay out of my way unless I ask.", icon: ShieldCheck },
   { value: "off", label: "Just the page", description: "Professional tools, no coach.", icon: Sparkles },
