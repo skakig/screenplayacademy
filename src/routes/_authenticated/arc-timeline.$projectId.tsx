@@ -149,10 +149,35 @@ function ArcTimelinePage() {
           </Card>
         )}
 
-        {filtered.length === 0 ? (
+        {scenes.length === 0 ? (
+          <Card className="p-12 text-center border-dashed">
+            <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+              <Activity className="h-5 w-5 text-primary" />
+            </div>
+            <h3 className="font-semibold mb-1">No scenes to chart yet</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
+              The Dramatic Pulse graphs your scenes against tension, stakes, and turns. Add at least three scenes to see the shape of your story.
+            </p>
+            <Button asChild size="sm">
+              <Link to="/scenes/$projectId" params={{ projectId }}>
+                <ArrowRight className="h-4 w-4 mr-1.5" /> Go to Scene Board
+              </Link>
+            </Button>
+          </Card>
+        ) : scenes.length < 3 ? (
+          <Card className="p-6 text-center border-dashed">
+            <h3 className="font-semibold text-sm mb-1">Add a few more scenes</h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              You have {scenes.length} scene{scenes.length === 1 ? "" : "s"}. The pulse gets meaningful around three or more — try roughing in an opening, midpoint, and climax stub.
+            </p>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/scenes/$projectId" params={{ projectId }}>Open Scene Board</Link>
+            </Button>
+          </Card>
+        ) : filtered.length === 0 ? (
           <Card className="p-8 text-center text-sm text-muted-foreground">
             No scenes match this filter.{" "}
-            <Link to="/scenes/$projectId" params={{ projectId }} className="text-primary underline">Create scenes →</Link>
+            <button onClick={() => setFilter("All")} className="text-primary underline">Clear filter</button>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">

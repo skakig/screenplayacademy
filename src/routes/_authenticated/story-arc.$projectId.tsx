@@ -1,15 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { ProjectNav } from "@/components/ProjectNav";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { GitBranch, LayoutGrid, Sparkles } from "lucide-react";
 import { upsertStoryArc } from "@/lib/arc.functions";
 
 export const Route = createFileRoute("/_authenticated/story-arc/$projectId")({
@@ -43,12 +45,33 @@ function StoryArcPage() {
     queryFn: async () => (await supabase.from("story_arcs").select("*").eq("project_id", projectId).maybeSingle()).data,
   });
 
+  const { data: sceneCount = 0 } = useQuery({
+    queryKey: ["scene-count", projectId],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("scenes")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId);
+      return count ?? 0;
+    },
+  });
+
   const persist = useMutation({
     mutationFn: async (patch: Record<string, any>) => {
       await save({ data: { project_id: projectId, patch } });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["story-arc", projectId] }),
   });
+
+  const arcIsEmpty = useMemo(() => {
+    if (!arc) return true;
+    const fields = [
+      arc.arc_type, arc.structure_model, arc.central_question, arc.theme,
+      arc.opening_state, arc.midpoint_shift, arc.darkest_moment,
+      arc.climax_choice, arc.final_state,
+    ];
+    return fields.every((f) => !f || String(f).trim() === "");
+  }, [arc]);
 
   return (
     <AppShell>
@@ -58,6 +81,41 @@ function StoryArcPage() {
           <h1 className="font-display text-3xl font-bold tracking-tight">Story Arc</h1>
           <p className="text-sm text-muted-foreground mt-1">The skeleton of your screenplay. Track structure, theme, and the turning points that hold the whole story together.</p>
         </header>
+
+        {arcIsEmpty && (
+          <Card className="p-5 border-dashed bg-primary/5">
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 h-9 w-9 rounded-md bg-primary/10 flex items-center justify-center">
+                <GitBranch className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-sm mb-1">
+                  {sceneCount === 0 ? "Start with a few scenes" : "Fill in the spine"}
+                </h3>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {sceneCount === 0
+                    ? "The story spine reads best against real scenes. Sketch a scene or two, then come back and shape the arc."
+                    : `You have ${sceneCount} scene${sceneCount === 1 ? "" : "s"}. Answer the central question and mark your turning points below — even one-sentence stubs unlock diagnostics elsewhere.`}
+                </p>
+                {sceneCount === 0 ? (
+                  <Button asChild size="sm" variant="outline">
+                    <Link to="/scenes/$projectId" params={{ projectId }}>
+                      <LayoutGrid className="h-4 w-4 mr-1.5" /> Open Scene Board
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => persist.mutate({ arc_type: ARC_TYPES[0], structure_model: STRUCTURES[0] })}
+                  >
+                    <Sparkles className="h-4 w-4 mr-1.5" /> Seed defaults
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
 
         <Card className="p-6 space-y-4 bg-card/40">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
