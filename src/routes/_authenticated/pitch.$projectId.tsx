@@ -12,6 +12,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { generatePitchPackage } from "@/lib/ai.functions";
 import { format } from "date-fns";
 import { downloadPitchKitPdf } from "@/components/editor/pitchKitPdf";
+import { downloadPitchDeckPdf, type PitchDeckSection } from "@/components/editor/pitchDeckPdf";
 
 import { PageFeatureGate } from "@/components/PageFeatureGate";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
