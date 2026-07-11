@@ -10,6 +10,8 @@ The central user experience is writing a screenplay. Every feature must support 
 
 Long-term production work must follow `docs/SCENESMITH_STORY_PRODUCTION_PLATFORM.md`: SceneSmith may orchestrate changing human and AI production tools, but the screenplay, Story Graph, approvals, authorship, and provider-neutral project model remain authoritative.
 
+Voice capture, dictation, spoken brainstorming, conversational guidance, meeting capture, and audio-to-story work must follow `docs/SCENESMITH_VOICE_STUDIO.md`: preserve the original session, keep providers replaceable, create reviewable artifact proposals, and never mutate canon without approval.
+
 ## Prime Directive
 
 The screenplay editor is the product.
@@ -42,6 +44,8 @@ For Academy, Coach, Script Review, The Message, or series-continuity work, also 
 - `docs/CHARACTER_TRUTH_ENGINE_SOURCE_SYSTEMS.md`
 
 For Story Graph, Production Graph, Scene Compiler, generator adapters, assets, cinematography, locations, budgets, production approvals, or studio-department work, `docs/SCENESMITH_STORY_PRODUCTION_PLATFORM.md` is the canonical product doctrine.
+
+For Voice Studio, speech-to-text, dictation, spoken brainstorming, scene/chapter/skit construction, character interviews, worldbuilding sessions, revision notes, writers' room recording, production voice notes, or conversational voice guidance, `docs/SCENESMITH_VOICE_STUDIO.md` is the canonical product doctrine.
 
 For current Stage 1 editor work, also read:
 
@@ -84,6 +88,8 @@ Do not skip ahead. Build in this order:
 9. Table Read Studio
 10. Academy
 11. Multilingual expansion
+
+Voice Studio must follow the phased sequence in `docs/SCENESMITH_VOICE_STUDIO.md` and must not preempt the local-first editor, stable project artifacts, permissions, or approval foundations it depends on.
 
 ## Architecture Rule
 
