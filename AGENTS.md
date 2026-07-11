@@ -25,11 +25,18 @@ The user must be able to open the editor and write naturally.
 Before implementing a feature, Lovable and all coding agents must read:
 
 1. `AGENTS.md`
-2. `docs/lovable/00_DEEP_RESEARCH_SCREENPLAY_PRO.md`
-3. `docs/lovable/01_IMPLEMENTATION_ROADMAP.md`
-4. `docs/lovable/10_I18N.md`
-5. `docs/lovable/11_DATABASE_AND_RLS.md`
-6. The feature-specific file for the requested task.
+2. `docs/SCENESMITH_INTELLIGENCE_PLATFORM_VISION.md`
+3. `docs/lovable/00_DEEP_RESEARCH_SCREENPLAY_PRO.md`
+4. `docs/lovable/01_IMPLEMENTATION_ROADMAP.md`
+5. `docs/lovable/10_I18N.md`
+6. `docs/lovable/11_DATABASE_AND_RLS.md`
+7. The feature-specific file for the requested task.
+
+For Academy, Coach, Script Review, The Message, or series-continuity work, also read:
+
+- `docs/SCENESMITH_ACADEMY.md`
+- `docs/CHARACTER_TRUTH_ENGINE.md`
+- `docs/CHARACTER_TRUTH_ENGINE_SOURCE_SYSTEMS.md`
 
 For current Stage 1 editor work, also read:
 
@@ -258,37 +265,3 @@ This exact test must pass before any other work is considered complete:
 10. Press Enter.
 11. Type: `Just a few more clicks.`
 12. Press Enter.
-13. Type: `COMMANDER`
-14. Press Enter.
-15. Type: `You are lost, soldier.`
-16. Keep typing for 30 seconds.
-
-Expected result:
-
-- First character is not lost.
-- Enter creates the correct next block.
-- Tab changes type and focus stays.
-- Character → Dialogue → Character → Dialogue works naturally.
-- No blur.
-- No caret jump.
-- No duplicate blocks.
-- No deleted blocks unless the user intentionally deletes.
-- Autosave is quiet.
-- Refresh restores all content.
-- Simulated network failure does not stop local writing.
-
-## Credit-Saving Workflow
-
-Before integrating into the production editor, build and verify the editor in an isolated lab route:
-
-`/editor-lab`
-
-The lab route should have no Supabase, no AI, no CoachPane, no StoryPulse, no Academy, no storyboard, no table read.
-
-The lab route must prove local writing works first.
-
-Once `/editor-lab` passes the acceptance test, integrate the same engine into `/editor/:projectId`.
-
-## Final Rule
-
-If typing does not work, nothing else matters.
