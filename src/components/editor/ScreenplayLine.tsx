@@ -401,6 +401,21 @@ export function ScreenplayLine({
   const showAutocomplete = isCharBlock && focused && !slashOpen;
   const beat = (block.metadata as any)?.beat ?? null;
 
+  // Character deep-link: match this line's content to a known character so
+  // the writer can jump straight into the guided builder for that character.
+  const routeParams = useParams({ strict: false }) as { projectId?: string };
+  const projectId = routeParams.projectId;
+  const linkedCharacter = useMemo(() => {
+    if (!isCharBlock) return null;
+    const raw = (block.content || "").trim().toUpperCase();
+    if (!raw) return null;
+    // Strip parentheticals like "(V.O.)" or "(CONT'D)" from the display name.
+    const core = raw.replace(/\s*\([^)]*\)\s*$/g, "").trim();
+    if (!core) return null;
+    return characters.find((c) => c.name.trim().toUpperCase() === core) ?? null;
+  }, [isCharBlock, block.content, characters]);
+
+
   return (
     <div
       className={`group relative blk-${block.block_type} border-l-2 pl-3 -ml-3 transition-colors ${
