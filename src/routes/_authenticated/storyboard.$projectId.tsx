@@ -15,10 +15,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { generateStoryboardPanel } from "@/lib/storyboard.functions";
 
 import { PageFeatureGate } from "@/components/PageFeatureGate";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/storyboard/$projectId")({
-  head: () => ({ meta: [{ title: "Storyboard — SceneSmith AI" }] }),
+  head: () => ({ meta: [{ title: "Shot Wall — SceneSmith Studio" }] }),
   component: GatedStoryboard,
+  errorComponent: RouteErrorBoundary,
 });
 
 function GatedStoryboard() {
