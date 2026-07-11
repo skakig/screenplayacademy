@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Command, BookPlus, X as XIcon, Wand2 } from "lucide-react";
+import { Command, BookPlus, X as XIcon, Wand2, ArrowUpRight } from "lucide-react";
+import { Link, useParams } from "@tanstack/react-router";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { cycleType } from "./screenplayKeymap";
@@ -400,6 +401,21 @@ export function ScreenplayLine({
   const showAutocomplete = isCharBlock && focused && !slashOpen;
   const beat = (block.metadata as any)?.beat ?? null;
 
+  // Character deep-link: match this line's content to a known character so
+  // the writer can jump straight into the guided builder for that character.
+  const routeParams = useParams({ strict: false }) as { projectId?: string };
+  const projectId = routeParams.projectId;
+  const linkedCharacter = useMemo(() => {
+    if (!isCharBlock) return null;
+    const raw = (block.content || "").trim().toUpperCase();
+    if (!raw) return null;
+    // Strip parentheticals like "(V.O.)" or "(CONT'D)" from the display name.
+    const core = raw.replace(/\s*\([^)]*\)\s*$/g, "").trim();
+    if (!core) return null;
+    return characters.find((c) => c.name.trim().toUpperCase() === core) ?? null;
+  }, [isCharBlock, block.content, characters]);
+
+
   return (
     <div
       className={`group relative blk-${block.block_type} border-l-2 pl-3 -ml-3 transition-colors ${
@@ -686,6 +702,19 @@ export function ScreenplayLine({
             </button>
           ))}
         </div>
+      )}
+
+      {isCharBlock && linkedCharacter && projectId && (
+        <Link
+          to="/characters/$projectId/build/$characterId"
+          params={{ projectId, characterId: linkedCharacter.id }}
+          onMouseDown={(e) => e.preventDefault()}
+          className="absolute right-0 top-1 z-10 inline-flex items-center gap-1 rounded-full border border-border/60 bg-popover/90 backdrop-blur px-2 py-0.5 text-[10px] font-sans text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground hover:border-primary/40 transition-opacity"
+          title={`Open ${linkedCharacter.name} in the Character Builder`}
+        >
+          <ArrowUpRight className="h-3 w-3" />
+          Open
+        </Link>
       )}
     </div>
   );
