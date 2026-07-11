@@ -201,10 +201,14 @@ function TableRead() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {audios.map((a: any) => (
+              {audios.map((a: any) => {
+                const total = a.lines_total ?? 0;
+                const done = a.lines_done ?? 0;
+                const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+                return (
                 <Card key={a.id} className="p-4">
                   <div className="flex items-center justify-between text-xs mb-2">
-                    <span className="font-medium capitalize">{a.kind} · {a.status}</span>
+                    <span className="font-medium capitalize">{a.kind} · {a.status}{a.status === "generating" && total > 0 ? ` · ${done}/${total} lines` : ""}</span>
                     <span className="text-muted-foreground">{new Date(a.created_at).toLocaleString()}</span>
                   </div>
                   {a.audio_url ? (
@@ -215,14 +219,23 @@ function TableRead() {
                       </div>
                     </>
                   ) : a.status === "failed" ? (
-                    <p className="text-xs text-destructive">Generation failed. Try again or simplify the scene.</p>
+                    <p className="text-xs text-destructive">{a.error_message ?? "Generation failed. Try again or simplify the scene."}</p>
                   ) : a.status === "generating" ? (
-                    <p className="text-xs text-muted-foreground italic flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" />Performing the read…</p>
+                    <div className="space-y-2" aria-live="polite">
+                      <div className="h-1.5 rounded bg-muted overflow-hidden">
+                        <div className="h-full bg-primary transition-[width] duration-500" style={{ width: `${pct}%` }} />
+                      </div>
+                      <p className="text-xs text-muted-foreground italic flex items-center gap-2">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        {a.current_line_label ? `Voicing ${a.current_line_label}…` : "Queuing lines…"}
+                      </p>
+                    </div>
                   ) : (
                     <p className="text-xs text-muted-foreground italic">Audio will appear here once generation completes.</p>
                   )}
                 </Card>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
