@@ -29,6 +29,14 @@ const TYPING_CLEAR_MS = 3500;
 // broadcast "typing=true" again. Prevents rapid true/false/true churn.
 const TYPING_MIN_OFF_MS = 1200;
 const LAST_SEEN_TICK_MS = 60_000;
+/**
+ * How long a peer can go without refreshing their presence payload before
+ * we render them as idle. Comfortably longer than TRACK_THROTTLE_MS +
+ * TYPING_CLEAR_MS so a normal typing burst never trips it.
+ */
+const IDLE_AFTER_MS = 45_000;
+/** How often we re-derive idle state. Kept slow to avoid re-render churn. */
+const IDLE_TICK_MS = 10_000;
 
 /**
  * Lightweight project-scoped Supabase Realtime presence hook.
