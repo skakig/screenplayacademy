@@ -19,6 +19,7 @@ import { tallyCharacters, buildOutline } from "@/lib/editor/manuscriptAnalyzer";
 import { SceneDataCard } from "@/components/editor/coach/SceneDataCard";
 import { AskCoachInput } from "@/components/editor/coach/AskCoachInput";
 import { StoryBuilderPanel } from "@/components/editor/story-builder/StoryBuilderPanel";
+import { LevelIntegrationPanel } from "@/components/editor/LevelIntegrationPanel";
 
 type Props = {
   projectId: string;
@@ -113,6 +114,7 @@ export function CoachPane({
           <CoachModeToggle />
         </div>
         <CoachPanel sceneText={sceneText} blockCount={blocks.length} />
+        <LevelIntegrationPanel />
         <SceneDataCard projectId={projectId} activeSceneIndex={activeSceneIndex} />
         <WriterInsightsPanel projectId={projectId} />
         {aiOutput && (
