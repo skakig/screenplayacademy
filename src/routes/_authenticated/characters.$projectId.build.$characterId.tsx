@@ -1033,16 +1033,47 @@ function GuidedBuilderPage() {
                             </div>
                           )}
 
-                          <Button
-                            onClick={generatePortraitNow}
-                            disabled={portraitBusy || imageStatusLoading || imageStatus?.configured === false || !ready || outOfCredits}
-                            className="w-full sm:w-auto"
-                          >
-                            {portraitBusy
-                              ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              : <Wand2 className="h-4 w-4 mr-2" />}
-                            {character?.portrait_url ? "Regenerate portrait" : "Generate portrait"}
-                          </Button>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              onClick={() => void generatePortraitNow()}
+                              disabled={portraitBusy || imageStatusLoading || imageStatus?.configured === false || !ready || outOfCredits}
+                              className="flex-1 sm:flex-none"
+                            >
+                              {portraitBusy
+                                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                : <Wand2 className="h-4 w-4 mr-2" />}
+                              {character?.portrait_url ? "Regenerate (same seed)" : "Generate portrait"}
+                            </Button>
+                            {character?.portrait_url && (
+                              <Button
+                                variant="outline"
+                                onClick={() => void generatePortraitNow({ rerollSeed: true })}
+                                disabled={portraitBusy || imageStatus?.configured === false || outOfCredits}
+                                title="Discard the current seed and generate a completely new take"
+                              >
+                                Reroll seed
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setStyleDialogOpen(true)}
+                              className="text-xs"
+                            >
+                              Edit style
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void autoSuggestVoice()}
+                              disabled={voiceBusy}
+                              className="text-xs"
+                            >
+                              {voiceBusy ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                              {(character as any)?.elevenlabs_voice_id ? "Reassign voice" : "Auto-assign voice"}
+                            </Button>
+                          </div>
+
 
 
                           <details className="rounded-lg border border-border/60 bg-secondary/30 p-3 text-xs">
