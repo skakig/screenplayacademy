@@ -52,7 +52,7 @@ const FEATURES = [
   },
   {
     icon: Users,
-    title: "Casting Wall",
+    title: "Characters",
     desc: "Wants, wounds, lies, secrets, and arcs. Build characters who can actually carry a scene.",
   },
   {
