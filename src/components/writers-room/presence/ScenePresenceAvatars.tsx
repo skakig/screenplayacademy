@@ -66,23 +66,49 @@ export function ScenePresenceAvatars({ sceneTitle, blocks, max = 3, className }:
           const name = presenceDisplayName(peer);
           const initials = presenceInitials(peer);
           const isTyping = peer.is_typing_scene_id === peer.active_scene_id;
+          const isIdle = !!peer.is_idle && !isTyping;
           const block = peer.active_block_id ? blockIndex.get(peer.active_block_id) : null;
           const blockLabel = block
             ? BLOCK_LABEL[block.block_type as keyof typeof BLOCK_LABEL] ?? block.block_type
             : null;
+          const suffix = isTyping
+            ? " · " + t("collab.presence.typingNow")
+            : isIdle
+              ? " · " + t("collab.presence.idle")
+              : "";
           const tooltip = blockLabel
-            ? `${name} · ${t("collab.presence.onBlock", { blockLabel })}${isTyping ? " · " + t("collab.presence.typingNow") : ""}`
-            : `${name}${isTyping ? " · " + t("collab.presence.typingNow") : ""}`;
+            ? `${name} · ${t("collab.presence.onBlock", { blockLabel })}${suffix}`
+            : `${name}${suffix}`;
           return (
             <Tooltip key={peer.user_id}>
               <TooltipTrigger asChild>
                 <span
                   className={cn(
-                    "relative inline-flex items-center justify-center h-4 w-4 rounded-full ring-1 ring-background bg-primary/20 text-[8px] font-semibold text-primary-foreground/90 uppercase overflow-hidden",
+                    "relative inline-flex items-center justify-center h-4 w-4 rounded-full ring-1 ring-background bg-primary/20 text-[8px] font-semibold text-primary-foreground/90 uppercase overflow-hidden transition-opacity",
                     isTyping && "ring-primary/60 shadow-[0_0_0_2px_rgba(120,120,255,0.15)]",
+                    isIdle && "opacity-50 grayscale",
                   )}
                   aria-label={tooltip}
                 >
+                  {peer.avatar_url ? (
+                    <img src={peer.avatar_url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span aria-hidden>{initials}</span>
+                  )}
+                  {isTyping && (
+                    <span
+                      aria-hidden
+                      className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-1 ring-background animate-pulse"
+                    />
+                  )}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                {tooltip}
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
                   {peer.avatar_url ? (
                     <img src={peer.avatar_url} alt="" className="h-full w-full object-cover" />
                   ) : (
