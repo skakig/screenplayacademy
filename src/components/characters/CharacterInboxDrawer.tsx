@@ -148,12 +148,20 @@ export function CharacterInboxDrawer({
   });
 
   // Cleanup candidates (from existing helper — inbox surface, no page clutter)
-  const cleanup = useMemo(
+  const cleanupFlat = useMemo(
     () => detectCleanupCandidates(characters, {
       relCounts, sceneCounts, completeness: (r) => completenessPct(r),
     }),
     [characters, relCounts, sceneCounts],
   );
+  const cleanup = useMemo(() => {
+    const structural = cleanupFlat.filter((c) => c.reason === "structural");
+    const lowSignal = cleanupFlat.filter((c) => c.reason === "low_signal");
+    const groups: { key: string; label: string; items: typeof cleanupFlat }[] = [];
+    if (structural.length) groups.push({ key: "structural", label: "Structural junk", items: structural });
+    if (lowSignal.length) groups.push({ key: "low_signal", label: "Low signal (empty stubs)", items: lowSignal });
+    return groups;
+  }, [cleanupFlat]);
   const [selectedCleanup, setSelectedCleanup] = useState<Set<string>>(new Set());
   const toggleCleanup = (id: string) =>
     setSelectedCleanup((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
