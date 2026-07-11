@@ -265,3 +265,37 @@ This exact test must pass before any other work is considered complete:
 10. Press Enter.
 11. Type: `Just a few more clicks.`
 12. Press Enter.
+13. Type: `COMMANDER`
+14. Press Enter.
+15. Type: `You are lost, soldier.`
+16. Keep typing for 30 seconds.
+
+Expected result:
+
+- First character is not lost.
+- Enter creates the correct next block.
+- Tab changes type and focus stays.
+- Character → Dialogue → Character → Dialogue works naturally.
+- No blur.
+- No caret jump.
+- No duplicate blocks.
+- No deleted blocks unless the user intentionally deletes.
+- Autosave is quiet.
+- Refresh restores all content.
+- Simulated network failure does not stop local writing.
+
+## Credit-Saving Workflow
+
+Before integrating into the production editor, build and verify the editor in an isolated lab route:
+
+`/editor-lab`
+
+The lab route should have no Supabase, no AI, no CoachPane, no StoryPulse, no Academy, no storyboard, no table read.
+
+The lab route must prove local writing works first.
+
+Once `/editor-lab` passes the acceptance test, integrate the same engine into `/editor/:projectId`.
+
+## Final Rule
+
+If typing does not work, nothing else matters.
