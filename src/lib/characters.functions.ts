@@ -488,6 +488,80 @@ export const setCastStylePreset = createServerFn({ method: "POST" })
     return { ok: true, presetKey: data.presetKey };
   });
 
+// ============= Set project-wide visual style overrides =============
+const VisualStyleInput = z.object({
+  projectId: z.string().uuid(),
+  visualStyle: z.record(z.string(), z.any()),
+});
+
+export const setProjectVisualStyle = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => VisualStyleInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: project, error } = await context.supabase
+      .from("projects").select("id, metadata").eq("id", data.projectId).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!project) throw new Error("Project not found");
+    const meta = { ...((project as any).metadata ?? {}), visual_style: data.visualStyle };
+    const { error: upErr } = await context.supabase
+      .from("projects").update({ metadata: meta } as any).eq("id", data.projectId);
+    if (upErr) throw new Error(upErr.message);
+    return { ok: true, visualStyle: data.visualStyle };
+  });
+
+// ============= Auto-suggest a unique ElevenLabs voice for a character =============
+// Picks a voice from the curated allowlist that isn't already used by another
+// character in the same project. Persists the assignment when found.
+const CURATED_MALE = [
+  "JBFqnCBsd6RMkjVDRZzb", // George
+  "TX3LPaxmHKxFdv7VOQHJ", // Liam
+  "IKne3meq5aSn9XLyUdCD", // Charlie
+  "N2lVS1w4EtoT3dr4eOWO", // Callum
+  "onwK4e9ZLuTAKqWW03F9", // Daniel
+  "nPczCjzI2devNBz1zQrb", // Brian
+  "bIHbv24MWmeRgasZH58o", // Will
+];
+const CURATED_FEMALE = [
+  "EXAVITQu4vr4xnSDxMaL", // Sarah
+  "Xb7hH8MSUJpSbSDYk0k2", // Alice
+  "cgSgspJ2msm6clMCkdW9", // Jessica
+  "pFZP5JQG7iQjIQuC4Bku", // Lily
+  "FGY2WhTYpPnrIDTdsKH5", // Laura
+  "XrExE9yKIg1WjnnlVkGX", // Matilda
+];
+const CURATED_ALL = [...CURATED_MALE, ...CURATED_FEMALE];
+
+const VoiceSuggestInput = z.object({ characterId: z.string().uuid() });
+
+export const suggestCharacterVoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => VoiceSuggestInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const c = await loadOwnedCharacter(context, data.characterId);
+    if ((c as any).elevenlabs_voice_id) {
+      return { voiceId: (c as any).elevenlabs_voice_id as string, changed: false };
+    }
+    const { data: peers } = await context.supabase
+      .from("characters")
+      .select("id, elevenlabs_voice_id")
+      .eq("project_id", c.project_id)
+      .not("elevenlabs_voice_id", "is", null);
+    const used = new Set((peers ?? []).map((p: any) => p.elevenlabs_voice_id));
+
+    // Naive gender inference from profile — falls back to full pool.
+    const bag = `${(c as any).gender ?? ""} ${(c as any).pronouns ?? ""}`.toLowerCase();
+    const pool =
+      /\b(she|her|female|woman|girl)\b/.test(bag) ? CURATED_FEMALE
+      : /\b(he|him|male|man|boy)\b/.test(bag) ? CURATED_MALE
+      : CURATED_ALL;
+
+    const pick = [...pool, ...CURATED_ALL].find((v) => !used.has(v)) ?? null;
+    if (!pick) return { voiceId: null as string | null, changed: false };
+    await context.supabase
+      .from("characters").update({ elevenlabs_voice_id: pick }).eq("id", c.id);
+    return { voiceId: pick, changed: true };
+  });
+
 // ============= List characters for a project (for autocomplete) =============
 const ListInput = z.object({ projectId: z.string().uuid() });
 export const listProjectCharacters = createServerFn({ method: "POST" })
