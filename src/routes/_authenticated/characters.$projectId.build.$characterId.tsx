@@ -20,7 +20,7 @@ import {
 import { toast } from "sonner";
 import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenStatus, setCastStylePreset, refreshPortraitUrl, setProjectVisualStyle, suggestCharacterVoice, generatePortraitCandidates, approvePortraitCandidate } from "@/lib/characters.functions";
 import { previewCharacterVoice } from "@/lib/voice-preview.functions";
-import { Volume2, Play, Pause } from "lucide-react";
+import { Volume2, Pause } from "lucide-react";
 import { StyleContractDialog } from "@/components/characters/StyleContractDialog";
 import { getUsageSnapshot } from "@/lib/usage.functions";
 import { useOnboarding } from "@/hooks/use-onboarding";
