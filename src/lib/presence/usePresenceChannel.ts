@@ -21,8 +21,13 @@ interface Options {
   self: SelfIdentity | null;
 }
 
-const TRACK_THROTTLE_MS = 1500;
-const TYPING_CLEAR_MS = 7000;
+const TRACK_THROTTLE_MS = 2500;
+// Grace window kept long enough that natural intra-word pauses don't clear
+// the "typing…" indicator and cause it to flicker between key presses.
+const TYPING_CLEAR_MS = 3500;
+// Once the indicator turns off, require this minimum quiet window before we
+// broadcast "typing=true" again. Prevents rapid true/false/true churn.
+const TYPING_MIN_OFF_MS = 1200;
 const LAST_SEEN_TICK_MS = 60_000;
 
 /**
