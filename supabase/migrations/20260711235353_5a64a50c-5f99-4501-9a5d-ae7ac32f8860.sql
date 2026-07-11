@@ -1,0 +1,2 @@
+ALTER TABLE public.audio_assets ADD COLUMN IF NOT EXISTS cache_key TEXT;
+CREATE INDEX IF NOT EXISTS audio_assets_cache_key_idx ON public.audio_assets (project_id, kind, cache_key) WHERE cache_key IS NOT NULL AND status = 'ready';
