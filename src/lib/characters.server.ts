@@ -1,5 +1,8 @@
 import { generateText } from "ai";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import type { TablesUpdate } from "@/integrations/supabase/types";
+
+type CharacterUpdate = TablesUpdate<"characters">;
 
 const SYSTEM = `You are SceneSmith AI, a story consultant and character architect.
 You design layered, contradictory, cinematic characters with depth. Avoid clichés.
@@ -47,15 +50,11 @@ export async function loadOwnedCharacter(ctx: any, id: string) {
   return data;
 }
 
-export function sanitizeCharacterPatch(patch: Record<string, any>) {
-  const clean: Record<string, any> = { ...patch };
-  delete clean.id;
-  delete clean.created_at;
-  delete clean.updated_at;
-  delete clean.project_id;
+export function sanitizeCharacterPatch(patch: Record<string, any>): CharacterUpdate {
+  const { id: _id, created_at: _createdAt, updated_at: _updatedAt, project_id: _projectId, moral_pressure, ...rest } = patch;
+  const clean = { ...rest } as CharacterUpdate;
 
-  if (clean.moral_pressure && !clean.act2_pressure) clean.act2_pressure = clean.moral_pressure;
-  delete clean.moral_pressure;
+  if (moral_pressure && !clean.act2_pressure) clean.act2_pressure = String(moral_pressure);
 
   return clean;
 }
