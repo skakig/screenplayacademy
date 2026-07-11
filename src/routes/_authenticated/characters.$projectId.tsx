@@ -180,6 +180,13 @@ function CharactersPage() {
             <p className="text-sm text-muted-foreground mt-0.5">Build your cast and protect character truth.</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setInboxOpen(true)}>
+              <Inbox className="h-4 w-4 mr-2" />
+              Inbox
+              {pendingCandidateCount > 0 && (
+                <Badge className="ml-2 text-[10px]" variant="secondary">{pendingCandidateCount}</Badge>
+              )}
+            </Button>
             <Button
               variant={bulkMode ? "secondary" : "outline"}
               size="sm"
