@@ -526,3 +526,22 @@ function AiBar({ label, busy, onClick }: { label: string; busy: boolean; onClick
     </Button>
   );
 }
+
+type Tier = "canonical" | "inferred" | "temporal";
+function TierNote({ tier, text }: { tier: Tier; text: string }) {
+  const cfg = {
+    canonical: { Icon: ShieldCheck, label: "Canonical", cls: "text-emerald-600 border-emerald-500/40 bg-emerald-500/[0.06]" },
+    inferred:  { Icon: Layers,       label: "Inferred",  cls: "text-sky-600     border-sky-500/40     bg-sky-500/[0.06]" },
+    temporal:  { Icon: Clock,        label: "Temporal",  cls: "text-amber-600   border-amber-500/40   bg-amber-500/[0.06]" },
+  }[tier];
+  const { Icon } = cfg;
+  return (
+    <div className={`flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-[11px] ${cfg.cls}`}>
+      <Icon className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+      <div className="flex-1">
+        <span className="font-medium">{cfg.label}</span>
+        <span className="text-muted-foreground ml-1.5">{text}</span>
+      </div>
+    </div>
+  );
+}
