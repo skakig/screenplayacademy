@@ -187,8 +187,14 @@ function CharactersPage() {
             <Button onClick={() => create.mutate()} disabled={create.isPending}>
               <Plus className="h-4 w-4 mr-2" />New Character
             </Button>
+            {mergeDebug && (
+              <Button variant="outline" size="sm" onClick={() => setMergeOpen(true)}>
+                <Scale className="h-4 w-4 mr-2" />Merge review (debug)
+              </Button>
+            )}
           </div>
         </div>
+        <MergeReviewDialog projectId={projectId} open={mergeOpen} onOpenChange={setMergeOpen} />
 
         {/* CLEANUP */}
         <div className="mb-4">
