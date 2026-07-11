@@ -216,6 +216,8 @@ export const i18nStrings = {
   "characters.builder.portrait.generated": "Portrait generated",
   "characters.builder.portrait.failed": "Portrait generation failed",
   "characters.builder.portrait.unavailable": "Portrait generation is not configured.",
+  "characters.builder.portrait.tryAgain": "Try again",
+  "characters.builder.portrait.retryHint": "Your inputs are safe — retry when you're ready.",
   "characters.builder.resolver.headTitle": "Build Character — SceneSmith Studio",
   "characters.builder.resolver.createError": "Could not create character",
   "characters.builder.resolver.createdToast": "Created your first character — let's build them.",

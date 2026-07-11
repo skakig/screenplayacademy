@@ -546,7 +546,17 @@ function GuidedBuilderPage() {
         toast.success(t("characters.builder.portrait.generated"));
       }
     } catch (e: any) {
-      toast.error(e?.message ?? t("characters.builder.portrait.failed"));
+      // Keep the user's inputs intact and offer a one-click retry.
+      toast.error(e?.message ?? t("characters.builder.portrait.failed"), {
+        description: t("characters.builder.portrait.retryHint"),
+        action: {
+          label: t("characters.builder.portrait.tryAgain"),
+          onClick: () => {
+            void generatePortraitNow();
+          },
+        },
+        duration: 10000,
+      });
     } finally {
       setPortraitBusy(false);
     }
