@@ -703,6 +703,19 @@ export function ScreenplayLine({
           ))}
         </div>
       )}
+
+      {isCharBlock && linkedCharacter && projectId && (
+        <Link
+          to="/characters/$projectId/build/$characterId"
+          params={{ projectId, characterId: linkedCharacter.id }}
+          onMouseDown={(e) => e.preventDefault()}
+          className="absolute right-0 top-1 z-10 inline-flex items-center gap-1 rounded-full border border-border/60 bg-popover/90 backdrop-blur px-2 py-0.5 text-[10px] font-sans text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground hover:border-primary/40 transition-opacity"
+          title={`Open ${linkedCharacter.name} in the Character Builder`}
+        >
+          <ArrowUpRight className="h-3 w-3" />
+          Open
+        </Link>
+      )}
     </div>
   );
 }
