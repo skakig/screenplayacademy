@@ -53,7 +53,7 @@ function CharactersPage() {
 
   const { data: characters = [] } = useQuery<any[]>({
     queryKey: ["characters", projectId],
-    queryFn: async (): Promise<any[]> => (await supabase.from("characters").select("*").eq("project_id", projectId).order("created_at")).data ?? [],
+    queryFn: async (): Promise<any[]> => (await supabase.from("characters").select("*").eq("project_id", projectId).is("quarantined_at", null).order("created_at")).data ?? [],
   });
 
   const { data: relCounts = {} } = useQuery<Record<string, number>>({
