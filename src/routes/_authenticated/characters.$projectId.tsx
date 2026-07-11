@@ -38,6 +38,7 @@ import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/characters/$projectId")({
   head: () => ({ meta: [{ title: "Characters — SceneSmith Studio" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({ merge: s.merge === "1" || s.merge === 1 ? "1" : undefined }),
   component: () => (<RouteReadinessGate to="/characters/$projectId"><CharactersPage /></RouteReadinessGate>),
   errorComponent: RouteErrorBoundary,
 });
