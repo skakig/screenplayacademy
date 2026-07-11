@@ -59,6 +59,14 @@ export function ResultsPanel({ session, role, projectId }: Props) {
     queryKey: arenaKeys.sessionAwards(session.id),
     queryFn: () => listSessionAwards(session.id),
   });
+  const winnersQ = useQuery({
+    queryKey: [...arenaKeys.sessionAwards(session.id), "studio_winner"] as const,
+    queryFn: () => resolveArenaWinners(session.id),
+  });
+  const [uid, setUid] = useState<string | null>(null);
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => setUid(data.user?.id ?? null));
+  }, []);
 
   const submitted = useMemo(
     () => (entriesQ.data ?? []).filter((e) => e.status === "submitted"),
