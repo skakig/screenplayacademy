@@ -48,12 +48,13 @@ const TextField = ({ label, value, onChange, multiline, rows = 2, placeholder }:
 );
 
 export function CharacterProfileDialog({
-  projectId, characterId, open, onOpenChange,
+  projectId, characterId, open, onOpenChange, initialPillar,
 }: {
   projectId: string;
   characterId: string | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  initialPillar?: string | null;
 }) {
   const qc = useQueryClient();
   const callUpsert = useServerFn(upsertCharacter);
