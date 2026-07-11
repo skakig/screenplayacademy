@@ -58,7 +58,7 @@ import { WriterDeskNewMenu } from "@/components/vault/WriterDeskNewMenu";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Writer's Desk — Screenplay Academy" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { from?: string; step?: string; block?: string } => ({
     from: typeof s.from === "string" ? s.from : undefined,
     step: typeof s.step === "string" ? s.step : undefined,
     block: typeof s.block === "string" ? s.block : undefined,
