@@ -19,6 +19,7 @@ import { listElevenLabsVoices } from "@/lib/elevenlabs-voices.functions";
 
 import { PageFeatureGate } from "@/components/PageFeatureGate";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
+import { useOpenCharacterBuilder } from "@/hooks/useOpenCharacterBuilder";
 
 export const Route = createFileRoute("/_authenticated/tableread/$projectId")({
   head: () => ({ meta: [{ title: "Table Read — SceneSmith Studio" }] }),
@@ -41,6 +42,7 @@ function TableRead() {
   const callGen = useServerFn(generateTableRead);
   const callRefresh = useServerFn(refreshTableReadUrl);
   const callVoiceList = useServerFn(listElevenLabsVoices);
+  const { openCharacterBuilder, loading: characterLoading } = useOpenCharacterBuilder({ projectId });
 
   const voicesQ = useQuery({
     queryKey: ["elevenlabs-voices"],
@@ -184,8 +186,8 @@ function TableRead() {
                       </Button>
                     )}
                     {characters.length === 0 && (
-                      <Button size="sm" variant={scenes.length === 0 ? "outline" : "default"} asChild>
-                        <Link to="/characters/$projectId" params={{ projectId }}>Add characters</Link>
+                      <Button size="sm" variant={scenes.length === 0 ? "outline" : "default"} onClick={openCharacterBuilder} disabled={characterLoading}>
+                        Add characters
                       </Button>
                     )}
                     <Button size="sm" variant="outline" asChild>

@@ -1,11 +1,8 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Sparkles, Headphones, Layers, FileText, GraduationCap, LineChart } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
-import { toast } from "sonner";
 import { t } from "@/lib/i18n/t";
 import type { I18nKey } from "@/lib/i18n/keys";
-import { listProjectCharacters, upsertCharacter } from "@/lib/characters.functions";
+import { useOpenCharacterBuilder } from "@/hooks/useOpenCharacterBuilder";
 
 type Props = { projectId: string };
 
@@ -26,40 +23,7 @@ const ITEMS: DockItem[] = [
 ];
 
 export function FeatureDock({ projectId }: Props) {
-  const navigate = useNavigate();
-  const listChars = useServerFn(listProjectCharacters);
-  const createChar = useServerFn(upsertCharacter);
-  const [charLoading, setCharLoading] = useState(false);
-
-  const openCharacterBuilder = async () => {
-    if (charLoading) return;
-    setCharLoading(true);
-    try {
-      const rows = (await listChars({ data: { projectId } })) as Array<{ id: string; name?: string | null }>;
-      let characterId = rows?.[0]?.id;
-      const createdFresh = !characterId;
-      if (!characterId) {
-        const created = (await createChar({
-          data: { project_id: projectId, patch: { name: "New Character" } },
-        })) as any;
-        characterId = created?.row?.id ?? created?.id;
-      }
-      if (!characterId) throw new Error("Could not resolve character");
-      if (createdFresh) {
-        toast.success("First character created", {
-          description: "Let's build them together in the guided builder.",
-        });
-      }
-      navigate({
-        to: "/characters/$projectId/build/$characterId",
-        params: { projectId, characterId },
-      });
-    } catch (e: any) {
-      toast.error(e?.message ?? "Could not open character builder");
-    } finally {
-      setCharLoading(false);
-    }
-  };
+  const { openCharacterBuilder, loading: charLoading } = useOpenCharacterBuilder({ projectId });
 
 
   const cardClass =
