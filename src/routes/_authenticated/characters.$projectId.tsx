@@ -23,7 +23,7 @@ import {
 import {
   Plus, User, Trash2, ChevronRight, Users, Search, MoreVertical, PencilLine,
   CheckSquare, X, Scale, Star, Inbox, AlertCircle, Bookmark, Zap, Target,
-  ArrowRight, FileText, Heart,
+  ArrowRight, FileText, Heart, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { completenessPct } from "@/components/characters/tmh";
