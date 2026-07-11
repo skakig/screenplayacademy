@@ -108,6 +108,7 @@ export function PresenceProvider({ projectId, role: roleProp, children }: Props)
       connected: presence.connected,
       setActiveArea: presence.setActiveArea,
       setActiveScene: presence.setActiveScene,
+      setActiveBlock: presence.setActiveBlock,
       pingTyping: presence.pingTyping,
     }),
     [presence],
