@@ -41,6 +41,11 @@ export const Route = createFileRoute(
   errorComponent: RouteErrorBoundary,
 });
 
+// Module-scoped voice preview cache: keeps the Audio element alive across
+// re-renders so repeated Preview clicks replay instantly with no network hit.
+const voicePreviewClientCache = new Map<string, { audio: HTMLAudioElement; url: string }>();
+});
+
 type Step = {
   field: string;
   title: string;
