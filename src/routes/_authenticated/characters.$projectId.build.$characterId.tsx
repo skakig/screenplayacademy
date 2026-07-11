@@ -18,7 +18,8 @@ import {
   GraduationCap, Flame, Users, BookOpen, AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenStatus } from "@/lib/characters.functions";
+import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenStatus, setCastStylePreset } from "@/lib/characters.functions";
+import { getUsageSnapshot } from "@/lib/usage.functions";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { t } from "@/lib/i18n/t";
@@ -28,6 +29,7 @@ import {
   isPortraitReady,
   PORTRAIT_STRENGTH_TARGET,
 } from "@/lib/characters/portraitPrompt";
+import { CAST_STYLE_PRESETS, getCastStylePreset, DEFAULT_CAST_STYLE_PRESET, type CastStylePresetKey } from "@/lib/characters/castStylePresets";
 
 export const Route = createFileRoute(
   "/_authenticated/characters/$projectId/build/$characterId",
