@@ -39,8 +39,8 @@ const fake = vi.hoisted(() => {
     idSeq: 0,
     // Project membership. RPCs and direct .from reads treat non-members
     // the way RLS + is_project_member() do in production.
-    members: new Set<string>([HOST_ID, WRITER_ID, JUDGE_ID]),
-    ownerId: HOST_ID,
+    members: new Set<string>(["user-host", "user-writer", "user-judge"]),
+    ownerId: "user-host",
   };
   const store: Record<string, Row[]> = {
     arena_sessions: [],
