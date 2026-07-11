@@ -101,6 +101,15 @@ const AI_TOOLS = [
   "Find plot holes", "Summarize scene", "Create storyboard prompt",
 ];
 
+function EditorRoute() {
+  const { projectId } = Route.useParams();
+  return (
+    <PresenceProvider projectId={projectId}>
+      <Editor />
+    </PresenceProvider>
+  );
+}
+
 function Editor() {
   const { projectId } = Route.useParams();
   const search = Route.useSearch();
