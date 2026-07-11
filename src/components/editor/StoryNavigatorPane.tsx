@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { ProjectProgressCard } from "@/components/editor/ProjectProgressCard";
+import { ScenePresenceAvatars } from "@/components/writers-room/presence/ScenePresenceAvatars";
 
 const ACT_LABEL: Record<1 | 2 | 3, string> = {
   1: "Act I · Setup",
