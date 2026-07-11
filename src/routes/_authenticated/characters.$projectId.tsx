@@ -198,15 +198,16 @@ function CharactersPage() {
         </div>
         <MergeReviewDialog projectId={projectId} open={mergeOpen} onOpenChange={setMergeOpen} />
 
-        {/* CLEANUP */}
-        <div className="mb-4">
-          <CastCleanupPanel
-            projectId={projectId}
-            characters={characters}
-            relCounts={relCounts}
-            sceneCounts={sceneCounts}
-          />
-        </div>
+        {/* Pass 2: unified inbox drawer replaces cleanup + detection panels */}
+        <CharacterInboxDrawer
+          projectId={projectId}
+          open={inboxOpen}
+          onOpenChange={setInboxOpen}
+          characters={characters}
+          relCounts={relCounts}
+          sceneCounts={sceneCounts}
+        />
+
 
         <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_320px] gap-4">
           {/* SIDEBAR */}
