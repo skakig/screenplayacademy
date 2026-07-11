@@ -168,8 +168,8 @@ export function similarity(a: IdentityInput, b: IdentityInput): SimilarityResult
     return applyCoOccurrence({ score: 0.98, auto: false, reasons }, a, b);
   }
 
-  // Damerau-Levenshtein on tokens ≥ 5 chars
-  if (na.normalized.length >= 5 && nb.normalized.length >= 5) {
+  // Damerau-Levenshtein on tokens ≥ 4 chars
+  if (na.normalized.length >= 4 && nb.normalized.length >= 4) {
     const dist = damerauLevenshtein(na.normalized, nb.normalized);
     if (dist === 1) {
       reasons.push("damerau_levenshtein_1");
