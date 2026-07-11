@@ -804,7 +804,7 @@ function GuidedBuilderPage() {
                   src={character.portrait_url}
                   alt={`${displayName} portrait`}
                   className="h-20 w-20 rounded-2xl object-cover border border-primary/40"
-                  onError={() => setPortraitBroken(true)}
+                  onError={handlePortraitLoadError}
                 />
               ) : (
                 <div className="h-20 w-20 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/20 to-primary/5 grid place-items-center font-display text-3xl text-primary">
@@ -947,7 +947,7 @@ function GuidedBuilderPage() {
                         src={character.portrait_url}
                         alt={`${displayName} portrait`}
                         className="h-full w-full object-cover"
-                        onError={() => setPortraitBroken(true)}
+                        onError={handlePortraitLoadError}
                       />
                     ) : (
                       <div className="text-center px-4">
