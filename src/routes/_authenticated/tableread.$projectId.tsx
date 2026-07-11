@@ -17,10 +17,12 @@ import { generateTableRead, refreshTableReadUrl } from "@/lib/tableread.function
 import { listElevenLabsVoices } from "@/lib/elevenlabs-voices.functions";
 
 import { PageFeatureGate } from "@/components/PageFeatureGate";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/tableread/$projectId")({
-  head: () => ({ meta: [{ title: "Table Read — SceneSmith AI" }] }),
+  head: () => ({ meta: [{ title: "Table Read — SceneSmith Studio" }] }),
   component: GatedTableRead,
+  errorComponent: RouteErrorBoundary,
 });
 
 function GatedTableRead() {
