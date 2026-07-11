@@ -185,25 +185,15 @@ export function CharacterProfileDialog({
           const filledCount = local ? [
             "role","external_goal","internal_need","wound","core_lie","secret","voice_summary","visual_description","character_arc",
           ].filter((k) => local[k] && String(local[k]).trim()).length : 0;
-          const initialTab = filledCount < 3 ? "build" : "overview";
+          const initialPillar = filledCount < 3 ? "build" : "identity";
           return (
-        <Tabs defaultValue={initialTab} className="flex-1 overflow-hidden flex flex-col">
+        <Tabs defaultValue={initialPillar} className="flex-1 overflow-hidden flex flex-col">
           <TabsList className="mx-6 mt-3 inline-flex w-auto max-w-[calc(100%-3rem)] overflow-x-auto flex-nowrap h-auto justify-start gap-1">
             <TabsTrigger value="build" className="text-[11px] shrink-0"><Sparkles className="h-3 w-3 mr-1" />Build</TabsTrigger>
-            <TabsTrigger value="overview" className="text-[11px] shrink-0">Overview</TabsTrigger>
-            <TabsTrigger value="backstory" className="text-[11px] shrink-0"><BookOpen className="h-3 w-3 mr-1" />Backstory</TabsTrigger>
-            <TabsTrigger value="personality" className="text-[11px] shrink-0"><Brain className="h-3 w-3 mr-1" />Personality</TabsTrigger>
-            {showTruthTab && (
-              <TabsTrigger value="truth" className="text-[11px] shrink-0" title="Would they do this?">
-                <Scale className="h-3 w-3 mr-1" /><span className="hidden md:inline">Truth Check</span><span className="md:hidden">Truth</span>
-              </TabsTrigger>
-            )}
-            <TabsTrigger value="tmh" className="text-[11px] shrink-0">TMH</TabsTrigger>
-            <TabsTrigger value="voice" className="text-[11px] shrink-0"><Mic2 className="h-3 w-3 mr-1" />Voice</TabsTrigger>
-            <TabsTrigger value="visual" className="text-[11px] shrink-0"><Eye className="h-3 w-3 mr-1" />Visual</TabsTrigger>
-            <TabsTrigger value="relationships" className="text-[11px] shrink-0"><Users className="h-3 w-3 mr-1" />Rel.</TabsTrigger>
-            <TabsTrigger value="arc" className="text-[11px] shrink-0"><Activity className="h-3 w-3 mr-1" />Arc</TabsTrigger>
-            <TabsTrigger value="scenes" className="text-[11px] shrink-0"><FileText className="h-3 w-3 mr-1" />Scenes</TabsTrigger>
+            <TabsTrigger value="identity" className="text-[11px] shrink-0"><UserRound className="h-3 w-3 mr-1" />Identity</TabsTrigger>
+            <TabsTrigger value="psychology" className="text-[11px] shrink-0"><Brain className="h-3 w-3 mr-1" />Psychology</TabsTrigger>
+            <TabsTrigger value="story" className="text-[11px] shrink-0"><Activity className="h-3 w-3 mr-1" />Story</TabsTrigger>
+            <TabsTrigger value="production" className="text-[11px] shrink-0"><Mic2 className="h-3 w-3 mr-1" />Production</TabsTrigger>
           </TabsList>
 
           <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -220,247 +210,298 @@ export function CharacterProfileDialog({
                     character={local}
                   />
                 </TabsContent>
-                {/* OVERVIEW */}
-                <TabsContent value="overview" className="space-y-3 mt-0">
-                  <div className="grid grid-cols-2 gap-3">
-                    <TextField label="Name *" value={local.name} onChange={(v: string) => set({ name: v })} />
-                    <TextField label="Alias" value={local.alias} onChange={(v: string) => set({ alias: v })} />
-                    <TextField label="Role" value={local.role} onChange={(v: string) => set({ role: v })} />
-                    <div>
-                      <Label className="text-xs">Group</Label>
-                      <Select value={local.group_name ?? "Main Cast"} onValueChange={(v) => { set({ group_name: v }); save.mutate({ group_name: v }); }}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {GROUPS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <TextField label="Character type" value={local.character_type} onChange={(v: string) => set({ character_type: v })} placeholder="e.g. Protagonist, Foil…" />
-                    <TextField label="Age" value={local.age} onChange={(v: string) => set({ age: v })} />
-                    <TextField label="Occupation" value={local.occupation} onChange={(v: string) => set({ occupation: v })} />
-                    <TextField label="Status" value={local.status} onChange={(v: string) => set({ status: v })} placeholder="alive, missing…" />
-                  </div>
-                  <TextField label="One-sentence summary" value={local.summary} onChange={(v: string) => set({ summary: v })} multiline rows={2} />
-                  <div className="grid grid-cols-2 gap-3">
-                    <TextField label="External want" value={local.external_goal} onChange={(v: string) => set({ external_goal: v })} multiline />
-                    <TextField label="Internal need" value={local.internal_need} onChange={(v: string) => set({ internal_need: v })} multiline />
-                    <TextField label="Core wound" value={local.wound} onChange={(v: string) => set({ wound: v })} multiline />
-                    <TextField label="Core lie" value={local.core_lie} onChange={(v: string) => set({ core_lie: v })} multiline />
-                    <TextField label="Core fear" value={local.fear} onChange={(v: string) => set({ fear: v })} multiline />
-                    <TextField label="Core secret" value={local.secret} onChange={(v: string) => set({ secret: v })} multiline />
-                    <TextField label="Core contradiction" value={local.contradiction} onChange={(v: string) => set({ contradiction: v })} multiline />
-                    <TextField label="Archetype" value={local.archetype} onChange={(v: string) => set({ archetype: v })} />
-                  </div>
-                </TabsContent>
 
-                {/* BACKSTORY */}
-                <TabsContent value="backstory" className="space-y-3 mt-0">
-                  <AiBar label="Generate Backstory" busy={aiBusy === "back"} onClick={() => runAi("back", () => callBack({ data: { characterId } }))} />
-                  {["childhood","defining_wound","formative_relationship","biggest_loss","biggest_shame","life_before_story","lies_about","never_says_aloud"].map((k) => (
-                    <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
-                  ))}
-                </TabsContent>
+                {/* IDENTITY = Overview + Backstory */}
+                <TabsContent value="identity" className="mt-0">
+                  <Tabs defaultValue="overview" className="w-full">
+                    <TabsList className="mb-4">
+                      <TabsTrigger value="overview" className="text-[11px]">Overview</TabsTrigger>
+                      <TabsTrigger value="backstory" className="text-[11px]"><BookOpen className="h-3 w-3 mr-1" />Backstory</TabsTrigger>
+                    </TabsList>
 
-                {/* PERSONALITY */}
-                <TabsContent value="personality" className="space-y-3 mt-0">
-                  <div className="grid grid-cols-2 gap-3">
-                    {["temperament","strengths","flaws","habits","conflict_style","fear_response","trust_triggers","betrayal_triggers","humor_style"].map((k) => (
-                      <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
-                    ))}
-                  </div>
-                </TabsContent>
-
-                {/* TRUTH CHECK — Would They Do This? */}
-                {showTruthTab && (
-                  <TabsContent value="truth" className="mt-0">
-                    <WouldTheyDoThisTab
-                      projectId={projectId}
-                      character={local}
-                      mode={resolvedMode}
-                      coachingLevel={(onboarding?.coaching_level as any) ?? null}
-                      writerExperienceLevel={onboarding?.writer_experience_level ?? null}
-                    />
-                  </TabsContent>
-                )}
-
-                {/* TMH */}
-
-                <TabsContent value="tmh" className="space-y-4 mt-0">
-                  <TMHInfoPanel />
-                  <AiBar label="Generate TMH Profile" busy={aiBusy === "tmh"} onClick={() => runAi("tmh", () => callTMH({ data: { characterId } }))} />
-                  <div className="grid grid-cols-2 gap-4">
-                    {(["tmh_baseline","tmh_stress","tmh_aspirational","tmh_shadow"] as const).map((k) => (
-                      <div key={k} className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-xs">{prettyLabel(k)}</Label>
-                          <TMHBadge level={local[k]} />
+                    <TabsContent value="overview" className="space-y-3 mt-0">
+                      <TierNote tier="canonical" text="Facts you set or import from your script — treated as canon by Truth Check." />
+                      <div className="grid grid-cols-2 gap-3">
+                        <TextField label="Name *" value={local.name} onChange={(v: string) => set({ name: v })} />
+                        <TextField label="Alias" value={local.alias} onChange={(v: string) => set({ alias: v })} />
+                        <TextField label="Role" value={local.role} onChange={(v: string) => set({ role: v })} />
+                        <div>
+                          <Label className="text-xs">Group</Label>
+                          <Select value={local.group_name ?? "Main Cast"} onValueChange={(v) => { set({ group_name: v }); save.mutate({ group_name: v }); }}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {GROUPS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
                         </div>
-                        <Slider min={1} max={9} step={1} value={[local[k] ?? 5]}
-                          onValueChange={(v) => set({ [k]: v[0] })}
-                          onValueCommit={(v) => save.mutate({ [k]: v[0] })}
-                        />
-                        <p className="text-[10px] text-muted-foreground">{tmhLabel(local[k])}</p>
+                        <TextField label="Character type" value={local.character_type} onChange={(v: string) => set({ character_type: v })} placeholder="e.g. Protagonist, Foil…" />
+                        <TextField label="Age" value={local.age} onChange={(v: string) => set({ age: v })} />
+                        <TextField label="Occupation" value={local.occupation} onChange={(v: string) => set({ occupation: v })} />
+                        <TextField label="Status" value={local.status} onChange={(v: string) => set({ status: v })} placeholder="alive, missing…" />
+                        <div>
+                          <Label className="text-xs">Story importance</Label>
+                          <Select value={local.importance ?? "supporting"} onValueChange={(v) => { set({ importance: v }); save.mutate({ importance: v }); }}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="lead">Lead</SelectItem>
+                              <SelectItem value="supporting">Supporting</SelectItem>
+                              <SelectItem value="bit">Bit</SelectItem>
+                              <SelectItem value="background">Background</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <TextField label="Story function" value={local.story_function} onChange={(v: string) => set({ story_function: v })} placeholder="Protagonist, Antagonist, Foil, Mentor…" />
                       </div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {["moral_wound","moral_blind_spot","core_temptation","core_virtue","core_vice","moral_test","what_they_justify","would_never_do","might_do_under_pressure","redemption_path","corruption_path"].map((k) => (
-                      <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
-                    ))}
-                  </div>
+                      <TextField label="One-sentence summary" value={local.summary} onChange={(v: string) => set({ summary: v })} multiline rows={2} />
+                      <div className="grid grid-cols-2 gap-3">
+                        <TextField label="External want" value={local.external_goal} onChange={(v: string) => set({ external_goal: v })} multiline />
+                        <TextField label="Internal need" value={local.internal_need} onChange={(v: string) => set({ internal_need: v })} multiline />
+                        <TextField label="Core wound" value={local.wound} onChange={(v: string) => set({ wound: v })} multiline />
+                        <TextField label="Core lie" value={local.core_lie} onChange={(v: string) => set({ core_lie: v })} multiline />
+                        <TextField label="Core fear" value={local.fear} onChange={(v: string) => set({ fear: v })} multiline />
+                        <TextField label="Core secret" value={local.secret} onChange={(v: string) => set({ secret: v })} multiline />
+                        <TextField label="Core contradiction" value={local.contradiction} onChange={(v: string) => set({ contradiction: v })} multiline />
+                        <TextField label="Archetype" value={local.archetype} onChange={(v: string) => set({ archetype: v })} />
+                      </div>
+                    </TabsContent>
 
-                  <Card className="p-3 bg-secondary/30 border-dashed">
-                    <div className="flex items-center gap-2 mb-2 text-xs font-semibold"><AlertTriangle className="h-3.5 w-3.5 text-accent" />Run Moral Pressure Test</div>
-                    <Button size="sm" variant="outline" disabled={!!aiBusy} onClick={async () => {
-                      const r = await runAi("pressure", () => callPressure({ data: { characterId } }));
-                      if (r?.text) setPressureOut(r.text);
-                    }}>{aiBusy === "pressure" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}Run pressure scenarios</Button>
-                    {pressureOut && <pre className="text-xs mt-3 whitespace-pre-wrap font-sans text-muted-foreground">{pressureOut}</pre>}
-                  </Card>
+                    <TabsContent value="backstory" className="space-y-3 mt-0">
+                      <TierNote tier="inferred" text="Draft with AI, then edit what you want to keep as canon." />
+                      <AiBar label="Generate Backstory" busy={aiBusy === "back"} onClick={() => runAi("back", () => callBack({ data: { characterId } }))} />
+                      {["childhood","defining_wound","formative_relationship","biggest_loss","biggest_shame","life_before_story","lies_about","never_says_aloud"].map((k) => (
+                        <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
+                      ))}
+                    </TabsContent>
+                  </Tabs>
                 </TabsContent>
 
-                {/* VOICE */}
-                <TabsContent value="voice" className="space-y-3 mt-0">
-                  <AiBar label="Generate Dialogue Voice" busy={aiBusy === "voice"} onClick={() => runAi("voice", () => callVoice({ data: { characterId } }))} />
-
-                  <Card className="p-3">
-                    <Label className="text-xs flex items-center gap-1.5"><Volume2 className="h-3.5 w-3.5 text-primary" />ElevenLabs voice</Label>
-                    <div className="text-[10px] text-muted-foreground mb-2">Reused by the Table Read.</div>
-                    <Select
-                      value={local.elevenlabs_voice_id ?? ""}
-                      onValueChange={(v) => { set({ elevenlabs_voice_id: v }); save.mutate({ elevenlabs_voice_id: v }); }}
-                    >
-                      <SelectTrigger><SelectValue placeholder={voicesQ.isLoading ? "Loading voices…" : "Pick a voice"} /></SelectTrigger>
-                      <SelectContent>
-                        {(voicesQ.data?.voices ?? []).map((v) => (
-                          <SelectItem key={v.voice_id} value={v.voice_id}>{v.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </Card>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    {["voice_summary","vocabulary_level","sentence_rhythm","directness_level","emotional_openness","favorite_phrases","forbidden_phrases","how_they_lie","how_they_apologize","how_they_threaten","subtext_pattern","silence_pattern","voice_archetype","voice_style","speech_patterns"].map((k) => (
-                      <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
-                    ))}
-                  </div>
-
-                  <Card className="p-3 bg-secondary/30 border-dashed">
-                    <div className="flex items-center gap-2 mb-2 text-xs font-semibold"><MessageSquareQuote className="h-3.5 w-3.5 text-accent" />Test dialogue</div>
-                    <Textarea placeholder="Scenario — e.g. 'They are caught in a lie by someone they love.'" value={dialogueScenario} onChange={(e) => setDialogueScenario(e.target.value)} rows={2} />
-                    <Button size="sm" variant="outline" className="mt-2" disabled={!dialogueScenario || !!aiBusy} onClick={async () => {
-                      const r = await runAi("dia", () => callDialogue({ data: { characterId, scenario: dialogueScenario } }));
-                      if (r?.text) setDialogueOut(r.text);
-                    }}>{aiBusy === "dia" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}Generate</Button>
-                    {dialogueOut && <pre className="text-xs mt-3 whitespace-pre-wrap font-mono text-muted-foreground">{dialogueOut}</pre>}
-                  </Card>
-                </TabsContent>
-
-                {/* VISUAL */}
-                <TabsContent value="visual" className="space-y-3 mt-0">
-                  {imgStatusQ.data && !imgStatusQ.data.configured && (
-                    <Card className="p-3 border-amber-500/40 bg-amber-500/[0.05] text-xs flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                      <div>
-                        <div className="font-medium text-amber-600">Portrait generation is not configured in this preview.</div>
-                        <div className="text-muted-foreground mt-0.5">Connect Lovable AI to enable image generation. You can still edit the visual prompt below.</div>
-                      </div>
-                    </Card>
-                  )}
-                  <div className="grid grid-cols-[180px_1fr] gap-4">
-                    <div className="aspect-[3/4] rounded-lg overflow-hidden bg-secondary border border-border flex items-center justify-center">
-                      {local.portrait_url ? (
-                        <img src={local.portrait_url} alt={local.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                {/* PSYCHOLOGY = Personality + TMH + Truth Check */}
+                <TabsContent value="psychology" className="mt-0">
+                  <Tabs defaultValue={showTruthTab ? "truth" : "personality"} className="w-full">
+                    <TabsList className="mb-4">
+                      <TabsTrigger value="personality" className="text-[11px]">Personality</TabsTrigger>
+                      <TabsTrigger value="tmh" className="text-[11px]">TMH Profile</TabsTrigger>
+                      {showTruthTab && (
+                        <TabsTrigger value="truth" className="text-[11px]"><Scale className="h-3 w-3 mr-1" />Truth Check</TabsTrigger>
                       )}
-                    </div>
-                    <div className="space-y-2">
-                      <AiBar label="Generate Visual Prompt" busy={aiBusy === "vis"} onClick={() => runAi("vis", () => callVisual({ data: { characterId } }))} />
-                      <Button
-                        size="sm"
-                        className="w-full"
-                        disabled={!!aiBusy || (imgStatusQ.data && !imgStatusQ.data.configured)}
-                        onClick={async () => {
-                          setPortraitError(null);
-                          setAiBusy("portrait");
-                          try {
-                            const out: any = await callPortrait({ data: { characterId: characterId! } });
-                            if (out?.row) {
-                              qc.invalidateQueries({ queryKey: ["character", characterId] });
-                              qc.invalidateQueries({ queryKey: ["characters", projectId] });
-                              toast.success("Portrait generated");
-                            }
-                          } catch (e: any) {
-                            const msg = e?.message ?? "Portrait generation failed";
-                            setPortraitError(msg);
-                            toast.error(msg);
-                          } finally {
-                            setAiBusy(null);
-                          }
-                        }}
-                      >
-                        {aiBusy === "portrait" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5 mr-1.5" />}
-                        Generate Portrait
-                      </Button>
-                      {portraitError && (
-                        <Card className="p-2 border-destructive/40 bg-destructive/[0.05] text-[11px] text-destructive">
-                          <div className="flex items-start gap-2">
-                            <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                            <div className="flex-1">{portraitError}</div>
-                            <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setPortraitError(null)}>Dismiss</Button>
+                    </TabsList>
+
+                    <TabsContent value="personality" className="space-y-3 mt-0">
+                      <TierNote tier="canonical" text="Habits and traits — used as evidence when Truth Check evaluates a scene." />
+                      <div className="grid grid-cols-2 gap-3">
+                        {["temperament","strengths","flaws","habits","conflict_style","fear_response","trust_triggers","betrayal_triggers","humor_style"].map((k) => (
+                          <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
+                        ))}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="tmh" className="space-y-4 mt-0">
+                      <TMHInfoPanel />
+                      <AiBar label="Generate TMH Profile" busy={aiBusy === "tmh"} onClick={() => runAi("tmh", () => callTMH({ data: { characterId } }))} />
+                      <div className="grid grid-cols-2 gap-4">
+                        {(["tmh_baseline","tmh_stress","tmh_aspirational","tmh_shadow"] as const).map((k) => (
+                          <div key={k} className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs">{prettyLabel(k)}</Label>
+                              <TMHBadge level={local[k]} />
+                            </div>
+                            <Slider min={1} max={9} step={1} value={[local[k] ?? 5]}
+                              onValueChange={(v) => set({ [k]: v[0] })}
+                              onValueCommit={(v) => save.mutate({ [k]: v[0] })}
+                            />
+                            <p className="text-[10px] text-muted-foreground">{tmhLabel(local[k])}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {["moral_wound","moral_blind_spot","core_temptation","core_virtue","core_vice","moral_test","what_they_justify","would_never_do","might_do_under_pressure","redemption_path","corruption_path"].map((k) => (
+                          <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
+                        ))}
+                      </div>
+
+                      <Card className="p-3 bg-secondary/30 border-dashed">
+                        <div className="flex items-center gap-2 mb-2 text-xs font-semibold"><AlertTriangle className="h-3.5 w-3.5 text-accent" />Run Moral Pressure Test</div>
+                        <Button size="sm" variant="outline" disabled={!!aiBusy} onClick={async () => {
+                          const r = await runAi("pressure", () => callPressure({ data: { characterId } }));
+                          if (r?.text) setPressureOut(r.text);
+                        }}>{aiBusy === "pressure" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}Run pressure scenarios</Button>
+                        {pressureOut && <pre className="text-xs mt-3 whitespace-pre-wrap font-sans text-muted-foreground">{pressureOut}</pre>}
+                      </Card>
+                    </TabsContent>
+
+                    {showTruthTab && (
+                      <TabsContent value="truth" className="mt-0">
+                        <TierNote tier="temporal" text="Live check against the scene you're on — updates as you edit." />
+                        <WouldTheyDoThisTab
+                          projectId={projectId}
+                          character={local}
+                          mode={resolvedMode}
+                          coachingLevel={(onboarding?.coaching_level as any) ?? null}
+                          writerExperienceLevel={onboarding?.writer_experience_level ?? null}
+                        />
+                      </TabsContent>
+                    )}
+                  </Tabs>
+                </TabsContent>
+
+                {/* STORY = Relationships + Arc + Scenes */}
+                <TabsContent value="story" className="mt-0">
+                  <Tabs defaultValue="relationships" className="w-full">
+                    <TabsList className="mb-4">
+                      <TabsTrigger value="relationships" className="text-[11px]"><Users className="h-3 w-3 mr-1" />Relationships</TabsTrigger>
+                      <TabsTrigger value="arc" className="text-[11px]"><Activity className="h-3 w-3 mr-1" />Arc</TabsTrigger>
+                      <TabsTrigger value="scenes" className="text-[11px]"><FileText className="h-3 w-3 mr-1" />Scenes</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="relationships" className="mt-0">
+                      <RelationshipsTab projectId={projectId} characterId={characterId} />
+                    </TabsContent>
+
+                    <TabsContent value="arc" className="space-y-4 mt-0">
+                      <CharacterArcSection projectId={projectId} characterId={characterId} />
+
+                      <AiBar label="Analyze Character Arc" busy={aiBusy === "arc"} onClick={() => runAi("arc", () => callArc({ data: { characterId } }))} />
+                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground pt-2">Arc notes (on character)</div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {["starting_belief","ending_belief","starting_behavior","ending_behavior","act1_state","act2_pressure","midpoint_shift","dark_night_state","climax_choice","final_image","character_arc"].map((k) => (
+                          <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
+                        ))}
+                      </div>
+
+                      <Card className="p-3 bg-secondary/30 border-dashed">
+                        <div className="flex items-center gap-2 mb-2 text-xs font-semibold"><Search className="h-3.5 w-3.5 text-accent" />Find contradictions</div>
+                        <Button size="sm" variant="outline" disabled={!!aiBusy} onClick={async () => {
+                          const r = await runAi("contradict", () => callContradict({ data: { characterId } }));
+                          if (r?.text) setContradictionsOut(r.text);
+                        }}>{aiBusy === "contradict" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}Audit profile</Button>
+                        {contradictionsOut && <pre className="text-xs mt-3 whitespace-pre-wrap font-sans text-muted-foreground">{contradictionsOut}</pre>}
+                      </Card>
+                    </TabsContent>
+
+                    <TabsContent value="scenes" className="mt-0">
+                      <SceneUsageTab projectId={projectId} characterId={characterId} />
+                      <Card className="p-3 bg-secondary/30 border-dashed mt-3">
+                        <div className="flex items-center gap-2 mb-2 text-xs font-semibold"><Lightbulb className="h-3.5 w-3.5 text-accent" />Suggest scene use</div>
+                        <Button size="sm" variant="outline" disabled={!!aiBusy} onClick={async () => {
+                          const r = await runAi("suggest", () => callSuggest({ data: { characterId } }));
+                          if (r?.text) setSceneSuggestOut(r.text);
+                        }}>{aiBusy === "suggest" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}Suggest</Button>
+                        {sceneSuggestOut && <pre className="text-xs mt-3 whitespace-pre-wrap font-sans text-muted-foreground">{sceneSuggestOut}</pre>}
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
+                </TabsContent>
+
+                {/* PRODUCTION = Voice + Visual */}
+                <TabsContent value="production" className="mt-0">
+                  <Tabs defaultValue="voice" className="w-full">
+                    <TabsList className="mb-4">
+                      <TabsTrigger value="voice" className="text-[11px]"><Mic2 className="h-3 w-3 mr-1" />Voice</TabsTrigger>
+                      <TabsTrigger value="visual" className="text-[11px]"><Eye className="h-3 w-3 mr-1" />Visual</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="voice" className="space-y-3 mt-0">
+                      <AiBar label="Generate Dialogue Voice" busy={aiBusy === "voice"} onClick={() => runAi("voice", () => callVoice({ data: { characterId } }))} />
+
+                      <Card className="p-3">
+                        <Label className="text-xs flex items-center gap-1.5"><Volume2 className="h-3.5 w-3.5 text-primary" />ElevenLabs voice</Label>
+                        <div className="text-[10px] text-muted-foreground mb-2">Reused by the Table Read.</div>
+                        <Select
+                          value={local.elevenlabs_voice_id ?? ""}
+                          onValueChange={(v) => { set({ elevenlabs_voice_id: v }); save.mutate({ elevenlabs_voice_id: v }); }}
+                        >
+                          <SelectTrigger><SelectValue placeholder={voicesQ.isLoading ? "Loading voices…" : "Pick a voice"} /></SelectTrigger>
+                          <SelectContent>
+                            {(voicesQ.data?.voices ?? []).map((v) => (
+                              <SelectItem key={v.voice_id} value={v.voice_id}>{v.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Card>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        {["voice_summary","vocabulary_level","sentence_rhythm","directness_level","emotional_openness","favorite_phrases","forbidden_phrases","how_they_lie","how_they_apologize","how_they_threaten","subtext_pattern","silence_pattern","voice_archetype","voice_style","speech_patterns"].map((k) => (
+                          <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
+                        ))}
+                      </div>
+
+                      <Card className="p-3 bg-secondary/30 border-dashed">
+                        <div className="flex items-center gap-2 mb-2 text-xs font-semibold"><MessageSquareQuote className="h-3.5 w-3.5 text-accent" />Test dialogue</div>
+                        <Textarea placeholder="Scenario — e.g. 'They are caught in a lie by someone they love.'" value={dialogueScenario} onChange={(e) => setDialogueScenario(e.target.value)} rows={2} />
+                        <Button size="sm" variant="outline" className="mt-2" disabled={!dialogueScenario || !!aiBusy} onClick={async () => {
+                          const r = await runAi("dia", () => callDialogue({ data: { characterId, scenario: dialogueScenario } }));
+                          if (r?.text) setDialogueOut(r.text);
+                        }}>{aiBusy === "dia" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}Generate</Button>
+                        {dialogueOut && <pre className="text-xs mt-3 whitespace-pre-wrap font-mono text-muted-foreground">{dialogueOut}</pre>}
+                      </Card>
+                    </TabsContent>
+
+                    <TabsContent value="visual" className="space-y-3 mt-0">
+                      {imgStatusQ.data && !imgStatusQ.data.configured && (
+                        <Card className="p-3 border-amber-500/40 bg-amber-500/[0.05] text-xs flex items-start gap-2">
+                          <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                          <div>
+                            <div className="font-medium text-amber-600">Portrait generation is not configured in this preview.</div>
+                            <div className="text-muted-foreground mt-0.5">Connect Lovable AI to enable image generation. You can still edit the visual prompt below.</div>
                           </div>
                         </Card>
                       )}
-                    </div>
-                  </div>
+                      <div className="grid grid-cols-[180px_1fr] gap-4">
+                        <div className="aspect-[3/4] rounded-lg overflow-hidden bg-secondary border border-border flex items-center justify-center">
+                          {local.portrait_url ? (
+                            <img src={local.portrait_url} alt={local.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <AiBar label="Generate Visual Prompt" busy={aiBusy === "vis"} onClick={() => runAi("vis", () => callVisual({ data: { characterId } }))} />
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            disabled={!!aiBusy || (imgStatusQ.data && !imgStatusQ.data.configured)}
+                            onClick={async () => {
+                              setPortraitError(null);
+                              setAiBusy("portrait");
+                              try {
+                                const out: any = await callPortrait({ data: { characterId: characterId! } });
+                                if (out?.row) {
+                                  qc.invalidateQueries({ queryKey: ["character", characterId] });
+                                  qc.invalidateQueries({ queryKey: ["characters", projectId] });
+                                  toast.success("Portrait generated");
+                                }
+                              } catch (e: any) {
+                                const msg = e?.message ?? "Portrait generation failed";
+                                setPortraitError(msg);
+                                toast.error(msg);
+                              } finally {
+                                setAiBusy(null);
+                              }
+                            }}
+                          >
+                            {aiBusy === "portrait" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5 mr-1.5" />}
+                            Generate Portrait
+                          </Button>
+                          {portraitError && (
+                            <Card className="p-2 border-destructive/40 bg-destructive/[0.05] text-[11px] text-destructive">
+                              <div className="flex items-start gap-2">
+                                <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                                <div className="flex-1">{portraitError}</div>
+                                <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setPortraitError(null)}>Dismiss</Button>
+                              </div>
+                            </Card>
+                          )}
+                        </div>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    {["visual_description","costume_notes","color_palette","signature_props","visual_symbol","movement_style"].map((k) => (
-                      <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
-                    ))}
-                  </div>
-                  <TextField label="Image prompt" value={local.image_prompt} onChange={(v: string) => set({ image_prompt: v })} multiline rows={4} />
-                </TabsContent>
-
-                {/* RELATIONSHIPS */}
-                <TabsContent value="relationships" className="mt-0">
-                  <RelationshipsTab projectId={projectId} characterId={characterId} />
-                </TabsContent>
-
-                {/* ARC */}
-                <TabsContent value="arc" className="space-y-4 mt-0">
-                  <CharacterArcSection projectId={projectId} characterId={characterId} />
-
-                  <AiBar label="Analyze Character Arc" busy={aiBusy === "arc"} onClick={() => runAi("arc", () => callArc({ data: { characterId } }))} />
-                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground pt-2">Arc notes (on character)</div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {["starting_belief","ending_belief","starting_behavior","ending_behavior","act1_state","act2_pressure","midpoint_shift","dark_night_state","climax_choice","final_image","character_arc"].map((k) => (
-                      <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
-                    ))}
-                  </div>
-
-                  <Card className="p-3 bg-secondary/30 border-dashed">
-                    <div className="flex items-center gap-2 mb-2 text-xs font-semibold"><Search className="h-3.5 w-3.5 text-accent" />Find contradictions</div>
-                    <Button size="sm" variant="outline" disabled={!!aiBusy} onClick={async () => {
-                      const r = await runAi("contradict", () => callContradict({ data: { characterId } }));
-                      if (r?.text) setContradictionsOut(r.text);
-                    }}>{aiBusy === "contradict" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}Audit profile</Button>
-                    {contradictionsOut && <pre className="text-xs mt-3 whitespace-pre-wrap font-sans text-muted-foreground">{contradictionsOut}</pre>}
-                  </Card>
-                </TabsContent>
-
-                {/* SCENES */}
-                <TabsContent value="scenes" className="mt-0">
-                  <SceneUsageTab projectId={projectId} characterId={characterId} />
-                  <Card className="p-3 bg-secondary/30 border-dashed mt-3">
-                    <div className="flex items-center gap-2 mb-2 text-xs font-semibold"><Lightbulb className="h-3.5 w-3.5 text-accent" />Suggest scene use</div>
-                    <Button size="sm" variant="outline" disabled={!!aiBusy} onClick={async () => {
-                      const r = await runAi("suggest", () => callSuggest({ data: { characterId } }));
-                      if (r?.text) setSceneSuggestOut(r.text);
-                    }}>{aiBusy === "suggest" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}Suggest</Button>
-                    {sceneSuggestOut && <pre className="text-xs mt-3 whitespace-pre-wrap font-sans text-muted-foreground">{sceneSuggestOut}</pre>}
-                  </Card>
+                      <div className="grid grid-cols-2 gap-3">
+                        {["visual_description","costume_notes","color_palette","signature_props","visual_symbol","movement_style"].map((k) => (
+                          <TextField key={k} label={prettyLabel(k)} value={local[k]} onChange={(v: string) => set({ [k]: v })} multiline rows={2} />
+                        ))}
+                      </div>
+                      <TextField label="Image prompt" value={local.image_prompt} onChange={(v: string) => set({ image_prompt: v })} multiline rows={4} />
+                    </TabsContent>
+                  </Tabs>
                 </TabsContent>
               </>
             )}
