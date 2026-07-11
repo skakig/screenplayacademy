@@ -545,6 +545,7 @@ export const i18nStrings = {
   "collab.presence.idle": "Idle",
   "collab.presence.hereNow": "Here now",
   "collab.presence.onThisScene": "On this scene",
+  "collab.presence.inScene": "In {{scene}}",
 
   // Pass 7 — Live Scene Collaboration (experimental)
   "collab.tabs.live": "Live Lab",
