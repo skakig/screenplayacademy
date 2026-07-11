@@ -48,8 +48,7 @@ describe("collapseCandidateVariants (acceptance test 1)", () => {
 
 describe("similarity — acceptance tests 2, 3, 8, 9", () => {
   it("test 2: Hans vs Hanns — proposed ~0.85, never auto", () => {
-    const s = similarity({ id: "a", name: "Hanns" }, { id: "b", name: "Hansi" });
-    // 5-char names with edit distance 1
+    const s = similarity({ id: "a", name: "Hans" }, { id: "b", name: "Hanns" });
     expect(s.auto).toBe(false);
     expect(s.score).toBeGreaterThanOrEqual(0.85);
     expect(s.reasons).toContain("damerau_levenshtein_1");
