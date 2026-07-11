@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import type { TablesInsert } from "@/integrations/supabase/types";
 import {
   DEP_TABLES,
   callJson,
@@ -37,8 +38,13 @@ export const upsertCharacter = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       return row;
     } else {
+      const insertRow: TablesInsert<"characters"> = {
+        ...clean,
+        project_id,
+        name: typeof clean.name === "string" && clean.name.trim() ? clean.name : "New Character",
+      };
       const { data: row, error } = await context.supabase
-        .from("characters").insert({ ...clean, project_id, name: clean.name || "New Character" }).select().single();
+        .from("characters").insert(insertRow).select().single();
       if (error) throw new Error(error.message);
       return row;
     }
