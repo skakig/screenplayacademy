@@ -12,6 +12,10 @@ Long-term production work must follow `docs/SCENESMITH_STORY_PRODUCTION_PLATFORM
 
 Voice capture, dictation, spoken brainstorming, conversational guidance, meeting capture, and audio-to-story work must follow `docs/SCENESMITH_VOICE_STUDIO.md`: preserve the original session, keep providers replaceable, create reviewable artifact proposals, and never mutate canon without approval.
 
+World discovery, corpus import, World Bible, World Graph, series continuation, locations, factions, timelines, lore, world continuity, maps, visual-world generation, and world-to-production work must follow `docs/SCENESMITH_WORLD_BUILDING.md`: extract candidates rather than truth, attach evidence, keep canon explicit, and help the writer see the world without blocking the page.
+
+Authorized source ingestion, corpus extraction, adaptive series onboarding, writer knowledge mapping, Character/World population proposals, source authority, and evidence-backed continuity or editorial review must follow `docs/ITS_PfHU_Importation.md`: preserve the source, attach evidence, let humans control identity and canon, use ITS to determine what must be understood, and use PfHU to determine how that understanding is presented.
+
 ## Prime Directive
 
 The screenplay editor is the product.
@@ -46,6 +50,10 @@ For Academy, Coach, Script Review, The Message, or series-continuity work, also 
 For Story Graph, Production Graph, Scene Compiler, generator adapters, assets, cinematography, locations, budgets, production approvals, or studio-department work, `docs/SCENESMITH_STORY_PRODUCTION_PLATFORM.md` is the canonical product doctrine.
 
 For Voice Studio, speech-to-text, dictation, spoken brainstorming, scene/chapter/skit construction, character interviews, worldbuilding sessions, revision notes, writers' room recording, production voice notes, or conversational voice guidance, `docs/SCENESMITH_VOICE_STUDIO.md` is the canonical product doctrine.
+
+For World Building, source-corpus import, series continuation, World Bible, World Graph, world entities, locations, factions, institutions, cultures, languages, timelines, artifacts, technologies, species, world rules, maps, visual-world assets, or world continuity, `docs/SCENESMITH_WORLD_BUILDING.md` is the canonical product doctrine.
+
+For ITS/PfHU Importation, authorized corpus ingestion, character or world auto-population proposals, identity resolution from prior works, source authority, adaptive series onboarding, writer knowledge maps, continuation packages, or imported-canon editorial review, `docs/ITS_PfHU_Importation.md` is the canonical product doctrine.
 
 For current Stage 1 editor work, also read:
 
@@ -90,6 +98,10 @@ Do not skip ahead. Build in this order:
 11. Multilingual expansion
 
 Voice Studio must follow the phased sequence in `docs/SCENESMITH_VOICE_STUDIO.md` and must not preempt the local-first editor, stable project artifacts, permissions, or approval foundations it depends on.
+
+World Building must follow the phased sequence in `docs/SCENESMITH_WORLD_BUILDING.md`. Do not begin visual-world or generator work before source evidence, candidates, canon governance, entity identity, permissions, and World Graph foundations are proven.
+
+ITS/PfHU Importation must follow the phased sequence in `docs/ITS_PfHU_Importation.md`. Source preservation, segmentation, evidence, candidate review, identity decisions, source authority, and canon governance must be proven before adaptive onboarding, continuation guidance, or imported-canon editorial review is treated as authoritative.
 
 ## Architecture Rule
 
