@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "route-matrix": "bun run scripts/generate-route-matrix.ts",
+    "route-matrix:check": "bun run scripts/generate-route-matrix.ts --check"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.48",
