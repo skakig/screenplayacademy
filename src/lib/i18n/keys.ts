@@ -513,8 +513,8 @@ export const i18nStrings = {
   "collab.acceptInvite.checking": "Checking your invite…",
   "collab.acceptInvite.acceptedTitle": "You're in.",
   "collab.acceptInvite.acceptedBody":
-    "Taking you to the Writers' Room…",
-  "collab.acceptInvite.openRoom": "Open Writers' Room",
+    "Opening the project…",
+  "collab.acceptInvite.openRoom": "Open project",
   "collab.acceptInvite.invalidTitle": "We couldn't find that invite",
   "collab.acceptInvite.invalidBody":
     "The link may be mistyped or no longer valid. Ask the project owner to send a fresh invite.",
@@ -525,14 +525,14 @@ export const i18nStrings = {
   "collab.acceptInvite.revokedBody":
     "The project owner cancelled this invite. Get in touch if you think this is a mistake.",
   "collab.acceptInvite.acceptedAlreadyTitle":
-    "This invite has already been accepted",
+    "You're already on this project",
   "collab.acceptInvite.acceptedAlreadyBody":
-    "If you're already a collaborator, head to the Writers' Room directly.",
+    "Opening it now — you already have access.",
   "collab.acceptInvite.emailMismatchTitle":
     "Signed in as a different email",
   "collab.acceptInvite.emailMismatchBody":
-    "This invite was sent to a different email address. Sign out and sign in with the invited address to accept it.",
-  "collab.acceptInvite.signOut": "Sign out",
+    "You're signed in as {currentEmail}, but this invite was sent to a different address. Sign out and sign in with the invited email to accept it.",
+  "collab.acceptInvite.signOut": "Sign out and switch accounts",
   "collab.acceptInvite.backToDashboard": "Back to Studio Lobby",
   "collab.acceptInvite.unknownTitle": "Couldn't accept this invite",
   "collab.acceptInvite.unknownBody":
@@ -541,6 +541,7 @@ export const i18nStrings = {
   "collab.acceptInvite.missingTokenBody":
     "Open the full link you were sent — the token at the end is required.",
   "collab.acceptInvite.needsSignIn": "Sign in to accept this invite…",
+  "collab.acceptInvite.tryAgain": "Try again",
 
   // Writer modes: Focus / Basic / Advanced
   "mode.focus": "Focus",
