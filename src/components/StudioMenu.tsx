@@ -292,13 +292,28 @@ export function StudioMenu() {
                       </div>
                     );
 
+                    const handleClick = () => {
+                      emitMenuClick({
+                        label: it.label,
+                        to: String(it.to),
+                        tier,
+                        locked,
+                        required_tier: requiredTier,
+                        experimental: Boolean(it.experimental),
+                        setup_required: setupRequired,
+                        missing_project: missingProject,
+                        needs_data: it.needsData ?? null,
+                      });
+                      setOpen(false);
+                    };
+
                     // Missing-project items route to /projects with a helper toast context
                     if (missingProject) {
                       return (
                         <Link
                           key={it.label}
                           to="/projects"
-                          onClick={() => setOpen(false)}
+                          onClick={handleClick}
                           aria-label={`${it.label} — pick a project first`}
                         >
                           {inner}
@@ -311,7 +326,7 @@ export function StudioMenu() {
                         <Link
                           key={it.label}
                           to="/pricing"
-                          onClick={() => setOpen(false)}
+                          onClick={handleClick}
                           aria-label={`${it.label} — upgrade to ${requiredTier ? TIER_LABEL[requiredTier] : "unlock"}`}
                         >
                           {inner}
@@ -323,7 +338,7 @@ export function StudioMenu() {
                         key={it.label}
                         to={it.to as any}
                         params={params as any}
-                        onClick={() => setOpen(false)}
+                        onClick={handleClick}
                       >
                         {inner}
                       </Link>
