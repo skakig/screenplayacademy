@@ -56,13 +56,13 @@ export type MenuGate = MatrixEntry & {
   requiredTierLabel: string | null;
 };
 
-/**
- * Resolve a single menu item against the current session/project context.
- * Returns the badge state, the click target (with tier-lock / pick-project
- * redirects applied), and the human-readable fix CTA.
- */
+export type MenuGateItem = Omit<MenuItemManifest, "iconName" | "label" | "desc"> & {
+  label?: string;
+  desc?: string;
+};
+
 export function resolveMenuGate(
-  item: MenuItemManifest,
+  item: MenuGateItem,
   ctx: MenuGateContext,
 ): MenuGate {
   const scenario: ProjectScenario = ctx.projectId
