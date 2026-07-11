@@ -27,7 +27,7 @@ export function useOpenCharacterBuilder({
     setLoading(true);
     try {
       const rows = (await listChars({ data: { projectId } })) as Array<{ id: string; name?: string | null }>;
-      let characterId = rows?.[0]?.id;
+      let characterId: string | undefined = rows?.[0]?.id;
       const createdFresh = !characterId;
 
       if (!characterId) {
