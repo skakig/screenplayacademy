@@ -637,7 +637,7 @@ function Editor() {
       )}
 
       {/* Advanced Mode: manuscript is single-column; panels are summoned. */}
-      <div className="grid grid-cols-1 max-w-[1600px] mx-auto">
+      <div className={`grid max-w-[1600px] mx-auto ${showCoachRail ? "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px]" : "grid-cols-1"}`}>
         <section className="min-h-[calc(100vh-64px)] min-w-0 flex flex-col p-4 sm:p-6 lg:p-8 screenplay-canvas">
           {isLoglineStep ? (
             <div className="max-w-[760px] mx-auto pt-4">
