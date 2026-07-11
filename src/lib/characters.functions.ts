@@ -569,35 +569,58 @@ export const approvePortraitCandidate = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ApproveInput.parse(d))
   .handler(async ({ data, context }) => {
     const c = await loadOwnedCharacter(context, data.characterId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let finalUrl = data.url ?? null;
+    let finalPath: string | null = null;
+
     if (data.path) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       // Confirm the object belongs to this character/project before adopting
       // it — path is client-supplied and must match the expected prefix.
       const expectedPrefix = `${c.project_id}/characters/${c.id}-`;
       if (!data.path.startsWith(expectedPrefix)) {
         throw new Error("Portrait candidate does not belong to this character.");
       }
-      const { data: signed, error: signErr } = await supabaseAdmin.storage
-        .from("storyboards").createSignedUrl(data.path, 60 * 60 * 24 * 30);
-      if (signErr || !signed?.signedUrl) {
+      // Copy the candidate to a stable canonical portrait path so the approved
+      // image survives even if candidate objects are cleaned up later, and so
+      // refreshPortraitUrl can re-sign it indefinitely.
+      const stablePath = `${c.project_id}/characters/${c.id}-portrait-${data.seed}.png`;
+      const { data: dl, error: dlErr } = await supabaseAdmin.storage
+        .from("storyboards").download(data.path);
+      if (dlErr || !dl) {
         throw new Error("Selected portrait is no longer available. Regenerate the grid and try again.");
       }
+      const bytes = new Uint8Array(await dl.arrayBuffer());
+      const { error: upErr } = await supabaseAdmin.storage
+        .from("storyboards")
+        .upload(stablePath, bytes, { contentType: "image/png", upsert: true });
+      if (upErr) throw new Error(`Could not save portrait: ${upErr.message}`);
+      const { data: signed, error: signErr } = await supabaseAdmin.storage
+        .from("storyboards").createSignedUrl(stablePath, 60 * 60 * 24 * 30);
+      if (signErr || !signed?.signedUrl) {
+        throw new Error("Could not sign approved portrait URL.");
+      }
       finalUrl = signed.signedUrl;
+      finalPath = stablePath;
     }
     if (!finalUrl) throw new Error("No portrait URL to approve.");
-    const { data: row, error } = await context.supabase
+
+    // Use the admin client for the persistence write so RLS on `characters`
+    // (owner-only) doesn't silently drop approvals from collaborators who
+    // have edit rights via can_edit_project. We already verified ownership /
+    // edit access in loadOwnedCharacter.
+    const { data: row, error } = await supabaseAdmin
       .from("characters")
       .update({
         portrait_url: finalUrl,
         portrait_seed: data.seed,
-        ...(data.path ? { portrait_path: data.path } : {}),
+        ...(finalPath ? { portrait_path: finalPath } : {}),
       } as any)
       .eq("id", c.id)
       .select()
       .single();
     if (error) throw new Error(error.message);
-    return { row, seed: data.seed };
+    if (!row) throw new Error("Portrait approval did not persist. Please try again.");
+    return { row, seed: data.seed, path: finalPath };
   });
 
 
