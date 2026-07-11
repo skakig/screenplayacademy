@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/_authenticated/vault/$projectId")({
       },
     ],
   }),
-  component: VaultPage,
+  component: () => (<RouteReadinessGate to="/vault/$projectId"><VaultPage /></RouteReadinessGate>),
   errorComponent: ({ error }) => (
     <div className="p-8 text-sm text-destructive">Something broke: {error.message}</div>
   ),

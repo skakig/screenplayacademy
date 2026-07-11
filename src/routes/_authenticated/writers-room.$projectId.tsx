@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 import { useQuery } from "@tanstack/react-query";
 import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
@@ -34,7 +35,7 @@ import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/writers-room/$projectId")({
   head: () => ({ meta: [{ title: "Writers' Room — SceneSmith Studio" }] }),
-  component: GatedWritersRoom,
+  component: () => (<RouteReadinessGate to="/writers-room/$projectId"><GatedWritersRoom /></RouteReadinessGate>),
   errorComponent: RouteErrorBoundary,
 });
 
