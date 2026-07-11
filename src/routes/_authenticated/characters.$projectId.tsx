@@ -63,6 +63,7 @@ const STORY_FUNCTIONS: { key: StoryFunctionKey; label: string }[] = [
 
 function CharactersPage() {
   const { projectId } = Route.useParams();
+  const navigate = useNavigate();
   const search = useSearch({ from: "/_authenticated/characters/$projectId" }) as { merge?: string };
   const mergeDebug = search.merge === "1";
   const [mergeOpen, setMergeOpen] = useState(false);
