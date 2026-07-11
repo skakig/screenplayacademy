@@ -512,7 +512,7 @@ function FilterRow({
 }
 
 function CharacterCard({
-  c, rels, scenes, bulkMode, bulkSelected, onBulkToggle, onOpen, onRename, onDelete,
+  c, projectId, rels, scenes, bulkMode, bulkSelected, onBulkToggle, onOpen, onRename, onDelete,
 }: any) {
   const pct = completenessPct(c);
   const status = pct >= 75 ? "Strong" : pct >= 40 ? "Developing" : "Needs Work";
