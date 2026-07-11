@@ -1084,9 +1084,16 @@ function Editor() {
         open={storyBuilderOpen}
         onOpenChange={setStoryBuilderOpen}
       />
-      <FocusPill />
+      <FocusAccessoryBar
+        currentBlockType={activeBlockType}
+        hasFocus={!!activeMeta}
+        onCycleType={cmdCycleType}
+        onNewLine={cmdNewLine}
+        onAiContinue={cmdAiContinue}
+        aiBusy={aiContinueBusy}
+      />
       <FirstRunModeDialog />
-      <WriterDeskNewMenu projectId={projectId} />
+      {!focus && <WriterDeskNewMenu projectId={projectId} />}
     </AppShell>
   );
 }
