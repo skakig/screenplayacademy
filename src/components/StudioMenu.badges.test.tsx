@@ -131,23 +131,24 @@ describe("StudioMenu StateBadges — order across tiers and scenarios", () => {
 });
 
 describe("StudioMenu StateBadges — tier lock coverage", () => {
+  const isLocked = (item: Item, tier: Tier) => {
+    const html = renderBadges(item, tier, "p", true);
+    const label = item.feature ? TIER_LABEL[FEATURE_MIN_TIER[item.feature]] : "";
+    return html.includes("lucide-lock") && html.includes(label);
+  };
+
   it("free tier locks pitch, table_read, storyboard, writers_room", () => {
-    const html = MENU_ITEMS.filter((i) => i.feature).map(
-      (i) => `${i.label}:${renderBadges(i, "free", "p", true).includes("Lock") || renderBadges(i, "free", "p", true).includes(TIER_LABEL[FEATURE_MIN_TIER[i.feature!]])}`,
-    );
-    expect(html).toEqual([
-      "Pitch Deck:true",
-      "Table Read:true",
-      "Shot Wall:true",
-      "Writers' Room:true",
+    const results = MENU_ITEMS.filter((i) => i.feature).map((i) => ({ label: i.label, locked: isLocked(i, "free") }));
+    expect(results).toEqual([
+      { label: "Pitch Deck", locked: true },
+      { label: "Table Read", locked: true },
+      { label: "Shot Wall", locked: true },
+      { label: "Writers' Room", locked: true },
     ]);
   });
 
   it("creator tier unlocks pitch but still locks pro/studio features", () => {
-    const results = MENU_ITEMS.filter((i) => i.feature).map((i) => {
-      const html = renderBadges(i, "creator", "p", true);
-      return { label: i.label, locked: html.includes("Lock") };
-    });
+    const results = MENU_ITEMS.filter((i) => i.feature).map((i) => ({ label: i.label, locked: isLocked(i, "creator") }));
     expect(results).toEqual([
       { label: "Pitch Deck", locked: false },
       { label: "Table Read", locked: true },
@@ -157,10 +158,7 @@ describe("StudioMenu StateBadges — tier lock coverage", () => {
   });
 
   it("pro tier unlocks pitch + table_read + storyboard, still locks writers_room", () => {
-    const results = MENU_ITEMS.filter((i) => i.feature).map((i) => ({
-      label: i.label,
-      locked: renderBadges(i, "pro", "p", true).includes("Lock"),
-    }));
+    const results = MENU_ITEMS.filter((i) => i.feature).map((i) => ({ label: i.label, locked: isLocked(i, "pro") }));
     expect(results).toEqual([
       { label: "Pitch Deck", locked: false },
       { label: "Table Read", locked: false },
@@ -170,9 +168,7 @@ describe("StudioMenu StateBadges — tier lock coverage", () => {
   });
 
   it("studio tier unlocks every feature", () => {
-    const anyLocked = MENU_ITEMS.filter((i) => i.feature).some((i) =>
-      renderBadges(i, "studio", "p", true).includes("Lock"),
-    );
+    const anyLocked = MENU_ITEMS.filter((i) => i.feature).some((i) => isLocked(i, "studio"));
     expect(anyLocked).toBe(false);
   });
 });
