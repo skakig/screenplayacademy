@@ -540,6 +540,7 @@ export const i18nStrings = {
   "collab.acceptInvite.missingTokenTitle": "Invite link is missing a token",
   "collab.acceptInvite.missingTokenBody":
     "Open the full link you were sent — the token at the end is required.",
+  "collab.acceptInvite.needsSignIn": "Sign in to accept this invite…",
 
   // Writer modes: Focus / Basic / Advanced
   "mode.focus": "Focus",
