@@ -579,6 +579,14 @@ function CharacterCard({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onSelect={onOpen}><FileText className="h-3.5 w-3.5 mr-2" />Open profile</DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      to="/characters/$projectId/build/$characterId"
+                      params={{ projectId, characterId: c.id }}
+                    >
+                      <Sparkles className="h-3.5 w-3.5 mr-2" />Guided build
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onSelect={onRename}><PencilLine className="h-3.5 w-3.5 mr-2" />Rename</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
