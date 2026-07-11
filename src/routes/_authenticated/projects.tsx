@@ -21,6 +21,7 @@ function Projects() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  const [inviteProjectId, setInviteProjectId] = useState<string | null>(null);
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
