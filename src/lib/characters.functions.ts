@@ -715,3 +715,158 @@ export const listProjectCharacters = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
+// ============= Style import across projects =============
+// Allow a writer to reuse portrait + voice settings from any project they can
+// access. Reads are performed with the user's supabase client so RLS enforces
+// membership on both source and target.
+
+const PORTRAIT_STYLE_FIELDS = [
+  "visual_description",
+  "visual_symbol",
+  "portrait_url",
+  "portrait_path",
+  "portrait_seed",
+  "movement_style",
+] as const;
+
+const VOICE_STYLE_FIELDS = [
+  "elevenlabs_voice_id",
+  "voice_summary",
+  "voice_style",
+  "voice_archetype",
+  "humor_style",
+  "conflict_style",
+] as const;
+
+export const listStyleSourceProjects = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ excludeProjectId: z.string().uuid().optional() }).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("projects")
+      .select("id, title, metadata, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(100);
+    if (error) throw new Error(error.message);
+    return (rows ?? [])
+      .filter((r: any) => r.id !== data.excludeProjectId)
+      .map((r: any) => ({
+        id: r.id as string,
+        title: (r.title as string) ?? "Untitled",
+        cast_style_preset: (r.metadata?.cast_style_preset ?? null) as string | null,
+        has_visual_style:
+          !!r.metadata?.visual_style && Object.keys(r.metadata.visual_style).length > 0,
+        updated_at: r.updated_at as string | null,
+      }));
+  });
+
+export const listStyleSourceCharacters = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ sourceProjectId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const cols = [
+      "id",
+      "name",
+      "role",
+      "archetype",
+      ...PORTRAIT_STYLE_FIELDS,
+      ...VOICE_STYLE_FIELDS,
+    ].join(", ");
+    const { data: rows, error } = await context.supabase
+      .from("characters")
+      .select(cols)
+      .eq("project_id", data.sourceProjectId)
+      .is("quarantined_at", null)
+      .order("name");
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((c: any) => ({
+      ...c,
+      has_portrait: !!(c.portrait_url || c.portrait_path),
+      has_voice: !!(c.elevenlabs_voice_id || c.voice_summary),
+    }));
+  });
+
+const ImportProjectStyleInput = z.object({
+  targetProjectId: z.string().uuid(),
+  sourceProjectId: z.string().uuid(),
+  includePreset: z.boolean().default(true),
+  includeVisualStyle: z.boolean().default(true),
+});
+
+export const importProjectStyleSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => ImportProjectStyleInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: src, error: srcErr } = await context.supabase
+      .from("projects").select("id, metadata").eq("id", data.sourceProjectId).maybeSingle();
+    if (srcErr) throw new Error(srcErr.message);
+    if (!src) throw new Error("Source project not readable");
+    const { data: tgt, error: tgtErr } = await context.supabase
+      .from("projects").select("id, metadata").eq("id", data.targetProjectId).maybeSingle();
+    if (tgtErr) throw new Error(tgtErr.message);
+    if (!tgt) throw new Error("Target project not editable");
+
+    const srcMeta = ((src as any).metadata ?? {}) as Record<string, any>;
+    const nextMeta: Record<string, any> = { ...((tgt as any).metadata ?? {}) };
+    if (data.includePreset && srcMeta.cast_style_preset) {
+      nextMeta.cast_style_preset = srcMeta.cast_style_preset;
+    }
+    if (data.includeVisualStyle && srcMeta.visual_style) {
+      nextMeta.visual_style = srcMeta.visual_style;
+    }
+    const { error: upErr } = await context.supabase
+      .from("projects").update({ metadata: nextMeta } as any).eq("id", data.targetProjectId);
+    if (upErr) throw new Error(upErr.message);
+    return {
+      ok: true,
+      cast_style_preset: nextMeta.cast_style_preset ?? null,
+      visual_style: nextMeta.visual_style ?? null,
+    };
+  });
+
+const ImportCharacterStyleInput = z.object({
+  targetCharacterId: z.string().uuid(),
+  sourceCharacterId: z.string().uuid(),
+  includePortrait: z.boolean().default(true),
+  includeVoice: z.boolean().default(true),
+});
+
+export const importCharacterStyleFromSource = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => ImportCharacterStyleInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const cols = ["id", "project_id", ...PORTRAIT_STYLE_FIELDS, ...VOICE_STYLE_FIELDS].join(", ");
+    const { data: src, error: srcErr } = await context.supabase
+      .from("characters").select(cols).eq("id", data.sourceCharacterId).maybeSingle();
+    if (srcErr) throw new Error(srcErr.message);
+    if (!src) throw new Error("Source character not readable");
+
+    // Ensure target is editable via loadOwnedCharacter (throws otherwise).
+    await loadOwnedCharacter(context, data.targetCharacterId);
+
+    const patch: Record<string, any> = {};
+    if (data.includePortrait) {
+      for (const f of PORTRAIT_STYLE_FIELDS) {
+        const v = (src as any)[f];
+        if (v !== null && v !== undefined && v !== "") patch[f] = v;
+      }
+    }
+    if (data.includeVoice) {
+      for (const f of VOICE_STYLE_FIELDS) {
+        const v = (src as any)[f];
+        if (v !== null && v !== undefined && v !== "") patch[f] = v;
+      }
+    }
+    if (Object.keys(patch).length === 0) {
+      return { ok: true, updated: 0 };
+    }
+    const { data: row, error: upErr } = await context.supabase
+      .from("characters").update(patch).eq("id", data.targetCharacterId).select().single();
+    if (upErr) throw new Error(upErr.message);
+    return { ok: true, updated: Object.keys(patch).length, row };
+  });
