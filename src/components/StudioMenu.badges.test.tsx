@@ -34,7 +34,7 @@ const MENU_ITEMS: Item[] = [
   { label: "Scene Board", needsProject: true, needsData: "scenes" },
   { label: "Scene Vault", needsProject: true },
   { label: "Story Spine", needsProject: true },
-  { label: "Characters", needsProject: true, needsData: "characters" },
+  { label: "Characters", needsProject: true },
   { label: "Dramatic Pulse", needsProject: true, needsData: "scenes" },
   { label: "Pitch Deck", needsProject: true, feature: "pitch", needsData: "script" },
   { label: "Table Read", needsProject: true, feature: "table_read", needsData: "characters", experimental: true },
@@ -182,7 +182,7 @@ describe("StudioMenu StateBadges — needs-data suppression", () => {
   });
 
   it("shows 'Needs …' when project exists", () => {
-    const item = MENU_ITEMS.find((i) => i.label === "Characters")!;
+    const item = MENU_ITEMS.find((i) => i.label === "Table Read")!;
     const html = renderBadges(item, "free", "p", true);
     expect(html).toContain("Needs characters");
     expect(html).not.toContain("Pick a project");

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChevronDown, ChevronRight, Check, Circle, Sparkles, Users, GitBranch, Layers, Film, ArrowRight } from "lucide-react";
 import type { Block } from "@/lib/editor/manuscriptAnalyzer";
 import { buildOutline, tallyCharacters } from "@/lib/editor/manuscriptAnalyzer";
+import { useOpenCharacterBuilder } from "@/hooks/useOpenCharacterBuilder";
 
 type Props = {
   projectId: string;
@@ -23,6 +24,7 @@ type Section = {
 
 export function StoryBuilderPanel({ projectId, blocks, onOpenStoryBuilder }: Props) {
   const [openKey, setOpenKey] = useState<string | null>("foundation");
+  const { openCharacterBuilder, loading: characterLoading } = useOpenCharacterBuilder({ projectId });
 
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
@@ -85,13 +87,14 @@ export function StoryBuilderPanel({ projectId, blocks, onOpenStoryBuilder }: Pro
               ))}
             </ul>
           )}
-          <Link
-            to="/characters/$projectId"
-            params={{ projectId }}
+          <button
+            type="button"
+            onClick={openCharacterBuilder}
+            disabled={characterLoading}
             className="w-full inline-flex items-center justify-center gap-1.5 text-[11px] py-1.5 rounded-md bg-card/60 border border-border/60 hover:bg-card transition-colors text-foreground/85"
           >
             Open Character Intelligence <ArrowRight className="h-3 w-3" />
-          </Link>
+          </button>
         </div>
       ),
     },

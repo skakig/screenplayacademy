@@ -1,7 +1,6 @@
 // Characters Rebuild — Pass 3 (Cast landing).
 // See docs/CHARACTERS_REBUILD.md.
 import { createFileRoute, Link, useSearch, useNavigate } from "@tanstack/react-router";
-import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -37,19 +36,19 @@ export const Route = createFileRoute("/_authenticated/characters/$projectId")({
   head: () => ({ meta: [{ title: "Characters — SceneSmith Studio" }] }),
   validateSearch: (s: Record<string, unknown>): { merge?: "1" } =>
     s.merge === "1" || s.merge === 1 ? { merge: "1" } : {},
-  component: () => (<RouteReadinessGate to="/characters/$projectId"><CharactersPage /></RouteReadinessGate>),
+  component: CharactersPage,
   errorComponent: RouteErrorBoundary,
 });
 
-type ImportanceKey = "lead" | "supporting" | "minor" | "background";
+type ImportanceKey = "main" | "supporting" | "minor" | "unassigned";
 type StoryFunctionKey =
   | "protagonist" | "antagonist" | "mentor" | "ally" | "love_interest" | "comic_relief" | "custom";
 
 const IMPORTANCE: { key: ImportanceKey; label: string }[] = [
-  { key: "lead", label: "Lead" },
+  { key: "main", label: "Lead" },
   { key: "supporting", label: "Supporting" },
   { key: "minor", label: "Minor" },
-  { key: "background", label: "Background" },
+  { key: "unassigned", label: "Unassigned" },
 ];
 
 const STORY_FUNCTIONS: { key: StoryFunctionKey; label: string }[] = [
@@ -149,7 +148,7 @@ function CharactersPage() {
     let leads = 0, supporting = 0, needReview = 0;
     for (const c of characters) {
       const imp = (c.importance ?? "").toLowerCase();
-      if (imp === "lead") leads++;
+      if (imp === "main") leads++;
       else if (imp === "supporting") supporting++;
       if (completenessPct(c) < 25) needReview++;
     }
@@ -649,11 +648,11 @@ function CharacterCard({
 
 function ImportanceChip({ level }: { level: string }) {
   const map: Record<string, { label: string; cls: string }> = {
-    lead:        { label: "Lead",        cls: "bg-primary/15 text-primary border-primary/40" },
+    main:        { label: "Lead",        cls: "bg-primary/15 text-primary border-primary/40" },
     supporting:  { label: "Supporting",  cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" },
     minor:       { label: "Minor",       cls: "bg-secondary text-foreground/80 border-border/60" },
     bit:         { label: "Bit",         cls: "bg-secondary text-foreground/80 border-border/60" },
-    background:  { label: "Background",  cls: "bg-secondary/50 text-muted-foreground border-border/50" },
+    unassigned:  { label: "Unassigned",  cls: "bg-secondary/50 text-muted-foreground border-border/50" },
     antagonist:  { label: "Antagonist",  cls: "bg-rose-500/10 text-rose-400 border-rose-500/30" },
   };
   const cfg = map[level] ?? { label: level, cls: "bg-secondary text-foreground/80 border-border/60" };

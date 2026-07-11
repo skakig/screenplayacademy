@@ -19,17 +19,12 @@ import { toast } from "sonner";
 import { upsertCharacter, generateFullCharacter, generatePortrait } from "@/lib/characters.functions";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
-import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 
 export const Route = createFileRoute(
   "/_authenticated/characters/$projectId/build/$characterId",
 )({
   head: () => ({ meta: [{ title: "Build Character — SceneSmith Studio" }] }),
-  component: () => (
-    <RouteReadinessGate to="/characters/$projectId">
-      <GuidedBuilderPage />
-    </RouteReadinessGate>
-  ),
+  component: GuidedBuilderPage,
   errorComponent: RouteErrorBoundary,
 });
 
@@ -75,7 +70,7 @@ const STEPS: Step[] = [
     ],
   },
   {
-    field: "moral_pressure",
+    field: "act2_pressure",
     title: "External Pressure",
     subtitle: "What stands in their way",
     question: (n) => `What outside force is squeezing ${n} right now?`,
@@ -238,10 +233,10 @@ function GuidedBuilderPage() {
 
   const importance = (character?.importance || "").toLowerCase();
   const importanceLabel =
-    importance === "lead" ? "Lead Character" :
+    importance === "main" ? "Lead Character" :
     importance === "supporting" ? "Supporting" :
     importance === "minor" ? "Minor" :
-    importance === "background" ? "Background" : "Lead Character";
+    importance === "unassigned" ? "Unassigned" : "Lead Character";
 
   const displayName = (drafts.name || character?.name || "Untitled").toString();
 
@@ -714,7 +709,7 @@ function GuidedBuilderPage() {
             />
             <SnapshotRow
               icon={Crosshair} tone="text-primary" label="Core Tension"
-              value={drafts.moral_pressure ?? character?.moral_pressure}
+              value={drafts.act2_pressure ?? character?.act2_pressure}
               empty="Add the pressure they face."
             />
             <SnapshotRow

@@ -20,6 +20,7 @@ import { SceneDataCard } from "@/components/editor/coach/SceneDataCard";
 import { AskCoachInput } from "@/components/editor/coach/AskCoachInput";
 import { StoryBuilderPanel } from "@/components/editor/story-builder/StoryBuilderPanel";
 import { LevelIntegrationPanel } from "@/components/editor/LevelIntegrationPanel";
+import { useOpenCharacterBuilder } from "@/hooks/useOpenCharacterBuilder";
 
 type Props = {
   projectId: string;
@@ -84,6 +85,7 @@ export function CoachPane({
   const outline = useMemo(() => buildOutline(blocks), [blocks]);
   const currentLabel = activeBlockType ? BLOCK_LABEL[activeBlockType] ?? activeBlockType : "—";
   const nextLabel = activeBlockType ? BLOCK_LABEL[nextBlockTypeAfter(activeBlockType)] ?? "" : "";
+  const { openCharacterBuilder, loading: characterLoading } = useOpenCharacterBuilder({ projectId });
 
   const [notes, setNotes] = useState<string>(() => {
     if (typeof window === "undefined") return "";
@@ -196,8 +198,8 @@ export function CoachPane({
             ))}
           </ul>
         )}
-        <Button asChild variant="outline" size="sm" className="w-full">
-          <Link to="/characters/$projectId" params={{ projectId }}>Open Casting Wall</Link>
+        <Button variant="outline" size="sm" className="w-full" onClick={openCharacterBuilder} disabled={characterLoading}>
+          Open Character Builder
         </Button>
       </TabsContent>
 

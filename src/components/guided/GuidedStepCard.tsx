@@ -24,6 +24,7 @@ import {
 } from "@/lib/academy.functions";
 import type { GuidedStepMeta } from "./stepMeta";
 import { StepVersionHistory } from "./StepVersionHistory";
+import { useOpenCharacterBuilder } from "@/hooks/useOpenCharacterBuilder";
 
 type Step = {
   id: string;
@@ -85,6 +86,7 @@ export function GuidedStepCard({
   const applyFn = useServerFn(applyStepOutput);
   const versionFn = useServerFn(saveStepVersion);
   const aiFn = useServerFn(meta.aiHelper ? AI_HELPERS[meta.aiHelper] : aiGenerateLoglineOptions);
+  const { openCharacterBuilder, loading: characterLoading } = useOpenCharacterBuilder({ projectId });
 
   // Scroll-into-view if URL hash targets this step
   useEffect(() => {
@@ -269,12 +271,15 @@ export function GuidedStepCard({
                   {meta.aiLabel ?? "Help me"}
                 </Button>
               )}
-              {meta.destination && (
+              {meta.destination === "characters" ? (
+                <Button size="sm" variant="ghost" onClick={openCharacterBuilder} disabled={characterLoading}>
+                  Open characters <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                </Button>
+              ) : meta.destination && (
                 <Button asChild size="sm" variant="ghost">
                   <Link
                     to={
                       meta.destination === "editor" ? "/editor/$projectId" :
-                      meta.destination === "characters" ? "/characters/$projectId" :
                       meta.destination === "story-arc" ? "/story-arc/$projectId" :
                       meta.destination === "scenes" ? "/scenes/$projectId" :
                       meta.destination === "pitch" ? "/pitch/$projectId" :
