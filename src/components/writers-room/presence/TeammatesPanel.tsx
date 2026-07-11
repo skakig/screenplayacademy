@@ -151,6 +151,7 @@ function TeammateRow({
 }) {
   const name = presenceDisplayName(peer);
   const typing = !!peer.is_typing_scene_id;
+  const idle = !!peer.is_idle && !typing;
   const inScript = peer.active_area === "script";
   const blockLabel =
     block?.block_type && BLOCK_LABEL[block.block_type as keyof typeof BLOCK_LABEL]
@@ -158,14 +159,14 @@ function TeammateRow({
       : block?.block_type ?? null;
 
   return (
-    <li className="flex items-start gap-3 px-4 py-3">
+    <li className={cn("flex items-start gap-3 px-4 py-3 transition-opacity", idle && "opacity-70")}>
       <div className="relative shrink-0">
         <PresenceAvatar peer={peer} size="md" ring={false} />
         {color && !peer.is_self ? (
           <span
             aria-hidden
             className="absolute -left-2 top-1 bottom-1 w-[3px] rounded-full"
-            style={{ background: color }}
+            style={{ background: color, opacity: idle ? 0.5 : 1 }}
           />
         ) : null}
       </div>
@@ -183,6 +184,13 @@ function TeammateRow({
               className={cn("h-4 px-1.5 text-[10px] font-normal", "bg-primary/10 text-primary")}
             >
               {t("collab.presence.typingNow")}
+            </Badge>
+          ) : idle ? (
+            <Badge
+              variant="outline"
+              className="h-4 px-1.5 text-[10px] font-normal text-muted-foreground border-border/60"
+            >
+              {t("collab.presence.idle")}
             </Badge>
           ) : null}
         </div>

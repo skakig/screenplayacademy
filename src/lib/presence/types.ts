@@ -34,4 +34,12 @@ export interface ProjectPresenceState {
   last_active_at: string;
 }
 
-export type PresencePeer = ProjectPresenceState & { is_self: boolean };
+export type PresencePeer = ProjectPresenceState & {
+  is_self: boolean;
+  /**
+   * Derived client-side. True when the peer hasn't refreshed their presence
+   * payload for longer than the idle threshold. Computed on a slow tick so
+   * it never flickers between key presses.
+   */
+  is_idle?: boolean;
+};

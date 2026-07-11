@@ -29,6 +29,14 @@ const TYPING_CLEAR_MS = 3500;
 // broadcast "typing=true" again. Prevents rapid true/false/true churn.
 const TYPING_MIN_OFF_MS = 1200;
 const LAST_SEEN_TICK_MS = 60_000;
+/**
+ * How long a peer can go without refreshing their presence payload before
+ * we render them as idle. Comfortably longer than TRACK_THROTTLE_MS +
+ * TYPING_CLEAR_MS so a normal typing burst never trips it.
+ */
+const IDLE_AFTER_MS = 45_000;
+/** How often we re-derive idle state. Kept slow to avoid re-render churn. */
+const IDLE_TICK_MS = 10_000;
 
 /**
  * Lightweight project-scoped Supabase Realtime presence hook.
@@ -114,10 +122,14 @@ export function usePresenceChannel({ projectId, role, self }: Options) {
     const sync = () => {
       const raw = channel.presenceState() as Record<string, ProjectPresenceState[]>;
       const out: PresencePeer[] = [];
+      const now = Date.now();
       for (const list of Object.values(raw)) {
         const latest = list[list.length - 1];
         if (!latest || !latest.user_id) continue;
-        out.push({ ...latest, is_self: latest.user_id === self.user_id });
+        const lastActive = Date.parse(latest.last_active_at ?? "") || 0;
+        const isSelf = latest.user_id === self.user_id;
+        const isIdle = !isSelf && lastActive > 0 && now - lastActive > IDLE_AFTER_MS;
+        out.push({ ...latest, is_self: isSelf, is_idle: isIdle });
       }
       // Deduplicate by user_id keeping the most recent last_active_at.
       const byUser = new Map<string, PresencePeer>();
@@ -149,8 +161,28 @@ export function usePresenceChannel({ projectId, role, self }: Options) {
       void supabase.rpc("update_my_project_last_seen", { _project_id: projectId });
     }, LAST_SEEN_TICK_MS);
 
+    // Slow ticker so idle status flips on its own without a fresh sync event.
+    // Only rewrites peers when at least one peer's derived idle state changed,
+    // which keeps re-renders (and any downstream flicker) to a minimum.
+    const idleTick = setInterval(() => {
+      const now = Date.now();
+      setPeers((prev) => {
+        let changed = false;
+        const next = prev.map((p) => {
+          if (p.is_self) return p;
+          const lastActive = Date.parse(p.last_active_at ?? "") || 0;
+          const idle = lastActive > 0 && now - lastActive > IDLE_AFTER_MS;
+          if (idle === !!p.is_idle) return p;
+          changed = true;
+          return { ...p, is_idle: idle };
+        });
+        return changed ? next : prev;
+      });
+    }, IDLE_TICK_MS);
+
     return () => {
       clearInterval(lastSeenInterval);
+      clearInterval(idleTick);
       if (pendingTrack.current) {
         clearTimeout(pendingTrack.current);
         pendingTrack.current = null;
