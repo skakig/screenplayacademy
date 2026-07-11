@@ -1539,6 +1539,12 @@ function GuidedBuilderPage() {
         projectId={projectId}
         initial={((project as any)?.metadata?.visual_style ?? {}) as any}
       />
+      <StyleImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        targetProjectId={projectId}
+        targetCharacterId={characterId}
+      />
     </div>
 
   );
