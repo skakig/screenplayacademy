@@ -609,12 +609,23 @@ function ImportanceChip({ level }: { level: string }) {
 function Inspector({ c, onOpen, onTruthCheck }: { c: any; onOpen: () => void; onTruthCheck: () => void }) {
   if (!c) {
     return (
-      <Card className="p-5 border-dashed text-center">
-        <Sparkles className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
-        <p className="text-xs text-muted-foreground">Select a character to inspect.</p>
+      <Card className="p-8 border-dashed text-center flex flex-col items-center">
+        <div className="relative mb-6">
+          <div className="w-20 h-20 border-2 border-dashed border-border rounded-full flex items-center justify-center">
+            <User className="w-8 h-8 text-muted-foreground/30" strokeWidth={1} />
+          </div>
+          <div className="absolute -bottom-1 -right-1 bg-primary w-5 h-5 rounded-full flex items-center justify-center border-2 border-background">
+            <Sparkles className="w-2.5 h-2.5 text-primary-foreground" />
+          </div>
+        </div>
+        <h3 className="font-display text-lg text-foreground/80 mb-2">Select Character</h3>
+        <p className="text-xs text-muted-foreground leading-relaxed max-w-[220px]">
+          Tap anyone on the wall to inspect their metrics, story function, and evolving relationships.
+        </p>
       </Card>
     );
   }
+
   return (
     <Card className="p-4">
       <div className="flex items-center gap-3">
