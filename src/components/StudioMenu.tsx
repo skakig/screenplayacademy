@@ -29,6 +29,7 @@ import {
   Archive,
   Lock,
   FlaskConical,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import { useState, type ComponentProps } from "react";
@@ -52,9 +53,64 @@ type Item = {
   guidedOnly?: boolean;
   feature?: Feature;
   experimental?: boolean;
+  /** Requires an external integration to be configured before it will work end-to-end. */
+  setupRequires?: "billing";
   /** Hint shown as a "needs …" chip when a project exists but likely has no data yet. */
   needsData?: "scenes" | "characters" | "script";
 };
+
+/**
+ * Standardized state chips rendered in a fixed order across every Studio Menu item:
+ *   1. Tier lock  →  2. Beta  →  3. Setup required  →  4. Pick a project  →  5. Needs data
+ * Colors and sizes are tokenized so Free/Creator/Pro/Studio see the same visual language.
+ */
+function StateBadges(props: {
+  locked: boolean;
+  requiredTier: Tier | null;
+  experimental?: boolean;
+  setupRequired?: boolean;
+  missingProject: boolean;
+  needsData?: Item["needsData"];
+}) {
+  const { locked, requiredTier, experimental, setupRequired, missingProject, needsData } = props;
+  return (
+    <>
+      {locked && requiredTier && (
+        <Badge
+          variant="outline"
+          className="text-[9px] px-1.5 py-0 gap-0.5 border-amber-500/40 text-amber-600 dark:text-amber-400"
+        >
+          <Lock className="h-2.5 w-2.5" />
+          {TIER_LABEL[requiredTier]}
+        </Badge>
+      )}
+      {experimental && (
+        <Badge
+          variant="outline"
+          className="text-[9px] px-1.5 py-0 gap-0.5 border-purple-500/40 text-purple-600 dark:text-purple-400"
+        >
+          <FlaskConical className="h-2.5 w-2.5" />
+          Beta
+        </Badge>
+      )}
+      {setupRequired && (
+        <Badge
+          variant="outline"
+          className="text-[9px] px-1.5 py-0 gap-0.5 border-sky-500/40 text-sky-600 dark:text-sky-400"
+        >
+          <Wrench className="h-2.5 w-2.5" />
+          Setup
+        </Badge>
+      )}
+      {missingProject && (
+        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Pick a project</Badge>
+      )}
+      {!missingProject && needsData && (
+        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Needs {needsData}</Badge>
+      )}
+    </>
+  );
+}
 
 const GROUPS: { key: string; label: string; items: Item[] }[] = [
   {
