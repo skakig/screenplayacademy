@@ -232,6 +232,11 @@ export function StoryNavigatorPane({
                                   aria-label="Missing scene purpose/conflict/turn"
                                 />
                               )}
+                              <ScenePresenceAvatars
+                                sceneTitle={scene.title}
+                                blocks={blocks}
+                                className="ml-1"
+                              />
                               {isActive && <ChevronRight className="h-3 w-3 opacity-70 shrink-0" />}
                             </div>
                             <div className="flex items-center gap-1.5 mt-1 ml-[18px]">
