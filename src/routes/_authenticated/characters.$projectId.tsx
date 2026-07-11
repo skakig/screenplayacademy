@@ -49,6 +49,19 @@ function CharactersPage() {
   const [mergeOpen, setMergeOpen] = useState(false);
   const [inboxOpen, setInboxOpen] = useState(false);
   const qc = useQueryClient();
+
+  const { data: pendingCandidateCount = 0 } = useQuery<number>({
+    queryKey: ["character-candidate-count", projectId],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("character_candidates")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("status", "pending");
+      return count ?? 0;
+    },
+    refetchInterval: 30000,
+  });
   const callUpsert = useServerFn(upsertCharacter);
   const callDel = useServerFn(deleteCharacter);
   const callBulk = useServerFn(bulkDeleteCharacters);
