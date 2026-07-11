@@ -63,6 +63,7 @@ export function usePresenceChannel({ projectId, role, self }: Options) {
       active_scene_id: null,
       active_scene_label: null,
       is_typing_scene_id: null,
+      active_block_id: null,
       last_active_at: new Date().toISOString(),
     };
   }, [canSubscribe, self, role, projectId]);
