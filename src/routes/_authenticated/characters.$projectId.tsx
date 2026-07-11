@@ -177,8 +177,11 @@ function CharactersPage() {
     mutationFn: async () => callUpsert({ data: { project_id: projectId, patch: { name: "New Character" } } }),
     onSuccess: (row: any) => {
       invalidate();
-      setSelectedId(row.id);
-      setDialogOpen(true);
+      // Pass 4: new characters go straight into the guided builder route.
+      navigate({
+        to: "/characters/$projectId/build/$characterId",
+        params: { projectId, characterId: row.id },
+      });
     },
     onError: (e: any) => toast.error(e.message),
   });
