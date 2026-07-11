@@ -225,6 +225,7 @@ export function StudioMenu() {
                     const active = currentPath === href;
 
                     const requiredTier = it.feature ? FEATURE_MIN_TIER[it.feature] : null;
+                    const setupRequired = it.setupRequires === "billing" && !stripeReady;
 
                     const inner = (
                       <div className={`flex items-start gap-3 rounded-md px-2.5 py-2 transition-colors ${
@@ -241,24 +242,14 @@ export function StudioMenu() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-sm font-medium truncate">{it.label}</span>
-                            {locked && requiredTier && (
-                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-0.5 border-amber-500/40 text-amber-600 dark:text-amber-400">
-                                <Lock className="h-2.5 w-2.5" />
-                                {TIER_LABEL[requiredTier]}
-                              </Badge>
-                            )}
-                            {it.experimental && (
-                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-0.5 border-purple-500/40 text-purple-600 dark:text-purple-400">
-                                <FlaskConical className="h-2.5 w-2.5" />
-                                Beta
-                              </Badge>
-                            )}
-                            {missingProject && (
-                              <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Pick a project</Badge>
-                            )}
-                            {!missingProject && it.needsData && (
-                              <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Needs {it.needsData}</Badge>
-                            )}
+                            <StateBadges
+                              locked={locked}
+                              requiredTier={requiredTier}
+                              experimental={it.experimental}
+                              setupRequired={setupRequired}
+                              missingProject={missingProject}
+                              needsData={it.needsData}
+                            />
                           </div>
                           <div className="text-[11px] text-muted-foreground leading-snug line-clamp-2">
                             {it.desc}
