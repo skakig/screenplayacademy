@@ -2,7 +2,7 @@
 // Cinematic full-screen route inspired by the approved iPad mockup.
 // See docs/CHARACTERS_REBUILD.md.
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,7 +18,8 @@ import {
   GraduationCap, Flame, Users, BookOpen, AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenStatus } from "@/lib/characters.functions";
+import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenStatus, setCastStylePreset } from "@/lib/characters.functions";
+import { getUsageSnapshot } from "@/lib/usage.functions";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { t } from "@/lib/i18n/t";
@@ -28,6 +29,7 @@ import {
   isPortraitReady,
   PORTRAIT_STRENGTH_TARGET,
 } from "@/lib/characters/portraitPrompt";
+import { CAST_STYLE_PRESETS, getCastStylePreset, DEFAULT_CAST_STYLE_PRESET, type CastStylePresetKey } from "@/lib/characters/castStylePresets";
 
 export const Route = createFileRoute(
   "/_authenticated/characters/$projectId/build/$characterId",
@@ -383,6 +385,8 @@ function GuidedBuilderPage() {
   const callFull = useServerFn(generateFullCharacter);
   const callPortrait = useServerFn(generatePortrait);
   const callImageStatus = useServerFn(getImageGenStatus);
+  const callSetPreset = useServerFn(setCastStylePreset);
+  const callUsageSnapshot = useServerFn(getUsageSnapshot);
   const { data: onboarding } = useOnboarding();
 
   const experience = String(onboarding?.writer_experience_level ?? "").toLowerCase();
@@ -390,10 +394,15 @@ function GuidedBuilderPage() {
   const isExperienced = /\b(experienced|pitching)\b/.test(experience);
 
   const { data: project } = useQuery({
-    queryKey: ["project-title", projectId],
+    queryKey: ["project-meta", projectId],
     queryFn: async () =>
-      (await supabase.from("projects").select("title").eq("id", projectId).maybeSingle()).data,
+      (await supabase.from("projects").select("title, metadata").eq("id", projectId).maybeSingle()).data,
   });
+
+  const savedPresetKey = ((project as any)?.metadata?.cast_style_preset ?? DEFAULT_CAST_STYLE_PRESET) as CastStylePresetKey;
+  const [presetKey, setPresetKey] = useState<CastStylePresetKey>(savedPresetKey);
+  // Keep local selection in sync when project loads/refetches.
+  useEffect(() => { setPresetKey(savedPresetKey); }, [savedPresetKey]);
 
   const { data: character, isLoading: characterLoading, isError: characterIsError, error: characterError } = useQuery<any>({
     queryKey: ["character", projectId, characterId],
@@ -413,6 +422,17 @@ function GuidedBuilderPage() {
     queryKey: ["image-generation-status"],
     queryFn: async () => callImageStatus(),
   });
+
+  const { data: usageSnapshot, refetch: refetchUsage } = useQuery({
+    queryKey: ["usage-snapshot"],
+    queryFn: async () => callUsageSnapshot({ data: {} }),
+  });
+  const portraitUsage = (usageSnapshot as any[] | undefined)?.find(
+    (r) => r?.feature === "character_portraits",
+  );
+  const portraitsUsed = Number(portraitUsage?.used ?? 0);
+  const portraitsLimit = Number(portraitUsage?.monthly_limit ?? 0);
+  const portraitsRemaining = Math.max(0, portraitsLimit - portraitsUsed);
 
   const [step, setStep] = useState(0);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -530,16 +550,34 @@ function GuidedBuilderPage() {
     }
   };
 
+  const changePreset = async (key: CastStylePresetKey) => {
+    setPresetKey(key);
+    try {
+      await callSetPreset({ data: { projectId, presetKey: key } });
+      qc.invalidateQueries({ queryKey: ["project-meta", projectId] });
+      toast.success(`Cast style set to ${getCastStylePreset(key).label}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not save style preset");
+    }
+  };
+
   const generatePortraitNow = async () => {
     if (imageStatus?.configured === false) {
       toast.info(t("characters.builder.portrait.unavailable"));
       return;
     }
+    if (portraitsLimit > 0 && portraitsRemaining <= 0) {
+      toast.error("You've reached your portrait generation limit for this month.", {
+        description: "Upgrade your plan or wait for the next billing cycle to generate more portraits.",
+      });
+      return;
+    }
     setPortraitBusy(true);
     try {
-      const out: any = await callPortrait({ data: { characterId } });
+      const out: any = await callPortrait({ data: { characterId, presetKey } });
       qc.invalidateQueries({ queryKey: ["character", projectId, characterId] });
       qc.invalidateQueries({ queryKey: ["characters", projectId] });
+      void refetchUsage();
       if (out?.configured === false) {
         toast.info(t("characters.builder.portrait.unavailable"));
       } else if (out?.row?.portrait_url) {
@@ -888,7 +926,9 @@ function GuidedBuilderPage() {
                     {(() => {
                       const filled = profileStrength(character as any);
                       const ready = isPortraitReady(character as any);
-                      const promptPreview = composePortraitPrompt(character as any, {});
+                      const activePreset = getCastStylePreset(presetKey);
+                      const promptPreview = composePortraitPrompt(character as any, activePreset.contract);
+                      const outOfCredits = portraitsLimit > 0 && portraitsRemaining <= 0;
                       return (
                         <>
                           <div className={`rounded-lg border px-3 py-2 text-xs ${imageStatus?.configured === false ? "border-amber-500/40 bg-amber-500/10 text-amber-500" : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"}`}>
@@ -902,15 +942,55 @@ function GuidedBuilderPage() {
                             )}
                           </div>
 
+                          <div>
+                            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                              Cast Style Preset
+                            </Label>
+                            <Select value={presetKey} onValueChange={(v) => void changePreset(v as CastStylePresetKey)}>
+                              <SelectTrigger className="mt-1.5 h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {CAST_STYLE_PRESETS.map((p) => (
+                                  <SelectItem key={p.key} value={p.key}>
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{p.label}</span>
+                                      <span className="text-[10px] text-muted-foreground">{p.description}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="mt-1 text-[10px] text-muted-foreground">
+                              Applies to every portrait in this project so the whole cast reads as one film.
+                            </p>
+                          </div>
+
                           <div className={`rounded-lg border px-3 py-2 text-xs ${ready ? "border-primary/40 bg-primary/10 text-primary" : "border-amber-500/40 bg-amber-500/10 text-amber-500"}`}>
                             {ready
                               ? t("characters.builder.portrait.gateReady")
                               : t("characters.builder.portrait.gateNeed").replace("{filled}", String(filled)).replace("{needed}", String(PORTRAIT_STRENGTH_TARGET))}
                           </div>
 
+                          {portraitsLimit > 0 && (
+                            <div className={`rounded-lg border px-3 py-2 text-xs ${outOfCredits ? "border-rose-500/40 bg-rose-500/10 text-rose-400" : "border-border/60 bg-secondary/40 text-muted-foreground"}`}>
+                              <div className="flex items-center justify-between">
+                                <span>Portrait generations this month</span>
+                                <span className="font-mono font-semibold">
+                                  {portraitsUsed} / {portraitsLimit}
+                                </span>
+                              </div>
+                              {outOfCredits ? (
+                                <p className="mt-1">Limit reached — upgrade your plan or wait for the next cycle.</p>
+                              ) : (
+                                <p className="mt-1">{portraitsRemaining} remaining on your current plan.</p>
+                              )}
+                            </div>
+                          )}
+
                           <Button
                             onClick={generatePortraitNow}
-                            disabled={portraitBusy || imageStatusLoading || imageStatus?.configured === false || !ready}
+                            disabled={portraitBusy || imageStatusLoading || imageStatus?.configured === false || !ready || outOfCredits}
                             className="w-full sm:w-auto"
                           >
                             {portraitBusy
@@ -918,6 +998,7 @@ function GuidedBuilderPage() {
                               : <Wand2 className="h-4 w-4 mr-2" />}
                             {character?.portrait_url ? "Regenerate portrait" : "Generate portrait"}
                           </Button>
+
 
                           <details className="rounded-lg border border-border/60 bg-secondary/30 p-3 text-xs">
                             <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">

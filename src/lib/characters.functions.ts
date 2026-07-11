@@ -329,18 +329,44 @@ export const suggestSceneUse = createServerFn({ method: "POST" })
 
 // ============= Portrait generation =============
 
+const PortraitInput = z.object({
+  characterId: z.string().uuid(),
+  presetKey: z.string().optional(),
+});
+
 export const generatePortrait = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => AiInput.parse(d))
+  .inputValidator((d: unknown) => PortraitInput.parse(d))
   .handler(async ({ data, context }) => {
     const c = await loadOwnedCharacter(context, data.characterId);
     const key = process.env.LOVABLE_API_KEY;
-    // Compose deterministically from the full profile + project style
-    // contract so every character in the cast reads as one film.
+
+    // Gate portrait generation against the user's monthly plan cap BEFORE
+    // spending model credits. Throws USAGE_LIMIT when the cap is reached.
+    const { consumeUsage } = await import("@/lib/usage.functions");
+    try {
+      await consumeUsage(context.supabase, "character_portraits", 1);
+    } catch (e: any) {
+      const msg = String(e?.message ?? "");
+      if (msg.startsWith("USAGE_LIMIT")) {
+        throw new Error(
+          "Portrait generation limit reached for your plan this month. Upgrade or wait for next cycle.",
+        );
+      }
+      throw e;
+    }
+
+    // Compose deterministically from the full profile + selected cast style
+    // preset so every character in the cast reads as one film.
     const { composePortraitPrompt } = await import("@/lib/characters/portraitPrompt");
+    const { getCastStylePreset } = await import("@/lib/characters/castStylePresets");
     const { data: projectRow } = await context.supabase
       .from("projects").select("*").eq("id", c.project_id).maybeSingle();
-    const style = ((projectRow as any)?.metadata?.visual_style) ?? {};
+    const meta = ((projectRow as any)?.metadata ?? {}) as Record<string, any>;
+    const presetKey = data.presetKey || meta.cast_style_preset || "ultra_realistic";
+    const preset = getCastStylePreset(presetKey);
+    // Preset provides the baseline; project metadata.visual_style overrides individual fields.
+    const style = { ...preset.contract, ...(meta.visual_style ?? {}) };
     let prompt = composePortraitPrompt(c as any, style);
     if (!prompt.trim()) {
       prompt = demoVisualPrompt(c);
@@ -349,7 +375,7 @@ export const generatePortrait = createServerFn({ method: "POST" })
     if (!key) {
       const { data: row } = await context.supabase
         .from("characters").select("*").eq("id", c.id).single();
-      return { row, demo: true, configured: false };
+      return { row, demo: true, configured: false, preset: preset.key };
     }
     const res = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
       method: "POST",
@@ -370,7 +396,9 @@ export const generatePortrait = createServerFn({ method: "POST" })
     if (b64) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
-      const path = `${c.project_id}/characters/${c.id}.png`;
+      // Cache-bust the storage path so regenerations produce a new signed URL
+      // and the browser doesn't serve the previous portrait.
+      const path = `${c.project_id}/characters/${c.id}-${Date.now()}.png`;
       const { error: upErr } = await supabaseAdmin.storage
         .from("storyboards")
         .upload(path, bytes, { contentType: "image/png", upsert: true });
@@ -387,7 +415,29 @@ export const generatePortrait = createServerFn({ method: "POST" })
     const { data: row } = await context.supabase
       .from("characters").update({ portrait_url: portraitUrl, image_prompt: prompt })
       .eq("id", c.id).select().single();
-    return { row, demo: false };
+    return { row, demo: false, preset: preset.key };
+  });
+
+// ============= Cast style preset (per project) =============
+
+const CastStyleInput = z.object({
+  projectId: z.string().uuid(),
+  presetKey: z.string().min(1).max(64),
+});
+
+export const setCastStylePreset = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => CastStyleInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: project, error } = await context.supabase
+      .from("projects").select("id, metadata").eq("id", data.projectId).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!project) throw new Error("Project not found");
+    const meta = { ...((project as any).metadata ?? {}), cast_style_preset: data.presetKey };
+    const { error: upErr } = await context.supabase
+      .from("projects").update({ metadata: meta } as any).eq("id", data.projectId);
+    if (upErr) throw new Error(upErr.message);
+    return { ok: true, presetKey: data.presetKey };
   });
 
 // ============= List characters for a project (for autocomplete) =============
