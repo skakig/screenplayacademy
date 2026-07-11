@@ -19,6 +19,7 @@ import { useOnboarding } from "@/hooks/use-onboarding";
 import { GuidedDashboard } from "@/components/dashboard/GuidedDashboard";
 import { seedGuidedSteps } from "@/lib/academy.functions";
 import { t } from "@/lib/i18n/t";
+import { VoiceCreditsPanel } from "@/components/dashboard/VoiceCreditsPanel";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Studio Lobby — SceneSmith Studio" }] }),
