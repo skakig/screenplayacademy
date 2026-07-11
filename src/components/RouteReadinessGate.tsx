@@ -4,7 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Lock, Wrench, FolderKanban, Sparkles } from "lucide-react";
-import { useRouteGate } from "@/lib/readiness/useMenuGate";
+import { useRouteGate, useCurrentProjectId } from "@/lib/readiness/useMenuGate";
 
 /**
  * Enforce Studio Menu gating at the destination route. If the gate says the
@@ -31,8 +31,9 @@ export function RouteReadinessGate({
   /** Optional custom fallback when blocked. Defaults to the standard card. */
   fallback?: (gate: NonNullable<ReturnType<typeof useRouteGate>>) => ReactNode;
 }) {
+  const routerProjectId = useCurrentProjectId();
   const gate = useRouteGate(to, projectId);
-  const activeProjectId = projectId ?? null;
+  const activeProjectId = projectId ?? routerProjectId;
 
   // Unknown route in manifest — never gate.
   if (!gate) return <>{children}</>;
@@ -60,10 +61,9 @@ export function RouteReadinessGate({
           ? FolderKanban
           : Sparkles;
 
-  const routerProjectId = gate.targetParams?.projectId ?? activeProjectId;
   const fixLinkProps: Record<string, unknown> = { to: gate.fixTo };
-  if (gate.fixTo.includes("$projectId") && routerProjectId) {
-    fixLinkProps.params = { projectId: routerProjectId };
+  if (gate.fixTo.includes("$projectId") && activeProjectId) {
+    fixLinkProps.params = { projectId: activeProjectId };
   }
 
   return (
