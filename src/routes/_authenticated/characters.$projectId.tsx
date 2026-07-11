@@ -80,6 +80,7 @@ function CharactersPage() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogPillar, setDialogPillar] = useState<string | null>(null);
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState<null | { ids: string[]; label: string }>(null);
