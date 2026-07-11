@@ -519,6 +519,75 @@ export type Database = {
         }
         Relationships: []
       }
+      character_candidates: {
+        Row: {
+          candidate_type: string
+          confidence: number
+          created_at: string
+          detected_name: string
+          dialogue_line_count: number
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          merged_into_character_id: string | null
+          normalized_name: string
+          project_id: string
+          scene_count: number
+          source_block_ids: string[]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_type?: string
+          confidence?: number
+          created_at?: string
+          detected_name: string
+          dialogue_line_count?: number
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          merged_into_character_id?: string | null
+          normalized_name: string
+          project_id: string
+          scene_count?: number
+          source_block_ids?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_type?: string
+          confidence?: number
+          created_at?: string
+          detected_name?: string
+          dialogue_line_count?: number
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          merged_into_character_id?: string | null
+          normalized_name?: string
+          project_id?: string
+          scene_count?: number
+          source_block_ids?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_candidates_merged_into_character_id_fkey"
+            columns: ["merged_into_character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_candidates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_evidence_events: {
         Row: {
           block_id: string | null
@@ -611,6 +680,44 @@ export type Database = {
           wants_from_other?: string | null
         }
         Relationships: []
+      }
+      character_repair_snapshots: {
+        Row: {
+          character_id: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          project_id: string
+          reason: string
+          snapshot: Json
+        }
+        Insert: {
+          character_id?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          project_id: string
+          reason: string
+          snapshot: Json
+        }
+        Update: {
+          character_id?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          project_id?: string
+          reason?: string
+          snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_repair_snapshots_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       character_scene_arc_states: {
         Row: {
@@ -824,6 +931,7 @@ export type Database = {
           humor_style: string | null
           id: string
           image_prompt: string | null
+          importance: string | null
           internal_need: string | null
           lies_about: string | null
           life_before_story: string | null
@@ -838,6 +946,8 @@ export type Database = {
           occupation: string | null
           portrait_url: string | null
           project_id: string
+          quarantine_reason: string | null
+          quarantined_at: string | null
           redemption_path: string | null
           relationships: string | null
           role: string | null
@@ -849,6 +959,7 @@ export type Database = {
           starting_behavior: string | null
           starting_belief: string | null
           status: string | null
+          story_function: string | null
           strengths: string | null
           subtext_pattern: string | null
           summary: string | null
@@ -915,6 +1026,7 @@ export type Database = {
           humor_style?: string | null
           id?: string
           image_prompt?: string | null
+          importance?: string | null
           internal_need?: string | null
           lies_about?: string | null
           life_before_story?: string | null
@@ -929,6 +1041,8 @@ export type Database = {
           occupation?: string | null
           portrait_url?: string | null
           project_id: string
+          quarantine_reason?: string | null
+          quarantined_at?: string | null
           redemption_path?: string | null
           relationships?: string | null
           role?: string | null
@@ -940,6 +1054,7 @@ export type Database = {
           starting_behavior?: string | null
           starting_belief?: string | null
           status?: string | null
+          story_function?: string | null
           strengths?: string | null
           subtext_pattern?: string | null
           summary?: string | null
@@ -1006,6 +1121,7 @@ export type Database = {
           humor_style?: string | null
           id?: string
           image_prompt?: string | null
+          importance?: string | null
           internal_need?: string | null
           lies_about?: string | null
           life_before_story?: string | null
@@ -1020,6 +1136,8 @@ export type Database = {
           occupation?: string | null
           portrait_url?: string | null
           project_id?: string
+          quarantine_reason?: string | null
+          quarantined_at?: string | null
           redemption_path?: string | null
           relationships?: string | null
           role?: string | null
@@ -1031,6 +1149,7 @@ export type Database = {
           starting_behavior?: string | null
           starting_belief?: string | null
           status?: string | null
+          story_function?: string | null
           strengths?: string | null
           subtext_pattern?: string | null
           summary?: string | null
@@ -2995,6 +3114,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_character_candidate: {
+        Args: { _candidate_id: string; _overrides?: Json }
+        Returns: string
+      }
       accept_project_invite: {
         Args: { _token: string }
         Returns: {
@@ -3304,6 +3427,110 @@ export type Database = {
           already_existed: boolean
           id: string
         }[]
+      }
+      restore_quarantined_character: {
+        Args: { _character_id: string }
+        Returns: {
+          act1_state: string | null
+          act2_pressure: string | null
+          age: string | null
+          alias: string | null
+          archetype: string | null
+          betrayal_triggers: string | null
+          biggest_loss: string | null
+          biggest_shame: string | null
+          character_arc: string | null
+          character_type: string | null
+          childhood: string | null
+          climax_choice: string | null
+          color_palette: string | null
+          conflict_style: string | null
+          contradiction: string | null
+          core_lie: string | null
+          core_temptation: string | null
+          core_vice: string | null
+          core_virtue: string | null
+          corruption_path: string | null
+          costume_notes: string | null
+          created_at: string
+          dark_night_state: string | null
+          defining_wound: string | null
+          directness_level: string | null
+          elevenlabs_voice_id: string | null
+          emotional_openness: string | null
+          ending_behavior: string | null
+          ending_belief: string | null
+          external_goal: string | null
+          favorite_phrases: string | null
+          fear: string | null
+          fear_response: string | null
+          final_image: string | null
+          flaws: string | null
+          forbidden_phrases: string | null
+          formative_relationship: string | null
+          group_name: string
+          habits: string | null
+          how_they_apologize: string | null
+          how_they_lie: string | null
+          how_they_threaten: string | null
+          humor_style: string | null
+          id: string
+          image_prompt: string | null
+          importance: string | null
+          internal_need: string | null
+          lies_about: string | null
+          life_before_story: string | null
+          midpoint_shift: string | null
+          might_do_under_pressure: string | null
+          moral_blind_spot: string | null
+          moral_test: string | null
+          moral_wound: string | null
+          movement_style: string | null
+          name: string
+          never_says_aloud: string | null
+          occupation: string | null
+          portrait_url: string | null
+          project_id: string
+          quarantine_reason: string | null
+          quarantined_at: string | null
+          redemption_path: string | null
+          relationships: string | null
+          role: string | null
+          secret: string | null
+          sentence_rhythm: string | null
+          signature_props: string | null
+          silence_pattern: string | null
+          speech_patterns: string | null
+          starting_behavior: string | null
+          starting_belief: string | null
+          status: string | null
+          story_function: string | null
+          strengths: string | null
+          subtext_pattern: string | null
+          summary: string | null
+          temperament: string | null
+          tmh_aspirational: number | null
+          tmh_baseline: number | null
+          tmh_shadow: number | null
+          tmh_stress: number | null
+          trust_triggers: string | null
+          updated_at: string
+          visual_description: string | null
+          visual_symbol: string | null
+          vocabulary_level: string | null
+          voice_archetype: string | null
+          voice_style: string | null
+          voice_summary: string | null
+          what_they_justify: string | null
+          would_never_do: string | null
+          wound: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "characters"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       start_arena_round: {
         Args: { _session_id: string }
