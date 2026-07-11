@@ -878,10 +878,7 @@ function GuidedBuilderPage() {
                     {(() => {
                       const filled = profileStrength(character as any);
                       const ready = isPortraitReady(character as any);
-                      const promptPreview = composePortraitPrompt(
-                        character as any,
-                        ((project as any)?.metadata?.visual_style) ?? {},
-                      );
+                      const promptPreview = composePortraitPrompt(character as any, {});
                       return (
                         <>
                           <div className={`rounded-lg border px-3 py-2 text-xs ${imageStatus?.configured === false ? "border-amber-500/40 bg-amber-500/10 text-amber-500" : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"}`}>
