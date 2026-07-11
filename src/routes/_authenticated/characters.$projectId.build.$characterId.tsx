@@ -141,10 +141,10 @@ function GuidedBuilderPage() {
       (await supabase.from("projects").select("title").eq("id", projectId).maybeSingle()).data,
   });
 
-  const { data: character } = useQuery({
+  const { data: character } = useQuery<any>({
     queryKey: ["character", characterId],
     refetchOnMount: "always",
-    queryFn: async () =>
+    queryFn: async (): Promise<any> =>
       (await supabase.from("characters").select("*").eq("id", characterId).maybeSingle()).data,
   });
 
