@@ -448,6 +448,22 @@ function IconChip({ on, icon: Icon, title, tone }: { on: boolean; icon: any; tit
   );
 }
 
+function ImportanceChip({ level }: { level: string }) {
+  const map: Record<string, { label: string; cls: string; stars: number }> = {
+    lead:       { label: "Lead",       cls: "bg-primary/15 text-primary border-primary/40",       stars: 3 },
+    supporting: { label: "Supporting", cls: "bg-accent/15 text-accent border-accent/40",         stars: 2 },
+    bit:        { label: "Bit",        cls: "bg-secondary text-foreground/80 border-border/60",  stars: 1 },
+    background: { label: "Background", cls: "bg-secondary/50 text-muted-foreground border-border/50", stars: 0 },
+  };
+  const cfg = map[level] ?? map.supporting;
+  return (
+    <span className={`text-[10px] px-1.5 py-0.5 rounded-full border inline-flex items-center gap-1 ${cfg.cls}`} title={`Story importance: ${cfg.label}`}>
+      {cfg.stars > 0 && <Star className="h-2.5 w-2.5 fill-current" />}
+      {cfg.label}
+    </span>
+  );
+}
+
 function Inspector({ c, onOpen }: { c: any; onOpen: () => void }) {
   if (!c) {
     return (
