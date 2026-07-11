@@ -74,6 +74,16 @@ function TableRead() {
 
   useEffect(() => { if (!sceneId && scenes.length) setSceneId(scenes[0].id); }, [scenes, sceneId]);
 
+  // Poll audio_assets while any row is still generating (fallback if realtime
+  // isn't wired for this project).
+  useEffect(() => {
+    if (!audios.some((a: any) => a.status === "generating")) return;
+    const t = setInterval(() => {
+      qc.invalidateQueries({ queryKey: ["audios", projectId] });
+    }, 4000);
+    return () => clearInterval(t);
+  }, [audios, projectId, qc]);
+
   const gen = useMutation({
     mutationFn: async () => callGen({ data: { projectId, sceneId, voiceMap, narrator, sfx } }),
     onSuccess: (audio: any) => {
