@@ -22,6 +22,12 @@ import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenSt
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { t } from "@/lib/i18n/t";
+import {
+  composePortraitPrompt,
+  profileStrength,
+  isPortraitReady,
+  PORTRAIT_STRENGTH_TARGET,
+} from "@/lib/characters/portraitPrompt";
 
 export const Route = createFileRoute(
   "/_authenticated/characters/$projectId/build/$characterId",
