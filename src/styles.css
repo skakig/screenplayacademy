@@ -287,3 +287,17 @@
   .cine-card { transition: none; }
   .cine-card:hover { transform: none; }
 }
+
+/* Presence — typing pulse for peer block indicators + avatar rings. */
+@keyframes presence-typing-pulse {
+  0%, 100% { transform: scale(0.8); opacity: 0.4; }
+  50%      { transform: scale(1.15); opacity: 1; }
+}
+@keyframes presence-typing-ring {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.55); }
+  50%      { box-shadow: 0 0 0 3px hsl(var(--primary) / 0.15); }
+}
+.presence-typing-ring {
+  animation: presence-typing-ring 1200ms ease-in-out infinite;
+  border-radius: 9999px;
+}

@@ -13,8 +13,12 @@ interface Props {
 export function PresenceAvatar({ peer, size = "sm", className, ring = true }: Props) {
   const name = presenceDisplayName(peer);
   const sizing = size === "md" ? "h-9 w-9 text-sm" : "h-7 w-7 text-[10px]";
+  const typing = !!peer.is_typing_scene_id;
   return (
-    <div className={cn("relative inline-flex shrink-0", className)} title={name}>
+    <div
+      className={cn("relative inline-flex shrink-0", typing && "presence-typing-ring", className)}
+      title={name}
+    >
       <Avatar
         className={cn(
           sizing,
@@ -30,7 +34,10 @@ export function PresenceAvatar({ peer, size = "sm", className, ring = true }: Pr
       </Avatar>
       <span
         aria-hidden
-        className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-background"
+        className={cn(
+          "absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-2 ring-background",
+          typing ? "bg-primary" : "bg-emerald-500",
+        )}
       />
     </div>
   );

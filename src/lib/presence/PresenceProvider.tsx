@@ -13,6 +13,7 @@ interface PresenceContextValue {
   connected: boolean;
   setActiveArea: (area: PresenceArea) => void;
   setActiveScene: (id: string | null, label: string | null) => void;
+  setActiveBlock: (id: string | null) => void;
   pingTyping: (sceneId: string | null) => void;
 }
 
@@ -107,6 +108,7 @@ export function PresenceProvider({ projectId, role: roleProp, children }: Props)
       connected: presence.connected,
       setActiveArea: presence.setActiveArea,
       setActiveScene: presence.setActiveScene,
+      setActiveBlock: presence.setActiveBlock,
       pingTyping: presence.pingTyping,
     }),
     [presence],

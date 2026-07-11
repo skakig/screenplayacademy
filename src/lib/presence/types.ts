@@ -29,6 +29,8 @@ export interface ProjectPresenceState {
   /** Human label e.g. "Scene 12". Safe to render. */
   active_scene_label?: string | null;
   is_typing_scene_id?: string | null;
+  /** Server ID (or local id) of the block the caret is currently in. */
+  active_block_id?: string | null;
   last_active_at: string;
 }
 

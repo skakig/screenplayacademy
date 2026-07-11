@@ -53,6 +53,7 @@ import { FirstRunModeDialog } from "@/components/editor/FirstRunModeDialog";
 import { BasicProgressPill } from "@/components/editor/BasicProgressPill";
 import { EditorSummonBar } from "@/components/editor/EditorSummonBar";
 import { PresenceAvatarStack } from "@/components/writers-room/presence/PresenceAvatarStack";
+import { PeerBlockIndicators } from "@/components/writers-room/presence/PeerBlockIndicators";
 import { PresenceProvider, useOptionalPresence } from "@/lib/presence/PresenceProvider";
 import { InviteCollaboratorDialog } from "@/components/writers-room/InviteCollaboratorDialog";
 import { UserPlus } from "lucide-react";
@@ -563,8 +564,8 @@ function Editor() {
   })();
   const activeScene = activeSceneIdx >= 0 ? outline[activeSceneIdx] : null;
 
-  // Presence: broadcast that this user is in the script editor, and which
-  // scene their caret is currently in. Payload carries no script content.
+  // Presence: broadcast that this user is in the script editor, which scene
+  // their caret is currently in, and which block. Payload carries no script content.
   const presence = useOptionalPresence();
   useEffect(() => {
     presence?.setActiveArea("script");
@@ -575,6 +576,25 @@ function Editor() {
       activeScene?.title ?? null,
     );
   }, [presence, activeScene?.id, activeScene?.title]);
+  useEffect(() => {
+    presence?.setActiveBlock(activeBlockId ?? null);
+  }, [presence, activeBlockId]);
+
+  // Editor scroll container — hosts the peer caret overlay.
+  const editorSurfaceRef = useRef<HTMLDivElement>(null);
+  const pingTyping = presence?.pingTyping;
+  useEffect(() => {
+    if (!pingTyping) return;
+    const el = editorSurfaceRef.current;
+    if (!el) return;
+    const onInput = () => pingTyping(activeScene?.id ?? null);
+    el.addEventListener("input", onInput, true);
+    el.addEventListener("keydown", onInput, true);
+    return () => {
+      el.removeEventListener("input", onInput, true);
+      el.removeEventListener("keydown", onInput, true);
+    };
+  }, [pingTyping, activeScene?.id]);
 
   const [inviteOpen, setInviteOpen] = useState(false);
 
@@ -840,7 +860,8 @@ function Editor() {
                 onCopyAll={copyAllText}
               />
 
-              <div className="flex-1 min-h-0">
+              <div className="flex-1 min-h-0 relative" ref={editorSurfaceRef}>
+                <PeerBlockIndicators containerRef={editorSurfaceRef} projectId={projectId} />
                 <ScreenplayDocumentEditor
                   ref={editorRef}
                   projectId={projectId}
