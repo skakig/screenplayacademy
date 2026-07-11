@@ -28,10 +28,10 @@ import { toast } from "sonner";
 import { TMHBadge } from "@/components/characters/TMHBadge";
 import { GROUPS, completenessPct, tmhLabel } from "@/components/characters/tmh";
 import { CharacterProfileDialog } from "@/components/characters/CharacterProfileDialog";
-import { CastCleanupPanel } from "@/components/characters/CastCleanupPanel";
-import { DetectedSpeakersPanel } from "@/components/characters/DetectedSpeakersPanel";
+import { CharacterInboxDrawer } from "@/components/characters/CharacterInboxDrawer";
 import { upsertCharacter, deleteCharacter, bulkDeleteCharacters, restoreCharacters } from "@/lib/characters.functions";
 import { MergeReviewDialog } from "@/components/characters/MergeReviewDialog";
+import { supabase as sbClient } from "@/integrations/supabase/client";
 import { useSearch } from "@tanstack/react-router";
 
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
