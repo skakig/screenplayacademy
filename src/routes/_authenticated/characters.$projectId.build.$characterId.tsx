@@ -286,7 +286,84 @@ function BuilderRouteState({
   );
 }
 
-function GuidedBuilderPage() {
+function EmptyProjectAutoCreate({ projectId }: { projectId: string; onNotEmpty?: () => void }) {
+  const navigate = useNavigate();
+  const callUpsert = useServerFn(upsertCharacter);
+  const [error, setError] = useState<string | null>(null);
+  const started = useMemo(() => ({ v: false }), []);
+
+  const { data: countResult, isLoading: countLoading } = useQuery({
+    queryKey: ["character-count", projectId],
+    queryFn: async () => {
+      const { count, error: cErr } = await supabase
+        .from("characters")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .is("quarantined_at", null);
+      if (cErr) throw cErr;
+      return count ?? 0;
+    },
+  });
+
+  const isEmpty = (countResult ?? 0) === 0;
+
+  // Kick off auto-create only when the project is truly empty.
+  if (isEmpty && !started.v && !error) {
+    started.v = true;
+    (async () => {
+      try {
+        const row: any = await callUpsert({
+          data: { project_id: projectId, patch: { name: t("characters.builder.newCharacterName") } },
+        });
+        if (!row?.id) throw new Error(t("characters.builder.resolver.createError"));
+        toast.success(t("characters.builder.resolver.createdToast"));
+        await navigate({
+          to: "/characters/$projectId/build/$characterId",
+          params: { projectId, characterId: row.id },
+          replace: true,
+        });
+      } catch (e: any) {
+        started.v = false;
+        setError(e?.message ?? t("characters.builder.resolver.error"));
+      }
+    })();
+  }
+
+  if (error) {
+    return (
+      <BuilderRouteState
+        projectId={projectId}
+        title={t("characters.builder.resolver.errorTitle")}
+        body={error}
+        tone="danger"
+      />
+    );
+  }
+
+  if (countLoading || isEmpty) {
+    return (
+      <BuilderRouteState
+        projectId={projectId}
+        title={t("characters.builder.resolver.loadingTitle")}
+        body={t("characters.builder.resolver.loadingBody")}
+        tone="loading"
+      />
+    );
+  }
+
+  // Project has characters but this ID is not one of them — show the safe
+  // not-found state with a link into the resolver to pick/create.
+  return (
+    <BuilderRouteState
+      projectId={projectId}
+      title={t("characters.builder.notFoundTitle")}
+      body={t("characters.builder.notFoundBody")}
+      tone="muted"
+      showCreate
+    />
+  );
+}
+
   const { projectId, characterId } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
