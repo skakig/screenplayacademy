@@ -186,9 +186,9 @@ export function CharacterProfileDialog({
           const filledCount = local ? [
             "role","external_goal","internal_need","wound","core_lie","secret","voice_summary","visual_description","character_arc",
           ].filter((k) => local[k] && String(local[k]).trim()).length : 0;
-          const initialPillar = filledCount < 3 ? "build" : "identity";
+          const initialPillarResolved = initialPillar ?? (filledCount < 3 ? "build" : "identity");
           return (
-        <Tabs defaultValue={initialPillar} className="flex-1 overflow-hidden flex flex-col">
+        <Tabs value={undefined} defaultValue={initialPillarResolved} key={initialPillarResolved + ":" + (characterId ?? "")} className="flex-1 overflow-hidden flex flex-col">
           <TabsList className="mx-6 mt-3 inline-flex w-auto max-w-[calc(100%-3rem)] overflow-x-auto flex-nowrap h-auto justify-start gap-1">
             <TabsTrigger value="build" className="text-[11px] shrink-0"><Sparkles className="h-3 w-3 mr-1" />Build</TabsTrigger>
             <TabsTrigger value="identity" className="text-[11px] shrink-0"><UserRound className="h-3 w-3 mr-1" />Identity</TabsTrigger>
