@@ -335,12 +335,17 @@ export const generatePortrait = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const c = await loadOwnedCharacter(context, data.characterId);
     const key = process.env.LOVABLE_API_KEY;
-    // Ensure we always have a prompt before calling the image API.
-    let prompt = (c.image_prompt || "").trim();
-    if (!prompt) {
+    // Compose deterministically from the full profile + project style
+    // contract so every character in the cast reads as one film.
+    const { composePortraitPrompt } = await import("@/lib/characters/portraitPrompt");
+    const { data: projectRow } = await context.supabase
+      .from("projects").select("metadata").eq("id", c.project_id).maybeSingle();
+    const style = (projectRow?.metadata as any)?.visual_style ?? {};
+    let prompt = composePortraitPrompt(c as any, style);
+    if (!prompt.trim()) {
       prompt = demoVisualPrompt(c);
-      await context.supabase.from("characters").update({ image_prompt: prompt }).eq("id", c.id);
     }
+    await context.supabase.from("characters").update({ image_prompt: prompt }).eq("id", c.id);
     if (!key) {
       const { data: row } = await context.supabase
         .from("characters").select("*").eq("id", c.id).single();
