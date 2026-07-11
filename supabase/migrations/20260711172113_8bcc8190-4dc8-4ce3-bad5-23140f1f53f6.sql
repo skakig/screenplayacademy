@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.has_arena_entry_read_access(uuid, uuid, uuid, arena_entry_status) FROM anon, PUBLIC;
