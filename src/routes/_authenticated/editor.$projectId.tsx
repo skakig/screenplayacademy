@@ -421,11 +421,49 @@ function Editor() {
     const v = window.localStorage.getItem("editor:coach-pinned");
     return v === null ? true : v === "1";
   });
+  // Hydrate from server-side user preference (cross-device).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("ui_preferences")
+        .eq("id", userData.user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const prefs = (data?.ui_preferences ?? {}) as Record<string, unknown>;
+      if (typeof prefs.coachPinned === "boolean") {
+        setCoachPinnedState(prefs.coachPinned);
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("editor:coach-pinned", prefs.coachPinned ? "1" : "0");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const setCoachPinned = useCallback((v: boolean) => {
     setCoachPinnedState(v);
     if (typeof window !== "undefined") {
       window.localStorage.setItem("editor:coach-pinned", v ? "1" : "0");
     }
+    void (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const { data: current } = await supabase
+        .from("profiles")
+        .select("ui_preferences")
+        .eq("id", userData.user.id)
+        .maybeSingle();
+      const prefs = {
+        ...((current?.ui_preferences ?? {}) as Record<string, unknown>),
+        coachPinned: v,
+      };
+      await supabase.from("profiles").update({ ui_preferences: prefs }).eq("id", userData.user.id);
+    })();
   }, []);
   const writeMode = useWriteMode();
   const focus = writeMode.on;
