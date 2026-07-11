@@ -33,7 +33,7 @@ import { upsertCharacter, deleteCharacter, bulkDeleteCharacters, restoreCharacte
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/characters/$projectId")({
-  head: () => ({ meta: [{ title: "Casting Wall — SceneSmith Studio" }] }),
+  head: () => ({ meta: [{ title: "Characters — SceneSmith Studio" }] }),
   component: () => (<RouteReadinessGate to="/characters/$projectId"><CharactersPage /></RouteReadinessGate>),
   errorComponent: RouteErrorBoundary,
 });
