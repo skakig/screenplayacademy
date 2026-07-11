@@ -54,6 +54,7 @@ import { BasicProgressPill } from "@/components/editor/BasicProgressPill";
 import { EditorSummonBar } from "@/components/editor/EditorSummonBar";
 import { PresenceAvatarStack } from "@/components/writers-room/presence/PresenceAvatarStack";
 import { PeerBlockIndicators } from "@/components/writers-room/presence/PeerBlockIndicators";
+import { TeammatesPanel } from "@/components/writers-room/presence/TeammatesPanel";
 import { PresenceProvider, useOptionalPresence } from "@/lib/presence/PresenceProvider";
 import { InviteCollaboratorDialog } from "@/components/writers-room/InviteCollaboratorDialog";
 import { UserPlus } from "lucide-react";
