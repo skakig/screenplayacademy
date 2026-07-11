@@ -79,14 +79,46 @@ export const generateTableRead = createServerFn({ method: "POST" })
       }
     }
 
-    // Load script blocks (filtered by scene if provided)
-    let blockQ = supabase
+    // Load script blocks. We DON'T filter by scene_id in the query — many
+    // projects have script_blocks.scene_id unpopulated (the editor doesn't
+    // assign it yet), which would silently return zero lines. Instead we
+    // load all blocks ordered, then slice by scene heading below.
+    const { data: blocks } = await supabase
       .from("script_blocks")
       .select("id, block_type, content, scene_id, order_index")
       .eq("project_id", data.projectId)
       .order("order_index");
-    if (data.sceneId) blockQ = blockQ.eq("scene_id", data.sceneId);
-    const { data: blocks } = await blockQ;
+
+    // If a scene is selected, slice the block range: from the matching
+    // scene_heading block up to (but not including) the next scene_heading.
+    let scopedBlocks = blocks ?? [];
+    if (data.sceneId && scopedBlocks.length > 0) {
+      const { data: targetScene } = await supabase
+        .from("scenes")
+        .select("scene_heading, title")
+        .eq("id", data.sceneId)
+        .maybeSingle();
+
+      // Prefer an exact scene_id match when the editor did populate it.
+      const byId = scopedBlocks.filter((b) => b.scene_id === data.sceneId);
+      if (byId.length > 0) {
+        scopedBlocks = byId;
+      } else if (targetScene) {
+        const norm = (s: string) => s.trim().toUpperCase().replace(/\s+/g, " ");
+        const targetHeading = norm(targetScene.scene_heading || targetScene.title || "");
+        const startIdx = scopedBlocks.findIndex(
+          (b) => b.block_type === "scene_heading" && norm(String(b.content ?? "")) === targetHeading,
+        );
+        if (startIdx >= 0) {
+          const rest = scopedBlocks.slice(startIdx + 1);
+          const nextHeadingRel = rest.findIndex((b) => b.block_type === "scene_heading");
+          const endIdx = nextHeadingRel === -1 ? scopedBlocks.length : startIdx + 1 + nextHeadingRel;
+          scopedBlocks = scopedBlocks.slice(startIdx, endIdx);
+        }
+        // If we couldn't find the heading, fall through and perform the
+        // full script — better than throwing "nothing to perform".
+      }
+    }
 
     const { data: characters } = await supabase
       .from("characters")
