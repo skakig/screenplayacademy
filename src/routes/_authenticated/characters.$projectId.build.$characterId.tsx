@@ -489,16 +489,17 @@ function GuidedBuilderPage() {
   }
 
   if (!character) {
+    // If the project has zero characters, defer to the /build resolver which
+    // is the single place that intentionally creates the first character
+    // (and shows the success toast) before navigating into the builder.
     return (
-      <BuilderRouteState
+      <EmptyProjectAutoCreate
         projectId={projectId}
-        title={t("characters.builder.notFoundTitle")}
-        body={t("characters.builder.notFoundBody")}
-        tone="muted"
-        showCreate
+        onNotEmpty={() => null}
       />
     );
   }
+
 
   if (character.project_id && character.project_id !== projectId) {
     return (
