@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -119,6 +119,7 @@ function Editor() {
   const fromGuided = search.from === "guided";
   const guidedStep = search.step;
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const callAi = useServerFn(aiAssist);
 
   const { data: project } = useQuery({
@@ -148,6 +149,22 @@ function Editor() {
     mutationFn: (name: string) => createChar({ data: { project_id: projectId, patch: { name } } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["characters", projectId] }),
   });
+
+  const openGuidedCharacterBuilder = async () => {
+    let characterId = (characters as CharacterHit[])[0]?.id;
+    if (!characterId) {
+      const created = (await createCharacter.mutateAsync("New Character")) as { row?: { id?: string }; id?: string } | null;
+      characterId = created?.row?.id ?? created?.id;
+      toast.success("First character created", {
+        description: "Let's build them together in the guided builder.",
+      });
+    }
+    if (!characterId) {
+      toast.error("Could not open character builder");
+      return;
+    }
+    navigate({ to: "/characters/$projectId/build/$characterId", params: { projectId, characterId } });
+  };
 
   // Project Dictionary — terms that should never be auto-corrected.
   const dictionary = useProjectDictionary(projectId);
@@ -787,20 +804,25 @@ function Editor() {
                       <p className="text-xs flex-1">
                         This step has a dedicated page: <strong>{redirect.destination}</strong>.
                       </p>
-                      <Button asChild size="sm" variant="outline">
-                        <Link
-                          to={
-                            redirect.destination === "characters" ? "/characters/$projectId" :
-                            redirect.destination === "story-arc" ? "/story-arc/$projectId" :
-                            redirect.destination === "scenes" ? "/scenes/$projectId" :
-                            redirect.destination === "pitch" ? "/pitch/$projectId" :
-                            "/tableread/$projectId"
-                          }
-                          params={{ projectId }}
-                        >
-                          Open {redirect.destination} <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
-                        </Link>
-                      </Button>
+                      {redirect.destination === "characters" ? (
+                        <Button size="sm" variant="outline" onClick={openGuidedCharacterBuilder} disabled={createCharacter.isPending}>
+                          Open characters <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                        </Button>
+                      ) : (
+                        <Button asChild size="sm" variant="outline">
+                          <Link
+                            to={
+                              redirect.destination === "story-arc" ? "/story-arc/$projectId" :
+                              redirect.destination === "scenes" ? "/scenes/$projectId" :
+                              redirect.destination === "pitch" ? "/pitch/$projectId" :
+                              "/tableread/$projectId"
+                            }
+                            params={{ projectId }}
+                          >
+                            Open {redirect.destination} <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                          </Link>
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
