@@ -40,10 +40,10 @@ async function ttsLine(apiKey: string, voiceId: string, text: string, previous?:
       headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({
         text,
-        model_id: "eleven_multilingual_v2",
+        model_id: TABLE_READ_MODEL_ID,
         previous_text: previous,
         next_text: next,
-        voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.35, use_speaker_boost: true },
+        voice_settings: TABLE_READ_VOICE_SETTINGS,
       }),
     },
   );
