@@ -76,8 +76,12 @@ export function useSubscription(): SubscriptionState {
 
   useEffect(() => {
     if (!userId) return;
+    // Unique channel name per mount — Supabase Realtime keys channels by topic,
+    // so a shared name (e.g. `sub-${userId}`) causes "cannot add postgres_changes
+    // callbacks after subscribe()" when the hook mounts twice in the same session
+    // (StrictMode double-invoke, or multiple consumers of useSubscription).
     const channel = supabase
-      .channel(`sub-${userId}`)
+      .channel(`sub-${userId}-${Math.random().toString(36).slice(2, 10)}`)
       .on(
         "postgres_changes",
         {
