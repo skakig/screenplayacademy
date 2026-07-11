@@ -22,6 +22,7 @@ import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenSt
 import { previewCharacterVoice } from "@/lib/voice-preview.functions";
 import { Volume2, Pause } from "lucide-react";
 import { StyleContractDialog } from "@/components/characters/StyleContractDialog";
+import { StyleImportDialog } from "@/components/characters/StyleImportDialog";
 import { getUsageSnapshot } from "@/lib/usage.functions";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
