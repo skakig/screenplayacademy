@@ -191,6 +191,52 @@ export const generateTableRead = createServerFn({ method: "POST" })
       throw new Error("Nothing to perform — add scene headings, action, or dialogue first.");
     }
 
+    // -------- Cache lookup --------
+    // The generated audio is a pure function of (scene scope, narrator/sfx
+    // flags, and the ordered [voiceId, text] tuples fed to ElevenLabs). Hash
+    // that tuple and reuse an existing ready clip when it matches — no
+    // ElevenLabs call, no character/minute metering, instant playback.
+    const cachePayload = JSON.stringify({
+      v: 1,
+      sceneId: data.sceneId ?? null,
+      narrator: data.narrator,
+      sfx: data.sfx,
+      model: TABLE_READ_MODEL_ID,
+      voice: TABLE_READ_VOICE_SETTINGS,
+      lines: lines.map((l) => [l.voiceId, l.text]),
+    });
+    const cacheKeyBytes = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(cachePayload),
+    );
+    const cacheKey = Array.from(new Uint8Array(cacheKeyBytes))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    const { data: cached } = await supabase
+      .from("audio_assets")
+      .select("id, project_id, scene_id, status, audio_url, duration_seconds, voice_map, kind, created_at, updated_at")
+      .eq("project_id", data.projectId)
+      .eq("kind", "table_read")
+      .eq("status", "ready")
+      .eq("cache_key" as any, cacheKey)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (cached?.id) {
+      // Re-sign so a stale URL doesn't hand back a 403 to the player.
+      const path = `${userId}/${cached.project_id}/${cached.id}.mp3`;
+      const { data: signed } = await supabaseAdmin.storage
+        .from("table-reads")
+        .createSignedUrl(path, 60 * 60 * 24 * 7);
+      const url = signed?.signedUrl ?? cached.audio_url;
+      if (url && url !== cached.audio_url) {
+        await supabaseAdmin.from("audio_assets").update({ audio_url: url }).eq("id", cached.id);
+      }
+      return { ...cached, audio_url: url, status: "ready" as const, cached: true };
+    }
+
     // Estimate spoken minutes at ~150 wpm and consume that from the monthly
     // cap up-front — this way we never burn ElevenLabs credits for an
     // over-quota user. Rounded up, minimum 1 minute per run.
@@ -219,10 +265,12 @@ export const generateTableRead = createServerFn({ method: "POST" })
           [...charByName.entries()].map(([name, v]) => [name, v.voiceId ?? null]),
         ) as any,
         status: "generating",
-      })
+        cache_key: cacheKey,
+      } as any)
       .select()
       .single();
     if (insertErr || !pendingRow) throw new Error(insertErr?.message ?? "Could not create audio asset");
+
 
     if (!apiKey) {
       await supabaseAdmin

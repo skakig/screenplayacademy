@@ -420,6 +420,7 @@ export type Database = {
       audio_assets: {
         Row: {
           audio_url: string | null
+          cache_key: string | null
           created_at: string
           duration_seconds: number | null
           id: string
@@ -432,6 +433,7 @@ export type Database = {
         }
         Insert: {
           audio_url?: string | null
+          cache_key?: string | null
           created_at?: string
           duration_seconds?: number | null
           id?: string
@@ -444,6 +446,7 @@ export type Database = {
         }
         Update: {
           audio_url?: string | null
+          cache_key?: string | null
           created_at?: string
           duration_seconds?: number | null
           id?: string
