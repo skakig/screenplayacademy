@@ -722,9 +722,10 @@ function GuidedBuilderPage() {
   const previewVoiceNow = async () => {
     const voiceId = (character as any)?.elevenlabs_voice_id as string | undefined;
     if (!voiceId) {
-      toast.info("Assign a voice to this character first.");
+      setPreviewError({ kind: "no_voice" });
       return;
     }
+    setPreviewError(null);
     setPreviewBusy(true);
     try {
       // Client-side cache keyed by (voiceId, greeting text) — instant replay
@@ -738,10 +739,16 @@ function GuidedBuilderPage() {
       }
       const out: any = await callPreviewVoice({ data: { characterId } });
       if (!out?.ok) {
-        if (out?.reason === "no_voice") toast.info("Assign a voice first.");
-        else if (out?.reason === "not_configured") toast.info("Voice preview is not configured for this project.");
-        else if (out?.reason === "quota") toast.error(out?.message ?? "You're out of table-read credits.");
-        else toast.error("Could not generate preview.");
+        const reason = out?.reason as string | undefined;
+        if (reason === "no_voice") setPreviewError({ kind: "no_voice" });
+        else if (reason === "not_configured") setPreviewError({ kind: "not_configured", message: out?.message });
+        else if (reason === "quota") setPreviewError({ kind: "quota", message: out?.message });
+        else if (reason === "provider_quota") setPreviewError({ kind: "provider_quota", message: out?.message });
+        else if (reason === "rate_limited") {
+          const secs = Math.max(3, Number(out?.retryAfterSeconds) || 15);
+          setPreviewError({ kind: "rate_limited", retryAfterSeconds: secs, message: out?.message });
+          setRateLimitCountdown(secs);
+        } else setPreviewError({ kind: "generic", message: out?.message ?? "Could not generate preview." });
         return;
       }
       const audio = new Audio(out.url);
@@ -750,11 +757,26 @@ function GuidedBuilderPage() {
       await audio.play().catch(() => {});
       if (out.cached) toast.success("Loaded cached preview", { duration: 1200 });
     } catch (e: any) {
-      toast.error(e?.message ?? "Could not preview voice");
+      const message = String(e?.message ?? "Could not preview voice");
+      // Server may throw the shared USAGE_LIMIT format when the monthly
+      // tts_characters cap is hit before we ever call ElevenLabs.
+      if (/USAGE_LIMIT/.test(message)) {
+        setPreviewError({ kind: "quota", message });
+      } else {
+        setPreviewError({ kind: "generic", message });
+      }
     } finally {
       setPreviewBusy(false);
     }
   };
+
+  // Rate-limit countdown so the retry button re-enables automatically.
+  useEffect(() => {
+    if (rateLimitCountdown <= 0) return;
+    const t = setInterval(() => setRateLimitCountdown((n) => Math.max(0, n - 1)), 1000);
+    return () => clearInterval(t);
+  }, [rateLimitCountdown]);
+
 
 
   const exitTo = () =>
