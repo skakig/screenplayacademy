@@ -48,6 +48,7 @@ export function usePresenceChannel({ projectId, role, self }: Options) {
   const lastTrackAt = useRef(0);
   const pendingTrack = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypingOffAt = useRef(0);
 
   const canSubscribe = !!projectId && !!role && !!self?.user_id;
 
