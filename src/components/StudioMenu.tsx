@@ -283,7 +283,7 @@ export function StudioMenu() {
                               experimental={gate.experimental}
                               setupRequired={gate.setupRequired}
                               missingProject={gate.missingProject}
-                              needsData={gate.needsData}
+                              needsData={gate.needsData ?? undefined}
                             />
                           </div>
                           <div className="text-[11px] text-muted-foreground leading-snug line-clamp-2">
