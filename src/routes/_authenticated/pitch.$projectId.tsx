@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -175,8 +175,15 @@ function Pitch() {
           <Card className="p-12 text-center border-dashed">
             <Sparkles className="h-10 w-10 text-primary mx-auto mb-3" />
             <h3 className="font-semibold mb-1">No pitch package yet</h3>
-            <p className="text-sm text-muted-foreground mb-4">We'll write your logline, synopsis, treatment, comps, pitch email and more.</p>
-            <Button onClick={run} disabled={loading}>{loading ? "Generating..." : "Generate now"}</Button>
+            <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+              We'll write your logline, synopsis, treatment, comps, pitch email and more. Best results with a title, logline, and a few written scenes already in place.
+            </p>
+            <div className="flex items-center gap-2 justify-center flex-wrap">
+              <Button onClick={run} disabled={loading}>{loading ? "Generating..." : "Generate now"}</Button>
+              <Button variant="outline" asChild>
+                <Link to="/editor/$projectId" params={{ projectId }}>Write more first</Link>
+              </Button>
+            </div>
           </Card>
         ) : (
           <div className="space-y-4">

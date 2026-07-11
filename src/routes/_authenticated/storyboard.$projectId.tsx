@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -123,7 +123,23 @@ function Storyboard() {
             <Card className="p-12 text-center border-dashed">
               <ImageIcon className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <h3 className="font-semibold mb-1">No panels yet</h3>
-              <p className="text-sm text-muted-foreground">Describe a shot on the left and generate your first storyboard panel.</p>
+              {scenes.length === 0 ? (
+                <>
+                  <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+                    You need at least one scene to auto-fill shot prompts. Add a scene on the Scene Board, or write a scene heading (INT./EXT.) in the editor.
+                  </p>
+                  <div className="flex items-center gap-2 justify-center flex-wrap">
+                    <Button size="sm" asChild>
+                      <Link to="/scenes/$projectId" params={{ projectId }}>Add a scene</Link>
+                    </Button>
+                    <Button size="sm" variant="outline" asChild>
+                      <Link to="/editor/$projectId" params={{ projectId }}>Open editor</Link>
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Describe a shot on the left and generate your first storyboard panel.</p>
+              )}
             </Card>
           ) : (
             <div className="grid sm:grid-cols-2 gap-4">

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -110,7 +110,18 @@ function ScenesPage() {
         {scenes.length === 0 ? (
           <Card className="p-12 text-center border-dashed">
             <LayoutGrid className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">No scenes yet. Start outlining your story.</p>
+            <h3 className="font-semibold mb-1">No scenes yet</h3>
+            <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+              Scenes power the Story Spine, Dramatic Pulse, Shot Wall and Table Read. Add one manually, or write in the editor — scene headings (INT./EXT.) auto-create scenes here.
+            </p>
+            <div className="flex items-center gap-2 justify-center flex-wrap">
+              <Button size="sm" onClick={() => { setEditing({ title: "", status: "idea" }); setOpen(true); }}>
+                <Plus className="h-3.5 w-3.5 mr-1.5" />Add scene
+              </Button>
+              <Button size="sm" variant="outline" asChild>
+                <Link to="/editor/$projectId" params={{ projectId }}>Open editor</Link>
+              </Button>
+            </div>
           </Card>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

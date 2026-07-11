@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -218,8 +218,20 @@ function CharactersPage() {
               {filtered.length === 0 ? (
                 <Card className="p-12 text-center border-dashed">
                   <User className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground mb-3">No characters in this group yet.</p>
-                  <Button size="sm" variant="outline" onClick={() => create.mutate()}><Plus className="h-3.5 w-3.5 mr-1.5" />Add character</Button>
+                  <h3 className="font-semibold mb-1">
+                    {characters.length === 0 ? "No characters yet" : `No characters in ${group}`}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+                    {characters.length === 0
+                      ? "Characters unlock Truth Check, Table Read voices, and the Story Spine. Add one manually or auto-import speakers already named in your script below."
+                      : "Add a character to this group, or switch to All to see everyone."}
+                  </p>
+                  <div className="flex items-center gap-2 justify-center flex-wrap">
+                    <Button size="sm" onClick={() => create.mutate()}><Plus className="h-3.5 w-3.5 mr-1.5" />Add character</Button>
+                    <Button size="sm" variant="outline" asChild>
+                      <Link to="/editor/$projectId" params={{ projectId }}>Write in editor</Link>
+                    </Button>
+                  </div>
                 </Card>
               ) : (
                 <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
