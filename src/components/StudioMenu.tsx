@@ -42,38 +42,33 @@ type Item = {
 
 const GROUPS: { key: string; label: string; items: Item[] }[] = [
   {
-    key: "write",
-    label: "Write",
+    key: "school",
+    label: "School — Learn to write",
     items: [
-      { to: "/editor/$projectId", label: "Writer's Desk", desc: "The page. Where the screenplay lives.", icon: FileText, needsProject: true },
+      { to: "/academy", label: "Screenplay School", desc: "Lessons, modules, and craft fundamentals.", icon: GraduationCap },
       { to: "/first-screenplay/$projectId", label: "Guided Path", desc: "Step-by-step from idea to draft.", icon: Compass, needsProject: true, guidedOnly: true },
     ],
   },
   {
-    key: "plan",
-    label: "Plan",
+    key: "editor",
+    label: "Editor — Write the screenplay",
     items: [
+      { to: "/editor/$projectId", label: "Writer's Desk", desc: "The page. Where the screenplay lives.", icon: FileText, needsProject: true },
       { to: "/scenes/$projectId", label: "Scene Board", desc: "See every scene on one wall.", icon: LayoutGrid, needsProject: true },
-      { to: "/vault/$projectId", label: "Scene Vault", desc: "Stash scenes, fragments, and alt takes before they have a home.", icon: Archive, needsProject: true },
+      { to: "/vault/$projectId", label: "Scene Vault", desc: "Stash scenes, fragments, and alt takes.", icon: Archive, needsProject: true },
       { to: "/story-arc/$projectId", label: "Story Spine", desc: "Beats and turning points across three acts.", icon: GitBranch, needsProject: true },
       { to: "/characters/$projectId", label: "Casting Wall", desc: "Character profiles, wants, wounds.", icon: Users, needsProject: true },
-    ],
-  },
-  {
-    key: "polish",
-    label: "Polish",
-    items: [
       { to: "/arc-timeline/$projectId", label: "Dramatic Pulse", desc: "Tension and stakes scene-by-scene.", icon: Activity, needsProject: true },
     ],
   },
   {
-    key: "produce",
-    label: "Produce",
+    key: "producer",
+    label: "Producer — Ship the screenplay",
     items: [
+      { to: "/pitch/$projectId", label: "Pitch Deck", desc: "Logline, synopsis, treatment, pitch email.", icon: Sparkles, needsProject: true },
+      { to: "/tableread/$projectId", label: "Table Read", desc: "Hear it read aloud with AI voices.", icon: Mic, needsProject: true },
       { to: "/storyboard/$projectId", label: "Shot Wall", desc: "Visualize scenes as storyboards.", icon: ImageIcon, needsProject: true },
-      { to: "/tableread/$projectId", label: "Rehearsal Room", desc: "Hear it read with AI voices.", icon: Mic, needsProject: true },
-      { to: "/pitch/$projectId", label: "Producer Room", desc: "Pitch deck, logline, synopsis.", icon: Sparkles, needsProject: true },
-      { to: "/writers-room/$projectId", label: "Writers' Room", desc: "Collaborate live with your team.", icon: UsersRound, needsProject: true },
+      { to: "/writers-room/$projectId", label: "Writers' Room", desc: "Invite collaborators, notes, sessions.", icon: UsersRound, needsProject: true },
     ],
   },
   {
@@ -82,13 +77,6 @@ const GROUPS: { key: string; label: string; items: Item[] }[] = [
     items: [
       { to: "/dashboard", label: "Studio Lobby", desc: "Your home base.", icon: Home },
       { to: "/projects", label: "Script Vault", desc: "All your projects.", icon: FolderKanban },
-      { to: "/academy", label: "Screenplay School", desc: "Learn the craft.", icon: GraduationCap },
-    ],
-  },
-  {
-    key: "settings",
-    label: "Settings",
-    items: [
       { to: "/settings", label: "Studio Settings", desc: "Preferences and account.", icon: Settings },
       { to: "/pricing", label: "Pricing", desc: "Plans and billing.", icon: CreditCard },
     ],

@@ -30,10 +30,12 @@ import { fetchProjectRole, wrKeys } from "@/lib/collab";
 import { t } from "@/lib/i18n/t";
 
 import { PageFeatureGate } from "@/components/PageFeatureGate";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/writers-room/$projectId")({
   head: () => ({ meta: [{ title: "Writers' Room — SceneSmith Studio" }] }),
   component: GatedWritersRoom,
+  errorComponent: RouteErrorBoundary,
 });
 
 function GatedWritersRoom() {
@@ -85,13 +87,21 @@ function WritersRoomPage() {
     <AppShell>
       <ProjectNav projectId={projectId} title={project?.title} />
       <div className="max-w-[1100px] mx-auto px-4 py-10">
-        <header className="mb-8">
-          <h1 className="font-display text-4xl font-semibold tracking-tight">
-            {t("collab.room.title")}
-          </h1>
-          <p className="text-muted-foreground mt-2 max-w-2xl">
-            {t("collab.room.subtitle")}
-          </p>
+        <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="font-display text-4xl font-semibold tracking-tight">
+              {t("collab.room.title")}
+            </h1>
+            <p className="text-muted-foreground mt-2 max-w-2xl">
+              {t("collab.room.subtitle")}
+            </p>
+          </div>
+          {isOwner && (
+            <Button onClick={() => setInviteOpen(true)} size="lg" className="shrink-0">
+              <UserPlus className="h-4 w-4 mr-2" />
+              {t("collab.invite.button")}
+            </Button>
+          )}
         </header>
 
         {roleLoading ? (

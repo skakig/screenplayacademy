@@ -14,10 +14,12 @@ import { format } from "date-fns";
 import { downloadPitchKitPdf } from "@/components/editor/pitchKitPdf";
 
 import { PageFeatureGate } from "@/components/PageFeatureGate";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/pitch/$projectId")({
-  head: () => ({ meta: [{ title: "Pitch Package — SceneSmith AI" }] }),
+  head: () => ({ meta: [{ title: "Pitch Deck — SceneSmith Studio" }] }),
   component: GatedPitch,
+  errorComponent: RouteErrorBoundary,
 });
 
 function GatedPitch() {

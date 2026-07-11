@@ -29,9 +29,12 @@ import { CastCleanupPanel } from "@/components/characters/CastCleanupPanel";
 import { DetectedSpeakersPanel } from "@/components/characters/DetectedSpeakersPanel";
 import { upsertCharacter, deleteCharacter, bulkDeleteCharacters, restoreCharacters } from "@/lib/characters.functions";
 
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
+
 export const Route = createFileRoute("/_authenticated/characters/$projectId")({
-  head: () => ({ meta: [{ title: "Your Characters — SceneSmith AI" }] }),
+  head: () => ({ meta: [{ title: "Casting Wall — SceneSmith Studio" }] }),
   component: CharactersPage,
+  errorComponent: RouteErrorBoundary,
 });
 
 function CharactersPage() {
