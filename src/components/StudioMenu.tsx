@@ -138,9 +138,9 @@ const GROUPS: { key: string; label: string; items: Item[] }[] = [
     label: "Producer — Ship the screenplay",
     items: [
       { to: "/pitch/$projectId", label: "Pitch Deck", desc: "Logline, synopsis, treatment, pitch email.", icon: Sparkles, needsProject: true, feature: "pitch", needsData: "script" },
-      { to: "/tableread/$projectId", label: "Table Read", desc: "Hear it read aloud with AI voices.", icon: Mic, needsProject: true, feature: "table_read", needsData: "characters" },
-      { to: "/storyboard/$projectId", label: "Shot Wall", desc: "Visualize scenes as storyboards.", icon: ImageIcon, needsProject: true, feature: "storyboard", needsData: "scenes" },
-      { to: "/writers-room/$projectId", label: "Writers' Room", desc: "Invite collaborators, notes, sessions.", icon: UsersRound, needsProject: true, feature: "writers_room" },
+      { to: "/tableread/$projectId", label: "Table Read", desc: "Hear it read aloud with AI voices.", icon: Mic, needsProject: true, feature: "table_read", needsData: "characters", experimental: true },
+      { to: "/storyboard/$projectId", label: "Shot Wall", desc: "Visualize scenes as storyboards.", icon: ImageIcon, needsProject: true, feature: "storyboard", needsData: "scenes", experimental: true },
+      { to: "/writers-room/$projectId", label: "Writers' Room", desc: "Invite collaborators, notes, sessions.", icon: UsersRound, needsProject: true, feature: "writers_room", experimental: true },
     ],
   },
   {
@@ -150,7 +150,7 @@ const GROUPS: { key: string; label: string; items: Item[] }[] = [
       { to: "/dashboard", label: "Studio Lobby", desc: "Your home base.", icon: Home },
       { to: "/projects", label: "Script Vault", desc: "All your projects.", icon: FolderKanban },
       { to: "/settings", label: "Studio Settings", desc: "Preferences and account.", icon: Settings },
-      { to: "/pricing", label: "Pricing", desc: "Plans and billing.", icon: CreditCard },
+      { to: "/pricing", label: "Pricing", desc: "Plans and billing.", icon: CreditCard, setupRequires: "billing" },
     ],
   },
 ];
