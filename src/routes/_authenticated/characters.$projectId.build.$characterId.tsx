@@ -564,8 +564,66 @@ function GuidedBuilderPage() {
 
   const callRefreshPortrait = useServerFn(refreshPortraitUrl);
   const callSuggestVoice = useServerFn(suggestCharacterVoice);
+  const callCandidates = useServerFn(generatePortraitCandidates);
+  const callApprove = useServerFn(approvePortraitCandidate);
   const [styleDialogOpen, setStyleDialogOpen] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
+  const [candidatesBusy, setCandidatesBusy] = useState(false);
+  const [approvingSeed, setApprovingSeed] = useState<number | null>(null);
+  type PortraitCandidate = { seed: number; url: string | null; path: string | null; index: number; error: string | null };
+  const [candidates, setCandidates] = useState<PortraitCandidate[] | null>(null);
+
+  const exploreCandidates = async () => {
+    if (imageStatus?.configured === false) {
+      toast.info(t("characters.builder.portrait.unavailable"));
+      return;
+    }
+    const need = 4;
+    if (portraitsLimit > 0 && portraitsRemaining < need) {
+      toast.error(`Need ${need} portrait credits to explore variants — you have ${portraitsRemaining}.`);
+      return;
+    }
+    setCandidatesBusy(true);
+    setCandidates(null);
+    try {
+      const out: any = await callCandidates({ data: { characterId, presetKey, count: need } });
+      void refetchUsage();
+      if (out?.configured === false) {
+        toast.info(t("characters.builder.portrait.unavailable"));
+        return;
+      }
+      const list: PortraitCandidate[] = out?.candidates ?? [];
+      setCandidates(list);
+      const ok = list.filter((c) => c.url).length;
+      if (ok === 0) toast.error("No candidates were generated. Try again.");
+      else toast.success(`Generated ${ok} portrait ${ok === 1 ? "variant" : "variants"} — pick the one that feels right.`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not generate portrait variants");
+    } finally {
+      setCandidatesBusy(false);
+    }
+  };
+
+  const approveCandidate = async (cand: PortraitCandidate) => {
+    if (!cand.url && !cand.path) return;
+    setApprovingSeed(cand.seed);
+    try {
+      const out: any = await callApprove({
+        data: { characterId, seed: cand.seed, path: cand.path, url: cand.url },
+      });
+      qc.invalidateQueries({ queryKey: ["character", projectId, characterId] });
+      qc.invalidateQueries({ queryKey: ["characters", projectId] });
+      if (out?.row?.portrait_url) {
+        toast.success("Portrait approved and locked in.");
+        setCandidates(null);
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not approve portrait");
+    } finally {
+      setApprovingSeed(null);
+    }
+  };
+
 
   const generatePortraitNow = async (opts?: { rerollSeed?: boolean }) => {
     if (imageStatus?.configured === false) {
