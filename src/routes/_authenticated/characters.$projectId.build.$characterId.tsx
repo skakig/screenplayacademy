@@ -22,6 +22,12 @@ import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenSt
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { t } from "@/lib/i18n/t";
+import {
+  composePortraitPrompt,
+  profileStrength,
+  isPortraitReady,
+  PORTRAIT_STRENGTH_TARGET,
+} from "@/lib/characters/portraitPrompt";
 
 export const Route = createFileRoute(
   "/_authenticated/characters/$projectId/build/$characterId",
@@ -869,34 +875,62 @@ function GuidedBuilderPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <div className={`rounded-lg border px-3 py-2 text-xs ${imageStatus?.configured === false ? "border-amber-500/40 bg-amber-500/10 text-amber-500" : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"}`}>
-                      {imageStatusLoading
-                        ? t("characters.builder.portrait.statusLoading")
-                        : imageStatus?.configured === false
-                        ? t("characters.builder.portrait.notConfigured")
-                        : t("characters.builder.portrait.ready")}
-                      {imageStatus?.configured === false && (
-                        <p className="mt-1 text-muted-foreground">{t("characters.builder.portrait.notConfiguredBody")}</p>
-                      )}
-                    </div>
-                    <Button
-                      onClick={generatePortraitNow}
-                      disabled={portraitBusy || imageStatusLoading || imageStatus?.configured === false}
-                      className="w-full sm:w-auto"
-                    >
-                      {portraitBusy
-                        ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        : <Wand2 className="h-4 w-4 mr-2" />}
-                      {character?.portrait_url ? "Regenerate portrait" : "Generate portrait"}
-                    </Button>
-                    <div className="rounded-lg border border-border/60 bg-secondary/40 p-3 text-xs text-muted-foreground space-y-1">
-                      <div className="flex items-center gap-1.5 text-primary/90 font-semibold text-[11px] uppercase tracking-wider">
-                        <Lightbulb className="h-3.5 w-3.5" />Coaching
-                      </div>
-                      <p>{current.coach[0]}</p>
-                      <p>{current.coach[1]}</p>
-                    </div>
+                    {(() => {
+                      const filled = profileStrength(character as any);
+                      const ready = isPortraitReady(character as any);
+                      const promptPreview = composePortraitPrompt(character as any, {});
+                      return (
+                        <>
+                          <div className={`rounded-lg border px-3 py-2 text-xs ${imageStatus?.configured === false ? "border-amber-500/40 bg-amber-500/10 text-amber-500" : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"}`}>
+                            {imageStatusLoading
+                              ? t("characters.builder.portrait.statusLoading")
+                              : imageStatus?.configured === false
+                              ? t("characters.builder.portrait.notConfigured")
+                              : t("characters.builder.portrait.ready")}
+                            {imageStatus?.configured === false && (
+                              <p className="mt-1 text-muted-foreground">{t("characters.builder.portrait.notConfiguredBody")}</p>
+                            )}
+                          </div>
+
+                          <div className={`rounded-lg border px-3 py-2 text-xs ${ready ? "border-primary/40 bg-primary/10 text-primary" : "border-amber-500/40 bg-amber-500/10 text-amber-500"}`}>
+                            {ready
+                              ? t("characters.builder.portrait.gateReady")
+                              : t("characters.builder.portrait.gateNeed").replace("{filled}", String(filled)).replace("{needed}", String(PORTRAIT_STRENGTH_TARGET))}
+                          </div>
+
+                          <Button
+                            onClick={generatePortraitNow}
+                            disabled={portraitBusy || imageStatusLoading || imageStatus?.configured === false || !ready}
+                            className="w-full sm:w-auto"
+                          >
+                            {portraitBusy
+                              ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              : <Wand2 className="h-4 w-4 mr-2" />}
+                            {character?.portrait_url ? "Regenerate portrait" : "Generate portrait"}
+                          </Button>
+
+                          <details className="rounded-lg border border-border/60 bg-secondary/30 p-3 text-xs">
+                            <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                              {t("characters.builder.portrait.promptTitle")}
+                            </summary>
+                            <p className="mt-2 text-muted-foreground leading-relaxed">{promptPreview}</p>
+                            <p className="mt-2 text-[10px] text-muted-foreground/80 italic">
+                              {t("characters.builder.portrait.promptHint")}
+                            </p>
+                          </details>
+
+                          <div className="rounded-lg border border-border/60 bg-secondary/40 p-3 text-xs text-muted-foreground space-y-1">
+                            <div className="flex items-center gap-1.5 text-primary/90 font-semibold text-[11px] uppercase tracking-wider">
+                              <Lightbulb className="h-3.5 w-3.5" />Coaching
+                            </div>
+                            <p>{current.coach[0]}</p>
+                            <p>{current.coach[1]}</p>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
+
                 </div>
               </>
             ) : (

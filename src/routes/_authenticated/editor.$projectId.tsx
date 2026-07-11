@@ -48,7 +48,7 @@ import { buildOutline, estimatePages } from "@/lib/editor/manuscriptAnalyzer";
 import { BookOpen, Map as MapIcon, Clapperboard } from "lucide-react";
 import { useWriterEvents } from "@/hooks/useWriterEvents";
 import { useWriteMode } from "@/hooks/use-write-mode";
-import { FocusPill } from "@/components/editor/FocusPill";
+import { FocusAccessoryBar } from "@/components/editor/FocusAccessoryBar";
 import { FirstRunModeDialog } from "@/components/editor/FirstRunModeDialog";
 import { BasicProgressPill } from "@/components/editor/BasicProgressPill";
 import { EditorSummonBar } from "@/components/editor/EditorSummonBar";
@@ -924,14 +924,16 @@ function Editor() {
 
               </div>
 
-              <EditorCommandBar
-                currentBlockType={activeBlockType}
-                hasFocus={!!activeMeta}
-                onCycleType={cmdCycleType}
-                onNewLine={cmdNewLine}
-                onAiContinue={cmdAiContinue}
-                aiBusy={aiContinueBusy}
-              />
+              {!focus && (
+                <EditorCommandBar
+                  currentBlockType={activeBlockType}
+                  hasFocus={!!activeMeta}
+                  onCycleType={cmdCycleType}
+                  onNewLine={cmdNewLine}
+                  onAiContinue={cmdAiContinue}
+                  aiBusy={aiContinueBusy}
+                />
+              )}
               {(blocks as any[]).length > 0 && !focus && (
                 <div className="max-w-[680px] mx-auto mt-4 flex justify-end gap-2">
                   <Button variant="outline" size="sm" onClick={() => {
@@ -1082,9 +1084,16 @@ function Editor() {
         open={storyBuilderOpen}
         onOpenChange={setStoryBuilderOpen}
       />
-      <FocusPill />
+      <FocusAccessoryBar
+        currentBlockType={activeBlockType}
+        hasFocus={!!activeMeta}
+        onCycleType={cmdCycleType}
+        onNewLine={cmdNewLine}
+        onAiContinue={cmdAiContinue}
+        aiBusy={aiContinueBusy}
+      />
       <FirstRunModeDialog />
-      <WriterDeskNewMenu projectId={projectId} />
+      {!focus && <WriterDeskNewMenu projectId={projectId} />}
     </AppShell>
   );
 }
