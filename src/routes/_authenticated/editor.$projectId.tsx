@@ -924,14 +924,16 @@ function Editor() {
 
               </div>
 
-              <EditorCommandBar
-                currentBlockType={activeBlockType}
-                hasFocus={!!activeMeta}
-                onCycleType={cmdCycleType}
-                onNewLine={cmdNewLine}
-                onAiContinue={cmdAiContinue}
-                aiBusy={aiContinueBusy}
-              />
+              {!focus && (
+                <EditorCommandBar
+                  currentBlockType={activeBlockType}
+                  hasFocus={!!activeMeta}
+                  onCycleType={cmdCycleType}
+                  onNewLine={cmdNewLine}
+                  onAiContinue={cmdAiContinue}
+                  aiBusy={aiContinueBusy}
+                />
+              )}
               {(blocks as any[]).length > 0 && !focus && (
                 <div className="max-w-[680px] mx-auto mt-4 flex justify-end gap-2">
                   <Button variant="outline" size="sm" onClick={() => {
