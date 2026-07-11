@@ -108,7 +108,7 @@ export const mergeCharacters = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await assertProjectMember(supabase, data.projectId);
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { supabaseAdmin: _sa } = await import("@/integrations/supabase/client.server"); const supabaseAdmin = _sa as any;
 
     // Verify every id belongs to the project. Refuse cross-project merges.
     const allIds = [data.primaryId, ...data.mergedIds];
@@ -263,7 +263,7 @@ export const undoMerge = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { supabaseAdmin: _sa } = await import("@/integrations/supabase/client.server"); const supabaseAdmin = _sa as any;
 
     const { data: merge, error } = await supabaseAdmin
       .from("character_merges")
@@ -373,7 +373,7 @@ export const rememberAlias = createServerFn({ method: "POST" })
     await assertProjectMember(supabase, data.projectId);
     const norm = normalizeName(data.aliasText).normalized;
     if (!norm) throw new Error("empty_alias");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { supabaseAdmin: _sa } = await import("@/integrations/supabase/client.server"); const supabaseAdmin = _sa as any;
     await supabaseAdmin.from("character_aliases").upsert(
       {
         project_id: data.projectId,
@@ -412,7 +412,7 @@ export const rememberKeepSeparate = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertProjectMember(supabase, data.projectId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { supabaseAdmin: _sa } = await import("@/integrations/supabase/client.server"); const supabaseAdmin = _sa as any;
     const { data: chars } = await supabaseAdmin
       .from("characters")
       .select("id, project_id, name")
