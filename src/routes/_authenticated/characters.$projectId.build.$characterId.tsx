@@ -330,6 +330,7 @@ function GuidedBuilderPage() {
   const [busy, setBusy] = useState(false);
   const [expandedCoach, setExpandedCoach] = useState<number | null>(0);
   const [portraitBusy, setPortraitBusy] = useState(false);
+  const [portraitBroken, setPortraitBroken] = useState(false);
 
   const current = STEPS[step];
   const isPortrait = current.kind === "portrait";
@@ -615,11 +616,12 @@ function GuidedBuilderPage() {
           <div className="rounded-2xl border border-border/70 bg-card/60 p-5 sm:p-6 shadow-sm relative overflow-hidden">
             <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.05] bg-[radial-gradient(circle_at_top_right,var(--primary),transparent_60%)]" />
             <div className="relative flex items-center gap-5">
-              {character?.portrait_url ? (
+              {character?.portrait_url && !portraitBroken ? (
                 <img
                   src={character.portrait_url}
                   alt={`${displayName} portrait`}
                   className="h-20 w-20 rounded-2xl object-cover border border-primary/40"
+                  onError={() => setPortraitBroken(true)}
                 />
               ) : (
                 <div className="h-20 w-20 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/20 to-primary/5 grid place-items-center font-display text-3xl text-primary">
@@ -757,11 +759,12 @@ function GuidedBuilderPage() {
 
                 <div className="mt-6 grid sm:grid-cols-[240px_minmax(0,1fr)] gap-6 items-start">
                   <div className="aspect-[3/4] rounded-xl border border-border/70 bg-card overflow-hidden grid place-items-center relative">
-                    {character?.portrait_url ? (
+                    {character?.portrait_url && !portraitBroken ? (
                       <img
                         src={character.portrait_url}
                         alt={`${displayName} portrait`}
                         className="h-full w-full object-cover"
+                        onError={() => setPortraitBroken(true)}
                       />
                     ) : (
                       <div className="text-center px-4">

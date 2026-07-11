@@ -507,6 +507,7 @@ function FilterRow({
 function CharacterCard({
   c, projectId, rels, scenes, bulkMode, bulkSelected, onBulkToggle, onOpen, onRename, onDelete,
 }: any) {
+  const [portraitBroken, setPortraitBroken] = useState(false);
   const pct = completenessPct(c);
   const status = pct >= 75 ? "Strong" : pct >= 40 ? "Developing" : "Needs Work";
   const statusTone =
@@ -536,8 +537,13 @@ function CharacterCard({
           className="relative shrink-0 h-40 w-32 rounded-xl overflow-hidden bg-gradient-to-b from-secondary/60 to-secondary/20 border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/60"
           aria-label={`Open ${c.name || "character"}`}
         >
-          {c.portrait_url ? (
-            <img src={c.portrait_url} alt={c.name || "Character portrait"} className="h-full w-full object-cover" />
+          {c.portrait_url && !portraitBroken ? (
+            <img
+              src={c.portrait_url}
+              alt={c.name || "Character portrait"}
+              className="h-full w-full object-cover"
+              onError={() => setPortraitBroken(true)}
+            />
           ) : (
             <div className="h-full w-full flex items-end justify-center pb-4">
               <div className="h-24 w-16 rounded-t-full bg-foreground/10" aria-hidden />
