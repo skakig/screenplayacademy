@@ -28,7 +28,7 @@ export const Route = createFileRoute("/pricing")({
       { rel: "canonical", href: "https://scenesmithstudio.com/pricing" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { promo?: string } => ({
     promo: typeof s.promo === "string" ? s.promo : undefined,
   }),
   component: Pricing,
