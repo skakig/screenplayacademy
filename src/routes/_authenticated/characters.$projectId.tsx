@@ -31,6 +31,8 @@ import { CharacterProfileDialog } from "@/components/characters/CharacterProfile
 import { CastCleanupPanel } from "@/components/characters/CastCleanupPanel";
 import { DetectedSpeakersPanel } from "@/components/characters/DetectedSpeakersPanel";
 import { upsertCharacter, deleteCharacter, bulkDeleteCharacters, restoreCharacters } from "@/lib/characters.functions";
+import { MergeReviewDialog } from "@/components/characters/MergeReviewDialog";
+import { useSearch } from "@tanstack/react-router";
 
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
