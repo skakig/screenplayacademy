@@ -144,12 +144,35 @@ function extractUsages(files: string[]): Usage[] {
       let varsProvided: string[] | null = null;
       if (varsBlock) {
         varsProvided = [];
-        OBJ_KEY_RE.lastIndex = 0;
-        let vm: RegExpExecArray | null;
-        while ((vm = OBJ_KEY_RE.exec(varsBlock))) {
-          varsProvided.push(vm[1]);
+        // Strip outer braces, split on commas that are not inside nested
+        // braces/parens/brackets, then take the identifier before `:` (or
+        // the whole identifier for shorthand `{ name }`).
+        const inner = varsBlock.slice(1, -1);
+        const parts: string[] = [];
+        let depth = 0;
+        let buf = "";
+        for (const ch of inner) {
+          if (ch === "{" || ch === "(" || ch === "[") depth++;
+          else if (ch === "}" || ch === ")" || ch === "]") depth--;
+          if (ch === "," && depth === 0) {
+            parts.push(buf);
+            buf = "";
+          } else buf += ch;
+        }
+        if (buf.trim()) parts.push(buf);
+        for (const p of parts) {
+          const head = p.split(":")[0].trim();
+          const m2 = head.match(/^\.\.\.(.*)$/);
+          if (m2) {
+            // Spread — we can't statically resolve the shape; skip strict check
+            varsProvided = null;
+            break;
+          }
+          const idm = head.match(/^([a-zA-Z_$][a-zA-Z0-9_$]*)/);
+          if (idm) varsProvided.push(idm[1]);
         }
       }
+
       usages.push({ file: relative(ROOT, file), line, key, varsProvided });
     }
   }
