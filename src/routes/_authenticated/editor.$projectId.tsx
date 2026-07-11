@@ -151,7 +151,7 @@ function Editor() {
   });
 
   const openGuidedCharacterBuilder = async () => {
-    let characterId = (characters as CharacterHit[])[0]?.id;
+    let characterId: string | undefined = (characters as CharacterHit[])[0]?.id;
     if (!characterId) {
       const created = (await createCharacter.mutateAsync("New Character")) as { row?: { id?: string }; id?: string } | null;
       characterId = created?.row?.id ?? created?.id;
