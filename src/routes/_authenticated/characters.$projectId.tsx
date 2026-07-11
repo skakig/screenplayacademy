@@ -248,27 +248,37 @@ function CharactersPage() {
         />
 
 
-        <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_320px] gap-4">
-          {/* SIDEBAR */}
-          <aside className="space-y-1">
-            <SideItem label="All" count={counts.All ?? 0} active={group === "All"} onClick={() => setGroup("All")} />
-            <div className="h-px bg-border/60 my-2" />
-            {GROUPS.map((g) => (
-              <SideItem key={g} label={g} count={counts[g] ?? 0} active={group === g} onClick={() => setGroup(g)} />
-            ))}
+        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr_320px] gap-4">
+          {/* SIDEBAR — Ensemble groups + arc-status legend */}
+          <aside className="space-y-6">
+            <div>
+              <h3 className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground uppercase mb-3 px-3">Ensemble</h3>
+              <div className="space-y-1">
+                <SideItem label="All Cast" count={counts.All ?? 0} active={group === "All"} onClick={() => setGroup("All")} />
+                {GROUPS.map((g) => (
+                  <SideItem key={g} label={g} count={counts[g] ?? 0} active={group === g} onClick={() => setGroup(g)} />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground uppercase mb-3 px-3">Arc Status</h3>
+              <div className="space-y-2.5 px-3">
+                <ArcLegend tone="emerald" label="Resolved" count={arcStatus.resolved} />
+                <ArcLegend tone="amber" label="Developing" count={arcStatus.developing} />
+                <ArcLegend tone="muted" label="Seed" count={arcStatus.seed} />
+              </div>
+            </div>
           </aside>
 
           {/* MAIN */}
           <main className="space-y-5">
             <section>
-              <div className="flex items-center gap-2 mb-3">
-                <h2 className="font-display text-lg">Cast</h2>
+              <div className="flex items-baseline gap-2 mb-4">
+                <h2 className="font-display text-lg">{group === "All" ? "All Cast" : group}</h2>
                 <Badge variant="outline" className="text-[10px]">{filtered.length}</Badge>
               </div>
-              <div className="relative mb-3">
-                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                <Input placeholder="Search by name, role, archetype…" value={query} onChange={(e) => setQuery(e.target.value)} className="pl-8 h-9" />
-              </div>
+
 
               {filtered.length === 0 ? (
                 <Card className="p-12 text-center border-dashed">
