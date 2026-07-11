@@ -464,7 +464,7 @@ function ImportanceChip({ level }: { level: string }) {
   );
 }
 
-function Inspector({ c, onOpen }: { c: any; onOpen: () => void }) {
+function Inspector({ c, onOpen, onTruthCheck }: { c: any; onOpen: () => void; onTruthCheck: () => void }) {
   if (!c) {
     return (
       <Card className="p-5 border-dashed text-center">
@@ -487,6 +487,8 @@ function Inspector({ c, onOpen }: { c: any; onOpen: () => void }) {
 
       <div className="flex flex-wrap gap-1.5 mt-3">
         <Badge variant="secondary" className="text-[10px]">{c.group_name ?? "Main Cast"}</Badge>
+        {c.importance && <ImportanceChip level={c.importance} />}
+        {c.story_function && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary/60 border border-border/60 text-foreground/80">{c.story_function}</span>}
         <TMHBadge level={c.tmh_baseline} />
       </div>
 
@@ -501,9 +503,14 @@ function Inspector({ c, onOpen }: { c: any; onOpen: () => void }) {
         <Row label="Voice" value={c.voice_summary ?? c.voice_style} />
       </dl>
 
-      <Button className="w-full mt-4" onClick={onOpen}>
-        <Sparkles className="h-3.5 w-3.5 mr-1.5" />Open full profile
-      </Button>
+      <div className="grid grid-cols-2 gap-2 mt-4">
+        <Button variant="outline" size="sm" onClick={onTruthCheck} title="Would they do this?">
+          <Scale className="h-3.5 w-3.5 mr-1.5" />Truth Check
+        </Button>
+        <Button size="sm" onClick={onOpen}>
+          <Sparkles className="h-3.5 w-3.5 mr-1.5" />Open profile
+        </Button>
+      </div>
     </Card>
   );
 }
