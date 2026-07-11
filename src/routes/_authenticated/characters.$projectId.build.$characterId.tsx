@@ -15,14 +15,12 @@ import {
   Sparkles, ChevronLeft, ChevronRight, ChevronDown, Loader2, Check, X,
   ArrowLeft, ArrowRight, Star, HelpCircle, Rocket, Crosshair, Clock,
   MessageCircle, Shield, Lightbulb, Save, Eye, Wand2, Image as ImageIcon,
-  GraduationCap, Flame, Users, BookOpen, AlertCircle,
+  GraduationCap, Flame, Users, BookOpen, AlertCircle, Volume2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenStatus, setCastStylePreset, refreshPortraitUrl, setProjectVisualStyle, suggestCharacterVoice, generatePortraitCandidates, approvePortraitCandidate } from "@/lib/characters.functions";
 import { previewCharacterVoice } from "@/lib/voice-preview.functions";
-import { Volume2, Pause } from "lucide-react";
 import { StyleContractDialog } from "@/components/characters/StyleContractDialog";
-import { StyleImportDialog } from "@/components/characters/StyleImportDialog";
 import { getUsageSnapshot } from "@/lib/usage.functions";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
@@ -42,6 +40,10 @@ export const Route = createFileRoute(
   component: GuidedBuilderPage,
   errorComponent: RouteErrorBoundary,
 });
+
+// Module-scoped voice preview cache: keeps the Audio element alive across
+// re-renders so repeated Preview clicks replay instantly with no network hit.
+const voicePreviewClientCache = new Map<string, { audio: HTMLAudioElement; url: string }>();
 
 type Step = {
   field: string;
@@ -567,16 +569,12 @@ function GuidedBuilderPage() {
 
   const callRefreshPortrait = useServerFn(refreshPortraitUrl);
   const callSuggestVoice = useServerFn(suggestCharacterVoice);
-  const callVoicePreview = useServerFn(previewCharacterVoice);
+  const callPreviewVoice = useServerFn(previewCharacterVoice);
   const callCandidates = useServerFn(generatePortraitCandidates);
   const callApprove = useServerFn(approvePortraitCandidate);
   const [styleDialogOpen, setStyleDialogOpen] = useState(false);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
-  const [voicePreviewBusy, setVoicePreviewBusy] = useState(false);
-  const [voicePreviewUrl, setVoicePreviewUrl] = useState<string | null>(null);
-  const [voicePreviewPlaying, setVoicePreviewPlaying] = useState(false);
-  const voiceAudioRef = (useMemo(() => ({ current: null as HTMLAudioElement | null }), []));
+  const [previewBusy, setPreviewBusy] = useState(false);
   const [candidatesBusy, setCandidatesBusy] = useState(false);
   const [approvingSeed, setApprovingSeed] = useState<number | null>(null);
   type PortraitCandidate = { seed: number; url: string | null; path: string | null; index: number; error: string | null };
@@ -620,23 +618,8 @@ function GuidedBuilderPage() {
       const out: any = await callApprove({
         data: { characterId, seed: cand.seed, path: cand.path, url: cand.url },
       });
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["character", projectId, characterId], refetchType: "active" }),
-        qc.invalidateQueries({
-          predicate: (q) => {
-            const k = q.queryKey?.[0];
-            return (
-              k === "character" ||
-              k === "characters" ||
-              k === "characters-lite" ||
-              k === "character-candidates" ||
-              k === "scene-states" ||
-              k === "script-blocks-for-cast"
-            );
-          },
-          refetchType: "active",
-        }),
-      ]);
+      qc.invalidateQueries({ queryKey: ["character", projectId, characterId] });
+      qc.invalidateQueries({ queryKey: ["characters", projectId] });
       if (out?.row?.portrait_url) {
         toast.success("Portrait approved and locked in.");
         setCandidates(null);
@@ -726,59 +709,42 @@ function GuidedBuilderPage() {
     }
   };
 
-  const playVoicePreview = async () => {
-    // Toggle if already playing
-    if (voicePreviewPlaying && voiceAudioRef.current) {
-      voiceAudioRef.current.pause();
-      setVoicePreviewPlaying(false);
+  const previewVoiceNow = async () => {
+    const voiceId = (character as any)?.elevenlabs_voice_id as string | undefined;
+    if (!voiceId) {
+      toast.info("Assign a voice to this character first.");
       return;
     }
-    // Reuse cached URL
-    if (voicePreviewUrl && voiceAudioRef.current) {
-      try {
-        voiceAudioRef.current.currentTime = 0;
-        await voiceAudioRef.current.play();
-        setVoicePreviewPlaying(true);
-      } catch { /* ignore */ }
-      return;
-    }
-    setVoicePreviewBusy(true);
+    setPreviewBusy(true);
     try {
-      const out: any = await callVoicePreview({ data: { characterId } });
-      if (out?.configured === false) {
-        toast.info("Voice preview isn't available — the ElevenLabs voice service isn't configured.");
+      // Client-side cache keyed by (voiceId, greeting text) — instant replay
+      // within the session with zero network calls. The server also caches
+      // to storage across sessions.
+      const cached = voicePreviewClientCache.get(voiceId);
+      if (cached && cached.audio) {
+        cached.audio.currentTime = 0;
+        await cached.audio.play().catch(() => {});
         return;
       }
-      if (!out?.audioBase64) {
-        toast.error("Could not generate a voice preview");
+      const out: any = await callPreviewVoice({ data: { characterId } });
+      if (!out?.ok) {
+        if (out?.reason === "no_voice") toast.info("Assign a voice first.");
+        else if (out?.reason === "not_configured") toast.info("Voice preview is not configured for this project.");
+        else if (out?.reason === "quota") toast.error(out?.message ?? "You're out of table-read credits.");
+        else toast.error("Could not generate preview.");
         return;
       }
-      const url = `data:${out.mime || "audio/mpeg"};base64,${out.audioBase64}`;
-      setVoicePreviewUrl(url);
-      const audio = new Audio(url);
-      voiceAudioRef.current = audio;
-      audio.onended = () => setVoicePreviewPlaying(false);
-      audio.onpause = () => setVoicePreviewPlaying(false);
-      await audio.play();
-      setVoicePreviewPlaying(true);
+      const audio = new Audio(out.url);
+      audio.preload = "auto";
+      voicePreviewClientCache.set(voiceId, { audio, url: out.url });
+      await audio.play().catch(() => {});
+      if (out.cached) toast.success("Loaded cached preview", { duration: 1200 });
     } catch (e: any) {
-      toast.error(e?.message ?? "Voice preview failed");
+      toast.error(e?.message ?? "Could not preview voice");
     } finally {
-      setVoicePreviewBusy(false);
+      setPreviewBusy(false);
     }
   };
-
-  // Clear cached preview when the character's assigned voice changes
-  useEffect(() => {
-    if (voiceAudioRef.current) {
-      voiceAudioRef.current.pause();
-      voiceAudioRef.current = null;
-    }
-    setVoicePreviewUrl(null);
-    setVoicePreviewPlaying(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [(character as any)?.elevenlabs_voice_id]);
-
 
 
   const exitTo = () =>
@@ -1201,15 +1167,6 @@ function GuidedBuilderPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setImportDialogOpen(true)}
-                              className="text-xs"
-                              title="Reuse portrait + voice from a character in another project"
-                            >
-                              Import style
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
                               onClick={() => void autoSuggestVoice()}
                               disabled={voiceBusy}
                               className="text-xs"
@@ -1220,19 +1177,15 @@ function GuidedBuilderPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => void playVoicePreview()}
-                              disabled={voicePreviewBusy}
+                              onClick={() => void previewVoiceNow()}
+                              disabled={previewBusy || !(character as any)?.elevenlabs_voice_id}
                               className="text-xs"
-                              title={(character as any)?.elevenlabs_voice_id
-                                ? "Hear how this character sounds before the table read"
-                                : "Preview with the default narrator voice (assign a voice for a truer take)"}
+                              title="Play a short greeting in this character's voice (cached for instant replay)"
                             >
-                              {voicePreviewBusy
+                              {previewBusy
                                 ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                : voicePreviewPlaying
-                                  ? <Pause className="h-3 w-3 mr-1" />
-                                  : <Volume2 className="h-3 w-3 mr-1" />}
-                              {voicePreviewPlaying ? "Stop preview" : "Preview voice"}
+                                : <Volume2 className="h-3 w-3 mr-1" />}
+                              Preview voice
                             </Button>
                             <Button
                               variant="outline"
@@ -1553,12 +1506,6 @@ function GuidedBuilderPage() {
         onOpenChange={setStyleDialogOpen}
         projectId={projectId}
         initial={((project as any)?.metadata?.visual_style ?? {}) as any}
-      />
-      <StyleImportDialog
-        open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
-        targetProjectId={projectId}
-        targetCharacterId={characterId}
       />
     </div>
 

@@ -569,58 +569,35 @@ export const approvePortraitCandidate = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ApproveInput.parse(d))
   .handler(async ({ data, context }) => {
     const c = await loadOwnedCharacter(context, data.characterId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let finalUrl = data.url ?? null;
-    let finalPath: string | null = null;
-
     if (data.path) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       // Confirm the object belongs to this character/project before adopting
       // it — path is client-supplied and must match the expected prefix.
       const expectedPrefix = `${c.project_id}/characters/${c.id}-`;
       if (!data.path.startsWith(expectedPrefix)) {
         throw new Error("Portrait candidate does not belong to this character.");
       }
-      // Copy the candidate to a stable canonical portrait path so the approved
-      // image survives even if candidate objects are cleaned up later, and so
-      // refreshPortraitUrl can re-sign it indefinitely.
-      const stablePath = `${c.project_id}/characters/${c.id}-portrait-${data.seed}.png`;
-      const { data: dl, error: dlErr } = await supabaseAdmin.storage
-        .from("storyboards").download(data.path);
-      if (dlErr || !dl) {
+      const { data: signed, error: signErr } = await supabaseAdmin.storage
+        .from("storyboards").createSignedUrl(data.path, 60 * 60 * 24 * 30);
+      if (signErr || !signed?.signedUrl) {
         throw new Error("Selected portrait is no longer available. Regenerate the grid and try again.");
       }
-      const bytes = new Uint8Array(await dl.arrayBuffer());
-      const { error: upErr } = await supabaseAdmin.storage
-        .from("storyboards")
-        .upload(stablePath, bytes, { contentType: "image/png", upsert: true });
-      if (upErr) throw new Error(`Could not save portrait: ${upErr.message}`);
-      const { data: signed, error: signErr } = await supabaseAdmin.storage
-        .from("storyboards").createSignedUrl(stablePath, 60 * 60 * 24 * 30);
-      if (signErr || !signed?.signedUrl) {
-        throw new Error("Could not sign approved portrait URL.");
-      }
       finalUrl = signed.signedUrl;
-      finalPath = stablePath;
     }
     if (!finalUrl) throw new Error("No portrait URL to approve.");
-
-    // Use the admin client for the persistence write so RLS on `characters`
-    // (owner-only) doesn't silently drop approvals from collaborators who
-    // have edit rights via can_edit_project. We already verified ownership /
-    // edit access in loadOwnedCharacter.
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await context.supabase
       .from("characters")
       .update({
         portrait_url: finalUrl,
         portrait_seed: data.seed,
-        ...(finalPath ? { portrait_path: finalPath } : {}),
+        ...(data.path ? { portrait_path: data.path } : {}),
       } as any)
       .eq("id", c.id)
       .select()
       .single();
     if (error) throw new Error(error.message);
-    if (!row) throw new Error("Portrait approval did not persist. Please try again.");
-    return { row, seed: data.seed, path: finalPath };
+    return { row, seed: data.seed };
   });
 
 
@@ -737,159 +714,4 @@ export const listProjectCharacters = createServerFn({ method: "POST" })
       .order("name");
     if (error) throw new Error(error.message);
     return rows ?? [];
-  });
-
-// ============= Style import across projects =============
-// Allow a writer to reuse portrait + voice settings from any project they can
-// access. Reads are performed with the user's supabase client so RLS enforces
-// membership on both source and target.
-
-const PORTRAIT_STYLE_FIELDS = [
-  "visual_description",
-  "visual_symbol",
-  "portrait_url",
-  "portrait_path",
-  "portrait_seed",
-  "movement_style",
-] as const;
-
-const VOICE_STYLE_FIELDS = [
-  "elevenlabs_voice_id",
-  "voice_summary",
-  "voice_style",
-  "voice_archetype",
-  "humor_style",
-  "conflict_style",
-] as const;
-
-export const listStyleSourceProjects = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ excludeProjectId: z.string().uuid().optional() }).parse(d ?? {}),
-  )
-  .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase
-      .from("projects")
-      .select("id, title, metadata, updated_at")
-      .order("updated_at", { ascending: false })
-      .limit(100);
-    if (error) throw new Error(error.message);
-    return (rows ?? [])
-      .filter((r: any) => r.id !== data.excludeProjectId)
-      .map((r: any) => ({
-        id: r.id as string,
-        title: (r.title as string) ?? "Untitled",
-        cast_style_preset: (r.metadata?.cast_style_preset ?? null) as string | null,
-        has_visual_style:
-          !!r.metadata?.visual_style && Object.keys(r.metadata.visual_style).length > 0,
-        updated_at: r.updated_at as string | null,
-      }));
-  });
-
-export const listStyleSourceCharacters = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ sourceProjectId: z.string().uuid() }).parse(d),
-  )
-  .handler(async ({ data, context }) => {
-    const cols = [
-      "id",
-      "name",
-      "role",
-      "archetype",
-      ...PORTRAIT_STYLE_FIELDS,
-      ...VOICE_STYLE_FIELDS,
-    ].join(", ");
-    const { data: rows, error } = await context.supabase
-      .from("characters")
-      .select(cols)
-      .eq("project_id", data.sourceProjectId)
-      .is("quarantined_at", null)
-      .order("name");
-    if (error) throw new Error(error.message);
-    return (rows ?? []).map((c: any) => ({
-      ...c,
-      has_portrait: !!(c.portrait_url || c.portrait_path),
-      has_voice: !!(c.elevenlabs_voice_id || c.voice_summary),
-    }));
-  });
-
-const ImportProjectStyleInput = z.object({
-  targetProjectId: z.string().uuid(),
-  sourceProjectId: z.string().uuid(),
-  includePreset: z.boolean().default(true),
-  includeVisualStyle: z.boolean().default(true),
-});
-
-export const importProjectStyleSettings = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => ImportProjectStyleInput.parse(d))
-  .handler(async ({ data, context }) => {
-    const { data: src, error: srcErr } = await context.supabase
-      .from("projects").select("id, metadata").eq("id", data.sourceProjectId).maybeSingle();
-    if (srcErr) throw new Error(srcErr.message);
-    if (!src) throw new Error("Source project not readable");
-    const { data: tgt, error: tgtErr } = await context.supabase
-      .from("projects").select("id, metadata").eq("id", data.targetProjectId).maybeSingle();
-    if (tgtErr) throw new Error(tgtErr.message);
-    if (!tgt) throw new Error("Target project not editable");
-
-    const srcMeta = ((src as any).metadata ?? {}) as Record<string, any>;
-    const nextMeta: Record<string, any> = { ...((tgt as any).metadata ?? {}) };
-    if (data.includePreset && srcMeta.cast_style_preset) {
-      nextMeta.cast_style_preset = srcMeta.cast_style_preset;
-    }
-    if (data.includeVisualStyle && srcMeta.visual_style) {
-      nextMeta.visual_style = srcMeta.visual_style;
-    }
-    const { error: upErr } = await context.supabase
-      .from("projects").update({ metadata: nextMeta } as any).eq("id", data.targetProjectId);
-    if (upErr) throw new Error(upErr.message);
-    return {
-      ok: true,
-      cast_style_preset: nextMeta.cast_style_preset ?? null,
-      visual_style: nextMeta.visual_style ?? null,
-    };
-  });
-
-const ImportCharacterStyleInput = z.object({
-  targetCharacterId: z.string().uuid(),
-  sourceCharacterId: z.string().uuid(),
-  includePortrait: z.boolean().default(true),
-  includeVoice: z.boolean().default(true),
-});
-
-export const importCharacterStyleFromSource = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => ImportCharacterStyleInput.parse(d))
-  .handler(async ({ data, context }) => {
-    const cols = ["id", "project_id", ...PORTRAIT_STYLE_FIELDS, ...VOICE_STYLE_FIELDS].join(", ");
-    const { data: src, error: srcErr } = await context.supabase
-      .from("characters").select(cols).eq("id", data.sourceCharacterId).maybeSingle();
-    if (srcErr) throw new Error(srcErr.message);
-    if (!src) throw new Error("Source character not readable");
-
-    // Ensure target is editable via loadOwnedCharacter (throws otherwise).
-    await loadOwnedCharacter(context, data.targetCharacterId);
-
-    const patch: Record<string, any> = {};
-    if (data.includePortrait) {
-      for (const f of PORTRAIT_STYLE_FIELDS) {
-        const v = (src as any)[f];
-        if (v !== null && v !== undefined && v !== "") patch[f] = v;
-      }
-    }
-    if (data.includeVoice) {
-      for (const f of VOICE_STYLE_FIELDS) {
-        const v = (src as any)[f];
-        if (v !== null && v !== undefined && v !== "") patch[f] = v;
-      }
-    }
-    if (Object.keys(patch).length === 0) {
-      return { ok: true, updated: 0 };
-    }
-    const { data: row, error: upErr } = await context.supabase
-      .from("characters").update(patch as any).eq("id", data.targetCharacterId).select().single();
-    if (upErr) throw new Error(upErr.message);
-    return { ok: true, updated: Object.keys(patch).length, row };
   });
