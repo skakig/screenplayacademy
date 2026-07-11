@@ -571,6 +571,7 @@ function GuidedBuilderPage() {
   const callCandidates = useServerFn(generatePortraitCandidates);
   const callApprove = useServerFn(approvePortraitCandidate);
   const [styleDialogOpen, setStyleDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [voicePreviewBusy, setVoicePreviewBusy] = useState(false);
   const [voicePreviewUrl, setVoicePreviewUrl] = useState<string | null>(null);
