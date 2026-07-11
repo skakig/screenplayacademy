@@ -1,6 +1,6 @@
-// DEPRECATED — route body replaced at Characters Rebuild Pass 3.
-// Do not add features here. See docs/CHARACTERS_REBUILD.md.
-import { createFileRoute, Link } from "@tanstack/react-router";
+// Characters Rebuild — Pass 3 (Cast landing).
+// See docs/CHARACTERS_REBUILD.md.
+import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -21,18 +21,16 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Plus, User, Sparkles, Trash2, Mic, Image as ImageIcon, KeyRound, AlertTriangle,
-  ChevronRight, FileText, Users, Search, MoreVertical, PencilLine, CheckSquare, X, Scale, Star, Inbox,
+  Plus, User, Trash2, ChevronRight, Users, Search, MoreVertical, PencilLine,
+  CheckSquare, X, Scale, Star, Inbox, AlertCircle, Bookmark, Zap, Target,
+  ArrowRight, FileText, Heart,
 } from "lucide-react";
 import { toast } from "sonner";
-import { TMHBadge } from "@/components/characters/TMHBadge";
-import { GROUPS, completenessPct, tmhLabel } from "@/components/characters/tmh";
+import { completenessPct } from "@/components/characters/tmh";
 import { CharacterProfileDialog } from "@/components/characters/CharacterProfileDialog";
 import { CharacterInboxDrawer } from "@/components/characters/CharacterInboxDrawer";
 import { upsertCharacter, deleteCharacter, bulkDeleteCharacters, restoreCharacters } from "@/lib/characters.functions";
 import { MergeReviewDialog } from "@/components/characters/MergeReviewDialog";
-import { useSearch } from "@tanstack/react-router";
-
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/characters/$projectId")({
@@ -41,6 +39,27 @@ export const Route = createFileRoute("/_authenticated/characters/$projectId")({
   component: () => (<RouteReadinessGate to="/characters/$projectId"><CharactersPage /></RouteReadinessGate>),
   errorComponent: RouteErrorBoundary,
 });
+
+type ImportanceKey = "lead" | "supporting" | "minor" | "background";
+type StoryFunctionKey =
+  | "protagonist" | "antagonist" | "mentor" | "ally" | "love_interest" | "comic_relief" | "custom";
+
+const IMPORTANCE: { key: ImportanceKey; label: string }[] = [
+  { key: "lead", label: "Lead" },
+  { key: "supporting", label: "Supporting" },
+  { key: "minor", label: "Minor" },
+  { key: "background", label: "Background" },
+];
+
+const STORY_FUNCTIONS: { key: StoryFunctionKey; label: string }[] = [
+  { key: "protagonist", label: "Protagonist" },
+  { key: "antagonist", label: "Antagonist" },
+  { key: "mentor", label: "Mentor" },
+  { key: "ally", label: "Ally" },
+  { key: "love_interest", label: "Love Interest" },
+  { key: "comic_relief", label: "Comic Relief" },
+  { key: "custom", label: "Custom" },
+];
 
 function CharactersPage() {
   const { projectId } = Route.useParams();
@@ -62,6 +81,19 @@ function CharactersPage() {
     },
     refetchInterval: 30000,
   });
+
+  const { data: detectedCount = 0 } = useQuery<number>({
+    queryKey: ["character-candidate-total", projectId],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("character_candidates")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId);
+      return count ?? 0;
+    },
+    refetchInterval: 60000,
+  });
+
   const callUpsert = useServerFn(upsertCharacter);
   const callDel = useServerFn(deleteCharacter);
   const callBulk = useServerFn(bulkDeleteCharacters);
@@ -74,7 +106,8 @@ function CharactersPage() {
 
   const { data: characters = [] } = useQuery<any[]>({
     queryKey: ["characters", projectId],
-    queryFn: async (): Promise<any[]> => (await supabase.from("characters").select("*").eq("project_id", projectId).is("quarantined_at", null).order("created_at")).data ?? [],
+    queryFn: async (): Promise<any[]> =>
+      (await supabase.from("characters").select("*").eq("project_id", projectId).is("quarantined_at", null).order("created_at")).data ?? [],
   });
 
   const { data: relCounts = {} } = useQuery<Record<string, number>>({
@@ -97,11 +130,11 @@ function CharactersPage() {
     },
   });
 
-  const [group, setGroup] = useState<string>("All");
+  const [importanceFilter, setImportanceFilter] = useState<ImportanceKey | null>(null);
+  const [functionFilter, setFunctionFilter] = useState<StoryFunctionKey | null>(null);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogPillar, setDialogPillar] = useState<string | null>(null);
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState<null | { ids: string[]; label: string }>(null);
@@ -112,38 +145,35 @@ function CharactersPage() {
     qc.invalidateQueries({ queryKey: ["scene-counts", projectId] });
   };
 
-  const counts = useMemo(() => {
-    const m: Record<string, number> = { All: characters.length };
-    for (const g of GROUPS) m[g] = 0;
-    for (const c of characters) m[c.group_name ?? "Main Cast"] = (m[c.group_name ?? "Main Cast"] ?? 0) + 1;
-    return m;
-  }, [characters]);
-
-  const arcStatus = useMemo(() => {
-    let resolved = 0, developing = 0, seed = 0;
+  const kpis = useMemo(() => {
+    let leads = 0, supporting = 0, needReview = 0;
     for (const c of characters) {
-      const pct = completenessPct(c);
-      if (pct >= 75) resolved++;
-      else if (pct >= 25) developing++;
-      else seed++;
+      const imp = (c.importance ?? "").toLowerCase();
+      if (imp === "lead") leads++;
+      else if (imp === "supporting") supporting++;
+      if (completenessPct(c) < 25) needReview++;
     }
-    return { resolved, developing, seed };
-  }, [characters]);
-
+    return {
+      total: characters.length,
+      leads,
+      supporting,
+      needReview: Math.max(needReview, pendingCandidateCount),
+      detected: detectedCount,
+    };
+  }, [characters, pendingCandidateCount, detectedCount]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return characters.filter((c) => {
-      if (group !== "All" && (c.group_name ?? "Main Cast") !== group) return false;
+      if (importanceFilter && (c.importance ?? "").toLowerCase() !== importanceFilter) return false;
+      if (functionFilter && (c.story_function ?? "").toLowerCase() !== functionFilter) return false;
       if (q && !`${c.name} ${c.role ?? ""} ${c.archetype ?? ""}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [characters, group, query]);
-
-  const selected = filtered.find((c) => c.id === selectedId) ?? characters.find((c) => c.id === selectedId);
+  }, [characters, importanceFilter, functionFilter, query]);
 
   const create = useMutation({
-    mutationFn: async () => callUpsert({ data: { project_id: projectId, patch: { name: "New Character", group_name: group === "All" ? "Main Cast" : group } } }),
+    mutationFn: async () => callUpsert({ data: { project_id: projectId, patch: { name: "New Character" } } }),
     onSuccess: (row: any) => {
       invalidate();
       setSelectedId(row.id);
@@ -195,61 +225,71 @@ function CharactersPage() {
     const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next;
   });
 
+  const clearFilters = () => { setImportanceFilter(null); setFunctionFilter(null); setQuery(""); };
+  const activeFilters = !!(importanceFilter || functionFilter || query.trim());
+
   return (
     <AppShell>
       <ProjectNav projectId={projectId} title={project?.title} />
-      <div className="max-w-[1600px] mx-auto px-4 py-6">
-        {/* Pass 3 — Ensemble Wall header */}
-        <div className="mb-6 rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 py-4 sm:flex sm:flex-wrap sm:justify-between">
-            <div className="flex min-w-0 items-center gap-4">
-              <h1 className="font-display text-2xl font-semibold text-primary truncate">Cast &amp; Characters</h1>
-              <div className="hidden sm:block h-4 w-px bg-border/60" />
-              <div className="hidden sm:flex gap-1 text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
-                <span className="text-primary/80 truncate max-w-[160px]">{project?.title ?? "Untitled"}</span>
-                <span>/</span>
-                <span>{characters.length} in ensemble</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  placeholder="Filter ensemble…"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="pl-8 h-9 w-48 focus:w-64 transition-all bg-secondary/40"
-                />
-              </div>
-              <Button variant="outline" size="sm" onClick={() => setInboxOpen(true)}>
-                <Inbox className="h-4 w-4 mr-2" />
-                Inbox
-                {pendingCandidateCount > 0 && (
-                  <Badge className="ml-2 text-[10px]" variant="secondary">{pendingCandidateCount}</Badge>
-                )}
-              </Button>
-              <Button
-                variant={bulkMode ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => { setBulkMode((b) => !b); setBulkSelected(new Set()); }}
-              >
-                <CheckSquare className="h-4 w-4 mr-2" />{bulkMode ? "Exit select" : "Select"}
-              </Button>
-              <Button onClick={() => create.mutate()} disabled={create.isPending}>
-                <Plus className="h-4 w-4 mr-2" />New Character
-              </Button>
-              {mergeDebug && (
-                <Button variant="outline" size="sm" onClick={() => setMergeOpen(true)}>
-                  <Scale className="h-4 w-4 mr-2" />Merge review
-                </Button>
-              )}
-            </div>
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Header row */}
+        <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 md:flex md:items-center md:justify-between">
+          <div className="min-w-0">
+            <h1 className="font-display text-3xl sm:text-4xl font-semibold text-foreground">Characters</h1>
+            <p className="text-sm text-muted-foreground mt-1">Build your cast and protect character truth.</p>
           </div>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {kpis.needReview > 0 && (
+              <button
+                onClick={() => setInboxOpen(true)}
+                className="hidden sm:inline-flex items-center gap-2 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-500 hover:bg-amber-500/20 transition"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                {kpis.needReview} need review
+                <ChevronRight className="h-3 w-3" />
+              </button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => setInboxOpen(true)}>
+              <Inbox className="h-4 w-4 mr-2" />
+              Review Inbox
+              {pendingCandidateCount > 0 && (
+                <Badge className="ml-2 text-[10px]" variant="secondary">{pendingCandidateCount}</Badge>
+              )}
+            </Button>
+            <Button onClick={() => create.mutate()} disabled={create.isPending}>
+              <Plus className="h-4 w-4 mr-2" />New Character
+            </Button>
+            {mergeDebug && (
+              <Button variant="outline" size="sm" onClick={() => setMergeOpen(true)}>
+                <Scale className="h-4 w-4 mr-2" />Merge review
+              </Button>
+            )}
+          </div>
+        </header>
+
+        {/* KPI strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <KpiCard icon={Users} tone="primary" value={kpis.total} label="Total Characters" />
+          <KpiCard icon={Star} tone="primary" value={kpis.leads} label="Leads" />
+          <KpiCard icon={Users} tone="emerald" value={kpis.supporting} label="Supporting" />
+          <KpiCard
+            icon={AlertCircle}
+            tone="amber"
+            value={kpis.needReview}
+            label="Need Review"
+            onClick={kpis.needReview > 0 ? () => setInboxOpen(true) : undefined}
+          />
+          <KpiCard
+            icon={Bookmark}
+            tone="violet"
+            value={kpis.detected}
+            label="Detected Items"
+            onClick={kpis.detected > 0 ? () => setInboxOpen(true) : undefined}
+          />
         </div>
 
         <MergeReviewDialog projectId={projectId} open={mergeOpen} onOpenChange={setMergeOpen} />
 
-        {/* Pass 2: unified inbox drawer replaces cleanup + detection panels */}
         <CharacterInboxDrawer
           projectId={projectId}
           open={inboxOpen}
@@ -259,94 +299,93 @@ function CharactersPage() {
           sceneCounts={sceneCounts}
         />
 
-
-        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr_320px] gap-4">
-          {/* SIDEBAR — Ensemble groups + arc-status legend */}
-          <aside className="space-y-6">
-            <div>
-              <h3 className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground uppercase mb-3 px-3">Ensemble</h3>
-              <div className="space-y-1">
-                <SideItem label="All Cast" count={counts.All ?? 0} active={group === "All"} onClick={() => setGroup("All")} />
-                {GROUPS.map((g) => (
-                  <SideItem key={g} label={g} count={counts[g] ?? 0} active={group === g} onClick={() => setGroup(g)} />
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground uppercase mb-3 px-3">Arc Status</h3>
-              <div className="space-y-2.5 px-3">
-                <ArcLegend tone="emerald" label="Resolved" count={arcStatus.resolved} />
-                <ArcLegend tone="amber" label="Developing" count={arcStatus.developing} />
-                <ArcLegend tone="muted" label="Seed" count={arcStatus.seed} />
-              </div>
-            </div>
-          </aside>
-
-          {/* MAIN */}
-          <main className="space-y-5">
-            <section>
-              <div className="flex items-baseline gap-2 mb-4">
-                <h2 className="font-display text-lg">{group === "All" ? "All Cast" : group}</h2>
-                <Badge variant="outline" className="text-[10px]">{filtered.length}</Badge>
-              </div>
-
-
-              {filtered.length === 0 ? (
-                <Card className="p-12 text-center border-dashed">
-                  <User className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                  <h3 className="font-semibold mb-1">
-                    {characters.length === 0 ? "No characters yet" : `No characters in ${group}`}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
-                    {characters.length === 0
-                      ? "Characters unlock Truth Check, Table Read voices, and the Story Spine. Add one manually or auto-import speakers already named in your script below."
-                      : "Add a character to this group, or switch to All to see everyone."}
-                  </p>
-                  <div className="flex items-center gap-2 justify-center flex-wrap">
-                    <Button size="sm" onClick={() => create.mutate()}><Plus className="h-3.5 w-3.5 mr-1.5" />Add character</Button>
-                    <Button size="sm" variant="outline" asChild>
-                      <Link to="/editor/$projectId" params={{ projectId }}>Write in editor</Link>
-                    </Button>
-                  </div>
-                </Card>
-              ) : (
-                <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                  {filtered.map((c) => (
-                    <CharacterCard
-                      key={c.id}
-                      c={c}
-                      rels={relCounts[c.id] ?? 0}
-                      scenes={sceneCounts[c.id] ?? 0}
-                      selected={c.id === selectedId}
-                      bulkMode={bulkMode}
-                      bulkSelected={bulkSelected.has(c.id)}
-                      onBulkToggle={() => toggleBulk(c.id)}
-                      onSelect={() => setSelectedId(c.id)}
-                      onOpen={() => { setSelectedId(c.id); setDialogOpen(true); }}
-                      onRename={() => {
-                        const next = window.prompt("Rename character", c.name || "");
-                        if (next && next.trim() && next !== c.name) renameOne.mutate({ id: c.id, name: next.trim() });
-                      }}
-                      onDelete={() => setConfirm({ ids: [c.id], label: c.name || "character" })}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-
-          </main>
-
-
-          {/* INSPECTOR */}
-          <aside className="space-y-3">
-            <Inspector
-              c={selected}
-              onOpen={() => { if (selected) { setDialogPillar(null); setDialogOpen(true); } }}
-              onTruthCheck={() => { if (selected) { setDialogPillar("psychology"); setDialogOpen(true); } }}
+        {/* Filter bar */}
+        <div className="rounded-xl border border-border/60 bg-card/40 backdrop-blur-sm px-4 py-3 space-y-3">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <FilterRow
+              label="Importance"
+              options={IMPORTANCE.map((i) => ({ key: i.key, label: i.label }))}
+              value={importanceFilter}
+              onChange={(k) => setImportanceFilter(k as ImportanceKey | null)}
             />
-          </aside>
+            <FilterRow
+              label="Story Function"
+              options={STORY_FUNCTIONS.map((f) => ({ key: f.key, label: f.label }))}
+              value={functionFilter}
+              onChange={(k) => setFunctionFilter(k as StoryFunctionKey | null)}
+            />
+            <div className="ml-auto flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="pl-8 h-9 w-44 focus:w-64 transition-all bg-secondary/40"
+                />
+              </div>
+              <Button
+                variant={bulkMode ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => { setBulkMode((b) => !b); setBulkSelected(new Set()); }}
+              >
+                <CheckSquare className="h-4 w-4 mr-2" />{bulkMode ? "Exit select" : "Select"}
+              </Button>
+              {activeFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <X className="h-3.5 w-3.5 mr-1" />Clear
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* Cards */}
+        {filtered.length === 0 ? (
+          <Card className="p-12 text-center border-dashed">
+            <User className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <h3 className="font-semibold mb-1">
+              {characters.length === 0 ? "No characters yet" : "No characters match these filters"}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+              {characters.length === 0
+                ? "Characters unlock Truth Check, Table Read voices, and the Story Spine. Add one manually or auto-import speakers already named in your script."
+                : "Loosen a filter, clear the search, or add a new character."}
+            </p>
+            <div className="flex items-center gap-2 justify-center flex-wrap">
+              <Button size="sm" onClick={() => create.mutate()}><Plus className="h-3.5 w-3.5 mr-1.5" />Add character</Button>
+              {characters.length === 0 && (
+                <Button size="sm" variant="outline" asChild>
+                  <Link to="/editor/$projectId" params={{ projectId }}>Write in editor</Link>
+                </Button>
+              )}
+              {activeFilters && characters.length > 0 && (
+                <Button size="sm" variant="outline" onClick={clearFilters}>Clear filters</Button>
+              )}
+            </div>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filtered.map((c) => (
+              <CharacterCard
+                key={c.id}
+                c={c}
+                rels={relCounts[c.id] ?? 0}
+                scenes={sceneCounts[c.id] ?? 0}
+                selected={c.id === selectedId}
+                bulkMode={bulkMode}
+                bulkSelected={bulkSelected.has(c.id)}
+                onBulkToggle={() => toggleBulk(c.id)}
+                onOpen={() => { setSelectedId(c.id); setDialogOpen(true); }}
+                onRename={() => {
+                  const next = window.prompt("Rename character", c.name || "");
+                  if (next && next.trim() && next !== c.name) renameOne.mutate({ id: c.id, name: next.trim() });
+                }}
+                onDelete={() => setConfirm({ ids: [c.id], label: c.name || "character" })}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Bulk action bar */}
@@ -394,286 +433,227 @@ function CharactersPage() {
         characterId={selectedId}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        initialPillar={dialogPillar}
       />
     </AppShell>
   );
 }
 
-function SideItem({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {
+function KpiCard({
+  icon: Icon, tone, value, label, onClick,
+}: {
+  icon: any; tone: "primary" | "emerald" | "amber" | "violet";
+  value: number; label: string; onClick?: () => void;
+}) {
+  const toneMap = {
+    primary: "text-primary bg-primary/10 border-primary/30",
+    emerald: "text-emerald-500 bg-emerald-500/10 border-emerald-500/30",
+    amber:   "text-amber-500 bg-amber-500/10 border-amber-500/30",
+    violet:  "text-violet-400 bg-violet-500/10 border-violet-500/30",
+  } as const;
+  const clickable = !!onClick;
   return (
-    <button
+    <Card
       onClick={onClick}
       className={[
-        "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition",
-        active ? "bg-secondary text-primary" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50",
+        "p-4 flex items-center gap-3 border-border/60 bg-card/50 backdrop-blur-sm transition",
+        clickable ? "cursor-pointer hover:border-primary/40 hover:bg-card/70" : "",
       ].join(" ")}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick?.(); } } : undefined}
     >
-      <span className="truncate">{label}</span>
-      <span className="text-[10px] tabular-nums">{count}</span>
-    </button>
-  );
-}
-
-function ArcLegend({ tone, label, count }: { tone: "emerald" | "amber" | "muted"; label: string; count: number }) {
-  const dot =
-    tone === "emerald" ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" :
-    tone === "amber" ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" :
-    "bg-muted-foreground/40";
-  return (
-    <div className="flex items-center gap-3">
-      <div className={`w-2 h-2 rounded-full ${dot}`} />
-      <span className="text-xs text-muted-foreground tabular-nums">{label} <span className="text-foreground/70">({count})</span></span>
-    </div>
-  );
-}
-
-function CharacterCard({
-  c, rels, scenes, selected, bulkMode, bulkSelected, onBulkToggle, onSelect, onOpen, onRename, onDelete,
-}: any) {
-  const pct = completenessPct(c);
-  const hasSecret = !!(c.secret || c.never_says_aloud || c.core_lie);
-  const hasVoice = !!c.elevenlabs_voice_id;
-  const hasPortrait = !!c.portrait_url;
-  const warning = c.tmh_baseline && c.tmh_stress && Math.abs(c.tmh_baseline - c.tmh_stress) > 4;
-  const provenance = c.canonical_name ? "canonical" : "inferred";
-  const initials = (c.name ?? "?").split(/\s+/).map((s: string) => s[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
-  const status = pct >= 75 ? "Resolved" : pct >= 25 ? "Developing" : "Seed";
-  const statusTone = pct >= 75 ? "text-emerald-500" : pct >= 25 ? "text-amber-500" : "text-muted-foreground";
-  const statusDot = pct >= 75 ? "bg-emerald-500" : pct >= 25 ? "bg-amber-500 animate-pulse" : "bg-muted-foreground/40";
-
-  return (
-    <div
-      className={[
-        "group bg-card border rounded-xl overflow-hidden flex flex-col cursor-pointer transition-all duration-500",
-        selected ? "border-primary/60 shadow-lg shadow-primary/10" : "border-border/60 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5",
-      ].join(" ")}
-      onClick={() => (bulkMode ? onBulkToggle() : onSelect())}
-    >
-      {/* Media area */}
-      <div className="h-40 bg-secondary/40 relative overflow-hidden">
-        {hasPortrait ? (
-          <img
-            src={c.portrait_url}
-            alt={c.name}
-            className="w-full h-full object-cover opacity-70 grayscale-[40%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="font-display text-6xl text-muted-foreground/20 select-none">{initials || "?"}</span>
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent pointer-events-none" />
-
-        {bulkMode && (
-          <div className="absolute top-3 left-3 z-10" onClick={(e) => e.stopPropagation()}>
-            <Checkbox checked={bulkSelected} onCheckedChange={onBulkToggle} aria-label={`Select ${c.name}`} />
-          </div>
-        )}
-
-        <div className={`absolute top-3 ${bulkMode ? "left-10" : "left-3"} flex gap-1.5`}>
-          {c.importance && <ImportanceChip level={c.importance} />}
-          {c.story_function && (
-            <span className="px-2 py-0.5 bg-background/70 backdrop-blur-md border border-border/60 text-foreground/80 text-[9px] font-semibold uppercase tracking-wider rounded">
-              {c.story_function}
-            </span>
-          )}
-        </div>
-
-        <div className="absolute top-3 right-3 flex items-center gap-1.5">
-          <span
-            title={provenance === "canonical" ? "Canonical (confirmed)" : "Inferred from script"}
-            className={`w-6 h-6 flex items-center justify-center rounded-full text-[10px] font-black border ${
-              provenance === "canonical"
-                ? "bg-primary/20 text-primary border-primary/30"
-                : "bg-blue-500/10 text-blue-400 border-blue-500/20"
-            }`}
-          >
-            {provenance === "canonical" ? "C" : "I"}
-          </span>
-          {!bulkMode && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Character menu"
-                  className="h-6 w-6 bg-background/70 backdrop-blur-md hover:bg-background/90"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreVertical className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem onSelect={() => onOpen()}><Sparkles className="h-3.5 w-3.5 mr-2" />Open profile</DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onRename()}><PencilLine className="h-3.5 w-3.5 mr-2" />Rename</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => onDelete()} className="text-destructive focus:text-destructive">
-                  <Trash2 className="h-3.5 w-3.5 mr-2" />Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
+      <div className={`h-11 w-11 shrink-0 rounded-xl border flex items-center justify-center ${toneMap[tone]}`}>
+        <Icon className="h-5 w-5" />
       </div>
-
-      {/* Body */}
-      <div className="p-4 space-y-3 flex-1 flex flex-col">
-        <div className="min-w-0">
-          <h3 className="font-display text-lg font-semibold truncate group-hover:text-primary transition-colors">
-            {c.name || "Untitled"}
-          </h3>
-          <p className="text-[10px] text-primary/70 mt-0.5 uppercase tracking-widest font-semibold truncate">
-            {c.role || c.archetype || "Archetype: unknown"}
-          </p>
-        </div>
-
-        {/* Metric strip */}
-        <div className="grid grid-cols-2 gap-px bg-border/60 rounded overflow-hidden">
-          <div className="bg-card p-2 text-center">
-            <span className="block text-[9px] text-muted-foreground uppercase tracking-tighter">Scenes</span>
-            <span className="text-sm font-semibold tabular-nums">{scenes}</span>
-          </div>
-          <div className="bg-card p-2 text-center">
-            <span className="block text-[9px] text-muted-foreground uppercase tracking-tighter">Arc</span>
-            <span className="text-sm font-semibold tabular-nums">{pct}%</span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
-          <div className="flex items-center gap-1.5">
-            <Users className="w-3 h-3" />
-            <span>{rels} rel{rels === 1 ? "" : "s"}</span>
-          </div>
-          <span className={`flex items-center gap-1.5 font-medium ${statusTone}`}>
-            <span className={`w-1 h-1 rounded-full ${statusDot}`} />
-            {status}
-          </span>
-        </div>
-
-        {/* Signal icons + Open */}
-        <div className="mt-auto pt-3 border-t border-border/40 flex items-center gap-2">
-          <IconChip on={hasVoice} icon={Mic} title="Voice assigned" />
-          <IconChip on={hasPortrait} icon={ImageIcon} title="Portrait generated" />
-          <IconChip on={hasSecret} icon={KeyRound} title="Has a secret" />
-          <IconChip on={!!warning} icon={AlertTriangle} title="TMH gap — check continuity" tone="warn" />
-          <Button
-            size="sm"
-            variant="ghost"
-            className="ml-auto h-7 px-2 text-[10px] text-primary hover:bg-primary/10"
-            onClick={(e) => { e.stopPropagation(); onOpen(); }}
-          >
-            Open <ChevronRight className="h-3 w-3 ml-0.5" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-function IconChip({ on, icon: Icon, title, tone }: { on: boolean; icon: any; title: string; tone?: "warn" }) {
-  return (
-    <span
-      title={title}
-      className={[
-        "h-5 w-5 rounded flex items-center justify-center border",
-        on
-          ? tone === "warn"
-            ? "border-destructive/40 text-destructive bg-destructive/10"
-            : "border-primary/40 text-primary bg-primary/10"
-          : "border-border/50 text-muted-foreground/40 bg-secondary/30",
-      ].join(" ")}
-    >
-      <Icon className="h-3 w-3" />
-    </span>
-  );
-}
-
-function ImportanceChip({ level }: { level: string }) {
-  const map: Record<string, { label: string; cls: string; stars: number }> = {
-    lead:       { label: "Lead",       cls: "bg-primary/15 text-primary border-primary/40",       stars: 3 },
-    supporting: { label: "Supporting", cls: "bg-accent/15 text-accent border-accent/40",         stars: 2 },
-    bit:        { label: "Bit",        cls: "bg-secondary text-foreground/80 border-border/60",  stars: 1 },
-    background: { label: "Background", cls: "bg-secondary/50 text-muted-foreground border-border/50", stars: 0 },
-  };
-  const cfg = map[level] ?? map.supporting;
-  return (
-    <span className={`text-[10px] px-1.5 py-0.5 rounded-full border inline-flex items-center gap-1 ${cfg.cls}`} title={`Story importance: ${cfg.label}`}>
-      {cfg.stars > 0 && <Star className="h-2.5 w-2.5 fill-current" />}
-      {cfg.label}
-    </span>
-  );
-}
-
-function Inspector({ c, onOpen, onTruthCheck }: { c: any; onOpen: () => void; onTruthCheck: () => void }) {
-  if (!c) {
-    return (
-      <Card className="p-8 border-dashed text-center flex flex-col items-center">
-        <div className="relative mb-6">
-          <div className="w-20 h-20 border-2 border-dashed border-border rounded-full flex items-center justify-center">
-            <User className="w-8 h-8 text-muted-foreground/30" strokeWidth={1} />
-          </div>
-          <div className="absolute -bottom-1 -right-1 bg-primary w-5 h-5 rounded-full flex items-center justify-center border-2 border-background">
-            <Sparkles className="w-2.5 h-2.5 text-primary-foreground" />
-          </div>
-        </div>
-        <h3 className="font-display text-lg text-foreground/80 mb-2">Select Character</h3>
-        <p className="text-xs text-muted-foreground leading-relaxed max-w-[220px]">
-          Tap anyone on the wall to inspect their metrics, story function, and evolving relationships.
-        </p>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="p-4">
-      <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-full overflow-hidden bg-secondary border border-border flex items-center justify-center">
-          {c.portrait_url ? <img src={c.portrait_url} alt={c.name} className="h-full w-full object-cover" /> : <User className="h-5 w-5 text-muted-foreground" />}
-        </div>
-        <div className="min-w-0">
-          <div className="font-display text-lg truncate">{c.name}</div>
-          <div className="text-[11px] text-muted-foreground truncate">{c.role || "—"}</div>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-1.5 mt-3">
-        <Badge variant="secondary" className="text-[10px]">{c.group_name ?? "Main Cast"}</Badge>
-        {c.importance && <ImportanceChip level={c.importance} />}
-        {c.story_function && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary/60 border border-border/60 text-foreground/80">{c.story_function}</span>}
-        <TMHBadge level={c.tmh_baseline} />
-      </div>
-
-      {c.summary && <p className="text-xs text-muted-foreground mt-3">{c.summary}</p>}
-
-      <dl className="grid grid-cols-1 gap-2 mt-4 text-[11px]">
-        <Row label="Wants" value={c.external_goal} />
-        <Row label="Needs" value={c.internal_need} />
-        <Row label="Wound" value={c.wound} />
-        <Row label="Fear" value={c.fear} />
-        <Row label="Secret" value={c.secret} />
-        <Row label="Voice" value={c.voice_summary ?? c.voice_style} />
-      </dl>
-
-      <div className="grid grid-cols-2 gap-2 mt-4">
-        <Button variant="outline" size="sm" onClick={onTruthCheck} title="Would they do this?">
-          <Scale className="h-3.5 w-3.5 mr-1.5" />Truth Check
-        </Button>
-        <Button size="sm" onClick={onOpen}>
-          <Sparkles className="h-3.5 w-3.5 mr-1.5" />Open profile
-        </Button>
+      <div className="min-w-0">
+        <div className="font-display text-2xl leading-none tabular-nums">{value}</div>
+        <div className="text-[11px] text-muted-foreground uppercase tracking-wide mt-1 truncate">{label}</div>
       </div>
     </Card>
   );
 }
 
-function Row({ label, value }: { label: string; value?: string | null }) {
-  if (!value) return null;
+function FilterRow({
+  label, options, value, onChange,
+}: {
+  label: string;
+  options: { key: string; label: string }[];
+  value: string | null;
+  onChange: (key: string | null) => void;
+}) {
   return (
-    <div>
-      <dt className="text-muted-foreground text-[10px] uppercase tracking-wide">{label}</dt>
-      <dd className="text-foreground/90">{value}</dd>
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-[10px] font-bold tracking-[0.18em] text-muted-foreground uppercase shrink-0">
+        {label}
+      </span>
+      {options.map((opt) => {
+        const active = value === opt.key;
+        return (
+          <button
+            key={opt.key}
+            onClick={() => onChange(active ? null : opt.key)}
+            className={[
+              "text-xs px-3 py-1.5 rounded-full border transition",
+              active
+                ? "border-primary/60 bg-primary/15 text-primary"
+                : "border-border/60 bg-secondary/40 text-foreground/80 hover:border-primary/40 hover:text-primary",
+            ].join(" ")}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
     </div>
+  );
+}
+
+function CharacterCard({
+  c, rels, scenes, bulkMode, bulkSelected, onBulkToggle, onOpen, onRename, onDelete,
+}: any) {
+  const pct = completenessPct(c);
+  const status = pct >= 75 ? "Strong" : pct >= 40 ? "Developing" : "Needs Work";
+  const statusTone =
+    pct >= 75 ? "text-emerald-500" :
+    pct >= 40 ? "text-amber-500" : "text-rose-400";
+  const statusDot =
+    pct >= 75 ? "bg-emerald-500" :
+    pct >= 40 ? "bg-amber-500" : "bg-rose-400";
+  const initials = (c.name ?? "?").split(/\s+/).map((s: string) => s[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+  const want = c.external_goal || c.want;
+  const pressure = c.pressure || c.fear || c.core_lie;
+  const arcFrom = c.arc_from || c.arc_start;
+  const arcTo = c.arc_to || c.arc_end;
+  const roleTag = c.story_function || c.role || c.archetype;
+
+  return (
+    <div
+      className={[
+        "group relative bg-card border border-border/60 rounded-2xl overflow-hidden",
+        "hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all",
+      ].join(" ")}
+    >
+      <div className="flex gap-4 p-4">
+        {/* Portrait */}
+        <button
+          onClick={() => (bulkMode ? onBulkToggle() : onOpen())}
+          className="relative shrink-0 h-40 w-32 rounded-xl overflow-hidden bg-gradient-to-b from-secondary/60 to-secondary/20 border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/60"
+          aria-label={`Open ${c.name || "character"}`}
+        >
+          {c.portrait_url ? (
+            <img src={c.portrait_url} alt={c.name || "Character portrait"} className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full flex items-end justify-center pb-4">
+              <div className="h-24 w-16 rounded-t-full bg-foreground/10" aria-hidden />
+              <span className="absolute inset-0 flex items-center justify-center font-display text-4xl text-muted-foreground/40">
+                {initials || "?"}
+              </span>
+            </div>
+          )}
+          {bulkMode && (
+            <div className="absolute top-2 left-2 z-10" onClick={(e) => e.stopPropagation()}>
+              <Checkbox checked={bulkSelected} onCheckedChange={onBulkToggle} aria-label={`Select ${c.name}`} />
+            </div>
+          )}
+        </button>
+
+        {/* Body */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex items-start gap-2">
+            <h3
+              className="font-display text-xl font-semibold truncate cursor-pointer hover:text-primary transition-colors"
+              onClick={onOpen}
+              title={c.name}
+            >
+              {c.name || "Untitled"}
+            </h3>
+            <div className="ml-auto -mt-1 -mr-1" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" aria-label="Character menu" className="h-7 w-7">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={onOpen}><FileText className="h-3.5 w-3.5 mr-2" />Open profile</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={onRename}><PencilLine className="h-3.5 w-3.5 mr-2" />Rename</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
+                    <Trash2 className="h-3.5 w-3.5 mr-2" />Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {c.importance && <ImportanceChip level={c.importance} />}
+            {roleTag && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/60 bg-secondary/40 text-foreground/80 uppercase tracking-wide font-medium">
+                {roleTag}
+              </span>
+            )}
+          </div>
+
+          <dl className="mt-3 space-y-1.5 text-xs">
+            {want && (
+              <div className="flex gap-2">
+                <dt className="w-[64px] shrink-0 text-primary/80 font-bold uppercase tracking-wider text-[9px] pt-0.5 flex items-center gap-1">
+                  <Target className="h-2.5 w-2.5" />Want
+                </dt>
+                <dd className="text-foreground/85 line-clamp-2">{want}</dd>
+              </div>
+            )}
+            {pressure && (
+              <div className="flex gap-2">
+                <dt className="w-[64px] shrink-0 text-amber-500/90 font-bold uppercase tracking-wider text-[9px] pt-0.5 flex items-center gap-1">
+                  <Zap className="h-2.5 w-2.5" />Pressure
+                </dt>
+                <dd className="text-foreground/85 line-clamp-2">{pressure}</dd>
+              </div>
+            )}
+          </dl>
+
+          {(arcFrom || arcTo) && (
+            <div className="mt-3 text-xs text-muted-foreground flex items-center gap-1.5 truncate">
+              <span className="text-foreground/70 truncate">{arcFrom || "—"}</span>
+              <ArrowRight className="h-3 w-3 shrink-0" />
+              <span className="text-foreground/70 truncate">{arcTo || "—"}</span>
+            </div>
+          )}
+
+          <div className="mt-auto pt-3 flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/40">
+            <span className="flex items-center gap-1.5"><FileText className="h-3 w-3" />{scenes} Scene{scenes === 1 ? "" : "s"}</span>
+            <span className="flex items-center gap-1.5"><Heart className="h-3 w-3" />{rels} Relationship{rels === 1 ? "" : "s"}</span>
+            <span className={`flex items-center gap-1.5 font-medium ${statusTone}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${statusDot}`} />{status}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={onOpen}
+        className="w-full border-t border-border/40 py-2.5 text-xs font-medium text-foreground/80 hover:bg-secondary/40 hover:text-primary transition flex items-center justify-center gap-1"
+      >
+        Open Character <ChevronRight className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function ImportanceChip({ level }: { level: string }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    lead:        { label: "Lead",        cls: "bg-primary/15 text-primary border-primary/40" },
+    supporting:  { label: "Supporting",  cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" },
+    minor:       { label: "Minor",       cls: "bg-secondary text-foreground/80 border-border/60" },
+    bit:         { label: "Bit",         cls: "bg-secondary text-foreground/80 border-border/60" },
+    background:  { label: "Background",  cls: "bg-secondary/50 text-muted-foreground border-border/50" },
+    antagonist:  { label: "Antagonist",  cls: "bg-rose-500/10 text-rose-400 border-rose-500/30" },
+  };
+  const cfg = map[level] ?? { label: level, cls: "bg-secondary text-foreground/80 border-border/60" };
+  return (
+    <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold uppercase tracking-wide ${cfg.cls}`}>
+      {cfg.label}
+    </span>
   );
 }
