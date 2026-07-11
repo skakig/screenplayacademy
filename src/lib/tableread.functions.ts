@@ -333,18 +333,22 @@ export const generateTableRead = createServerFn({ method: "POST" })
           status: "ready",
           audio_url: signed?.signedUrl ?? null,
           duration_seconds: approxSeconds,
-        })
+          lines_done: lines.length,
+          current_line_label: null,
+          error_message: null,
+        } as any)
         .eq("id", pendingRow.id)
         .select()
         .single();
 
       return { ...updated, status: "ready" as const };
     } catch (e: any) {
+      const msg = e?.message ?? "Table read generation failed";
       await supabaseAdmin
         .from("audio_assets")
-        .update({ status: "failed" })
+        .update({ status: "failed", error_message: msg.slice(0, 500), current_line_label: null } as any)
         .eq("id", pendingRow.id);
-      throw new Error(e?.message ?? "Table read generation failed");
+      throw new Error(msg);
     }
   });
 
