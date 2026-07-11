@@ -12,6 +12,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { generatePitchPackage } from "@/lib/ai.functions";
 import { format } from "date-fns";
 import { downloadPitchKitPdf } from "@/components/editor/pitchKitPdf";
+import { downloadPitchDeckPdf, type PitchDeckSection } from "@/components/editor/pitchDeckPdf";
 
 import { PageFeatureGate } from "@/components/PageFeatureGate";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
@@ -74,6 +75,38 @@ function Pitch() {
 
   const [loading, setLoading] = useState(false);
   const [exportingTimeline, setExportingTimeline] = useState(false);
+  const [exportingDeck, setExportingDeck] = useState(false);
+
+  const exportDeck = async () => {
+    if (!pitch) {
+      toast.error("Generate the pitch package first.");
+      return;
+    }
+    setExportingDeck(true);
+    try {
+      const sections: PitchDeckSection[] = SECTIONS
+        .map((s) => ({ key: s.key, label: s.label, value: String((pitch as any)[s.key] ?? "") }))
+        .filter((s) => s.value.trim().length > 0);
+      if (sections.length === 0) {
+        toast.error("Pitch package is empty — regenerate it first.");
+        return;
+      }
+      downloadPitchDeckPdf({
+        projectTitle: project?.title ?? "Untitled Project",
+        projectType: (project as any)?.project_type ?? null,
+        genre: (project as any)?.genre ?? null,
+        tone: (project as any)?.tone ?? null,
+        logline: (pitch as any)?.logline ?? (project as any)?.logline ?? null,
+        sections,
+        generatedAt: (pitch as any)?.generated_at ?? null,
+      });
+      toast.success("Pitch deck downloaded");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't export pitch deck");
+    } finally {
+      setExportingDeck(false);
+    }
+  };
 
   const exportTimeline = async () => {
     if (!takes || takes.length === 0) {
@@ -122,9 +155,20 @@ function Pitch() {
             <h1 className="text-3xl font-bold tracking-tight">Pitch Package</h1>
             <p className="text-muted-foreground">Industry-ready pitch in one click.</p>
           </div>
-          <Button onClick={run} disabled={loading} size="lg">
-            {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</> : <><Sparkles className="h-4 w-4 mr-2" />{pitch ? "Regenerate" : "Generate Pitch Package"}</>}
-          </Button>
+          <div className="flex items-center gap-2">
+            {pitch && (
+              <Button onClick={exportDeck} disabled={exportingDeck} size="lg" variant="outline">
+                {exportingDeck ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Preparing…</>
+                ) : (
+                  <><FileDown className="h-4 w-4 mr-2" />Download Pitch Deck</>
+                )}
+              </Button>
+            )}
+            <Button onClick={run} disabled={loading} size="lg">
+              {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</> : <><Sparkles className="h-4 w-4 mr-2" />{pitch ? "Regenerate" : "Generate Pitch Package"}</>}
+            </Button>
+          </div>
         </div>
 
         {!pitch ? (
