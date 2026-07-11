@@ -13,6 +13,7 @@ interface PresenceContextValue {
   connected: boolean;
   setActiveArea: (area: PresenceArea) => void;
   setActiveScene: (id: string | null, label: string | null) => void;
+  setActiveBlock: (id: string | null) => void;
   pingTyping: (sceneId: string | null) => void;
 }
 
