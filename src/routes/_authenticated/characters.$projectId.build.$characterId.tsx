@@ -2,7 +2,7 @@
 // Cinematic full-screen route inspired by the approved iPad mockup.
 // See docs/CHARACTERS_REBUILD.md.
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -402,7 +402,7 @@ function GuidedBuilderPage() {
   const savedPresetKey = ((project as any)?.metadata?.cast_style_preset ?? DEFAULT_CAST_STYLE_PRESET) as CastStylePresetKey;
   const [presetKey, setPresetKey] = useState<CastStylePresetKey>(savedPresetKey);
   // Keep local selection in sync when project loads/refetches.
-  useMemo(() => { setPresetKey(savedPresetKey); return null; }, [savedPresetKey]);
+  useEffect(() => { setPresetKey(savedPresetKey); }, [savedPresetKey]);
 
   const { data: character, isLoading: characterLoading, isError: characterIsError, error: characterError } = useQuery<any>({
     queryKey: ["character", projectId, characterId],
