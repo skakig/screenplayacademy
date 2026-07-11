@@ -1043,6 +1043,8 @@ export type Database = {
           name: string
           never_says_aloud: string | null
           occupation: string | null
+          portrait_path: string | null
+          portrait_seed: number | null
           portrait_url: string | null
           project_id: string
           quarantine_reason: string | null
@@ -1145,6 +1147,8 @@ export type Database = {
           name: string
           never_says_aloud?: string | null
           occupation?: string | null
+          portrait_path?: string | null
+          portrait_seed?: number | null
           portrait_url?: string | null
           project_id: string
           quarantine_reason?: string | null
@@ -1247,6 +1251,8 @@ export type Database = {
           name?: string
           never_says_aloud?: string | null
           occupation?: string | null
+          portrait_path?: string | null
+          portrait_seed?: number | null
           portrait_url?: string | null
           project_id?: string
           quarantine_reason?: string | null
@@ -3664,6 +3670,8 @@ export type Database = {
           name: string
           never_says_aloud: string | null
           occupation: string | null
+          portrait_path: string | null
+          portrait_seed: number | null
           portrait_url: string | null
           project_id: string
           quarantine_reason: string | null
