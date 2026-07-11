@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Film, Search, Trash2 } from "lucide-react";
+import { Plus, Film, Search, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { InviteCollaboratorDialog } from "@/components/writers-room/InviteCollaboratorDialog";
 
 export const Route = createFileRoute("/_authenticated/projects")({
   head: () => ({ meta: [{ title: "Projects — SceneSmith AI" }] }),
