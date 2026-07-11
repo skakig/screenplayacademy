@@ -16,6 +16,12 @@ World discovery, corpus import, World Bible, World Graph, series continuation, l
 
 Epic fantasy, space opera, shared-universe, multi-book saga, multi-era franchise, World Atlas, cosmology, magic-system, genealogy, character-knowledge, travel, logistics, adaptation-branch, and universe-scale continuity work must also follow `docs/SCENESMITH_EPIC_FANTASY_UNIVERSE_PLATFORM.md`: keep the Writer’s Desk primary, model truth across time and continuity, use maps as views over the World Graph, preserve human canon control, and never imitate a living author’s voice or persona.
 
+Review, self-proofing, continuity audits, adaptation comparison, canon comparison, critical analysis, evidence-backed argument building, counterargument testing, creator-review scripts, and methodology critique must follow `docs/SCENESMITH_REVIEW_INTELLIGENCE_AND_ARGUMENT_STUDIO.md`: separate fact, interpretation, and preference; attach evidence; test counterarguments; and never become a critic clone or confirmation-bias engine.
+
+Table reads, voice previews, live manuscript readings, audiobook creation, audio drama, creator narration, pronunciation, TTS billing, provider failures, rate limits, retries, and audio export must follow `docs/SCENESMITH_AUDIOBOOK_TABLE_READ_STUDIO.md`: keep voice roles provider-neutral, distinguish user credit limits from provider limits, preserve work through failure, and prevent duplicate billing.
+
+Scene parsing, production breakdown, shot planning, storyboards, image/video generation, dialogue audio, lip sync, sequence assembly, creator-video export, AI-native production, and scene-to-film workflows must follow `docs/SCENESMITH_SCENE_TO_SCREEN_PIPELINE.md`: parse before producing, compile scenes into reviewable shots, use approved Character/World state, track cost and lineage, and never reduce a film to one giant provider prompt.
+
 Authorized source ingestion, corpus extraction, adaptive series onboarding, writer knowledge mapping, Character/World population proposals, source authority, and evidence-backed continuity or editorial review must follow `docs/ITS_PfHU_Importation.md`: preserve the source, attach evidence, let humans control identity and canon, use ITS to determine what must be understood, and use PfHU to determine how that understanding is presented.
 
 ## Prime Directive
@@ -56,6 +62,12 @@ For Voice Studio, speech-to-text, dictation, spoken brainstorming, scene/chapter
 For World Building, source-corpus import, series continuation, World Bible, World Graph, world entities, locations, factions, institutions, cultures, languages, timelines, artifacts, technologies, species, world rules, maps, visual-world assets, or world continuity, `docs/SCENESMITH_WORLD_BUILDING.md` is the canonical product doctrine.
 
 For epic fantasy, space opera, shared universes, multi-book sagas, multi-era worlds, World Atlas, nested maps, calendars, cosmology, magic or technology systems, cultures, dynasties, genealogy, artifacts, travel, logistics, character knowledge, spoiler-aware continuity, adaptation branches, retcons, or universe-scale performance, `docs/SCENESMITH_EPIC_FANTASY_UNIVERSE_PLATFORM.md` is the canonical deep specification and acceptance standard.
+
+For self-review, continuity audits, Character/World alignment, adaptation or canon comparison, critical review, argument building, counterargument stress testing, methodology review, or reviewer/YouTube evidence packs, `docs/SCENESMITH_REVIEW_INTELLIGENCE_AND_ARGUMENT_STUDIO.md` is the canonical doctrine.
+
+For table reads, voice previews, live manuscript readings, audiobooks, audio drama, narration, pronunciation, provider rate limits, retry UX, audio credits, mastering, or audio exports, `docs/SCENESMITH_AUDIOBOOK_TABLE_READ_STUDIO.md` is the canonical doctrine.
+
+For screenplay parsing into scenes and dialogue, production breakdown, shot planning, image/video provider adapters, consistent character/location references, lip sync, edit timelines, creator-video assembly, or film-generation workflows, `docs/SCENESMITH_SCENE_TO_SCREEN_PIPELINE.md` is the canonical doctrine.
 
 For ITS/PfHU Importation, authorized corpus ingestion, character or world auto-population proposals, identity resolution from prior works, source authority, adaptive series onboarding, writer knowledge maps, continuation packages, or imported-canon editorial review, `docs/ITS_PfHU_Importation.md` is the canonical product doctrine.
 
@@ -106,6 +118,12 @@ Voice Studio must follow the phased sequence in `docs/SCENESMITH_VOICE_STUDIO.md
 World Building must follow the phased sequence in `docs/SCENESMITH_WORLD_BUILDING.md`. Do not begin visual-world or generator work before source evidence, candidates, canon governance, entity identity, permissions, and World Graph foundations are proven.
 
 Epic Fantasy & Universe Platform work must follow the phased sequence in `docs/SCENESMITH_EPIC_FANTASY_UNIVERSE_PLATFORM.md`. Do not begin Atlas spectacle, simulation-heavy systems, or universe-scale AI generation before universe identity, continuity branches, temporal canon, evidence, proposals, RLS, and Writer’s Desk isolation are proven.
+
+Review Intelligence must follow the phased sequence in `docs/SCENESMITH_REVIEW_INTELLIGENCE_AND_ARGUMENT_STUDIO.md`. Do not present strong conclusions before evidence, source authority, classification, counterargument testing, rights, and revision/argument destinations are proven.
+
+Audiobook & Table Read work must follow the phased sequence in `docs/SCENESMITH_AUDIOBOOK_TABLE_READ_STUDIO.md`. Reliable previews, explicit job states, idempotent billing, credit reservation, provider-rate-limit handling, pronunciation, source hashes, and selective retry must be proven before long-form audiobook generation is considered ready.
+
+Scene-to-Screen work must follow the phased sequence in `docs/SCENESMITH_SCENE_TO_SCREEN_PIPELINE.md`. Deterministic scene parsing, dialogue/action lineage, Production Graph breakdown, approved Character/World reference packages, cost estimates, shot approvals, and asset lineage must be proven before creator-video or film-generation claims are made.
 
 ITS/PfHU Importation must follow the phased sequence in `docs/ITS_PfHU_Importation.md`. Source preservation, segmentation, evidence, candidate review, identity decisions, source authority, and canon governance must be proven before adaptive onboarding, continuation guidance, or imported-canon editorial review is treated as authoritative.
 
