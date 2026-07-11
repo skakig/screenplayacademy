@@ -563,6 +563,22 @@ function Editor() {
   })();
   const activeScene = activeSceneIdx >= 0 ? outline[activeSceneIdx] : null;
 
+  // Presence: broadcast that this user is in the script editor, and which
+  // scene their caret is currently in. Payload carries no script content.
+  const presence = useOptionalPresence();
+  useEffect(() => {
+    presence?.setActiveArea("script");
+  }, [presence]);
+  useEffect(() => {
+    presence?.setActiveScene(
+      activeScene?.id ?? null,
+      activeScene?.title ?? null,
+    );
+  }, [presence, activeScene?.id, activeScene?.title]);
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+
+
   const jumpToBlock = useCallback((serverId: string) => {
     // jumpToServer also triggers the active-line viewport scroller so the
     // jumped-to block lands in the focus zone — no manual scrollIntoView here.
