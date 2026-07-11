@@ -332,6 +332,7 @@ export const suggestSceneUse = createServerFn({ method: "POST" })
 const PortraitInput = z.object({
   characterId: z.string().uuid(),
   presetKey: z.string().optional(),
+  rerollSeed: z.boolean().optional(),
 });
 
 export const generatePortrait = createServerFn({ method: "POST" })
@@ -356,6 +357,14 @@ export const generatePortrait = createServerFn({ method: "POST" })
       throw e;
     }
 
+    // Seed reuse for cross-take consistency. Keep the same seed unless the
+    // caller asked to reroll or the character has never had a portrait.
+    const existingSeed = Number((c as any).portrait_seed ?? 0);
+    const seed =
+      !data.rerollSeed && existingSeed > 0
+        ? existingSeed
+        : Math.floor(Math.random() * 2_000_000_000) + 1;
+
     // Compose deterministically from the full profile + selected cast style
     // preset so every character in the cast reads as one film.
     const { composePortraitPrompt } = await import("@/lib/characters/portraitPrompt");
@@ -371,11 +380,16 @@ export const generatePortrait = createServerFn({ method: "POST" })
     if (!prompt.trim()) {
       prompt = demoVisualPrompt(c);
     }
-    await context.supabase.from("characters").update({ image_prompt: prompt }).eq("id", c.id);
+    // Append seed tag — image models honour it as a stability hint.
+    prompt = `${prompt} Seed: ${seed}.`;
+    await context.supabase
+      .from("characters")
+      .update({ image_prompt: prompt, portrait_seed: seed } as any)
+      .eq("id", c.id);
     if (!key) {
       const { data: row } = await context.supabase
         .from("characters").select("*").eq("id", c.id).single();
-      return { row, demo: true, configured: false, preset: preset.key };
+      return { row, demo: true, configured: false, preset: preset.key, seed };
     }
     const res = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
       method: "POST",
@@ -393,12 +407,13 @@ export const generatePortrait = createServerFn({ method: "POST" })
       throw new Error("Portrait generation returned no image data. Try again or refine the visual prompt.");
     }
     let portraitUrl: string | null = null;
+    let portraitPath: string | null = null;
     if (b64) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
-      // Cache-bust the storage path so regenerations produce a new signed URL
-      // and the browser doesn't serve the previous portrait.
-      const path = `${c.project_id}/characters/${c.id}-${Date.now()}.png`;
+      // Path encodes seed + timestamp so regenerations remain uniquely
+      // addressable and the browser doesn't serve the previous portrait.
+      const path = `${c.project_id}/characters/${c.id}-${seed}-${Date.now()}.png`;
       const { error: upErr } = await supabaseAdmin.storage
         .from("storyboards")
         .upload(path, bytes, { contentType: "image/png", upsert: true });
@@ -406,6 +421,7 @@ export const generatePortrait = createServerFn({ method: "POST" })
       const { data: signed } = await supabaseAdmin.storage
         .from("storyboards").createSignedUrl(path, 60 * 60 * 24 * 30);
       portraitUrl = signed?.signedUrl ?? null;
+      portraitPath = path;
     } else if (url) {
       portraitUrl = url;
     }
@@ -413,10 +429,42 @@ export const generatePortrait = createServerFn({ method: "POST" })
       throw new Error("Portrait was generated but could not be stored. Please retry.");
     }
     const { data: row } = await context.supabase
-      .from("characters").update({ portrait_url: portraitUrl, image_prompt: prompt })
-      .eq("id", c.id).select().single();
-    return { row, demo: false, preset: preset.key };
+      .from("characters")
+      .update({
+        portrait_url: portraitUrl,
+        image_prompt: prompt,
+        portrait_seed: seed,
+        ...(portraitPath ? { portrait_path: portraitPath } : {}),
+      } as any)
+      .eq("id", c.id)
+      .select()
+      .single();
+    return { row, demo: false, preset: preset.key, seed };
   });
+
+// ============= Refresh portrait signed URL =============
+
+const RefreshInput = z.object({ characterId: z.string().uuid() });
+
+export const refreshPortraitUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => RefreshInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const c = await loadOwnedCharacter(context, data.characterId);
+    const path = (c as any).portrait_path as string | null;
+    if (!path) return { url: (c as any).portrait_url ?? null, refreshed: false };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from("storyboards")
+      .createSignedUrl(path, 60 * 60 * 24 * 30);
+    if (error || !signed?.signedUrl) return { url: (c as any).portrait_url ?? null, refreshed: false };
+    await context.supabase
+      .from("characters")
+      .update({ portrait_url: signed.signedUrl })
+      .eq("id", c.id);
+    return { url: signed.signedUrl, refreshed: true };
+  });
+
 
 // ============= Cast style preset (per project) =============
 
