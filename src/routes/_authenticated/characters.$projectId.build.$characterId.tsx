@@ -425,7 +425,7 @@ function GuidedBuilderPage() {
 
   const { data: usageSnapshot, refetch: refetchUsage } = useQuery({
     queryKey: ["usage-snapshot"],
-    queryFn: async () => callUsageSnapshot({ data: {} as any }),
+    queryFn: async () => callUsageSnapshot({ data: {} }),
   });
   const portraitUsage = (usageSnapshot as any[] | undefined)?.find(
     (r) => r?.feature === "character_portraits",
