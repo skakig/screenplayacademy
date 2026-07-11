@@ -70,6 +70,11 @@ export function VotingRoom({ session, role, projectId }: Props) {
     queryKey: arenaKeys.myVotes(session.id),
     queryFn: () => listMyVotes(session.id),
   });
+  const progressQ = useQuery({
+    queryKey: arenaKeys.progress(session.id),
+    queryFn: () => getVotingProgress(session.id),
+    refetchInterval: 5000,
+  });
 
   const entries = entriesQ.data ?? [];
   const identityIds = useMemo(
