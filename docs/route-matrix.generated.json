@@ -104,14 +104,12 @@
       "requiredTier": null,
       "experimental": false,
       "setupRequires": null,
-      "needsData": "characters",
+      "needsData": null,
       "guidedOnly": false,
       "needsProject": true,
       "lockedTiers": [],
       "blockingScenarios": [
-        "no_project",
-        "empty_project",
-        "has_scenes"
+        "no_project"
       ]
     },
     {
@@ -9197,11 +9195,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9217,11 +9213,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9237,11 +9231,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9257,11 +9249,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9277,11 +9267,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9297,11 +9285,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9317,11 +9303,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9337,11 +9321,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9581,11 +9563,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9601,11 +9581,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9621,11 +9599,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9641,11 +9617,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9661,11 +9635,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9681,11 +9653,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9701,11 +9671,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9721,11 +9689,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9965,11 +9931,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -9985,11 +9949,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -10005,11 +9967,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -10025,11 +9985,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -10045,11 +10003,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -10065,11 +10021,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -10085,11 +10039,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -10105,11 +10057,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -10349,11 +10299,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -10369,11 +10317,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -10389,11 +10335,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -10409,11 +10353,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -10429,11 +10371,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -10449,11 +10389,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -10469,11 +10407,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
@@ -10489,11 +10425,9 @@
       "experimental": false,
       "setupRequired": false,
       "missingProject": false,
-      "needsData": "characters",
-      "blockedBy": "needs_data",
-      "badgeOrder": [
-        "Needs characters"
-      ]
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": []
     },
     {
       "group": "editor",
