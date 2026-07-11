@@ -18,7 +18,7 @@ import {
   GraduationCap, Flame, Users, BookOpen, AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenStatus, setCastStylePreset, refreshPortraitUrl, setProjectVisualStyle, suggestCharacterVoice } from "@/lib/characters.functions";
+import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenStatus, setCastStylePreset, refreshPortraitUrl, setProjectVisualStyle, suggestCharacterVoice, generatePortraitCandidates, approvePortraitCandidate } from "@/lib/characters.functions";
 import { StyleContractDialog } from "@/components/characters/StyleContractDialog";
 import { getUsageSnapshot } from "@/lib/usage.functions";
 import { useOnboarding } from "@/hooks/use-onboarding";
