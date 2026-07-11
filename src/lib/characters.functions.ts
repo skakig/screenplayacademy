@@ -339,8 +339,8 @@ export const generatePortrait = createServerFn({ method: "POST" })
     // contract so every character in the cast reads as one film.
     const { composePortraitPrompt } = await import("@/lib/characters/portraitPrompt");
     const { data: projectRow } = await context.supabase
-      .from("projects").select("metadata").eq("id", c.project_id).maybeSingle();
-    const style = (projectRow?.metadata as any)?.visual_style ?? {};
+      .from("projects").select("*").eq("id", c.project_id).maybeSingle();
+    const style = ((projectRow as any)?.metadata?.visual_style) ?? {};
     let prompt = composePortraitPrompt(c as any, style);
     if (!prompt.trim()) {
       prompt = demoVisualPrompt(c);
