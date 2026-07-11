@@ -1321,7 +1321,14 @@ function GuidedBuilderPage() {
           </Button>
         </div>
       </div>
+      <StyleContractDialog
+        open={styleDialogOpen}
+        onOpenChange={setStyleDialogOpen}
+        projectId={projectId}
+        initial={((project as any)?.metadata?.visual_style ?? {}) as any}
+      />
     </div>
+
   );
 }
 
