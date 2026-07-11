@@ -566,10 +566,15 @@ function GuidedBuilderPage() {
 
   const callRefreshPortrait = useServerFn(refreshPortraitUrl);
   const callSuggestVoice = useServerFn(suggestCharacterVoice);
+  const callVoicePreview = useServerFn(previewCharacterVoice);
   const callCandidates = useServerFn(generatePortraitCandidates);
   const callApprove = useServerFn(approvePortraitCandidate);
   const [styleDialogOpen, setStyleDialogOpen] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
+  const [voicePreviewBusy, setVoicePreviewBusy] = useState(false);
+  const [voicePreviewUrl, setVoicePreviewUrl] = useState<string | null>(null);
+  const [voicePreviewPlaying, setVoicePreviewPlaying] = useState(false);
+  const voiceAudioRef = (useMemo(() => ({ current: null as HTMLAudioElement | null }), []));
   const [candidatesBusy, setCandidatesBusy] = useState(false);
   const [approvingSeed, setApprovingSeed] = useState<number | null>(null);
   type PortraitCandidate = { seed: number; url: string | null; path: string | null; index: number; error: string | null };
