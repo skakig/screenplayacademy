@@ -113,8 +113,26 @@ export const previewCharacterVoice = createServerFn({ method: "POST" })
     );
     if (!res.ok) {
       const err = await res.text().catch(() => "");
+      // Surface rate-limit + provider-quota specifically so the UI can offer
+      // a retry (with server-sent backoff) or a credit top-up.
+      if (res.status === 429) {
+        const retryAfter = Number(res.headers.get("retry-after") ?? "") || 15;
+        return {
+          ok: false as const,
+          reason: "rate_limited" as const,
+          retryAfterSeconds: retryAfter,
+          message: "Voice service is rate-limited right now. Try again in a moment.",
+        };
+      }
+      if (res.status === 401 || res.status === 403) {
+        return { ok: false as const, reason: "not_configured" as const, message: "Voice provider rejected the request." };
+      }
+      if (res.status === 402) {
+        return { ok: false as const, reason: "provider_quota" as const, message: "Voice provider is out of credits." };
+      }
       throw new Error(`ElevenLabs TTS failed (${res.status}): ${err.slice(0, 200)}`);
     }
+
     const bytes = new Uint8Array(await res.arrayBuffer());
 
     const { error: upErr } = await supabase.storage

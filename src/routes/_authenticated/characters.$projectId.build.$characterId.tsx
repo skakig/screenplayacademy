@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { upsertCharacter, generateFullCharacter, generatePortrait, getImageGenStatus, setCastStylePreset, refreshPortraitUrl, setProjectVisualStyle, suggestCharacterVoice, generatePortraitCandidates, approvePortraitCandidate } from "@/lib/characters.functions";
 import { previewCharacterVoice } from "@/lib/voice-preview.functions";
+import { openCreditsDialog } from "@/hooks/useCreditsUpsell";
 import { StyleContractDialog } from "@/components/characters/StyleContractDialog";
 import { getUsageSnapshot } from "@/lib/usage.functions";
 import { useOnboarding } from "@/hooks/use-onboarding";
@@ -575,6 +576,15 @@ function GuidedBuilderPage() {
   const [styleDialogOpen, setStyleDialogOpen] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [previewBusy, setPreviewBusy] = useState(false);
+  type PreviewError =
+    | { kind: "no_voice" }
+    | { kind: "not_configured"; message?: string }
+    | { kind: "quota"; message?: string }
+    | { kind: "provider_quota"; message?: string }
+    | { kind: "rate_limited"; retryAfterSeconds: number; message?: string }
+    | { kind: "generic"; message: string };
+  const [previewError, setPreviewError] = useState<PreviewError | null>(null);
+  const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
   const [candidatesBusy, setCandidatesBusy] = useState(false);
   const [approvingSeed, setApprovingSeed] = useState<number | null>(null);
   type PortraitCandidate = { seed: number; url: string | null; path: string | null; index: number; error: string | null };
@@ -712,9 +722,10 @@ function GuidedBuilderPage() {
   const previewVoiceNow = async () => {
     const voiceId = (character as any)?.elevenlabs_voice_id as string | undefined;
     if (!voiceId) {
-      toast.info("Assign a voice to this character first.");
+      setPreviewError({ kind: "no_voice" });
       return;
     }
+    setPreviewError(null);
     setPreviewBusy(true);
     try {
       // Client-side cache keyed by (voiceId, greeting text) — instant replay
@@ -728,10 +739,16 @@ function GuidedBuilderPage() {
       }
       const out: any = await callPreviewVoice({ data: { characterId } });
       if (!out?.ok) {
-        if (out?.reason === "no_voice") toast.info("Assign a voice first.");
-        else if (out?.reason === "not_configured") toast.info("Voice preview is not configured for this project.");
-        else if (out?.reason === "quota") toast.error(out?.message ?? "You're out of table-read credits.");
-        else toast.error("Could not generate preview.");
+        const reason = out?.reason as string | undefined;
+        if (reason === "no_voice") setPreviewError({ kind: "no_voice" });
+        else if (reason === "not_configured") setPreviewError({ kind: "not_configured", message: out?.message });
+        else if (reason === "quota") setPreviewError({ kind: "quota", message: out?.message });
+        else if (reason === "provider_quota") setPreviewError({ kind: "provider_quota", message: out?.message });
+        else if (reason === "rate_limited") {
+          const secs = Math.max(3, Number(out?.retryAfterSeconds) || 15);
+          setPreviewError({ kind: "rate_limited", retryAfterSeconds: secs, message: out?.message });
+          setRateLimitCountdown(secs);
+        } else setPreviewError({ kind: "generic", message: out?.message ?? "Could not generate preview." });
         return;
       }
       const audio = new Audio(out.url);
@@ -740,11 +757,26 @@ function GuidedBuilderPage() {
       await audio.play().catch(() => {});
       if (out.cached) toast.success("Loaded cached preview", { duration: 1200 });
     } catch (e: any) {
-      toast.error(e?.message ?? "Could not preview voice");
+      const message = String(e?.message ?? "Could not preview voice");
+      // Server may throw the shared USAGE_LIMIT format when the monthly
+      // tts_characters cap is hit before we ever call ElevenLabs.
+      if (/USAGE_LIMIT/.test(message)) {
+        setPreviewError({ kind: "quota", message });
+      } else {
+        setPreviewError({ kind: "generic", message });
+      }
     } finally {
       setPreviewBusy(false);
     }
   };
+
+  // Rate-limit countdown so the retry button re-enables automatically.
+  useEffect(() => {
+    if (rateLimitCountdown <= 0) return;
+    const t = setInterval(() => setRateLimitCountdown((n) => Math.max(0, n - 1)), 1000);
+    return () => clearInterval(t);
+  }, [rateLimitCountdown]);
+
 
 
   const exitTo = () =>
@@ -1199,6 +1231,96 @@ function GuidedBuilderPage() {
                               Explore 4 variants
                             </Button>
                           </div>
+
+                          {previewError && (
+                            <div
+                              role="alert"
+                              className="mt-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive-foreground"
+                            >
+                              <div className="flex items-start gap-2">
+                                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-destructive" />
+                                <div className="flex-1 space-y-2">
+                                  <div className="font-medium text-destructive">
+                                    {previewError.kind === "no_voice" && "No voice assigned yet"}
+                                    {previewError.kind === "not_configured" && "Voice preview unavailable"}
+                                    {previewError.kind === "rate_limited" && "Voice service is busy"}
+                                    {previewError.kind === "quota" && "Out of table-read credits"}
+                                    {previewError.kind === "provider_quota" && "Voice provider is out of credits"}
+                                    {previewError.kind === "generic" && "Preview failed"}
+                                  </div>
+                                  <div className="text-foreground/80">
+                                    {previewError.kind === "no_voice" && "Assign a voice to this character, then try again."}
+                                    {previewError.kind === "not_configured" && (previewError.message ?? "Ask an admin to connect the voice provider.")}
+                                    {previewError.kind === "rate_limited" && (
+                                      rateLimitCountdown > 0
+                                        ? `Retry in ${rateLimitCountdown}s — this usually clears within a moment.`
+                                        : "You can retry now."
+                                    )}
+                                    {previewError.kind === "quota" && "You've used this month's voice minutes. Top up credits to keep previewing and generate the table read."}
+                                    {previewError.kind === "provider_quota" && "Our voice provider ran out of credits. Try again shortly or top up your own credits to unblock."}
+                                    {previewError.kind === "generic" && previewError.message}
+                                  </div>
+                                  <div className="flex flex-wrap gap-2 pt-1">
+                                    {(previewError.kind === "rate_limited" ||
+                                      previewError.kind === "generic" ||
+                                      previewError.kind === "not_configured") && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => void previewVoiceNow()}
+                                        disabled={
+                                          previewBusy ||
+                                          (previewError.kind === "rate_limited" && rateLimitCountdown > 0)
+                                        }
+                                      >
+                                        {previewBusy ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                                        {previewError.kind === "rate_limited" && rateLimitCountdown > 0
+                                          ? `Retry in ${rateLimitCountdown}s`
+                                          : "Retry"}
+                                      </Button>
+                                    )}
+                                    {(previewError.kind === "quota" || previewError.kind === "provider_quota") && (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          onClick={() => openCreditsDialog("tts_characters")}
+                                        >
+                                          Buy voice credits
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => void previewVoiceNow()}
+                                          disabled={previewBusy}
+                                        >
+                                          Retry
+                                        </Button>
+                                      </>
+                                    )}
+                                    {previewError.kind === "no_voice" && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => void autoSuggestVoice()}
+                                        disabled={voiceBusy}
+                                      >
+                                        {voiceBusy ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                                        Auto-assign voice
+                                      </Button>
+                                    )}
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => setPreviewError(null)}
+                                    >
+                                      Dismiss
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
 
                           {(candidatesBusy || candidates) && (
                             <div className="rounded-lg border border-border/60 bg-secondary/30 p-3">
