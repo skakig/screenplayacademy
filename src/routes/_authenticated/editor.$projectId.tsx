@@ -828,6 +828,38 @@ function Editor() {
             </>
           )}
         </section>
+        {showCoachRail && (
+          <aside className="hidden xl:block border-l border-border/40 bg-background/40">
+            <div className="sticky top-16 max-h-[calc(100vh-64px)] overflow-auto">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-background/60">
+                <span className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground">Coach Rail</span>
+                <button
+                  onClick={() => setCoachPinned(false)}
+                  className="text-[10px] text-muted-foreground hover:text-foreground transition"
+                  title="Unpin the Coach rail"
+                >
+                  Unpin
+                </button>
+              </div>
+              <CoachPane
+                projectId={projectId}
+                blocks={blocks as any}
+                activeBlockId={activeBlockId}
+                activeBlockType={activeBlockType}
+                defaultTab={coachDefaultTab}
+                onOpenStoryBuilder={() => setStoryBuilderOpen(true)}
+                aiTools={AI_TOOLS}
+                aiTool={aiTool}
+                setAiTool={setAiTool}
+                aiPrompt={aiPrompt}
+                setAiPrompt={setAiPrompt}
+                aiOutput={aiOutput}
+                aiLoading={aiLoading}
+                onRunAi={runAi}
+              />
+            </div>
+          </aside>
+        )}
       </div>
 
       {/* Summoned panels: Script Map & Director's Chair as right-side drawers. */}
