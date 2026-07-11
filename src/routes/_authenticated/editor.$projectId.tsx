@@ -66,7 +66,7 @@ export const Route = createFileRoute("/_authenticated/editor/$projectId")({
     step: typeof s.step === "string" ? s.step : undefined,
     block: typeof s.block === "string" ? s.block : undefined,
   }),
-  component: Editor,
+  component: EditorRoute,
   errorComponent: ({ error, reset }) => (
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="max-w-md text-center space-y-3">
