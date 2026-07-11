@@ -1,3 +1,5 @@
+// DEPRECATED — do not extend. Retired at Characters Rebuild Pass 5.
+// See docs/CHARACTERS_REBUILD.md and docs/CHARACTERS_PASS1_INVENTORY.md.
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";

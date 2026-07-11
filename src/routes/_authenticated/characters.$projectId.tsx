@@ -1,3 +1,5 @@
+// DEPRECATED — route body replaced at Characters Rebuild Pass 3.
+// Do not add features here. See docs/CHARACTERS_REBUILD.md.
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { RouteReadinessGate } from "@/components/RouteReadinessGate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";

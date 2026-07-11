@@ -1,3 +1,5 @@
+// DEPRECATED — do not extend. Unmounted at Pass 2, deleted at Pass 3.
+// See docs/CHARACTERS_REBUILD.md.
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
