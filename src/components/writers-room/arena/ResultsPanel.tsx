@@ -98,15 +98,21 @@ export function ResultsPanel({ session, role, projectId }: Props) {
     [session.id, identityIds],
   );
 
-  const winner = ranked[0];
-  const isHostOrOwner = role === "owner"; // extra grants happen server-side too
-
-  const winnerColor: AuthorshipColor = winner
-    ? (palette.get(winner.author_id) ?? NEUTRAL_AUTHORSHIP_COLOR)
-    : NEUTRAL_AUTHORSHIP_COLOR;
-  const winnerIdentity = winner
-    ? identitiesQ.data?.get(winner.author_id)
-    : null;
+  // Prefer DB-authoritative winner rows (supports co-winners). Fall back to
+  // client-computed ranking only if the winners RPC hasn't hydrated yet.
+  const winnerEntryIds = useMemo(
+    () => new Set((winnersQ.data ?? []).map((w) => w.entry_id)),
+    [winnersQ.data],
+  );
+  const winners: ArenaEntryRow[] = useMemo(() => {
+    if (winnerEntryIds.size > 0) {
+      return submitted.filter((e) => winnerEntryIds.has(e.id));
+    }
+    return ranked[0] ? [ranked[0]] : [];
+  }, [submitted, winnerEntryIds, ranked]);
+  const isCoWinner = winners.length > 1;
+  const isHostOrOwner =
+    (!!uid && uid === session.created_by) || role === "owner";
 
   return (
     <Card className="p-6 bg-card/60 space-y-4">
@@ -117,27 +123,37 @@ export function ResultsPanel({ session, role, projectId }: Props) {
         </h3>
       </div>
 
-      {winner && (
-        <AuthorshipRail
-          color={winnerColor}
-          displayName={winnerIdentity?.display_name ?? ""}
-          avatarUrl={winnerIdentity?.avatar_url ?? null}
-          role={null}
-          meta={
-            <Badge variant="secondary">{t("arena.results.winner")}</Badge>
-          }
-        >
-          <div className="font-display text-lg font-semibold mt-1">
-            {winner.title || "Untitled entry"}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            avg {(scores.get(winner.id)?.average ?? 0).toFixed(1)}
-          </div>
-          <p className="text-sm whitespace-pre-wrap font-mono bg-background/60 p-3 rounded mt-3 max-h-60 overflow-y-auto">
-            {winner.body}
-          </p>
-        </AuthorshipRail>
-      )}
+      {winners.map((winner) => {
+        const winnerColor: AuthorshipColor =
+          palette.get(winner.author_id) ?? NEUTRAL_AUTHORSHIP_COLOR;
+        const winnerIdentity = identitiesQ.data?.get(winner.author_id);
+        return (
+          <AuthorshipRail
+            key={winner.id}
+            color={winnerColor}
+            displayName={winnerIdentity?.display_name ?? ""}
+            avatarUrl={winnerIdentity?.avatar_url ?? null}
+            role={null}
+            meta={
+              <Badge variant="secondary">
+                {isCoWinner
+                  ? t("arena.results.coWinners")
+                  : t("arena.results.winner")}
+              </Badge>
+            }
+          >
+            <div className="font-display text-lg font-semibold mt-1">
+              {winner.title || "Untitled entry"}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              avg {(scores.get(winner.id)?.average ?? 0).toFixed(1)}
+            </div>
+            <p className="text-sm whitespace-pre-wrap font-mono bg-background/60 p-3 rounded mt-3 max-h-60 overflow-y-auto">
+              {winner.body}
+            </p>
+          </AuthorshipRail>
+        );
+      })}
 
       <div className="space-y-3">
         <div className="text-xs uppercase tracking-wider text-muted-foreground">
