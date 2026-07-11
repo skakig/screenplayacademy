@@ -27,6 +27,7 @@ import {
   castArenaVote,
   finalizeArenaRound,
   getProjectMemberIdentities,
+  getVotingProgress,
   listMyVotes,
   listVotingEntries,
   type ArenaSessionRow,
