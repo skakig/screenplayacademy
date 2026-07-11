@@ -435,7 +435,7 @@ export const setCastStylePreset = createServerFn({ method: "POST" })
     if (!project) throw new Error("Project not found");
     const meta = { ...((project as any).metadata ?? {}), cast_style_preset: data.presetKey };
     const { error: upErr } = await context.supabase
-      .from("projects").update({ metadata: meta }).eq("id", data.projectId);
+      .from("projects").update({ metadata: meta } as any).eq("id", data.projectId);
     if (upErr) throw new Error(upErr.message);
     return { ok: true, presetKey: data.presetKey };
   });
