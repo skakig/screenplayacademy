@@ -620,8 +620,23 @@ function GuidedBuilderPage() {
       const out: any = await callApprove({
         data: { characterId, seed: cand.seed, path: cand.path, url: cand.url },
       });
-      qc.invalidateQueries({ queryKey: ["character", projectId, characterId] });
-      qc.invalidateQueries({ queryKey: ["characters", projectId] });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["character", projectId, characterId], refetchType: "active" }),
+        qc.invalidateQueries({
+          predicate: (q) => {
+            const k = q.queryKey?.[0];
+            return (
+              k === "character" ||
+              k === "characters" ||
+              k === "characters-lite" ||
+              k === "character-candidates" ||
+              k === "scene-states" ||
+              k === "script-blocks-for-cast"
+            );
+          },
+          refetchType: "active",
+        }),
+      ]);
       if (out?.row?.portrait_url) {
         toast.success("Portrait approved and locked in.");
         setCandidates(null);
