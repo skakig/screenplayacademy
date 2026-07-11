@@ -866,7 +866,7 @@ export const importCharacterStyleFromSource = createServerFn({ method: "POST" })
       return { ok: true, updated: 0 };
     }
     const { data: row, error: upErr } = await context.supabase
-      .from("characters").update(patch).eq("id", data.targetCharacterId).select().single();
+      .from("characters").update(patch as any).eq("id", data.targetCharacterId).select().single();
     if (upErr) throw new Error(upErr.message);
     return { ok: true, updated: Object.keys(patch).length, row };
   });
