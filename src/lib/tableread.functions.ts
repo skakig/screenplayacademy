@@ -151,7 +151,7 @@ export const generateTableRead = createServerFn({ method: "POST" })
     // Walk blocks → ordered lines
     const lines: Line[] = [];
     let currentSpeaker: string | null = null;
-    for (const b of blocks ?? []) {
+    for (const b of scopedBlocks) {
       const content = String(b.content ?? "").trim();
       if (!content) continue;
       switch (b.block_type) {
