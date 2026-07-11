@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
   Sparkles, Loader2, ImagePlus, BookOpen, Brain, Mic2, Eye, Users, Activity, FileText, Wand2, Volume2,
-  AlertTriangle, MessageSquareQuote, Search, Lightbulb, Scale,
+  AlertTriangle, MessageSquareQuote, Search, Lightbulb, Scale, UserRound, ShieldCheck, Layers, Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TMHInfoPanel } from "./TMHInfoPanel";
