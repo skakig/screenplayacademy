@@ -685,6 +685,7 @@ function Editor() {
   const headerExtras = (
     <div className="flex items-center gap-2">
       {!focus && <PresenceAvatarStack />}
+      {!focus && <TeammatesPanel projectId={projectId} blocks={blocks as any} />}
       {!focus && (
         <Button
           variant="outline"
