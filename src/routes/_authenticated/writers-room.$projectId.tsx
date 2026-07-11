@@ -30,10 +30,12 @@ import { fetchProjectRole, wrKeys } from "@/lib/collab";
 import { t } from "@/lib/i18n/t";
 
 import { PageFeatureGate } from "@/components/PageFeatureGate";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/writers-room/$projectId")({
   head: () => ({ meta: [{ title: "Writers' Room — SceneSmith Studio" }] }),
   component: GatedWritersRoom,
+  errorComponent: RouteErrorBoundary,
 });
 
 function GatedWritersRoom() {
