@@ -3,19 +3,18 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { consumeUsage } from "@/lib/usage.functions";
 import { z } from "zod";
 import { createHash } from "crypto";
+import { TABLE_READ_MODEL_ID, TABLE_READ_VOICE_SETTINGS } from "@/lib/voice-settings";
 
 const Input = z.object({
   characterId: z.string().uuid(),
   text: z.string().min(1).max(500).optional(),
 });
 
-const MODEL_ID = "eleven_multilingual_v2";
-const VOICE_SETTINGS = {
-  stability: 0.5,
-  similarity_boost: 0.75,
-  style: 0.35,
-  use_speaker_boost: true,
-};
+// Use the same model + settings the Table Read generator uses, so what the
+// writer approves in the builder preview is what plays back in performance.
+const MODEL_ID = TABLE_READ_MODEL_ID;
+const VOICE_SETTINGS = TABLE_READ_VOICE_SETTINGS;
+
 // Bump when generation params change to invalidate old cached clips.
 const CACHE_VERSION = "v1";
 const SIGNED_URL_TTL_SECONDS = 60 * 60; // 1 hour

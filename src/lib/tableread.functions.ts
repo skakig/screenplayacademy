@@ -3,7 +3,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireFeature } from "@/lib/entitlements.functions";
 import { consumeUsage } from "@/lib/usage.functions";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { TABLE_READ_MODEL_ID, TABLE_READ_VOICE_SETTINGS } from "@/lib/voice-settings";
 import { z } from "zod";
+
 
 const Input = z.object({
   projectId: z.string().uuid(),
@@ -38,10 +40,10 @@ async function ttsLine(apiKey: string, voiceId: string, text: string, previous?:
       headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({
         text,
-        model_id: "eleven_multilingual_v2",
+        model_id: TABLE_READ_MODEL_ID,
         previous_text: previous,
         next_text: next,
-        voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.35, use_speaker_boost: true },
+        voice_settings: TABLE_READ_VOICE_SETTINGS,
       }),
     },
   );
