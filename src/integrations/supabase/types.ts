@@ -422,9 +422,13 @@ export type Database = {
           audio_url: string | null
           cache_key: string | null
           created_at: string
+          current_line_label: string | null
           duration_seconds: number | null
+          error_message: string | null
           id: string
           kind: string
+          lines_done: number
+          lines_total: number | null
           project_id: string
           scene_id: string | null
           status: string
@@ -435,9 +439,13 @@ export type Database = {
           audio_url?: string | null
           cache_key?: string | null
           created_at?: string
+          current_line_label?: string | null
           duration_seconds?: number | null
+          error_message?: string | null
           id?: string
           kind?: string
+          lines_done?: number
+          lines_total?: number | null
           project_id: string
           scene_id?: string | null
           status?: string
@@ -448,9 +456,13 @@ export type Database = {
           audio_url?: string | null
           cache_key?: string | null
           created_at?: string
+          current_line_label?: string | null
           duration_seconds?: number | null
+          error_message?: string | null
           id?: string
           kind?: string
+          lines_done?: number
+          lines_total?: number | null
           project_id?: string
           scene_id?: string | null
           status?: string
