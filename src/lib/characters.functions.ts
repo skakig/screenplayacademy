@@ -466,6 +466,144 @@ export const refreshPortraitUrl = createServerFn({ method: "POST" })
   });
 
 
+// ============= Multi-candidate portrait grid + explicit approval =============
+
+const CandidatesInput = z.object({
+  characterId: z.string().uuid(),
+  presetKey: z.string().optional(),
+  count: z.number().int().min(2).max(4).optional(),
+});
+
+export const generatePortraitCandidates = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => CandidatesInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const c = await loadOwnedCharacter(context, data.characterId);
+    const key = process.env.LOVABLE_API_KEY;
+    const n = data.count ?? 4;
+
+    // Charge one portrait credit per candidate up-front so callers see limit
+    // errors before any model spend. Rolled back best-effort on hard failure.
+    const { consumeUsage } = await import("@/lib/usage.functions");
+    try {
+      await consumeUsage(context.supabase, "character_portraits", n);
+    } catch (e: any) {
+      const msg = String(e?.message ?? "");
+      if (msg.startsWith("USAGE_LIMIT")) {
+        throw new Error(
+          `Not enough portrait credits for ${n} candidates. Upgrade or wait for the next cycle.`,
+        );
+      }
+      throw e;
+    }
+
+    const { composePortraitPrompt } = await import("@/lib/characters/portraitPrompt");
+    const { getCastStylePreset } = await import("@/lib/characters/castStylePresets");
+    const { data: projectRow } = await context.supabase
+      .from("projects").select("*").eq("id", c.project_id).maybeSingle();
+    const meta = ((projectRow as any)?.metadata ?? {}) as Record<string, any>;
+    const presetKey = data.presetKey || meta.cast_style_preset || "ultra_realistic";
+    const preset = getCastStylePreset(presetKey);
+    const style = { ...preset.contract, ...(meta.visual_style ?? {}) };
+    const basePrompt = composePortraitPrompt(c as any, style) || demoVisualPrompt(c);
+
+    if (!key) {
+      // Demo mode: return placeholders so the grid still exercises the UI.
+      const stub = Array.from({ length: n }, (_, i) => ({
+        seed: Math.floor(Math.random() * 2_000_000_000) + 1,
+        url: null as string | null,
+        path: null as string | null,
+        error: "not_configured",
+        index: i,
+      }));
+      return { candidates: stub, demo: true, configured: false, preset: preset.key };
+    }
+
+    const seeds = Array.from({ length: n }, () => Math.floor(Math.random() * 2_000_000_000) + 1);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const results = await Promise.all(
+      seeds.map(async (seed, index) => {
+        const prompt = `${basePrompt} Seed: ${seed}.`;
+        try {
+          const res = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ model: "google/gemini-2.5-flash-image-preview", prompt, n: 1 }),
+          });
+          if (!res.ok) throw new Error(`gateway_${res.status}`);
+          const json: any = await res.json().catch(() => ({}));
+          const b64 = json?.data?.[0]?.b64_json;
+          const remoteUrl = json?.data?.[0]?.url;
+          if (!b64 && !remoteUrl) throw new Error("no_image");
+          if (b64) {
+            const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+            const path = `${c.project_id}/characters/${c.id}-cand-${seed}-${Date.now()}.png`;
+            const { error: upErr } = await supabaseAdmin.storage
+              .from("storyboards")
+              .upload(path, bytes, { contentType: "image/png", upsert: true });
+            if (upErr) throw new Error(`upload_${upErr.message}`);
+            const { data: signed } = await supabaseAdmin.storage
+              .from("storyboards").createSignedUrl(path, 60 * 60 * 24 * 30);
+            return { seed, url: signed?.signedUrl ?? null, path, index, error: null as string | null };
+          }
+          return { seed, url: remoteUrl as string, path: null, index, error: null as string | null };
+        } catch (err: any) {
+          return { seed, url: null, path: null, index, error: String(err?.message ?? "failed") };
+        }
+      }),
+    );
+
+    return { candidates: results, demo: false, preset: preset.key };
+  });
+
+const ApproveInput = z.object({
+  characterId: z.string().uuid(),
+  seed: z.number().int().positive(),
+  path: z.string().min(1).nullable().optional(),
+  url: z.string().url().nullable().optional(),
+});
+
+export const approvePortraitCandidate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => ApproveInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const c = await loadOwnedCharacter(context, data.characterId);
+    let finalUrl = data.url ?? null;
+    if (data.path) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      // Confirm the object belongs to this character/project before adopting
+      // it — path is client-supplied and must match the expected prefix.
+      const expectedPrefix = `${c.project_id}/characters/${c.id}-`;
+      if (!data.path.startsWith(expectedPrefix)) {
+        throw new Error("Portrait candidate does not belong to this character.");
+      }
+      const { data: signed, error: signErr } = await supabaseAdmin.storage
+        .from("storyboards").createSignedUrl(data.path, 60 * 60 * 24 * 30);
+      if (signErr || !signed?.signedUrl) {
+        throw new Error("Selected portrait is no longer available. Regenerate the grid and try again.");
+      }
+      finalUrl = signed.signedUrl;
+    }
+    if (!finalUrl) throw new Error("No portrait URL to approve.");
+    const { data: row, error } = await context.supabase
+      .from("characters")
+      .update({
+        portrait_url: finalUrl,
+        portrait_seed: data.seed,
+        ...(data.path ? { portrait_path: data.path } : {}),
+      } as any)
+      .eq("id", c.id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return { row, seed: data.seed };
+  });
+
+
+
+
+
 // ============= Cast style preset (per project) =============
 
 const CastStyleInput = z.object({
