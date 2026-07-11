@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { completenessPct } from "@/components/characters/tmh";
-import { CharacterProfileDialog } from "@/components/characters/CharacterProfileDialog";
+
 import { CharacterInboxDrawer } from "@/components/characters/CharacterInboxDrawer";
 import { upsertCharacter, deleteCharacter, bulkDeleteCharacters, restoreCharacters } from "@/lib/characters.functions";
 import { MergeReviewDialog } from "@/components/characters/MergeReviewDialog";
@@ -135,8 +135,6 @@ function CharactersPage() {
   const [importanceFilter, setImportanceFilter] = useState<ImportanceKey | null>(null);
   const [functionFilter, setFunctionFilter] = useState<StoryFunctionKey | null>(null);
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState<null | { ids: string[]; label: string }>(null);
@@ -378,7 +376,7 @@ function CharactersPage() {
                 projectId={projectId}
                 rels={relCounts[c.id] ?? 0}
                 scenes={sceneCounts[c.id] ?? 0}
-                selected={c.id === selectedId}
+                selected={false}
                 bulkMode={bulkMode}
                 bulkSelected={bulkSelected.has(c.id)}
                 onBulkToggle={() => toggleBulk(c.id)}
@@ -434,12 +432,6 @@ function CharactersPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <CharacterProfileDialog
-        projectId={projectId}
-        characterId={selectedId}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-      />
     </AppShell>
   );
 }
