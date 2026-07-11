@@ -153,6 +153,77 @@ export const i18nStrings = {
     "Adjust how present your director is while you write.",
   "dashboard.director.cta": "Studio Settings",
 
+  // Character Builder emergency route repair
+  "characters.builder.headTitle": "Build Character — SceneSmith Studio",
+  "characters.builder.newCharacterName": "New Character",
+  "characters.builder.returnToCharacters": "Return to Characters",
+  "characters.builder.createCharacter": "Create Character",
+  "characters.builder.loadingTitle": "Opening character…",
+  "characters.builder.loadingBody": "Loading the builder without changing your cast.",
+  "characters.builder.notFoundTitle": "Character not found",
+  "characters.builder.notFoundBody":
+    "This character may have been deleted, moved, or you may not have access to it.",
+  "characters.builder.projectMismatchTitle": "Character belongs to another project",
+  "characters.builder.projectMismatchBody":
+    "Return to this project’s Characters page and open the character from there.",
+  "characters.builder.errorTitle": "Character could not load",
+  "characters.builder.errorBody":
+    "The builder could not verify this character. No new records were created.",
+  "characters.builder.identity.title": "Identity",
+  "characters.builder.identity.subtitle": "Name, importance, and story function",
+  "characters.builder.identity.question": "Who is this character in the story record?",
+  "characters.builder.identity.why":
+    "Identity keeps every later choice attached to a specific person, not a placeholder.",
+  "characters.builder.identity.nameLabel": "Name",
+  "characters.builder.identity.namePlaceholder": "Character name",
+  "characters.builder.identity.importanceLabel": "Importance",
+  "characters.builder.identity.storyFunctionLabel": "Story function",
+  "characters.builder.identity.nameStarter": "Name them as they appear on the page.",
+  "characters.builder.identity.importanceStarter": "Pick how much story weight they carry.",
+  "characters.builder.identity.functionStarter": "Choose what job they serve in the story.",
+  "characters.builder.identity.coach1":
+    "A clear name prevents duplicate cast records and keeps script links reliable.",
+  "characters.builder.identity.coach2":
+    "Importance and story function tell the builder how much depth this profile needs.",
+  "characters.builder.identity.beginnerHint":
+    "If you are unsure, start with Supporting and Custom. You can change it later.",
+  "characters.builder.importance.main": "Lead",
+  "characters.builder.importance.supporting": "Supporting",
+  "characters.builder.importance.minor": "Minor",
+  "characters.builder.importance.unassigned": "Unassigned",
+  "characters.builder.function.protagonist": "Protagonist",
+  "characters.builder.function.antagonist": "Antagonist",
+  "characters.builder.function.mentor": "Mentor",
+  "characters.builder.function.ally": "Ally",
+  "characters.builder.function.loveInterest": "Love Interest",
+  "characters.builder.function.comicRelief": "Comic Relief",
+  "characters.builder.function.custom": "Custom",
+  "characters.builder.toast.nothingToSave": "Nothing new to save.",
+  "characters.builder.toast.saved": "Draft saved",
+  "characters.builder.toast.characterSaved": "Character saved",
+  "characters.builder.toast.fieldHasContent":
+    "This field has content. Try 'Make it sharper' or clear it first.",
+  "characters.builder.toast.suggested": "Suggested",
+  "characters.builder.toast.suggestedDemo": "Suggested (demo)",
+  "characters.builder.toast.noSuggestion": "No suggestion available for this field.",
+  "characters.builder.toast.suggestionFailed": "Suggestion failed",
+  "characters.builder.toast.saveFailed": "Save failed",
+  "characters.builder.portrait.ready": "Image generation ready",
+  "characters.builder.portrait.notConfigured": "Image generation is not configured",
+  "characters.builder.portrait.notConfiguredBody":
+    "Portrait generation is disabled for this environment. Your character data is safe.",
+  "characters.builder.portrait.statusLoading": "Checking image generation…",
+  "characters.builder.portrait.generated": "Portrait generated",
+  "characters.builder.portrait.failed": "Portrait generation failed",
+  "characters.builder.portrait.unavailable": "Portrait generation is not configured.",
+  "characters.builder.resolver.headTitle": "Build Character — SceneSmith Studio",
+  "characters.builder.resolver.createError": "Could not create character",
+  "characters.builder.resolver.createdToast": "Created your first character — let's build them.",
+  "characters.builder.resolver.error": "Could not open the character builder.",
+  "characters.builder.resolver.errorTitle": "Could not open builder",
+  "characters.builder.resolver.loadingTitle": "Opening character builder…",
+  "characters.builder.resolver.loadingBody": "Finding or creating the right character for this project.",
+
   // Writers' Room (collaboration)
   "collab.room.title": "Writers' Room",
   "collab.room.subtitle":
