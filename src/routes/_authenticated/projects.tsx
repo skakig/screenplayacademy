@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Film, Search, Trash2 } from "lucide-react";
+import { Plus, Film, Search, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { InviteCollaboratorDialog } from "@/components/writers-room/InviteCollaboratorDialog";
 
 export const Route = createFileRoute("/_authenticated/projects")({
   head: () => ({ meta: [{ title: "Projects — SceneSmith AI" }] }),
@@ -20,6 +21,7 @@ function Projects() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  const [inviteProjectId, setInviteProjectId] = useState<string | null>(null);
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
@@ -78,16 +80,33 @@ function Projects() {
                   {p.logline && <p className="text-sm text-muted-foreground mt-3 line-clamp-2">{p.logline}</p>}
                   <p className="text-xs text-muted-foreground mt-4">Updated {formatDistanceToNow(new Date(p.updated_at), { addSuffix: true })}</p>
                 </Link>
-                <button
-                  onClick={(e) => { e.preventDefault(); if (confirm(`Delete "${p.title}"? This cannot be undone.`)) del.mutate(p.id); }}
-                  className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition p-1.5 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"
-                  aria-label="Delete project"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                  <button
+                    onClick={(e) => { e.preventDefault(); setInviteProjectId(p.id); }}
+                    className="p-1.5 rounded hover:bg-primary/15 text-muted-foreground hover:text-primary"
+                    aria-label="Invite collaborator"
+                    title="Invite collaborator"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.preventDefault(); if (confirm(`Delete "${p.title}"? This cannot be undone.`)) del.mutate(p.id); }}
+                    className="p-1.5 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"
+                    aria-label="Delete project"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </Card>
             ))}
           </div>
+        )}
+        {inviteProjectId && (
+          <InviteCollaboratorDialog
+            projectId={inviteProjectId}
+            open={!!inviteProjectId}
+            onOpenChange={(o) => { if (!o) setInviteProjectId(null); }}
+          />
         )}
       </div>
     </AppShell>
