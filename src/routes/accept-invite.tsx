@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createFileRoute,
   useNavigate,
@@ -35,9 +35,6 @@ interface RpcRow {
 }
 
 export const Route = createFileRoute("/accept-invite")({
-  // Public route: unauthenticated visitors must be able to land here from an
-  // email link. We handle auth ourselves and bounce to /auth?next=… when
-  // needed so the token survives the sign-in round-trip.
   ssr: false,
   validateSearch: (search) => searchSchema.parse(search),
   head: () => ({
@@ -46,74 +43,90 @@ export const Route = createFileRoute("/accept-invite")({
   component: AcceptInvitePage,
 });
 
+function buildReturnPath(token: string | undefined): string {
+  return `/accept-invite${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+}
+
 function AcceptInvitePage() {
   const { token } = useSearch({ from: "/accept-invite" });
   const navigate = useNavigate();
   const [status, setStatus] = useState<AcceptStatus>("checking");
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [currentEmail, setCurrentEmail] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+
+  const runAccept = useCallback(async () => {
+    if (!token) {
+      setStatus("missing_token");
+      return;
+    }
+    setStatus("checking");
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      setStatus("needs_signin");
+      return;
+    }
+    setCurrentEmail(userData.user.email ?? null);
+    try {
+      const { data, error } = await supabase.rpc("accept_project_invite", {
+        _token: token,
+      });
+      if (error) {
+        setStatus("unknown");
+        return;
+      }
+      const row: RpcRow | null = Array.isArray(data)
+        ? ((data[0] as RpcRow) ?? null)
+        : ((data as RpcRow) ?? null);
+      setProjectId(row?.project_id ?? null);
+      setStatus(mapRpcStatus(row?.status ?? "unknown"));
+    } catch {
+      setStatus("unknown");
+    }
+  }, [token]);
 
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
-      if (!token) {
-        if (!cancelled) setStatus("missing_token");
-        return;
-      }
-
-      // Require an authenticated session before calling the RPC — otherwise
-      // it returns { status: "unauthenticated" } and the user sees a generic
-      // error instead of being sent to sign in.
-      const { data: userData } = await supabase.auth.getUser();
-      if (cancelled) return;
-      if (!userData.user) {
-        setStatus("needs_signin");
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase.rpc(
-          "accept_project_invite",
-          { _token: token },
-        );
-        if (cancelled) return;
-        if (error) {
-          setStatus("unknown");
-          return;
-        }
-        const row: RpcRow | null = Array.isArray(data)
-          ? ((data[0] as RpcRow) ?? null)
-          : ((data as RpcRow) ?? null);
-        const rpcStatus = row?.status ?? "unknown";
-        setProjectId(row?.project_id ?? null);
-        setStatus(mapRpcStatus(rpcStatus));
-      } catch {
-        if (!cancelled) setStatus("unknown");
-      }
-    })();
+    void runAccept().catch(() => {
+      if (!cancelled) setStatus("unknown");
+    });
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [runAccept, attempt]);
 
-  // Bounce to /auth with a next= that returns here with the token intact.
+  // Bounce to /auth preserving the token so it survives sign-in / signup.
   useEffect(() => {
     if (status !== "needs_signin") return;
-    const back = `/accept-invite${token ? `?token=${encodeURIComponent(token)}` : ""}`;
-    void navigate({ to: "/auth", search: { next: back } });
+    void navigate({
+      to: "/auth",
+      search: { next: buildReturnPath(token) },
+    });
   }, [status, token, navigate]);
 
-  // Auto-redirect on success.
+  // Auto-open the project after acceptance, or when the user was already a member.
   useEffect(() => {
-    if (status === "accepted" && projectId) {
+    if ((status === "accepted" || status === "accepted_already") && projectId) {
       const id = window.setTimeout(() => {
         void navigate({
-          to: "/writers-room/$projectId",
+          to: "/editor/$projectId",
           params: { projectId },
         });
-      }, 800);
+      }, 700);
       return () => window.clearTimeout(id);
     }
   }, [status, projectId, navigate]);
+
+  const handleSignOut = useCallback(async () => {
+    await supabase.auth.signOut();
+    // Keep the invite token so sign-in returns straight back here.
+    void navigate({ to: "/auth", search: { next: buildReturnPath(token) } });
+  }, [navigate, token]);
+
+  const handleOpenProject = useCallback(() => {
+    if (!projectId) return;
+    void navigate({ to: "/editor/$projectId", params: { projectId } });
+  }, [navigate, projectId]);
 
   return (
     <AppShell>
@@ -122,17 +135,10 @@ function AcceptInvitePage() {
           <Content
             status={status}
             projectId={projectId}
-            onSignOut={async () => {
-              await supabase.auth.signOut();
-              await navigate({ to: "/auth" });
-            }}
-            onOpenRoom={() => {
-              if (projectId)
-                void navigate({
-                  to: "/writers-room/$projectId",
-                  params: { projectId },
-                });
-            }}
+            currentEmail={currentEmail}
+            onSignOut={handleSignOut}
+            onOpenProject={handleOpenProject}
+            onRetry={() => setAttempt((n) => n + 1)}
           />
         </Card>
       </div>
@@ -143,47 +149,63 @@ function AcceptInvitePage() {
 interface ContentProps {
   status: AcceptStatus;
   projectId: string | null;
+  currentEmail: string | null;
   onSignOut: () => void;
-  onOpenRoom: () => void;
+  onOpenProject: () => void;
+  onRetry: () => void;
 }
 
-function Content({ status, projectId, onSignOut, onOpenRoom }: ContentProps) {
-  const view = useMemo(() => mapStatusToView(status), [status]);
+function Content({
+  status,
+  projectId,
+  currentEmail,
+  onSignOut,
+  onOpenProject,
+  onRetry,
+}: ContentProps) {
+  const view = useMemo(
+    () => mapStatusToView(status, currentEmail),
+    [status, currentEmail],
+  );
+  if (status === "checking" || status === "needs_signin") {
+    return (
+      <div className="flex flex-col items-center gap-3 py-4">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
+          {status === "needs_signin"
+            ? t("collab.acceptInvite.needsSignIn")
+            : t("collab.acceptInvite.checking")}
+        </p>
+      </div>
+    );
+  }
   return (
     <>
-      {status === "checking" || status === "needs_signin" ? (
-        <div className="flex flex-col items-center gap-3 py-4">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            {status === "needs_signin"
-              ? t("collab.acceptInvite.needsSignIn")
-              : t("collab.acceptInvite.checking")}
-          </p>
-        </div>
-      ) : (
-        <>
-          <h1 className="font-display text-2xl font-semibold">{view.title}</h1>
-          <p className="text-sm text-muted-foreground">{view.body}</p>
-          <div className="flex flex-col gap-2 pt-2">
-            {(status === "accepted" || status === "accepted_already") &&
-              projectId && (
-                <Button onClick={onOpenRoom}>
-                  {t("collab.acceptInvite.openRoom")}
-                </Button>
-              )}
-            {status === "email_mismatch" && (
-              <Button variant="secondary" onClick={onSignOut}>
-                {t("collab.acceptInvite.signOut")}
-              </Button>
-            )}
-            <Button asChild variant="ghost">
-              <a href="/dashboard">
-                {t("collab.acceptInvite.backToDashboard")}
-              </a>
+      <h1 className="font-display text-2xl font-semibold">{view.title}</h1>
+      <p className="text-sm text-muted-foreground whitespace-pre-line">
+        {view.body}
+      </p>
+      <div className="flex flex-col gap-2 pt-2">
+        {(status === "accepted" || status === "accepted_already") &&
+          projectId && (
+            <Button onClick={onOpenProject}>
+              {t("collab.acceptInvite.openRoom")}
             </Button>
-          </div>
-        </>
-      )}
+          )}
+        {status === "email_mismatch" && (
+          <Button variant="secondary" onClick={onSignOut}>
+            {t("collab.acceptInvite.signOut")}
+          </Button>
+        )}
+        {status === "unknown" && (
+          <Button variant="secondary" onClick={onRetry}>
+            {t("collab.acceptInvite.tryAgain")}
+          </Button>
+        )}
+        <Button asChild variant="ghost">
+          <a href="/dashboard">{t("collab.acceptInvite.backToDashboard")}</a>
+        </Button>
+      </div>
     </>
   );
 }
@@ -193,6 +215,7 @@ function mapRpcStatus(s: string): AcceptStatus {
     case "accepted":
       return "accepted";
     case "invalid":
+    case "not_found":
       return "invalid";
     case "expired":
       return "expired";
@@ -200,20 +223,21 @@ function mapRpcStatus(s: string): AcceptStatus {
       return "revoked";
     case "accepted_already":
     case "already_accepted":
+    case "already_member":
       return "accepted_already";
     case "email_mismatch":
       return "email_mismatch";
     case "unauthenticated":
       return "needs_signin";
     default:
-      return "accepted_already";
+      return "unknown";
   }
 }
 
-function mapStatusToView(status: AcceptStatus): {
-  title: string;
-  body: string;
-} {
+function mapStatusToView(
+  status: AcceptStatus,
+  currentEmail: string | null,
+): { title: string; body: string } {
   switch (status) {
     case "accepted":
       return {
@@ -238,7 +262,10 @@ function mapStatusToView(status: AcceptStatus): {
     case "email_mismatch":
       return {
         title: t("collab.acceptInvite.emailMismatchTitle"),
-        body: t("collab.acceptInvite.emailMismatchBody"),
+        body: t("collab.acceptInvite.emailMismatchBody").replace(
+          "{currentEmail}",
+          currentEmail ?? "this account",
+        ),
       };
     case "invalid":
       return {
