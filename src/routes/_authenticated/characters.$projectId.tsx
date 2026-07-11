@@ -31,17 +31,23 @@ import { CharacterProfileDialog } from "@/components/characters/CharacterProfile
 import { CastCleanupPanel } from "@/components/characters/CastCleanupPanel";
 import { DetectedSpeakersPanel } from "@/components/characters/DetectedSpeakersPanel";
 import { upsertCharacter, deleteCharacter, bulkDeleteCharacters, restoreCharacters } from "@/lib/characters.functions";
+import { MergeReviewDialog } from "@/components/characters/MergeReviewDialog";
+import { useSearch } from "@tanstack/react-router";
 
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/characters/$projectId")({
   head: () => ({ meta: [{ title: "Characters — SceneSmith Studio" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({ merge: s.merge === "1" || s.merge === 1 ? "1" : undefined }),
   component: () => (<RouteReadinessGate to="/characters/$projectId"><CharactersPage /></RouteReadinessGate>),
   errorComponent: RouteErrorBoundary,
 });
 
 function CharactersPage() {
   const { projectId } = Route.useParams();
+  const search = useSearch({ from: "/_authenticated/characters/$projectId" }) as { merge?: string };
+  const mergeDebug = search.merge === "1";
+  const [mergeOpen, setMergeOpen] = useState(false);
   const qc = useQueryClient();
   const callUpsert = useServerFn(upsertCharacter);
   const callDel = useServerFn(deleteCharacter);
@@ -184,8 +190,14 @@ function CharactersPage() {
             <Button onClick={() => create.mutate()} disabled={create.isPending}>
               <Plus className="h-4 w-4 mr-2" />New Character
             </Button>
+            {mergeDebug && (
+              <Button variant="outline" size="sm" onClick={() => setMergeOpen(true)}>
+                <Scale className="h-4 w-4 mr-2" />Merge review (debug)
+              </Button>
+            )}
           </div>
         </div>
+        <MergeReviewDialog projectId={projectId} open={mergeOpen} onOpenChange={setMergeOpen} />
 
         {/* CLEANUP */}
         <div className="mb-4">

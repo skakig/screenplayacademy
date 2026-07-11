@@ -456,6 +456,54 @@ export type Database = {
         }
         Relationships: []
       }
+      character_aliases: {
+        Row: {
+          alias_kind: string
+          alias_text: string
+          character_id: string
+          created_at: string
+          id: string
+          normalized: string
+          project_id: string
+          source: string
+        }
+        Insert: {
+          alias_kind?: string
+          alias_text: string
+          character_id: string
+          created_at?: string
+          id?: string
+          normalized: string
+          project_id: string
+          source?: string
+        }
+        Update: {
+          alias_kind?: string
+          alias_text?: string
+          character_id?: string
+          created_at?: string
+          id?: string
+          normalized?: string
+          project_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_aliases_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_aliases_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_arcs: {
         Row: {
           arc_type: string | null
@@ -623,6 +671,53 @@ export type Database = {
           scene_id?: string | null
         }
         Relationships: []
+      }
+      character_merges: {
+        Row: {
+          chosen_values: Json
+          created_at: string
+          id: string
+          kind: string
+          merged_by: string | null
+          merged_character_id: string
+          primary_character_id: string
+          project_id: string
+          snapshot: Json
+          undone_at: string | null
+        }
+        Insert: {
+          chosen_values?: Json
+          created_at?: string
+          id?: string
+          kind?: string
+          merged_by?: string | null
+          merged_character_id: string
+          primary_character_id: string
+          project_id: string
+          snapshot?: Json
+          undone_at?: string | null
+        }
+        Update: {
+          chosen_values?: Json
+          created_at?: string
+          id?: string
+          kind?: string
+          merged_by?: string | null
+          merged_character_id?: string
+          primary_character_id?: string
+          project_id?: string
+          snapshot?: Json
+          undone_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_merges_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       character_relationships: {
         Row: {
@@ -891,9 +986,11 @@ export type Database = {
           age: string | null
           alias: string | null
           archetype: string | null
+          archived_at: string | null
           betrayal_triggers: string | null
           biggest_loss: string | null
           biggest_shame: string | null
+          canonical_name: string | null
           character_arc: string | null
           character_type: string | null
           childhood: string | null
@@ -911,6 +1008,7 @@ export type Database = {
           dark_night_state: string | null
           defining_wound: string | null
           directness_level: string | null
+          display_name: string | null
           elevenlabs_voice_id: string | null
           emotional_openness: string | null
           ending_behavior: string | null
@@ -935,6 +1033,7 @@ export type Database = {
           internal_need: string | null
           lies_about: string | null
           life_before_story: string | null
+          merged_into: string | null
           midpoint_shift: string | null
           might_do_under_pressure: string | null
           moral_blind_spot: string | null
@@ -948,6 +1047,7 @@ export type Database = {
           project_id: string
           quarantine_reason: string | null
           quarantined_at: string | null
+          rank: string | null
           redemption_path: string | null
           relationships: string | null
           role: string | null
@@ -955,6 +1055,7 @@ export type Database = {
           sentence_rhythm: string | null
           signature_props: string | null
           silence_pattern: string | null
+          speaker_labels: string[]
           speech_patterns: string | null
           starting_behavior: string | null
           starting_belief: string | null
@@ -964,6 +1065,7 @@ export type Database = {
           subtext_pattern: string | null
           summary: string | null
           temperament: string | null
+          title: string | null
           tmh_aspirational: number | null
           tmh_baseline: number | null
           tmh_shadow: number | null
@@ -986,9 +1088,11 @@ export type Database = {
           age?: string | null
           alias?: string | null
           archetype?: string | null
+          archived_at?: string | null
           betrayal_triggers?: string | null
           biggest_loss?: string | null
           biggest_shame?: string | null
+          canonical_name?: string | null
           character_arc?: string | null
           character_type?: string | null
           childhood?: string | null
@@ -1006,6 +1110,7 @@ export type Database = {
           dark_night_state?: string | null
           defining_wound?: string | null
           directness_level?: string | null
+          display_name?: string | null
           elevenlabs_voice_id?: string | null
           emotional_openness?: string | null
           ending_behavior?: string | null
@@ -1030,6 +1135,7 @@ export type Database = {
           internal_need?: string | null
           lies_about?: string | null
           life_before_story?: string | null
+          merged_into?: string | null
           midpoint_shift?: string | null
           might_do_under_pressure?: string | null
           moral_blind_spot?: string | null
@@ -1043,6 +1149,7 @@ export type Database = {
           project_id: string
           quarantine_reason?: string | null
           quarantined_at?: string | null
+          rank?: string | null
           redemption_path?: string | null
           relationships?: string | null
           role?: string | null
@@ -1050,6 +1157,7 @@ export type Database = {
           sentence_rhythm?: string | null
           signature_props?: string | null
           silence_pattern?: string | null
+          speaker_labels?: string[]
           speech_patterns?: string | null
           starting_behavior?: string | null
           starting_belief?: string | null
@@ -1059,6 +1167,7 @@ export type Database = {
           subtext_pattern?: string | null
           summary?: string | null
           temperament?: string | null
+          title?: string | null
           tmh_aspirational?: number | null
           tmh_baseline?: number | null
           tmh_shadow?: number | null
@@ -1081,9 +1190,11 @@ export type Database = {
           age?: string | null
           alias?: string | null
           archetype?: string | null
+          archived_at?: string | null
           betrayal_triggers?: string | null
           biggest_loss?: string | null
           biggest_shame?: string | null
+          canonical_name?: string | null
           character_arc?: string | null
           character_type?: string | null
           childhood?: string | null
@@ -1101,6 +1212,7 @@ export type Database = {
           dark_night_state?: string | null
           defining_wound?: string | null
           directness_level?: string | null
+          display_name?: string | null
           elevenlabs_voice_id?: string | null
           emotional_openness?: string | null
           ending_behavior?: string | null
@@ -1125,6 +1237,7 @@ export type Database = {
           internal_need?: string | null
           lies_about?: string | null
           life_before_story?: string | null
+          merged_into?: string | null
           midpoint_shift?: string | null
           might_do_under_pressure?: string | null
           moral_blind_spot?: string | null
@@ -1138,6 +1251,7 @@ export type Database = {
           project_id?: string
           quarantine_reason?: string | null
           quarantined_at?: string | null
+          rank?: string | null
           redemption_path?: string | null
           relationships?: string | null
           role?: string | null
@@ -1145,6 +1259,7 @@ export type Database = {
           sentence_rhythm?: string | null
           signature_props?: string | null
           silence_pattern?: string | null
+          speaker_labels?: string[]
           speech_patterns?: string | null
           starting_behavior?: string | null
           starting_belief?: string | null
@@ -1154,6 +1269,7 @@ export type Database = {
           subtext_pattern?: string | null
           summary?: string | null
           temperament?: string | null
+          title?: string | null
           tmh_aspirational?: number | null
           tmh_baseline?: number | null
           tmh_shadow?: number | null
@@ -1171,6 +1287,13 @@ export type Database = {
           wound?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "characters_merged_into_fkey"
+            columns: ["merged_into"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "characters_project_id_fkey"
             columns: ["project_id"]
@@ -1915,6 +2038,51 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      project_alias_memory: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          decision: string
+          id: string
+          normalized: string
+          project_id: string
+          resolves_to_character_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          decision: string
+          id?: string
+          normalized: string
+          project_id: string
+          resolves_to_character_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          decision?: string
+          id?: string
+          normalized?: string
+          project_id?: string
+          resolves_to_character_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_alias_memory_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_alias_memory_resolves_to_character_id_fkey"
+            columns: ["resolves_to_character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_dictionary: {
         Row: {
@@ -3436,9 +3604,11 @@ export type Database = {
           age: string | null
           alias: string | null
           archetype: string | null
+          archived_at: string | null
           betrayal_triggers: string | null
           biggest_loss: string | null
           biggest_shame: string | null
+          canonical_name: string | null
           character_arc: string | null
           character_type: string | null
           childhood: string | null
@@ -3456,6 +3626,7 @@ export type Database = {
           dark_night_state: string | null
           defining_wound: string | null
           directness_level: string | null
+          display_name: string | null
           elevenlabs_voice_id: string | null
           emotional_openness: string | null
           ending_behavior: string | null
@@ -3480,6 +3651,7 @@ export type Database = {
           internal_need: string | null
           lies_about: string | null
           life_before_story: string | null
+          merged_into: string | null
           midpoint_shift: string | null
           might_do_under_pressure: string | null
           moral_blind_spot: string | null
@@ -3493,6 +3665,7 @@ export type Database = {
           project_id: string
           quarantine_reason: string | null
           quarantined_at: string | null
+          rank: string | null
           redemption_path: string | null
           relationships: string | null
           role: string | null
@@ -3500,6 +3673,7 @@ export type Database = {
           sentence_rhythm: string | null
           signature_props: string | null
           silence_pattern: string | null
+          speaker_labels: string[]
           speech_patterns: string | null
           starting_behavior: string | null
           starting_belief: string | null
@@ -3509,6 +3683,7 @@ export type Database = {
           subtext_pattern: string | null
           summary: string | null
           temperament: string | null
+          title: string | null
           tmh_aspirational: number | null
           tmh_baseline: number | null
           tmh_shadow: number | null
