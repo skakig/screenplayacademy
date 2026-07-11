@@ -885,6 +885,18 @@ function Editor() {
       {!focus && (
         <Sheet open={rightDrawerOpen} onOpenChange={setRightDrawerOpen}>
           <SheetContent side="right" className="w-[380px] p-0 overflow-auto">
+            {!coachPinned && (
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border/40">
+                <span className="font-mono uppercase tracking-[0.2em] text-[10px] text-muted-foreground">Coach</span>
+                <button
+                  onClick={() => { setCoachPinned(true); setRightDrawerOpen(false); }}
+                  className="text-[10px] text-primary hover:underline"
+                  title="Pin Coach as persistent side rail"
+                >
+                  Pin to side
+                </button>
+              </div>
+            )}
             <CoachPane
               projectId={projectId}
               blocks={blocks as any}
