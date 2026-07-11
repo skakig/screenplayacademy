@@ -550,16 +550,34 @@ function GuidedBuilderPage() {
     }
   };
 
+  const changePreset = async (key: CastStylePresetKey) => {
+    setPresetKey(key);
+    try {
+      await callSetPreset({ data: { projectId, presetKey: key } });
+      qc.invalidateQueries({ queryKey: ["project-meta", projectId] });
+      toast.success(`Cast style set to ${getCastStylePreset(key).label}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not save style preset");
+    }
+  };
+
   const generatePortraitNow = async () => {
     if (imageStatus?.configured === false) {
       toast.info(t("characters.builder.portrait.unavailable"));
       return;
     }
+    if (portraitsLimit > 0 && portraitsRemaining <= 0) {
+      toast.error("You've reached your portrait generation limit for this month.", {
+        description: "Upgrade your plan or wait for the next billing cycle to generate more portraits.",
+      });
+      return;
+    }
     setPortraitBusy(true);
     try {
-      const out: any = await callPortrait({ data: { characterId } });
+      const out: any = await callPortrait({ data: { characterId, presetKey } });
       qc.invalidateQueries({ queryKey: ["character", projectId, characterId] });
       qc.invalidateQueries({ queryKey: ["characters", projectId] });
+      void refetchUsage();
       if (out?.configured === false) {
         toast.info(t("characters.builder.portrait.unavailable"));
       } else if (out?.row?.portrait_url) {
