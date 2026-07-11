@@ -40,13 +40,13 @@ import { Route as AuthenticatedProjectsNewRouteImport } from './routes/_authenti
 import { Route as AuthenticatedPitchProjectIdRouteImport } from './routes/_authenticated/pitch.$projectId'
 import { Route as AuthenticatedFirstScreenplayProjectIdRouteImport } from './routes/_authenticated/first-screenplay.$projectId'
 import { Route as AuthenticatedEditorProjectIdRouteImport } from './routes/_authenticated/editor.$projectId'
-import { Route as AuthenticatedCharactersProjectIdRouteImport } from './routes/_authenticated/characters.$projectId'
 import { Route as AuthenticatedCharacterProjectIdRouteImport } from './routes/_authenticated/character.$projectId'
 import { Route as AuthenticatedCastProjectIdRouteImport } from './routes/_authenticated/cast.$projectId'
 import { Route as AuthenticatedArcTimelineProjectIdRouteImport } from './routes/_authenticated/arc-timeline.$projectId'
 import { Route as AuthenticatedAcademyModuleSlugRouteImport } from './routes/_authenticated/academy.$moduleSlug'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as AuthenticatedCharactersProjectIdIndexRouteImport } from './routes/_authenticated/characters.$projectId.index'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as AuthenticatedCharactersProjectIdCharacterIdRouteImport } from './routes/_authenticated/characters.$projectId.$characterId'
 import { Route as AuthenticatedCharacterProjectIdCharacterIdRouteImport } from './routes/_authenticated/character.$projectId.$characterId'
@@ -224,12 +224,6 @@ const AuthenticatedEditorProjectIdRoute =
     path: '/editor/$projectId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedCharactersProjectIdRoute =
-  AuthenticatedCharactersProjectIdRouteImport.update({
-    id: '/characters/$projectId',
-    path: '/characters/$projectId',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedCharacterProjectIdRoute =
   AuthenticatedCharacterProjectIdRouteImport.update({
     id: '/character/$projectId',
@@ -265,6 +259,12 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedCharactersProjectIdIndexRoute =
+  AuthenticatedCharactersProjectIdIndexRouteImport.update({
+    id: '/characters/$projectId/',
+    path: '/characters/$projectId/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -273,9 +273,9 @@ const ApiPublicPaymentsWebhookRoute =
   } as any)
 const AuthenticatedCharactersProjectIdCharacterIdRoute =
   AuthenticatedCharactersProjectIdCharacterIdRouteImport.update({
-    id: '/$characterId',
-    path: '/$characterId',
-    getParentRoute: () => AuthenticatedCharactersProjectIdRoute,
+    id: '/characters/$projectId/$characterId',
+    path: '/characters/$projectId/$characterId',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedCharacterProjectIdCharacterIdRoute =
   AuthenticatedCharacterProjectIdCharacterIdRouteImport.update({
@@ -297,21 +297,21 @@ const AuthenticatedAcademyModuleSlugLessonSlugRoute =
   } as any)
 const AuthenticatedCharactersProjectIdProfileCharacterIdRoute =
   AuthenticatedCharactersProjectIdProfileCharacterIdRouteImport.update({
-    id: '/profile/$characterId',
-    path: '/profile/$characterId',
-    getParentRoute: () => AuthenticatedCharactersProjectIdRoute,
+    id: '/characters/$projectId/profile/$characterId',
+    path: '/characters/$projectId/profile/$characterId',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedCharactersProjectIdEditCharacterIdRoute =
   AuthenticatedCharactersProjectIdEditCharacterIdRouteImport.update({
-    id: '/edit/$characterId',
-    path: '/edit/$characterId',
-    getParentRoute: () => AuthenticatedCharactersProjectIdRoute,
+    id: '/characters/$projectId/edit/$characterId',
+    path: '/characters/$projectId/edit/$characterId',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedCharactersProjectIdBuildCharacterIdRoute =
   AuthenticatedCharactersProjectIdBuildCharacterIdRouteImport.update({
-    id: '/build/$characterId',
-    path: '/build/$characterId',
-    getParentRoute: () => AuthenticatedCharactersProjectIdRoute,
+    id: '/characters/$projectId/build/$characterId',
+    path: '/characters/$projectId/build/$characterId',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -340,7 +340,6 @@ export interface FileRoutesByFullPath {
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/cast/$projectId': typeof AuthenticatedCastProjectIdRouteWithChildren
   '/character/$projectId': typeof AuthenticatedCharacterProjectIdRouteWithChildren
-  '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRouteWithChildren
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
   '/first-screenplay/$projectId': typeof AuthenticatedFirstScreenplayProjectIdRoute
   '/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
@@ -357,6 +356,7 @@ export interface FileRoutesByFullPath {
   '/character/$projectId/$characterId': typeof AuthenticatedCharacterProjectIdCharacterIdRoute
   '/characters/$projectId/$characterId': typeof AuthenticatedCharactersProjectIdCharacterIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/characters/$projectId/': typeof AuthenticatedCharactersProjectIdIndexRoute
   '/characters/$projectId/build/$characterId': typeof AuthenticatedCharactersProjectIdBuildCharacterIdRoute
   '/characters/$projectId/edit/$characterId': typeof AuthenticatedCharactersProjectIdEditCharacterIdRoute
   '/characters/$projectId/profile/$characterId': typeof AuthenticatedCharactersProjectIdProfileCharacterIdRoute
@@ -387,7 +387,6 @@ export interface FileRoutesByTo {
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/cast/$projectId': typeof AuthenticatedCastProjectIdRouteWithChildren
   '/character/$projectId': typeof AuthenticatedCharacterProjectIdRouteWithChildren
-  '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRouteWithChildren
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
   '/first-screenplay/$projectId': typeof AuthenticatedFirstScreenplayProjectIdRoute
   '/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
@@ -404,6 +403,7 @@ export interface FileRoutesByTo {
   '/character/$projectId/$characterId': typeof AuthenticatedCharacterProjectIdCharacterIdRoute
   '/characters/$projectId/$characterId': typeof AuthenticatedCharactersProjectIdCharacterIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/characters/$projectId': typeof AuthenticatedCharactersProjectIdIndexRoute
   '/characters/$projectId/build/$characterId': typeof AuthenticatedCharactersProjectIdBuildCharacterIdRoute
   '/characters/$projectId/edit/$characterId': typeof AuthenticatedCharactersProjectIdEditCharacterIdRoute
   '/characters/$projectId/profile/$characterId': typeof AuthenticatedCharactersProjectIdProfileCharacterIdRoute
@@ -436,7 +436,6 @@ export interface FileRoutesById {
   '/_authenticated/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/_authenticated/cast/$projectId': typeof AuthenticatedCastProjectIdRouteWithChildren
   '/_authenticated/character/$projectId': typeof AuthenticatedCharacterProjectIdRouteWithChildren
-  '/_authenticated/characters/$projectId': typeof AuthenticatedCharactersProjectIdRouteWithChildren
   '/_authenticated/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
   '/_authenticated/first-screenplay/$projectId': typeof AuthenticatedFirstScreenplayProjectIdRoute
   '/_authenticated/pitch/$projectId': typeof AuthenticatedPitchProjectIdRoute
@@ -453,6 +452,7 @@ export interface FileRoutesById {
   '/_authenticated/character/$projectId/$characterId': typeof AuthenticatedCharacterProjectIdCharacterIdRoute
   '/_authenticated/characters/$projectId/$characterId': typeof AuthenticatedCharactersProjectIdCharacterIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/_authenticated/characters/$projectId/': typeof AuthenticatedCharactersProjectIdIndexRoute
   '/_authenticated/characters/$projectId/build/$characterId': typeof AuthenticatedCharactersProjectIdBuildCharacterIdRoute
   '/_authenticated/characters/$projectId/edit/$characterId': typeof AuthenticatedCharactersProjectIdEditCharacterIdRoute
   '/_authenticated/characters/$projectId/profile/$characterId': typeof AuthenticatedCharactersProjectIdProfileCharacterIdRoute
@@ -485,7 +485,6 @@ export interface FileRouteTypes {
     | '/arc-timeline/$projectId'
     | '/cast/$projectId'
     | '/character/$projectId'
-    | '/characters/$projectId'
     | '/editor/$projectId'
     | '/first-screenplay/$projectId'
     | '/pitch/$projectId'
@@ -502,6 +501,7 @@ export interface FileRouteTypes {
     | '/character/$projectId/$characterId'
     | '/characters/$projectId/$characterId'
     | '/api/public/payments/webhook'
+    | '/characters/$projectId/'
     | '/characters/$projectId/build/$characterId'
     | '/characters/$projectId/edit/$characterId'
     | '/characters/$projectId/profile/$characterId'
@@ -532,7 +532,6 @@ export interface FileRouteTypes {
     | '/arc-timeline/$projectId'
     | '/cast/$projectId'
     | '/character/$projectId'
-    | '/characters/$projectId'
     | '/editor/$projectId'
     | '/first-screenplay/$projectId'
     | '/pitch/$projectId'
@@ -549,6 +548,7 @@ export interface FileRouteTypes {
     | '/character/$projectId/$characterId'
     | '/characters/$projectId/$characterId'
     | '/api/public/payments/webhook'
+    | '/characters/$projectId'
     | '/characters/$projectId/build/$characterId'
     | '/characters/$projectId/edit/$characterId'
     | '/characters/$projectId/profile/$characterId'
@@ -580,7 +580,6 @@ export interface FileRouteTypes {
     | '/_authenticated/arc-timeline/$projectId'
     | '/_authenticated/cast/$projectId'
     | '/_authenticated/character/$projectId'
-    | '/_authenticated/characters/$projectId'
     | '/_authenticated/editor/$projectId'
     | '/_authenticated/first-screenplay/$projectId'
     | '/_authenticated/pitch/$projectId'
@@ -597,6 +596,7 @@ export interface FileRouteTypes {
     | '/_authenticated/character/$projectId/$characterId'
     | '/_authenticated/characters/$projectId/$characterId'
     | '/api/public/payments/webhook'
+    | '/_authenticated/characters/$projectId/'
     | '/_authenticated/characters/$projectId/build/$characterId'
     | '/_authenticated/characters/$projectId/edit/$characterId'
     | '/_authenticated/characters/$projectId/profile/$characterId'
@@ -843,13 +843,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEditorProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/characters/$projectId': {
-      id: '/_authenticated/characters/$projectId'
-      path: '/characters/$projectId'
-      fullPath: '/characters/$projectId'
-      preLoaderRoute: typeof AuthenticatedCharactersProjectIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/character/$projectId': {
       id: '/_authenticated/character/$projectId'
       path: '/character/$projectId'
@@ -892,6 +885,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/characters/$projectId/': {
+      id: '/_authenticated/characters/$projectId/'
+      path: '/characters/$projectId'
+      fullPath: '/characters/$projectId/'
+      preLoaderRoute: typeof AuthenticatedCharactersProjectIdIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -901,10 +901,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/characters/$projectId/$characterId': {
       id: '/_authenticated/characters/$projectId/$characterId'
-      path: '/$characterId'
+      path: '/characters/$projectId/$characterId'
       fullPath: '/characters/$projectId/$characterId'
       preLoaderRoute: typeof AuthenticatedCharactersProjectIdCharacterIdRouteImport
-      parentRoute: typeof AuthenticatedCharactersProjectIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/character/$projectId/$characterId': {
       id: '/_authenticated/character/$projectId/$characterId'
@@ -929,24 +929,24 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/characters/$projectId/profile/$characterId': {
       id: '/_authenticated/characters/$projectId/profile/$characterId'
-      path: '/profile/$characterId'
+      path: '/characters/$projectId/profile/$characterId'
       fullPath: '/characters/$projectId/profile/$characterId'
       preLoaderRoute: typeof AuthenticatedCharactersProjectIdProfileCharacterIdRouteImport
-      parentRoute: typeof AuthenticatedCharactersProjectIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/characters/$projectId/edit/$characterId': {
       id: '/_authenticated/characters/$projectId/edit/$characterId'
-      path: '/edit/$characterId'
+      path: '/characters/$projectId/edit/$characterId'
       fullPath: '/characters/$projectId/edit/$characterId'
       preLoaderRoute: typeof AuthenticatedCharactersProjectIdEditCharacterIdRouteImport
-      parentRoute: typeof AuthenticatedCharactersProjectIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/characters/$projectId/build/$characterId': {
       id: '/_authenticated/characters/$projectId/build/$characterId'
-      path: '/build/$characterId'
+      path: '/characters/$projectId/build/$characterId'
       fullPath: '/characters/$projectId/build/$characterId'
       preLoaderRoute: typeof AuthenticatedCharactersProjectIdBuildCharacterIdRouteImport
-      parentRoute: typeof AuthenticatedCharactersProjectIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
@@ -1009,30 +1009,6 @@ const AuthenticatedCharacterProjectIdRouteWithChildren =
     AuthenticatedCharacterProjectIdRouteChildren,
   )
 
-interface AuthenticatedCharactersProjectIdRouteChildren {
-  AuthenticatedCharactersProjectIdCharacterIdRoute: typeof AuthenticatedCharactersProjectIdCharacterIdRoute
-  AuthenticatedCharactersProjectIdBuildCharacterIdRoute: typeof AuthenticatedCharactersProjectIdBuildCharacterIdRoute
-  AuthenticatedCharactersProjectIdEditCharacterIdRoute: typeof AuthenticatedCharactersProjectIdEditCharacterIdRoute
-  AuthenticatedCharactersProjectIdProfileCharacterIdRoute: typeof AuthenticatedCharactersProjectIdProfileCharacterIdRoute
-}
-
-const AuthenticatedCharactersProjectIdRouteChildren: AuthenticatedCharactersProjectIdRouteChildren =
-  {
-    AuthenticatedCharactersProjectIdCharacterIdRoute:
-      AuthenticatedCharactersProjectIdCharacterIdRoute,
-    AuthenticatedCharactersProjectIdBuildCharacterIdRoute:
-      AuthenticatedCharactersProjectIdBuildCharacterIdRoute,
-    AuthenticatedCharactersProjectIdEditCharacterIdRoute:
-      AuthenticatedCharactersProjectIdEditCharacterIdRoute,
-    AuthenticatedCharactersProjectIdProfileCharacterIdRoute:
-      AuthenticatedCharactersProjectIdProfileCharacterIdRoute,
-  }
-
-const AuthenticatedCharactersProjectIdRouteWithChildren =
-  AuthenticatedCharactersProjectIdRoute._addFileChildren(
-    AuthenticatedCharactersProjectIdRouteChildren,
-  )
-
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
@@ -1042,7 +1018,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedArcTimelineProjectIdRoute: typeof AuthenticatedArcTimelineProjectIdRoute
   AuthenticatedCastProjectIdRoute: typeof AuthenticatedCastProjectIdRouteWithChildren
   AuthenticatedCharacterProjectIdRoute: typeof AuthenticatedCharacterProjectIdRouteWithChildren
-  AuthenticatedCharactersProjectIdRoute: typeof AuthenticatedCharactersProjectIdRouteWithChildren
   AuthenticatedEditorProjectIdRoute: typeof AuthenticatedEditorProjectIdRoute
   AuthenticatedFirstScreenplayProjectIdRoute: typeof AuthenticatedFirstScreenplayProjectIdRoute
   AuthenticatedPitchProjectIdRoute: typeof AuthenticatedPitchProjectIdRoute
@@ -1053,6 +1028,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedVaultProjectIdRoute: typeof AuthenticatedVaultProjectIdRoute
   AuthenticatedWritersRoomProjectIdRoute: typeof AuthenticatedWritersRoomProjectIdRoute
   AuthenticatedAcademyIndexRoute: typeof AuthenticatedAcademyIndexRoute
+  AuthenticatedCharactersProjectIdCharacterIdRoute: typeof AuthenticatedCharactersProjectIdCharacterIdRoute
+  AuthenticatedCharactersProjectIdIndexRoute: typeof AuthenticatedCharactersProjectIdIndexRoute
+  AuthenticatedCharactersProjectIdBuildCharacterIdRoute: typeof AuthenticatedCharactersProjectIdBuildCharacterIdRoute
+  AuthenticatedCharactersProjectIdEditCharacterIdRoute: typeof AuthenticatedCharactersProjectIdEditCharacterIdRoute
+  AuthenticatedCharactersProjectIdProfileCharacterIdRoute: typeof AuthenticatedCharactersProjectIdProfileCharacterIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -1067,8 +1047,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCastProjectIdRoute: AuthenticatedCastProjectIdRouteWithChildren,
   AuthenticatedCharacterProjectIdRoute:
     AuthenticatedCharacterProjectIdRouteWithChildren,
-  AuthenticatedCharactersProjectIdRoute:
-    AuthenticatedCharactersProjectIdRouteWithChildren,
   AuthenticatedEditorProjectIdRoute: AuthenticatedEditorProjectIdRoute,
   AuthenticatedFirstScreenplayProjectIdRoute:
     AuthenticatedFirstScreenplayProjectIdRoute,
@@ -1081,6 +1059,16 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedWritersRoomProjectIdRoute:
     AuthenticatedWritersRoomProjectIdRoute,
   AuthenticatedAcademyIndexRoute: AuthenticatedAcademyIndexRoute,
+  AuthenticatedCharactersProjectIdCharacterIdRoute:
+    AuthenticatedCharactersProjectIdCharacterIdRoute,
+  AuthenticatedCharactersProjectIdIndexRoute:
+    AuthenticatedCharactersProjectIdIndexRoute,
+  AuthenticatedCharactersProjectIdBuildCharacterIdRoute:
+    AuthenticatedCharactersProjectIdBuildCharacterIdRoute,
+  AuthenticatedCharactersProjectIdEditCharacterIdRoute:
+    AuthenticatedCharactersProjectIdEditCharacterIdRoute,
+  AuthenticatedCharactersProjectIdProfileCharacterIdRoute:
+    AuthenticatedCharactersProjectIdProfileCharacterIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

@@ -32,7 +32,7 @@ import { upsertCharacter, deleteCharacter, bulkDeleteCharacters, restoreCharacte
 import { MergeReviewDialog } from "@/components/characters/MergeReviewDialog";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
-export const Route = createFileRoute("/_authenticated/characters/$projectId")({
+export const Route = createFileRoute("/_authenticated/characters/$projectId/")({
   head: () => ({ meta: [{ title: "Characters — SceneSmith Studio" }] }),
   validateSearch: (s: Record<string, unknown>): { merge?: "1" } =>
     s.merge === "1" || s.merge === 1 ? { merge: "1" } : {},
