@@ -109,25 +109,6 @@ export function ScenePresenceAvatars({ sceneTitle, blocks, max = 3, className }:
             </Tooltip>
           );
         })}
-                  {peer.avatar_url ? (
-                    <img src={peer.avatar_url} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <span aria-hidden>{initials}</span>
-                  )}
-                  {isTyping && (
-                    <span
-                      aria-hidden
-                      className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-1 ring-background animate-pulse"
-                    />
-                  )}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                {tooltip}
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
         {overflow > 0 && (
           <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-muted text-[8px] font-semibold text-muted-foreground ring-1 ring-background">
             +{overflow}
