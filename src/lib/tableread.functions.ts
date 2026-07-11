@@ -3,7 +3,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireFeature } from "@/lib/entitlements.functions";
 import { consumeUsage } from "@/lib/usage.functions";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { TABLE_READ_MODEL_ID, TABLE_READ_VOICE_SETTINGS } from "@/lib/voice-settings";
 import { z } from "zod";
+
 
 const Input = z.object({
   projectId: z.string().uuid(),
