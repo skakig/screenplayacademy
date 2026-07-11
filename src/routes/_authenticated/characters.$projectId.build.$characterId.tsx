@@ -926,7 +926,9 @@ function GuidedBuilderPage() {
                     {(() => {
                       const filled = profileStrength(character as any);
                       const ready = isPortraitReady(character as any);
-                      const promptPreview = composePortraitPrompt(character as any, {});
+                      const activePreset = getCastStylePreset(presetKey);
+                      const promptPreview = composePortraitPrompt(character as any, activePreset.contract);
+                      const outOfCredits = portraitsLimit > 0 && portraitsRemaining <= 0;
                       return (
                         <>
                           <div className={`rounded-lg border px-3 py-2 text-xs ${imageStatus?.configured === false ? "border-amber-500/40 bg-amber-500/10 text-amber-500" : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"}`}>
@@ -940,15 +942,55 @@ function GuidedBuilderPage() {
                             )}
                           </div>
 
+                          <div>
+                            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                              Cast Style Preset
+                            </Label>
+                            <Select value={presetKey} onValueChange={(v) => void changePreset(v as CastStylePresetKey)}>
+                              <SelectTrigger className="mt-1.5 h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {CAST_STYLE_PRESETS.map((p) => (
+                                  <SelectItem key={p.key} value={p.key}>
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{p.label}</span>
+                                      <span className="text-[10px] text-muted-foreground">{p.description}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="mt-1 text-[10px] text-muted-foreground">
+                              Applies to every portrait in this project so the whole cast reads as one film.
+                            </p>
+                          </div>
+
                           <div className={`rounded-lg border px-3 py-2 text-xs ${ready ? "border-primary/40 bg-primary/10 text-primary" : "border-amber-500/40 bg-amber-500/10 text-amber-500"}`}>
                             {ready
                               ? t("characters.builder.portrait.gateReady")
                               : t("characters.builder.portrait.gateNeed").replace("{filled}", String(filled)).replace("{needed}", String(PORTRAIT_STRENGTH_TARGET))}
                           </div>
 
+                          {portraitsLimit > 0 && (
+                            <div className={`rounded-lg border px-3 py-2 text-xs ${outOfCredits ? "border-rose-500/40 bg-rose-500/10 text-rose-400" : "border-border/60 bg-secondary/40 text-muted-foreground"}`}>
+                              <div className="flex items-center justify-between">
+                                <span>Portrait generations this month</span>
+                                <span className="font-mono font-semibold">
+                                  {portraitsUsed} / {portraitsLimit}
+                                </span>
+                              </div>
+                              {outOfCredits ? (
+                                <p className="mt-1">Limit reached — upgrade your plan or wait for the next cycle.</p>
+                              ) : (
+                                <p className="mt-1">{portraitsRemaining} remaining on your current plan.</p>
+                              )}
+                            </div>
+                          )}
+
                           <Button
                             onClick={generatePortraitNow}
-                            disabled={portraitBusy || imageStatusLoading || imageStatus?.configured === false || !ready}
+                            disabled={portraitBusy || imageStatusLoading || imageStatus?.configured === false || !ready || outOfCredits}
                             className="w-full sm:w-auto"
                           >
                             {portraitBusy
@@ -956,6 +998,7 @@ function GuidedBuilderPage() {
                               : <Wand2 className="h-4 w-4 mr-2" />}
                             {character?.portrait_url ? "Regenerate portrait" : "Generate portrait"}
                           </Button>
+
 
                           <details className="rounded-lg border border-border/60 bg-secondary/30 p-3 text-xs">
                             <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
