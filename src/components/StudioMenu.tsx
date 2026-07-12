@@ -325,6 +325,58 @@ export function StudioMenu() {
                     </div>
                   </div>
                 </Link>
+                {projectId ? (
+                  <Link
+                    to="/arena/$projectId"
+                    params={{ projectId }}
+                    onClick={() => setOpen(false)}
+                    className="block"
+                    aria-label="Arena Owner Preview — admin only, not publicly enabled"
+                  >
+                    <div className={`flex items-start gap-3 rounded-md px-2.5 py-2 transition-colors ${
+                      currentPath === `/arena/${projectId}`
+                        ? "bg-primary/10 text-foreground"
+                        : "hover:bg-secondary text-foreground/90"
+                    }`}>
+                      <div className="mt-0.5 shrink-0 w-7 h-7 rounded-md bg-muted/60 flex items-center justify-center">
+                        <FlaskConical className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-sm font-medium">Arena Owner Preview</span>
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] px-1.5 py-0 gap-0.5 border-purple-500/40 text-purple-600 dark:text-purple-400"
+                          >
+                            <FlaskConical className="h-2.5 w-2.5" />
+                            Preview
+                          </Badge>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground leading-snug">
+                          Verify Issue #26 gates against this project. Not public.
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ) : (
+                  <div
+                    className="flex items-start gap-3 rounded-md px-2.5 py-2 opacity-60"
+                    aria-label="Arena Owner Preview — pick a project first"
+                  >
+                    <div className="mt-0.5 shrink-0 w-7 h-7 rounded-md bg-muted/60 flex items-center justify-center">
+                      <FlaskConical className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-sm font-medium">Arena Owner Preview</span>
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Pick a project</Badge>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground leading-snug">
+                        Verify Issue #26 gates against a project. Not public.
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
