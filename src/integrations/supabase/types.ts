@@ -3646,6 +3646,398 @@ export type Database = {
           },
         ]
       }
+      world_artifacts: {
+        Row: {
+          candidate_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json
+          name: string
+          normalized_key: string
+          universe_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          name: string
+          normalized_key: string
+          universe_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          name?: string
+          normalized_key?: string
+          universe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_artifacts_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "import_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_artifacts_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_events: {
+        Row: {
+          candidate_id: string | null
+          created_at: string
+          id: string
+          location_id: string | null
+          metadata: Json
+          name: string
+          normalized_key: string
+          sequence: number | null
+          summary: string | null
+          universe_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id?: string | null
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          metadata?: Json
+          name: string
+          normalized_key: string
+          sequence?: number | null
+          summary?: string | null
+          universe_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string | null
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          metadata?: Json
+          name?: string
+          normalized_key?: string
+          sequence?: number | null
+          summary?: string | null
+          universe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_events_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "import_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_events_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "world_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_events_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_factions: {
+        Row: {
+          candidate_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          kind: string | null
+          metadata: Json
+          name: string
+          normalized_key: string
+          universe_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string | null
+          metadata?: Json
+          name: string
+          normalized_key: string
+          universe_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string | null
+          metadata?: Json
+          name?: string
+          normalized_key?: string
+          universe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_factions_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "import_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_factions_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_locations: {
+        Row: {
+          candidate_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          int_ext: string | null
+          metadata: Json
+          name: string
+          normalized_key: string
+          universe_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          int_ext?: string | null
+          metadata?: Json
+          name: string
+          normalized_key: string
+          universe_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          int_ext?: string | null
+          metadata?: Json
+          name?: string
+          normalized_key?: string
+          universe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_locations_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "import_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_locations_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_rules: {
+        Row: {
+          candidate_id: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          name: string
+          normalized_key: string
+          scope: string | null
+          statement: string
+          universe_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name: string
+          normalized_key: string
+          scope?: string | null
+          statement: string
+          universe_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name?: string
+          normalized_key?: string
+          scope?: string | null
+          statement?: string
+          universe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_rules_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "import_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_rules_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_threads: {
+        Row: {
+          candidate_id: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          name: string
+          normalized_key: string
+          question: string | null
+          status: string
+          universe_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name: string
+          normalized_key: string
+          question?: string | null
+          status?: string
+          universe_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name?: string
+          normalized_key?: string
+          question?: string | null
+          status?: string
+          universe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_threads_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "import_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_threads_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_timeline_entries: {
+        Row: {
+          candidate_id: string | null
+          created_at: string
+          event_id: string | null
+          id: string
+          label: string
+          metadata: Json
+          sequence: number
+          universe_id: string
+          updated_at: string
+          when_hint: string | null
+        }
+        Insert: {
+          candidate_id?: string | null
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          label: string
+          metadata?: Json
+          sequence: number
+          universe_id: string
+          updated_at?: string
+          when_hint?: string | null
+        }
+        Update: {
+          candidate_id?: string | null
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          label?: string
+          metadata?: Json
+          sequence?: number
+          universe_id?: string
+          updated_at?: string
+          when_hint?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_timeline_entries_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "import_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_timeline_entries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "world_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_timeline_entries_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       writer_profiles: {
         Row: {
           ai_dependence_score: number
