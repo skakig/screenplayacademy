@@ -132,11 +132,15 @@ function ScenesPage() {
                     </Select>
                   </div>
                   {editing.id && (
-                    <div className="pt-2 border-t">
+                    <div className="pt-2 border-t space-y-4">
                       <SceneWorldLocationsPanel
                         projectId={projectId}
                         sceneId={editing.id}
                         universeId={project?.default_universe_id ?? null}
+                      />
+                      <SceneWorldContextPanel
+                        projectId={projectId}
+                        sceneId={editing.id}
                       />
                     </div>
                   )}
