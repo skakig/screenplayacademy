@@ -25,11 +25,13 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   captureSceneSnapshot,
   deleteSceneSnapshot,
+  getSceneSnapshot,
   listSceneSnapshots,
   renameSceneSnapshot,
   restoreSceneSnapshot,
   type SceneSnapshotRow,
 } from "@/lib/editor/sceneSnapshots.functions";
+import { TakeDiffViewer, type TakeSummary } from "@/components/editor/TakeDiffViewer";
 
 type Props = {
   projectId: string;
