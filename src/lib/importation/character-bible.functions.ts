@@ -291,6 +291,34 @@ export const generateCharacterBible = createServerFn({ method: "POST" })
       });
     }
 
+    // 6b) Manual characters — every non-quarantined character in the project
+    //     not already covered by a promoted candidate.
+    const importedIds = new Set(entries.map((e) => e.character_id));
+    const { data: allProjChars, error: apErr } = await supabase
+      .from("characters")
+      .select("id, name, importance")
+      .eq("project_id", data.project_id)
+      .is("quarantined_at", null);
+    if (apErr) throw new Error(apErr.message);
+    for (const ch of allProjChars ?? []) {
+      const id = ch.id as string;
+      if (importedIds.has(id)) continue;
+      const aliases = aliasByChar.get(id) ?? [];
+      entries.push({
+        character_id: id,
+        source: "manual",
+        name: (ch.name as string) ?? "Unknown",
+        importance: (ch.importance as string | null) ?? null,
+        aliases: [...aliases].sort((a, b) => a.localeCompare(b)),
+        candidate_ids: [],
+        source_document_ids: [],
+        first_appearance: null,
+        speaking_segments: 0,
+        mention_segments: 0,
+        top_evidence: [],
+      });
+    }
+
     // Sort: leads first (speaking segments desc), then alpha.
     entries.sort((a, b) => {
       if (b.speaking_segments !== a.speaking_segments)
