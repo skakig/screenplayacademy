@@ -48,6 +48,7 @@ export async function linkSceneLocationsForProject(
       universeId: null,
       locationsEnsured: 0,
       usageLinked: 0,
+      usageUnlinked: 0,
       scenesConsidered: 0,
       skipped: 0,
     };
