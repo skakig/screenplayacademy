@@ -14,6 +14,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { promoteApprovedCharactersForDocument } from "./candidates.functions";
 
 type ResolvedEntity = {
   character_id: string;
