@@ -434,3 +434,377 @@ export const promoteCharacterCandidate = createServerFn({ method: "POST" })
 
     return { character_id: characterId, candidate_id: data.candidate_id };
   });
+
+// --- promote to world / story entities (Phase 3) ---
+
+type WorldPromoteTable =
+  | "world_locations"
+  | "world_factions"
+  | "world_events"
+  | "world_artifacts"
+  | "world_rules"
+  | "world_threads";
+
+async function promoteWorldRow(
+  supabase: Awaited<
+    ReturnType<typeof requireSupabaseAuth extends never ? never : never>
+  > extends never
+    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      any
+    : never,
+  _ignore?: never,
+): Promise<never> {
+  throw new Error("unreachable");
+}
+// (helper placeholder above kept out of the split boundary; the real work
+// lives in each server function so createServerFn's code-splitter can strip
+// module-scope helpers safely.)
+void promoteWorldRow;
+
+function pickString(v: unknown): string | null {
+  return typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
+}
+
+export const promoteLocationCandidate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        candidate_id: z.string().uuid(),
+        name_override: z.string().max(200).optional(),
+        description: z.string().max(4000).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: cand, error } = await supabase
+      .from("import_candidates")
+      .select("*")
+      .eq("id", data.candidate_id)
+      .single();
+    if (error || !cand) throw new Error("Candidate not found");
+    if (cand.candidate_type !== "location") {
+      throw new Error("Not a location candidate");
+    }
+    const payload = (cand.proposed_payload ?? {}) as Record<string, unknown>;
+    const name =
+      data.name_override?.trim() || (payload.name as string) || cand.normalized_key;
+    const { data: row, error: insErr } = await supabase
+      .from("world_locations")
+      .upsert(
+        {
+          universe_id: cand.universe_id,
+          candidate_id: cand.id,
+          name,
+          normalized_key: cand.normalized_key,
+          int_ext: (payload.int_ext as string) ?? null,
+          description: data.description ?? null,
+        },
+        { onConflict: "universe_id,normalized_key" },
+      )
+      .select("id")
+      .single();
+    if (insErr || !row) throw new Error(insErr?.message ?? "Insert failed");
+    await supabase
+      .from("import_candidates")
+      .update({
+        status: "accepted",
+        promoted_ref: { table: "world_locations", id: row.id } as never,
+      })
+      .eq("id", cand.id);
+    return { location_id: row.id, candidate_id: cand.id };
+  });
+
+export const promoteFactionCandidate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        candidate_id: z.string().uuid(),
+        name_override: z.string().max(200).optional(),
+        kind: z.string().max(120).optional(),
+        description: z.string().max(4000).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: cand, error } = await supabase
+      .from("import_candidates")
+      .select("*")
+      .eq("id", data.candidate_id)
+      .single();
+    if (error || !cand) throw new Error("Candidate not found");
+    if (cand.candidate_type !== "faction") {
+      throw new Error("Not a faction candidate");
+    }
+    const payload = (cand.proposed_payload ?? {}) as Record<string, unknown>;
+    const name =
+      data.name_override?.trim() || (payload.name as string) || cand.normalized_key;
+    const { data: row, error: insErr } = await supabase
+      .from("world_factions")
+      .upsert(
+        {
+          universe_id: cand.universe_id,
+          candidate_id: cand.id,
+          name,
+          normalized_key: cand.normalized_key,
+          kind: data.kind ?? pickString(payload.kind),
+          description: data.description ?? null,
+        },
+        { onConflict: "universe_id,normalized_key" },
+      )
+      .select("id")
+      .single();
+    if (insErr || !row) throw new Error(insErr?.message ?? "Insert failed");
+    await supabase
+      .from("import_candidates")
+      .update({
+        status: "accepted",
+        promoted_ref: { table: "world_factions", id: row.id } as never,
+      })
+      .eq("id", cand.id);
+    return { faction_id: row.id, candidate_id: cand.id };
+  });
+
+export const promoteEventCandidate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        candidate_id: z.string().uuid(),
+        name_override: z.string().max(200).optional(),
+        summary: z.string().max(4000).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: cand, error } = await supabase
+      .from("import_candidates")
+      .select("*")
+      .eq("id", data.candidate_id)
+      .single();
+    if (error || !cand) throw new Error("Candidate not found");
+    if (cand.candidate_type !== "event") {
+      throw new Error("Not an event candidate");
+    }
+    const payload = (cand.proposed_payload ?? {}) as Record<string, unknown>;
+    const name =
+      data.name_override?.trim() || (payload.name as string) || cand.normalized_key;
+    const sequence =
+      typeof payload.sequence === "number" ? (payload.sequence as number) : null;
+
+    // Resolve location by normalized key if the extractor tagged one.
+    let locationId: string | null = null;
+    const locKey = pickString(payload.location_key);
+    if (locKey) {
+      const { data: loc } = await supabase
+        .from("world_locations")
+        .select("id")
+        .eq("universe_id", cand.universe_id)
+        .eq("normalized_key", locKey)
+        .maybeSingle();
+      if (loc) locationId = loc.id;
+    }
+
+    const { data: row, error: insErr } = await supabase
+      .from("world_events")
+      .upsert(
+        {
+          universe_id: cand.universe_id,
+          candidate_id: cand.id,
+          name,
+          normalized_key: cand.normalized_key,
+          summary: data.summary ?? null,
+          sequence,
+          location_id: locationId,
+        },
+        { onConflict: "universe_id,normalized_key" },
+      )
+      .select("id")
+      .single();
+    if (insErr || !row) throw new Error(insErr?.message ?? "Insert failed");
+
+    // Also mirror as a timeline entry so the ordered view stays in sync.
+    if (sequence !== null) {
+      await supabase.from("world_timeline_entries").insert({
+        universe_id: cand.universe_id,
+        event_id: row.id,
+        candidate_id: cand.id,
+        label: name,
+        sequence,
+        when_hint: pickString(payload.time),
+      });
+    }
+
+    await supabase
+      .from("import_candidates")
+      .update({
+        status: "accepted",
+        promoted_ref: { table: "world_events", id: row.id } as never,
+      })
+      .eq("id", cand.id);
+    return { event_id: row.id, candidate_id: cand.id };
+  });
+
+export const promoteArtifactCandidate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        candidate_id: z.string().uuid(),
+        name_override: z.string().max(200).optional(),
+        description: z.string().max(4000).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: cand, error } = await supabase
+      .from("import_candidates")
+      .select("*")
+      .eq("id", data.candidate_id)
+      .single();
+    if (error || !cand) throw new Error("Candidate not found");
+    if (cand.candidate_type !== "artifact") {
+      throw new Error("Not an artifact candidate");
+    }
+    const payload = (cand.proposed_payload ?? {}) as Record<string, unknown>;
+    const name =
+      data.name_override?.trim() || (payload.name as string) || cand.normalized_key;
+    const { data: row, error: insErr } = await supabase
+      .from("world_artifacts")
+      .upsert(
+        {
+          universe_id: cand.universe_id,
+          candidate_id: cand.id,
+          name,
+          normalized_key: cand.normalized_key,
+          description: data.description ?? null,
+        },
+        { onConflict: "universe_id,normalized_key" },
+      )
+      .select("id")
+      .single();
+    if (insErr || !row) throw new Error(insErr?.message ?? "Insert failed");
+    await supabase
+      .from("import_candidates")
+      .update({
+        status: "accepted",
+        promoted_ref: { table: "world_artifacts", id: row.id } as never,
+      })
+      .eq("id", cand.id);
+    return { artifact_id: row.id, candidate_id: cand.id };
+  });
+
+export const promoteRuleCandidate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        candidate_id: z.string().uuid(),
+        name_override: z.string().max(200).optional(),
+        statement: z.string().min(1).max(4000),
+        scope: z.string().max(200).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: cand, error } = await supabase
+      .from("import_candidates")
+      .select("*")
+      .eq("id", data.candidate_id)
+      .single();
+    if (error || !cand) throw new Error("Candidate not found");
+    if (cand.candidate_type !== "rule") {
+      throw new Error("Not a rule candidate");
+    }
+    const payload = (cand.proposed_payload ?? {}) as Record<string, unknown>;
+    const name =
+      data.name_override?.trim() || (payload.name as string) || cand.normalized_key;
+    const { data: row, error: insErr } = await supabase
+      .from("world_rules")
+      .upsert(
+        {
+          universe_id: cand.universe_id,
+          candidate_id: cand.id,
+          name,
+          normalized_key: cand.normalized_key,
+          statement: data.statement,
+          scope: data.scope ?? null,
+        },
+        { onConflict: "universe_id,normalized_key" },
+      )
+      .select("id")
+      .single();
+    if (insErr || !row) throw new Error(insErr?.message ?? "Insert failed");
+    await supabase
+      .from("import_candidates")
+      .update({
+        status: "accepted",
+        promoted_ref: { table: "world_rules", id: row.id } as never,
+      })
+      .eq("id", cand.id);
+    return { rule_id: row.id, candidate_id: cand.id };
+  });
+
+export const promoteThreadCandidate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        candidate_id: z.string().uuid(),
+        name_override: z.string().max(200).optional(),
+        question_override: z.string().max(2000).optional(),
+        status: z.enum(["open", "resolved", "abandoned"]).default("open"),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: cand, error } = await supabase
+      .from("import_candidates")
+      .select("*")
+      .eq("id", data.candidate_id)
+      .single();
+    if (error || !cand) throw new Error("Candidate not found");
+    if (cand.candidate_type !== "thread") {
+      throw new Error("Not a thread candidate");
+    }
+    const payload = (cand.proposed_payload ?? {}) as Record<string, unknown>;
+    const name =
+      data.name_override?.trim() ||
+      (payload.name as string) ||
+      cand.normalized_key.slice(0, 200);
+    const question =
+      data.question_override?.trim() ||
+      (payload.question as string) ||
+      cand.normalized_key;
+    const { data: row, error: insErr } = await supabase
+      .from("world_threads")
+      .upsert(
+        {
+          universe_id: cand.universe_id,
+          candidate_id: cand.id,
+          name,
+          normalized_key: cand.normalized_key,
+          question,
+          status: data.status,
+        },
+        { onConflict: "universe_id,normalized_key" },
+      )
+      .select("id")
+      .single();
+    if (insErr || !row) throw new Error(insErr?.message ?? "Insert failed");
+    await supabase
+      .from("import_candidates")
+      .update({
+        status: "accepted",
+        promoted_ref: { table: "world_threads", id: row.id } as never,
+      })
+      .eq("id", cand.id);
+    return { thread_id: row.id, candidate_id: cand.id };
+  });
