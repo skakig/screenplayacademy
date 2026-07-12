@@ -85,9 +85,8 @@ export const generateCharacterBible = createServerFn({ method: "POST" })
       const ref = c.promoted_ref as { table?: string; id?: string } | null;
       return ref?.table === "characters" && typeof ref.id === "string";
     });
-    if (promotedRows.length === 0) {
-      return { bible_id: null, entries: [], version: 0, skipped: true };
-    }
+    // Note: we no longer bail out when there are no promoted candidates —
+    // manually-created characters must still appear in the Bible.
 
     const characterIds = Array.from(
       new Set(
