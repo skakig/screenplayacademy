@@ -60,6 +60,7 @@ import { InviteCollaboratorDialog } from "@/components/writers-room/InviteCollab
 import { UserPlus } from "lucide-react";
 import { AutosaveIndicator } from "@/components/editor/AutosaveIndicator";
 import { WriterDeskNewMenu } from "@/components/vault/WriterDeskNewMenu";
+import { SceneSnapshotButton } from "@/components/editor/SceneSnapshotButton";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Writer's Desk — Screenplay Academy" }] }),
@@ -936,6 +937,7 @@ function Editor() {
               )}
               {(blocks as any[]).length > 0 && !focus && (
                 <div className="max-w-[680px] mx-auto mt-4 flex justify-end gap-2">
+                  <SceneSnapshotButton projectId={projectId} activeBlockId={activeBlockId} />
                   <Button variant="outline" size="sm" onClick={() => {
                     const local = editorRef.current?.getBlocks() ?? (blocks as any[]);
                     const text = local.filter((b: any) => b.block_type !== "note").map(formatExport).join("\n\n");
