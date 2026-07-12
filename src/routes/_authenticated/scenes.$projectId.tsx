@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, LayoutGrid, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { SceneCleanupPanel } from "@/components/scenes/SceneCleanupPanel";
+import { SceneWorldLocationsPanel } from "@/components/scenes/SceneWorldLocationsPanel";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/scenes/$projectId")({
