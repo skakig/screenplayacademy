@@ -341,6 +341,28 @@ function OverviewPanel({
       </Card>
 
       <Card>
+        <CardContent className="p-3 flex items-center justify-between gap-3">
+          <div className="text-xs text-muted-foreground">
+            Re-run scene heading auto-linking against world locations. Idempotent — preserves manual edits.
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => relink.mutate()}
+            disabled={relink.isPending}
+          >
+            {relink.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+            ) : (
+              <Link2 className="h-3.5 w-3.5 mr-1.5" />
+            )}
+            Re-link scene locations
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
