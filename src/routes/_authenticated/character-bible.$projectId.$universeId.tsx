@@ -41,6 +41,7 @@ type BibleEntry = {
   importance: string | null;
   aliases: string[];
   source_document_ids: string[];
+  source?: "manual" | "imported";
   first_appearance: {
     document_id: string;
     segment_id: string;
