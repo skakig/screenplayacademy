@@ -141,6 +141,115 @@ function drawSectionSlide(doc: jsPDF, section: PitchDeckSection) {
   doc.setTextColor(0);
 }
 
+function drawBibleDivider(doc: jsPDF, bible: PitchDeckCharacterBible) {
+  doc.setFillColor(20, 20, 28);
+  doc.rect(0, 0, PAGE.w, PAGE.h, "F");
+  doc.setFillColor(210, 170, 90);
+  doc.rect(0, PAGE.h - 8, PAGE.w, 8, "F");
+
+  doc.setTextColor(210, 170, 90);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.text("CHARACTER BIBLE", M, M + 8);
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(36);
+  doc.text(`Character Bible · v${bible.version}`, M, M + 70);
+
+  if (bible.summary) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(13);
+    doc.setTextColor(220, 220, 220);
+    const lines = doc.splitTextToSize(bible.summary, CONTENT_W - 40);
+    doc.text(lines, M, M + 130);
+  }
+
+  doc.setTextColor(180, 180, 180);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(
+    `${bible.entries.length} character${bible.entries.length === 1 ? "" : "s"} · Generated ${format(new Date(bible.created_at), "MMMM d, yyyy")}`,
+    M,
+    PAGE.h - 40,
+  );
+  doc.setTextColor(0);
+}
+
+function drawBibleEntrySlide(doc: jsPDF, entry: PitchDeckBibleEntry) {
+  // Header band
+  doc.setFillColor(245, 243, 238);
+  doc.rect(0, 0, PAGE.w, 78, "F");
+  doc.setFillColor(210, 170, 90);
+  doc.rect(M, 62, 48, 4, "F");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  doc.setTextColor(20, 20, 28);
+  doc.text(entry.name, M, 44);
+
+  if (entry.importance) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(120, 100, 60);
+    doc.text(entry.importance.toUpperCase(), PAGE.w - M, 44, { align: "right" });
+  }
+
+  let y = 78 + 28;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+  doc.setTextColor(30, 30, 30);
+
+  const stats = [
+    `${entry.speaking_segments ?? 0} speaking`,
+    `${entry.mention_segments ?? 0} mentions`,
+  ];
+  if (entry.first_appearance) {
+    stats.push(
+      `First: ${entry.first_appearance.heading ?? "—"} (seq ${entry.first_appearance.sequence})`,
+    );
+  }
+  doc.text(stats.join("   ·   "), M, y);
+  y += 22;
+
+  if (entry.aliases && entry.aliases.length > 0) {
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(90, 90, 90);
+    const aliasLines = doc.splitTextToSize(
+      `Also known as: ${entry.aliases.join(", ")}`,
+      CONTENT_W,
+    );
+    doc.text(aliasLines, M, y);
+    y += aliasLines.length * 16 + 6;
+  }
+
+  const evidence = entry.top_evidence ?? [];
+  if (evidence.length > 0) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(20, 20, 28);
+    doc.text("EVIDENCE", M, y);
+    y += 16;
+
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(11);
+    doc.setTextColor(50, 50, 50);
+    const bottomLimit = PAGE.h - M - 20;
+    for (const ev of evidence) {
+      if (y > bottomLimit) break;
+      const excerpt = `"${ev.excerpt}"  (${Math.round((ev.confidence ?? 0) * 100)}%)`;
+      const lines = doc.splitTextToSize(excerpt, CONTENT_W - 12);
+      for (const line of lines) {
+        if (y > bottomLimit) break;
+        doc.text(line, M + 12, y);
+        y += 15;
+      }
+      y += 4;
+    }
+  }
+  doc.setTextColor(0);
+}
+
 export function generatePitchDeckPdf(opts: PitchDeckOptions): jsPDF {
   const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
 
@@ -151,6 +260,15 @@ export function generatePitchDeckPdf(opts: PitchDeckOptions): jsPDF {
   for (const section of sections) {
     doc.addPage();
     drawSectionSlide(doc, section);
+  }
+
+  if (opts.characterBible && opts.characterBible.entries.length > 0) {
+    doc.addPage();
+    drawBibleDivider(doc, opts.characterBible);
+    for (const entry of opts.characterBible.entries) {
+      doc.addPage();
+      drawBibleEntrySlide(doc, entry);
+    }
   }
 
   // Footers on every page
