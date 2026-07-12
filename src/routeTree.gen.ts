@@ -32,6 +32,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as AuthenticatedAcademyIndexRouteImport } from './routes/_authenticated/academy.index'
 import { Route as ApiImportationPromoteCharactersRouteImport } from './routes/api/importation/promote-characters'
 import { Route as AuthenticatedWritersRoomProjectIdRouteImport } from './routes/_authenticated/writers-room.$projectId'
+import { Route as AuthenticatedWorldProjectIdRouteImport } from './routes/_authenticated/world.$projectId'
 import { Route as AuthenticatedVaultProjectIdRouteImport } from './routes/_authenticated/vault.$projectId'
 import { Route as AuthenticatedTablereadProjectIdRouteImport } from './routes/_authenticated/tableread.$projectId'
 import { Route as AuthenticatedStoryboardProjectIdRouteImport } from './routes/_authenticated/storyboard.$projectId'
@@ -181,6 +182,12 @@ const AuthenticatedWritersRoomProjectIdRoute =
   AuthenticatedWritersRoomProjectIdRouteImport.update({
     id: '/writers-room/$projectId',
     path: '/writers-room/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWorldProjectIdRoute =
+  AuthenticatedWorldProjectIdRouteImport.update({
+    id: '/world/$projectId',
+    path: '/world/$projectId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedVaultProjectIdRoute =
@@ -400,6 +407,7 @@ export interface FileRoutesByFullPath {
   '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
   '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
   '/vault/$projectId': typeof AuthenticatedVaultProjectIdRoute
+  '/world/$projectId': typeof AuthenticatedWorldProjectIdRoute
   '/writers-room/$projectId': typeof AuthenticatedWritersRoomProjectIdRoute
   '/api/importation/promote-characters': typeof ApiImportationPromoteCharactersRoute
   '/academy/': typeof AuthenticatedAcademyIndexRoute
@@ -453,6 +461,7 @@ export interface FileRoutesByTo {
   '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
   '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
   '/vault/$projectId': typeof AuthenticatedVaultProjectIdRoute
+  '/world/$projectId': typeof AuthenticatedWorldProjectIdRoute
   '/writers-room/$projectId': typeof AuthenticatedWritersRoomProjectIdRoute
   '/api/importation/promote-characters': typeof ApiImportationPromoteCharactersRoute
   '/academy': typeof AuthenticatedAcademyIndexRoute
@@ -509,6 +518,7 @@ export interface FileRoutesById {
   '/_authenticated/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
   '/_authenticated/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
   '/_authenticated/vault/$projectId': typeof AuthenticatedVaultProjectIdRoute
+  '/_authenticated/world/$projectId': typeof AuthenticatedWorldProjectIdRoute
   '/_authenticated/writers-room/$projectId': typeof AuthenticatedWritersRoomProjectIdRoute
   '/api/importation/promote-characters': typeof ApiImportationPromoteCharactersRoute
   '/_authenticated/academy/': typeof AuthenticatedAcademyIndexRoute
@@ -565,6 +575,7 @@ export interface FileRouteTypes {
     | '/storyboard/$projectId'
     | '/tableread/$projectId'
     | '/vault/$projectId'
+    | '/world/$projectId'
     | '/writers-room/$projectId'
     | '/api/importation/promote-characters'
     | '/academy/'
@@ -618,6 +629,7 @@ export interface FileRouteTypes {
     | '/storyboard/$projectId'
     | '/tableread/$projectId'
     | '/vault/$projectId'
+    | '/world/$projectId'
     | '/writers-room/$projectId'
     | '/api/importation/promote-characters'
     | '/academy'
@@ -673,6 +685,7 @@ export interface FileRouteTypes {
     | '/_authenticated/storyboard/$projectId'
     | '/_authenticated/tableread/$projectId'
     | '/_authenticated/vault/$projectId'
+    | '/_authenticated/world/$projectId'
     | '/_authenticated/writers-room/$projectId'
     | '/api/importation/promote-characters'
     | '/_authenticated/academy/'
@@ -875,6 +888,13 @@ declare module '@tanstack/react-router' {
       path: '/writers-room/$projectId'
       fullPath: '/writers-room/$projectId'
       preLoaderRoute: typeof AuthenticatedWritersRoomProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/world/$projectId': {
+      id: '/_authenticated/world/$projectId'
+      path: '/world/$projectId'
+      fullPath: '/world/$projectId'
+      preLoaderRoute: typeof AuthenticatedWorldProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/vault/$projectId': {
@@ -1212,6 +1232,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStoryboardProjectIdRoute: typeof AuthenticatedStoryboardProjectIdRoute
   AuthenticatedTablereadProjectIdRoute: typeof AuthenticatedTablereadProjectIdRoute
   AuthenticatedVaultProjectIdRoute: typeof AuthenticatedVaultProjectIdRoute
+  AuthenticatedWorldProjectIdRoute: typeof AuthenticatedWorldProjectIdRoute
   AuthenticatedWritersRoomProjectIdRoute: typeof AuthenticatedWritersRoomProjectIdRoute
   AuthenticatedAcademyIndexRoute: typeof AuthenticatedAcademyIndexRoute
   AuthenticatedCharacterBibleProjectIdUniverseIdRoute: typeof AuthenticatedCharacterBibleProjectIdUniverseIdRoute
@@ -1242,6 +1263,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedStoryboardProjectIdRoute: AuthenticatedStoryboardProjectIdRoute,
   AuthenticatedTablereadProjectIdRoute: AuthenticatedTablereadProjectIdRoute,
   AuthenticatedVaultProjectIdRoute: AuthenticatedVaultProjectIdRoute,
+  AuthenticatedWorldProjectIdRoute: AuthenticatedWorldProjectIdRoute,
   AuthenticatedWritersRoomProjectIdRoute:
     AuthenticatedWritersRoomProjectIdRoute,
   AuthenticatedAcademyIndexRoute: AuthenticatedAcademyIndexRoute,
