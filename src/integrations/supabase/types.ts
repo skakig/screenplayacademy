@@ -4914,6 +4914,7 @@ export type Database = {
       }
       can_create_suggestion: { Args: { _project_id: string }; Returns: boolean }
       can_edit_project: { Args: { _project_id: string }; Returns: boolean }
+      can_edit_universe: { Args: { _universe_id: string }; Returns: boolean }
       can_manage_scene_assignments: {
         Args: { _project_id: string }
         Returns: boolean
