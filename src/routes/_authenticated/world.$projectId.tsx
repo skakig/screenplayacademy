@@ -194,7 +194,77 @@ function WorldHubTabs({ projectId, universeId }: { projectId: string; universeId
           </TabsContent>
         ),
       )}
+
+      <TabsContent value="relationships">
+        <RelationshipsTab projectId={projectId} universeId={universeId} />
+      </TabsContent>
     </Tabs>
+  );
+}
+
+function RelationshipsTab({
+  projectId,
+  universeId,
+}: {
+  projectId: string;
+  universeId: string;
+}) {
+  const fetchEntities = useServerFn2(listWorldEntities);
+  const q = useQuery({
+    queryKey: ["world-entities", universeId],
+    queryFn: () => fetchEntities({ data: { universeId, limit: 500 } }),
+    staleTime: 30_000,
+  });
+  if (q.isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Loading entities…
+      </div>
+    );
+  }
+  if (q.isError) {
+    return (
+      <Card>
+        <CardContent className="p-4 text-sm text-destructive">
+          Couldn't load world entities. {(q.error as Error)?.message}
+        </CardContent>
+      </Card>
+    );
+  }
+  const rows = q.data ?? [];
+  if (rows.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-sm text-muted-foreground">
+          No world entities yet. Approve candidates in the Importation Center or
+          add locations, factions, and characters to build the graph.
+        </CardContent>
+      </Card>
+    );
+  }
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">
+          Select an entity to edit its typed relationships
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {rows.map((r) => (
+          <Link
+            key={r.id}
+            to="/world/$projectId/entity/$entityId"
+            params={{ projectId, entityId: r.id }}
+            className="flex items-center justify-between rounded-md border border-border/40 p-2 hover:bg-secondary text-sm"
+          >
+            <span className="truncate">{r.name}</span>
+            <Badge variant="outline" className="text-[10px] capitalize">
+              {r.entity_kind}
+            </Badge>
+          </Link>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 
