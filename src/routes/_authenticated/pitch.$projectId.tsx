@@ -68,9 +68,19 @@ function Pitch() {
   const qc = useQueryClient();
   const callGen = useServerFn(generatePitchPackage);
   const fetchBible = useServerFn(getPitchCharacterBible);
+  const listBibleVersions = useServerFn(listPitchCharacterBibleVersions);
   const { tier } = useSubscription();
   const bibleUnlocked = hasFeature(tier, "pitch_character_bible");
   const [includeBible, setIncludeBible] = useState(true);
+  const [bibleVersionId, setBibleVersionId] = useState<string | "latest">(
+    "latest",
+  );
+
+  const { data: bibleVersions = [] } = useQuery({
+    queryKey: ["pitch-bible-versions", projectId],
+    queryFn: () => listBibleVersions({ data: { project_id: projectId } }),
+    enabled: bibleUnlocked,
+  });
 
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
