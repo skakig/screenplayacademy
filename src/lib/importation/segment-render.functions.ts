@@ -14,6 +14,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { promoteApprovedCharactersForDocument } from "./candidates.functions";
 
 type ResolvedEntity = {
   character_id: string;
@@ -103,10 +104,25 @@ export const renderResolvedScreenplay = createServerFn({ method: "GET" })
 
     const { data: doc, error: dErr } = await supabase
       .from("source_documents")
-      .select("id, universe_id, title")
+      .select("id, universe_id, project_id, title")
       .eq("id", data.document_id)
       .single();
     if (dErr || !doc) throw new Error("Document not found");
+
+    // Auto-promote any approved character candidates for this document before
+    // rendering, so the segment view always reflects the reviewer's latest
+    // identity decisions without a manual promotion step. Idempotent: existing
+    // promoted_ref rows short-circuit inside the helper.
+    const projectId = (doc as { project_id?: string | null }).project_id;
+    if (projectId) {
+      try {
+        await promoteApprovedCharactersForDocument({
+          data: { document_id: data.document_id, project_id: projectId },
+        });
+      } catch (err) {
+        console.warn("[render] auto-promotion failed", err);
+      }
+    }
 
     // 1. Resolved character identities for this universe.
     const { data: cands, error: cErr } = await supabase
