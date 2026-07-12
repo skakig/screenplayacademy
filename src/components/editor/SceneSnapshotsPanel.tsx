@@ -27,6 +27,7 @@ import {
   deleteSceneSnapshot,
   getSceneSnapshot,
   listSceneSnapshots,
+  recreateSceneSnapshot,
   renameSceneSnapshot,
   restoreSceneSnapshot,
   type SceneSnapshotRow,
@@ -45,6 +46,7 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
   const renameFn = useServerFn(renameSceneSnapshot);
   const deleteFn = useServerFn(deleteSceneSnapshot);
   const restoreFn = useServerFn(restoreSceneSnapshot);
+  const recreateFn = useServerFn(recreateSceneSnapshot);
 
   const [sceneId, setSceneId] = useState<string | null>(null);
   const [sceneLabel, setSceneLabel] = useState<string | null>(null);
