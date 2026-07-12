@@ -15,7 +15,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { screenplayHeuristicEntityExtractor } from "./adapters/screenplay-entity-extractor";
 import { screenplayHeuristicWorldExtractor } from "./adapters/screenplay-world-extractor";
-import type { EntityExtractor, ImportCandidate, SourceSegment } from "./contracts";
+import type { CandidateType, EntityExtractor, ImportCandidate, SourceSegment } from "./contracts";
 
 // --- helpers ---
 
