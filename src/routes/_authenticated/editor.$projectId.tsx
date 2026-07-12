@@ -60,6 +60,7 @@ import { InviteCollaboratorDialog } from "@/components/writers-room/InviteCollab
 import { UserPlus } from "lucide-react";
 import { AutosaveIndicator } from "@/components/editor/AutosaveIndicator";
 import { WriterDeskNewMenu } from "@/components/vault/WriterDeskNewMenu";
+import { SceneSnapshotButton } from "@/components/editor/SceneSnapshotButton";
 
 export const Route = createFileRoute("/_authenticated/editor/$projectId")({
   head: () => ({ meta: [{ title: "Writer's Desk — Screenplay Academy" }] }),
