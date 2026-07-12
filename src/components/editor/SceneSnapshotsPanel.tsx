@@ -227,6 +227,40 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
         </Button>
       </div>
 
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          {compareIds.length > 0
+            ? `${compareIds.length}/2 selected`
+            : "Select two to compare"}
+        </span>
+        <div className="flex items-center gap-1">
+          {compareIds.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-[11px] px-2"
+              onClick={() => setCompareIds([])}
+            >
+              Clear
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[11px] px-2"
+            disabled={compareIds.length !== 2 || loadingDiff}
+            onClick={openCompare}
+          >
+            {loadingDiff ? (
+              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            ) : (
+              <ArrowLeftRight className="h-3 w-3 mr-1" />
+            )}
+            Compare
+          </Button>
+        </div>
+      </div>
+
       <ScrollArea className="max-h-[280px] rounded-md border border-border/40">
         {isLoading ? (
           <div className="p-3 text-xs text-muted-foreground">Loading…</div>
@@ -236,8 +270,16 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
           </div>
         ) : (
           <ul className="divide-y divide-border/40">
-            {snapshots.map((s) => (
+            {snapshots.map((s) => {
+              const checked = compareIds.includes(s.id);
+              return (
               <li key={s.id} className="p-2 flex items-start gap-2 text-xs">
+                <Checkbox
+                  checked={checked}
+                  onCheckedChange={() => toggleCompare(s.id)}
+                  className="mt-0.5"
+                  aria-label={`Select ${s.label ?? "snapshot"} for comparison`}
+                />
                 <div className="flex-1 min-w-0">
                   {editingId === s.id ? (
                     <div className="flex gap-1">
