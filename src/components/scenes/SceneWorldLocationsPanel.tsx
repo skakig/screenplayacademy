@@ -24,8 +24,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { MapPin, Link2Off, Wand2 } from "lucide-react";
 import { toast } from "sonner";
+
+type PendingUnlink = {
+  id: string;
+  entityId: string;
+  usageKind: string;
+  name: string;
+};
+
 
 interface Props {
   projectId: string;
