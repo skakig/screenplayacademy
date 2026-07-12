@@ -253,6 +253,32 @@ function Pitch() {
                   : "Upgrade to Pro or higher to attach the Character Bible to pitch exports."}
               </p>
             </div>
+            {bibleUnlocked && includeBible && bibleVersions.length > 0 && (
+              <Select
+                value={bibleVersionId}
+                onValueChange={(v) =>
+                  setBibleVersionId(v as string | "latest")
+                }
+              >
+                <SelectTrigger className="w-[240px]">
+                  <SelectValue placeholder="Version" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="latest">
+                    Latest (v{bibleVersions[0].version})
+                  </SelectItem>
+                  {bibleVersions.map((v, i) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      v{v.version}
+                      {i === 0 ? " · latest" : ""} ·{" "}
+                      {format(new Date(v.created_at), "MMM d, yyyy")} ·{" "}
+                      {v.entry_count} char
+                      {v.entry_count === 1 ? "" : "s"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Switch
               checked={bibleUnlocked && includeBible}
               disabled={!bibleUnlocked}
