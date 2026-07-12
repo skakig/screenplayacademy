@@ -210,6 +210,8 @@ export const restoreSceneSnapshot = createServerFn({ method: "POST" })
       throw new Error("Snapshot payload is invalid");
     }
 
+    let backupSnapshotId: string | null = null;
+
     // Optional pre-restore capture so restores are reversible.
     if (data.capture_current) {
       const { data: currentBlocks } = await supabase
@@ -234,16 +236,21 @@ export const restoreSceneSnapshot = createServerFn({ method: "POST" })
           },
           blocks: (currentBlocks ?? []) as SceneSnapshotBlock[],
         };
-        await supabase.from("scene_snapshots").insert({
-          project_id: snap.project_id,
-          scene_id: snap.scene_id,
-          user_id: userId,
-          label: `Before restore — ${new Date().toLocaleString()}`,
-          summary: `Auto-captured before restoring "${snap.label ?? "snapshot"}"`,
-          block_count: backup.blocks.length,
-          word_count: wordCount(backup.blocks),
-          snapshot: backup as any,
-        });
+        const { data: backupRow } = await supabase
+          .from("scene_snapshots")
+          .insert({
+            project_id: snap.project_id,
+            scene_id: snap.scene_id,
+            user_id: userId,
+            label: `Before restore — ${new Date().toLocaleString()}`,
+            summary: `Auto-captured before restoring "${snap.label ?? "snapshot"}"`,
+            block_count: backup.blocks.length,
+            word_count: wordCount(backup.blocks),
+            snapshot: backup as any,
+          })
+          .select("id")
+          .single();
+        backupSnapshotId = backupRow?.id ?? null;
       }
     }
 
@@ -270,5 +277,48 @@ export const restoreSceneSnapshot = createServerFn({ method: "POST" })
       if (insErr) throw new Error(insErr.message);
     }
 
-    return { ok: true as const, scene_id: snap.scene_id };
+    return {
+      ok: true as const,
+      scene_id: snap.scene_id,
+      backup_snapshot_id: backupSnapshotId,
+    };
+  });
+
+export const recreateSceneSnapshot = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        project_id: z.string().uuid(),
+        scene_id: z.string().uuid(),
+        label: z.string().trim().max(120).nullable().optional(),
+        summary: z.string().trim().max(500).nullable().optional(),
+        snapshot: z.any(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const payload = data.snapshot as SceneSnapshotPayload;
+    if (!payload || !Array.isArray(payload.blocks)) {
+      throw new Error("Snapshot payload is invalid");
+    }
+    const { data: row, error } = await supabase
+      .from("scene_snapshots")
+      .insert({
+        project_id: data.project_id,
+        scene_id: data.scene_id,
+        user_id: userId,
+        label: data.label ?? `Restored ${new Date().toLocaleString()}`,
+        summary: data.summary ?? null,
+        block_count: payload.blocks.length,
+        word_count: wordCount(payload.blocks),
+        snapshot: payload as any,
+      })
+      .select(
+        "id, project_id, scene_id, label, summary, block_count, word_count, created_at, updated_at",
+      )
+      .single();
+    if (error) throw new Error(error.message);
+    return row as SceneSnapshotRow;
   });
