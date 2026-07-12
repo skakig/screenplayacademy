@@ -30,6 +30,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedAcademyIndexRouteImport } from './routes/_authenticated/academy.index'
+import { Route as ApiImportationPromoteCharactersRouteImport } from './routes/api/importation/promote-characters'
 import { Route as AuthenticatedWritersRoomProjectIdRouteImport } from './routes/_authenticated/writers-room.$projectId'
 import { Route as AuthenticatedVaultProjectIdRouteImport } from './routes/_authenticated/vault.$projectId'
 import { Route as AuthenticatedTablereadProjectIdRouteImport } from './routes/_authenticated/tableread.$projectId'
@@ -165,6 +166,12 @@ const AuthenticatedAcademyIndexRoute =
     id: '/academy/',
     path: '/academy/',
     getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const ApiImportationPromoteCharactersRoute =
+  ApiImportationPromoteCharactersRouteImport.update({
+    id: '/api/importation/promote-characters',
+    path: '/api/importation/promote-characters',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const AuthenticatedWritersRoomProjectIdRoute =
   AuthenticatedWritersRoomProjectIdRouteImport.update({
@@ -365,6 +372,7 @@ export interface FileRoutesByFullPath {
   '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
   '/vault/$projectId': typeof AuthenticatedVaultProjectIdRoute
   '/writers-room/$projectId': typeof AuthenticatedWritersRoomProjectIdRoute
+  '/api/importation/promote-characters': typeof ApiImportationPromoteCharactersRoute
   '/academy/': typeof AuthenticatedAcademyIndexRoute
   '/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
   '/cast/$projectId/$characterId': typeof AuthenticatedCastProjectIdCharacterIdRoute
@@ -413,6 +421,7 @@ export interface FileRoutesByTo {
   '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
   '/vault/$projectId': typeof AuthenticatedVaultProjectIdRoute
   '/writers-room/$projectId': typeof AuthenticatedWritersRoomProjectIdRoute
+  '/api/importation/promote-characters': typeof ApiImportationPromoteCharactersRoute
   '/academy': typeof AuthenticatedAcademyIndexRoute
   '/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
   '/cast/$projectId/$characterId': typeof AuthenticatedCastProjectIdCharacterIdRoute
@@ -464,6 +473,7 @@ export interface FileRoutesById {
   '/_authenticated/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
   '/_authenticated/vault/$projectId': typeof AuthenticatedVaultProjectIdRoute
   '/_authenticated/writers-room/$projectId': typeof AuthenticatedWritersRoomProjectIdRoute
+  '/api/importation/promote-characters': typeof ApiImportationPromoteCharactersRoute
   '/_authenticated/academy/': typeof AuthenticatedAcademyIndexRoute
   '/_authenticated/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
   '/_authenticated/cast/$projectId/$characterId': typeof AuthenticatedCastProjectIdCharacterIdRoute
@@ -515,6 +525,7 @@ export interface FileRouteTypes {
     | '/tableread/$projectId'
     | '/vault/$projectId'
     | '/writers-room/$projectId'
+    | '/api/importation/promote-characters'
     | '/academy/'
     | '/academy/$moduleSlug/$lessonSlug'
     | '/cast/$projectId/$characterId'
@@ -563,6 +574,7 @@ export interface FileRouteTypes {
     | '/tableread/$projectId'
     | '/vault/$projectId'
     | '/writers-room/$projectId'
+    | '/api/importation/promote-characters'
     | '/academy'
     | '/academy/$moduleSlug/$lessonSlug'
     | '/cast/$projectId/$characterId'
@@ -613,6 +625,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tableread/$projectId'
     | '/_authenticated/vault/$projectId'
     | '/_authenticated/writers-room/$projectId'
+    | '/api/importation/promote-characters'
     | '/_authenticated/academy/'
     | '/_authenticated/academy/$moduleSlug/$lessonSlug'
     | '/_authenticated/cast/$projectId/$characterId'
@@ -645,6 +658,7 @@ export interface RootRouteChildren {
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiImportationPromoteCharactersRoute: typeof ApiImportationPromoteCharactersRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -796,6 +810,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/academy/'
       preLoaderRoute: typeof AuthenticatedAcademyIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/importation/promote-characters': {
+      id: '/api/importation/promote-characters'
+      path: '/api/importation/promote-characters'
+      fullPath: '/api/importation/promote-characters'
+      preLoaderRoute: typeof ApiImportationPromoteCharactersRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/writers-room/$projectId': {
       id: '/_authenticated/writers-room/$projectId'
@@ -1150,6 +1171,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutSuccessRoute: CheckoutSuccessRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiImportationPromoteCharactersRoute: ApiImportationPromoteCharactersRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
