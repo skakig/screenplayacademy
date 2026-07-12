@@ -53,6 +53,53 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
   const [editingValue, setEditingValue] = useState("");
   const [pendingRestore, setPendingRestore] = useState<SceneSnapshotRow | null>(null);
   const [pendingDelete, setPendingDelete] = useState<SceneSnapshotRow | null>(null);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [diffPair, setDiffPair] = useState<{ left: TakeSummary; right: TakeSummary } | null>(null);
+  const [loadingDiff, setLoadingDiff] = useState(false);
+  const getSnapshotFn = useServerFn(getSceneSnapshot);
+
+  const toggleCompare = useCallback((id: string) => {
+    setCompareIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= 2) return [prev[1], id];
+      return [...prev, id];
+    });
+  }, []);
+
+  const openCompare = useCallback(async () => {
+    if (compareIds.length !== 2) return;
+    setLoadingDiff(true);
+    try {
+      const [a, b] = await Promise.all(
+        compareIds.map((id) => getSnapshotFn({ data: { snapshot_id: id } })),
+      );
+      // Order chronologically: older on the left, newer on the right.
+      const [older, newer] =
+        new Date(a.created_at).getTime() <= new Date(b.created_at).getTime()
+          ? [a, b]
+          : [b, a];
+      const toSummary = (s: typeof a): TakeSummary => ({
+        id: s.id,
+        name: s.label ?? "Untitled snapshot",
+        capturedAt: new Date(s.created_at).getTime(),
+        payload: {
+          savedAt: new Date(s.created_at).getTime(),
+          blocks: (s.snapshot?.blocks ?? []).map((b) => ({
+            block_type: b.block_type,
+            content: b.content,
+            order_index: b.order_index,
+          })),
+        },
+      });
+      setDiffPair({ left: toSummary(older), right: toSummary(newer) });
+      setDiffOpen(true);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't load snapshots for comparison");
+    } finally {
+      setLoadingDiff(false);
+    }
+  }, [compareIds, getSnapshotFn]);
 
   // Resolve the scene the active block belongs to.
   useEffect(() => {
