@@ -3018,6 +3018,156 @@ export type Database = {
           },
         ]
       }
+      series_knowledge_node_evidence: {
+        Row: {
+          confidence: number
+          created_at: string
+          evidence_id: string | null
+          excerpt: string
+          id: string
+          node_id: string
+          segment_id: string | null
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string
+          evidence_id?: string | null
+          excerpt?: string
+          id?: string
+          node_id: string
+          segment_id?: string | null
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          evidence_id?: string | null
+          excerpt?: string
+          id?: string
+          node_id?: string
+          segment_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "series_knowledge_node_evidence_evidence_id_fkey"
+            columns: ["evidence_id"]
+            isOneToOne: false
+            referencedRelation: "import_evidence"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "series_knowledge_node_evidence_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "series_knowledge_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "series_knowledge_node_evidence_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "source_segments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      series_knowledge_nodes: {
+        Row: {
+          concept_type: string
+          created_at: string
+          current_status: string
+          entity_ids: string[]
+          entity_kind: string | null
+          explanation: string
+          extractor: string
+          extractor_version: string
+          id: string
+          importance: string
+          normalized_key: string
+          role_relevance: string[]
+          title: string
+          universe_id: string
+          updated_at: string
+        }
+        Insert: {
+          concept_type: string
+          created_at?: string
+          current_status?: string
+          entity_ids?: string[]
+          entity_kind?: string | null
+          explanation?: string
+          extractor?: string
+          extractor_version?: string
+          id?: string
+          importance?: string
+          normalized_key: string
+          role_relevance?: string[]
+          title: string
+          universe_id: string
+          updated_at?: string
+        }
+        Update: {
+          concept_type?: string
+          created_at?: string
+          current_status?: string
+          entity_ids?: string[]
+          entity_kind?: string | null
+          explanation?: string
+          extractor?: string
+          extractor_version?: string
+          id?: string
+          importance?: string
+          normalized_key?: string
+          role_relevance?: string[]
+          title?: string
+          universe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "series_knowledge_nodes_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      series_knowledge_prerequisites: {
+        Row: {
+          created_at: string
+          id: string
+          node_id: string
+          prerequisite_node_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          node_id: string
+          prerequisite_node_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          node_id?: string
+          prerequisite_node_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "series_knowledge_prerequisites_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "series_knowledge_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "series_knowledge_prerequisites_prerequisite_node_id_fkey"
+            columns: ["prerequisite_node_id"]
+            isOneToOne: false
+            referencedRelation: "series_knowledge_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       source_documents: {
         Row: {
           authority: string
@@ -4085,6 +4235,63 @@ export type Database = {
           },
           {
             foreignKeyName: "world_timeline_entries_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      writer_knowledge_state: {
+        Row: {
+          confidence: number
+          created_at: string
+          evidence_of_understanding: Json
+          id: string
+          knowledge_node_id: string
+          last_checked_at: string | null
+          preferred_presentation: string
+          status: string
+          universe_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string
+          evidence_of_understanding?: Json
+          id?: string
+          knowledge_node_id: string
+          last_checked_at?: string | null
+          preferred_presentation?: string
+          status?: string
+          universe_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          evidence_of_understanding?: Json
+          id?: string
+          knowledge_node_id?: string
+          last_checked_at?: string | null
+          preferred_presentation?: string
+          status?: string
+          universe_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "writer_knowledge_state_knowledge_node_id_fkey"
+            columns: ["knowledge_node_id"]
+            isOneToOne: false
+            referencedRelation: "series_knowledge_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "writer_knowledge_state_universe_id_fkey"
             columns: ["universe_id"]
             isOneToOne: false
             referencedRelation: "story_universes"
