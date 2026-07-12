@@ -28,7 +28,11 @@ export type ReadinessCounts = {
 export function scenarioFromCounts(counts: ReadinessCounts | null | undefined): ProjectScenario {
   if (!counts) return "empty_project";
   const { scenes, characters, scriptBlocks } = counts;
-  if (scriptBlocks > 0 && scenes > 0 && characters > 0) return "populated";
+  // "populated" means the writer has real script content. A finished screenplay
+  // does not require populating the Characters roster explicitly — dialogue in
+  // the editor already implies cast, so we treat scriptBlocks + scenes as
+  // populated even when the characters table is empty.
+  if (scriptBlocks > 0 && scenes > 0) return "populated";
   if (scenes > 0 && characters > 0) return "has_scenes_and_characters";
   if (scenes > 0) return "has_scenes";
   return "empty_project";
