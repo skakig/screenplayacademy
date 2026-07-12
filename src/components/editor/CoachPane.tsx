@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Loader2, Compass, Drama, Type, NotebookPen, Headphones, Users, MicVocal, Copy, History } from "lucide-react";
 import { DraftHistoryPanel } from "@/components/editor/DraftHistoryPanel";
+import { SceneSnapshotsPanel } from "@/components/editor/SceneSnapshotsPanel";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "@tanstack/react-router";
