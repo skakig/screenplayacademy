@@ -23,7 +23,9 @@ import {
   getSceneSnapshot,
   type ProjectSnapshotSceneGroup,
 } from "@/lib/editor/sceneSnapshots.functions";
-import type { PitchDeckSceneSnapshot } from "@/components/editor/pitchDeckPdf";
+import type { PitchDeckSceneSnapshot, PitchDeckWorldUsage } from "@/components/editor/pitchDeckPdf";
+import { getWorldUsageReport } from "@/lib/world/worldUsageReport.functions";
+import { Globe } from "lucide-react";
 import { Clapperboard as SceneIcon } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { hasFeature } from "@/lib/entitlements";
@@ -88,6 +90,9 @@ function Pitch() {
   >({});
   const listSnapshots = useServerFn(listProjectSceneSnapshots);
   const fetchSnapshot = useServerFn(getSceneSnapshot);
+  const fetchWorldUsage = useServerFn(getWorldUsageReport);
+  const [includeWorldUsage, setIncludeWorldUsage] = useState(true);
+
 
   const { data: snapshotGroups = [] as ProjectSnapshotSceneGroup[] } = useQuery({
     queryKey: ["pitch-scene-snapshots", projectId],
@@ -210,6 +215,41 @@ function Pitch() {
         }
       }
 
+      let worldUsage: PitchDeckWorldUsage | null = null;
+      if (includeWorldUsage) {
+        try {
+          const report = await fetchWorldUsage({ data: { projectId } });
+          if (report.entities.length > 0) {
+            worldUsage = {
+              totals: report.totals,
+              entities: report.entities.map((e) => ({
+                name: e.entity.name,
+                entityKind: e.entity.entity_kind,
+                summary: e.entity.summary,
+                scenes: e.scenes.map((s) => ({
+                  sceneHeading: s.sceneHeading,
+                  title: s.title,
+                  sequence: s.sequence,
+                  usageKind: s.usageKind,
+                  source: s.source,
+                })),
+                edges: e.edges.map((edge) => ({
+                  direction: edge.direction,
+                  relationshipType: edge.relationshipType,
+                  otherName: edge.other?.name ?? null,
+                  otherKind: edge.other?.entity_kind ?? null,
+                  notes: edge.notes,
+                })),
+              })),
+            };
+          }
+        } catch (e: any) {
+          toast.error(
+            `Couldn't attach World Usage: ${e?.message ?? "unknown error"}`,
+          );
+        }
+      }
+
       downloadPitchDeckPdf({
         projectTitle: project?.title ?? "Untitled Project",
         projectType: (project as any)?.project_type ?? null,
@@ -220,6 +260,7 @@ function Pitch() {
         generatedAt: (pitch as any)?.generated_at ?? null,
         characterBible,
         sceneSnapshots: sceneSnapshots.length > 0 ? sceneSnapshots : null,
+        worldUsage,
       });
       const bibleNote = characterBible
         ? ` · Character Bible v${characterBible.version}`
@@ -228,7 +269,10 @@ function Pitch() {
         sceneSnapshots.length > 0
           ? ` · ${sceneSnapshots.length} scene snapshot${sceneSnapshots.length === 1 ? "" : "s"}`
           : "";
-      toast.success(`Pitch deck downloaded${bibleNote}${sceneNote}`);
+      const worldNote = worldUsage
+        ? ` · ${worldUsage.totals.entities} world entit${worldUsage.totals.entities === 1 ? "y" : "ies"}`
+        : "";
+      toast.success(`Pitch deck downloaded${bibleNote}${sceneNote}${worldNote}`);
     } catch (e: any) {
       toast.error(e?.message ?? "Couldn't export pitch deck");
     } finally {
@@ -422,6 +466,27 @@ function Pitch() {
             </div>
           </Card>
         )}
+
+        {pitch && (
+          <Card className="p-3 mb-6 flex flex-wrap items-center gap-3">
+            <Globe className="h-4 w-4 text-primary" />
+            <div className="flex-1 min-w-[220px]">
+              <div className="text-sm font-medium">
+                Include World Usage page
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Adds one slide per world entity with the scenes that reference it and its relationship edges.
+              </p>
+            </div>
+            <Switch
+              checked={includeWorldUsage}
+              onCheckedChange={(v) => setIncludeWorldUsage(v)}
+              aria-label="Include World Usage in pitch deck"
+            />
+          </Card>
+        )}
+
+
 
 
 
