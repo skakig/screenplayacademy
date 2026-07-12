@@ -116,6 +116,11 @@ export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Pro
   const linkedIds = new Set(usageRows.map((u) => u.entity_id));
   const linkable = entities.filter((e) => !linkedIds.has(e.id));
 
+  const invalidateSceneWorld = () => {
+    qc.invalidateQueries({ queryKey: ["scene-world-usage", projectId, sceneId] });
+    qc.invalidateQueries({ queryKey: sceneWorldContextQueryKey(projectId, sceneId) });
+  };
+
   const link = useMutation({
     mutationFn: async (entityId: string) =>
       linkUsage({
@@ -123,7 +128,7 @@ export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Pro
       }),
     onSuccess: () => {
       setChoice("");
-      qc.invalidateQueries({ queryKey: ["scene-world-usage", projectId, sceneId] });
+      invalidateSceneWorld();
       toast.success("Location linked");
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to link"),
@@ -133,7 +138,7 @@ export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Pro
     mutationFn: async (target: PendingUnlink) =>
       unlinkUsage({ data: { id: target.id } }).then(() => target),
     onSuccess: (target) => {
-      qc.invalidateQueries({ queryKey: ["scene-world-usage", projectId, sceneId] });
+      invalidateSceneWorld();
       toast.success(`Unlinked ${target.name}`, {
         action: {
           label: "Undo",
@@ -147,9 +152,7 @@ export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Pro
               },
             })
               .then(() => {
-                qc.invalidateQueries({
-                  queryKey: ["scene-world-usage", projectId, sceneId],
-                });
+                invalidateSceneWorld();
                 toast.success(`Restored ${target.name}`);
               })
               .catch((e: any) =>
@@ -167,7 +170,7 @@ export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Pro
   const auto = useMutation({
     mutationFn: async () => autoLink({ data: { projectId } }),
     onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: ["scene-world-usage", projectId, sceneId] });
+      invalidateSceneWorld();
       qc.invalidateQueries({ queryKey: ["world-entities", universeId, "location"] });
       toast.success(
         `Auto-link ran (${res.locationsEnsured} created, ${res.usageLinked} usage rows)`,
@@ -175,6 +178,7 @@ export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Pro
     },
     onError: (e: any) => toast.error(e?.message ?? "Auto-link failed"),
   });
+
 
   if (!universeId) {
     return (
