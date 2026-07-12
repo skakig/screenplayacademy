@@ -1712,6 +1712,63 @@ export type Database = {
           },
         ]
       }
+      import_extraction_runs: {
+        Row: {
+          adapter: string
+          adapter_version: string
+          created_at: string
+          document_id: string
+          error: string | null
+          id: string
+          input_checksum: string
+          output_summary: Json
+          stage: string
+          status: string
+          universe_id: string
+        }
+        Insert: {
+          adapter: string
+          adapter_version: string
+          created_at?: string
+          document_id: string
+          error?: string | null
+          id?: string
+          input_checksum: string
+          output_summary?: Json
+          stage: string
+          status?: string
+          universe_id: string
+        }
+        Update: {
+          adapter?: string
+          adapter_version?: string
+          created_at?: string
+          document_id?: string
+          error?: string | null
+          id?: string
+          input_checksum?: string
+          output_summary?: Json
+          stage?: string
+          status?: string
+          universe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_extraction_runs_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_extraction_runs_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_recommendations: {
         Row: {
           accepted: boolean | null
@@ -2724,6 +2781,171 @@ export type Database = {
           },
         ]
       }
+      source_documents: {
+        Row: {
+          authority: string
+          byte_size: number
+          checksum: string
+          created_at: string
+          diagnostics: Json
+          filename: string | null
+          id: string
+          ingest_error: string | null
+          language: string | null
+          media_type: string
+          normalized_text: string | null
+          parser_adapter: string | null
+          parser_version: string | null
+          project_id: string | null
+          rights_note: string | null
+          source_type: string
+          status: string
+          storage_path: string | null
+          structural_hints: Json
+          title: string
+          universe_id: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          authority?: string
+          byte_size?: number
+          checksum: string
+          created_at?: string
+          diagnostics?: Json
+          filename?: string | null
+          id?: string
+          ingest_error?: string | null
+          language?: string | null
+          media_type?: string
+          normalized_text?: string | null
+          parser_adapter?: string | null
+          parser_version?: string | null
+          project_id?: string | null
+          rights_note?: string | null
+          source_type?: string
+          status?: string
+          storage_path?: string | null
+          structural_hints?: Json
+          title: string
+          universe_id: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          authority?: string
+          byte_size?: number
+          checksum?: string
+          created_at?: string
+          diagnostics?: Json
+          filename?: string | null
+          id?: string
+          ingest_error?: string | null
+          language?: string | null
+          media_type?: string
+          normalized_text?: string | null
+          parser_adapter?: string | null
+          parser_version?: string | null
+          project_id?: string | null
+          rights_note?: string | null
+          source_type?: string
+          status?: string
+          storage_path?: string | null
+          structural_hints?: Json
+          title?: string
+          universe_id?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_documents_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_segments: {
+        Row: {
+          checksum: string
+          created_at: string
+          document_id: string
+          heading: string | null
+          id: string
+          language: string | null
+          location: Json
+          normalized_text: string
+          raw_text: string
+          segment_type: string
+          segmenter_adapter: string
+          segmenter_version: string
+          sequence: number
+          speakers: string[]
+          stable_key: string
+          universe_id: string
+        }
+        Insert: {
+          checksum: string
+          created_at?: string
+          document_id: string
+          heading?: string | null
+          id?: string
+          language?: string | null
+          location?: Json
+          normalized_text: string
+          raw_text: string
+          segment_type: string
+          segmenter_adapter: string
+          segmenter_version: string
+          sequence: number
+          speakers?: string[]
+          stable_key: string
+          universe_id: string
+        }
+        Update: {
+          checksum?: string
+          created_at?: string
+          document_id?: string
+          heading?: string | null
+          id?: string
+          language?: string | null
+          location?: Json
+          normalized_text?: string
+          raw_text?: string
+          segment_type?: string
+          segmenter_adapter?: string
+          segmenter_version?: string
+          sequence?: number
+          speakers?: string[]
+          stable_key?: string
+          universe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_segments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_segments_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       story_arcs: {
         Row: {
           arc_type: string | null
@@ -2768,6 +2990,36 @@ export type Database = {
           project_id?: string
           structure_model?: string | null
           theme?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      story_universes: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          owner_id: string
+          primary_language: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          owner_id: string
+          primary_language?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          primary_language?: string | null
           updated_at?: string
         }
         Relationships: []
