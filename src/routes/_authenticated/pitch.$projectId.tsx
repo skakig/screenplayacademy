@@ -166,6 +166,50 @@ function Pitch() {
         }
       }
 
+      // Resolve selected scene snapshots (fetch full payloads).
+      const chosen = Object.entries(sceneSnapshotSelections).filter(
+        ([, snapId]) => snapId && snapId.length > 0,
+      );
+      const sceneSnapshots: PitchDeckSceneSnapshot[] = [];
+      if (chosen.length > 0) {
+        // Preserve scene order from snapshotGroups.
+        const orderIndex = new Map(
+          snapshotGroups.map((g, i) => [g.scene.id, i] as const),
+        );
+        chosen.sort(
+          (a, b) => (orderIndex.get(a[0]) ?? 0) - (orderIndex.get(b[0]) ?? 0),
+        );
+        for (const [sceneId, snapshotId] of chosen) {
+          try {
+            const full = await fetchSnapshot({ data: { snapshot_id: snapshotId } });
+            const group = snapshotGroups.find((g) => g.scene.id === sceneId);
+            const sceneLabel =
+              group?.scene.title ||
+              group?.scene.scene_heading ||
+              full.snapshot.scene.title ||
+              full.snapshot.scene.scene_heading ||
+              "Scene";
+            sceneSnapshots.push({
+              sceneLabel,
+              sceneHeading:
+                full.snapshot.scene.scene_heading ??
+                group?.scene.scene_heading ??
+                null,
+              snapshotLabel: full.label ?? "Snapshot",
+              capturedAt: full.created_at,
+              blocks: full.snapshot.blocks.map((b) => ({
+                block_type: b.block_type,
+                content: b.content ?? "",
+              })),
+            });
+          } catch (e: any) {
+            toast.error(
+              `Couldn't attach snapshot for a scene: ${e?.message ?? "unknown error"}`,
+            );
+          }
+        }
+      }
+
       downloadPitchDeckPdf({
         projectTitle: project?.title ?? "Untitled Project",
         projectType: (project as any)?.project_type ?? null,
@@ -175,12 +219,16 @@ function Pitch() {
         sections,
         generatedAt: (pitch as any)?.generated_at ?? null,
         characterBible,
+        sceneSnapshots: sceneSnapshots.length > 0 ? sceneSnapshots : null,
       });
-      toast.success(
-        characterBible
-          ? `Pitch deck downloaded (Character Bible v${characterBible.version} attached)`
-          : "Pitch deck downloaded",
-      );
+      const bibleNote = characterBible
+        ? ` · Character Bible v${characterBible.version}`
+        : "";
+      const sceneNote =
+        sceneSnapshots.length > 0
+          ? ` · ${sceneSnapshots.length} scene snapshot${sceneSnapshots.length === 1 ? "" : "s"}`
+          : "";
+      toast.success(`Pitch deck downloaded${bibleNote}${sceneNote}`);
     } catch (e: any) {
       toast.error(e?.message ?? "Couldn't export pitch deck");
     } finally {
