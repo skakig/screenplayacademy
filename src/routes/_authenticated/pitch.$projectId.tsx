@@ -354,6 +354,76 @@ function Pitch() {
           </Card>
         )}
 
+        {pitch && snapshotGroups.length > 0 && (
+          <Card className="p-4 mb-6">
+            <div className="flex items-start gap-3 mb-3">
+              <SceneIcon className="h-4 w-4 text-primary mt-0.5" />
+              <div className="flex-1">
+                <div className="text-sm font-medium">
+                  Include key scene snapshots
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Pick a saved snapshot version for each scene you want to
+                  attach as extra slides in the pitch deck.
+                </p>
+              </div>
+              {Object.values(sceneSnapshotSelections).filter(Boolean).length > 0 && (
+                <Badge variant="secondary" className="shrink-0">
+                  {Object.values(sceneSnapshotSelections).filter(Boolean).length} selected
+                </Badge>
+              )}
+            </div>
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {snapshotGroups.map((g) => {
+                const selected = sceneSnapshotSelections[g.scene.id] ?? "";
+                const heading =
+                  g.scene.scene_heading || g.scene.title || "Untitled scene";
+                return (
+                  <div
+                    key={g.scene.id}
+                    className="flex items-center gap-2 border rounded-md px-3 py-2"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">
+                        {heading}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {g.snapshots.length} snapshot
+                        {g.snapshots.length === 1 ? "" : "s"}
+                      </div>
+                    </div>
+                    <Select
+                      value={selected || "__none__"}
+                      onValueChange={(v) =>
+                        setSceneSnapshotSelections((prev) => ({
+                          ...prev,
+                          [g.scene.id]: v === "__none__" ? "" : v,
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="w-[260px]">
+                        <SelectValue placeholder="Don't include" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Don't include</SelectItem>
+                        {g.snapshots.map((s, i) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.label ?? `Snapshot ${i + 1}`}
+                            {i === 0 ? " · latest" : ""} ·{" "}
+                            {format(new Date(s.created_at), "MMM d, HH:mm")} ·{" "}
+                            {s.word_count.toLocaleString()} w
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        )}
+
+
 
         {!pitch ? (
           <Card className="p-12 text-center border-dashed">
