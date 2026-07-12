@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { format } from "date-fns";
-import { Loader2, Sparkles, BookOpen, RefreshCw } from "lucide-react";
+import { Loader2, Sparkles, BookOpen, Download, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
@@ -22,8 +22,11 @@ import {
 import {
   listCharacterBibles,
   generateCharacterBible,
-  regenerateCharacterBibleFromScreenplay,
 } from "@/lib/importation/character-bible.functions";
+import { getCharacterBibleExport } from "@/lib/importation/character-bible-export.functions";
+import { downloadCharacterBiblePdf } from "@/components/importation/characterBiblePdf";
+import { useSubscription } from "@/hooks/useSubscription";
+import { hasFeature } from "@/lib/entitlements";
 
 type BibleEntry = {
   character_id: string;
@@ -70,7 +73,10 @@ function CharacterBiblePage() {
   const qc = useQueryClient();
   const listFn = useServerFn(listCharacterBibles);
   const generateFn = useServerFn(generateCharacterBible);
-  const regenerateFn = useServerFn(regenerateCharacterBibleFromScreenplay);
+  const exportFn = useServerFn(getCharacterBibleExport);
+  const { tier } = useSubscription();
+  const pdfUnlocked = hasFeature(tier, "character_bible_pdf");
+  const [exporting, setExporting] = useState(false);
 
   const queryKey = ["character-bibles", universeId, projectId] as const;
 
@@ -107,35 +113,6 @@ function CharacterBiblePage() {
       toast.error(e instanceof Error ? e.message : "Failed to generate"),
   });
 
-  const regenerate = useMutation({
-    mutationFn: () =>
-      regenerateFn({
-        data: { universe_id: universeId, project_id: projectId },
-      }),
-    onSuccess: (res) => {
-      if (res?.skipped) {
-        toast.info(
-          `Scanned ${res.documents_scanned ?? 0} document${
-            (res.documents_scanned ?? 0) === 1 ? "" : "s"
-          } — no approved characters to compile yet.`,
-        );
-        return;
-      }
-      const created = res?.promoted_created ?? 0;
-      const reused = res?.promoted_reused ?? 0;
-      toast.success(
-        `Regenerated v${res?.version ?? "?"} — ${created} new, ${reused} reused`,
-      );
-      setSelectedId(res?.bible_id ?? null);
-      qc.invalidateQueries({ queryKey });
-    },
-    onError: (e: unknown) =>
-      toast.error(e instanceof Error ? e.message : "Failed to regenerate"),
-  });
-
-  const busy = generate.isPending || regenerate.isPending;
-
-
   return (
     <AppShell title="Character Bible">
       <ProjectNav projectId={projectId} />
@@ -168,21 +145,51 @@ function CharacterBiblePage() {
 
           <Button
             variant="outline"
-            onClick={() => regenerate.mutate()}
-            disabled={busy}
+            onClick={async () => {
+              if (!active) return;
+              setExporting(true);
+              try {
+                const payload = await exportFn({
+                  data: {
+                    project_id: projectId,
+                    universe_id: universeId,
+                    bible_id: active.id,
+                  },
+                });
+                await downloadCharacterBiblePdf(payload);
+                toast.success(`Downloaded v${payload.bible.version}`);
+              } catch (e: unknown) {
+                const msg = e instanceof Error ? e.message : "Export failed";
+                if (msg.startsWith("PLAN_LIMIT")) {
+                  toast.error("PDF export requires Pro or higher.");
+                } else {
+                  toast.error(msg);
+                }
+              } finally {
+                setExporting(false);
+              }
+            }}
+            disabled={!active || exporting}
             className="gap-1.5"
-            title="Re-run character promotion across every source document, then compile the next version"
+            title={
+              pdfUnlocked
+                ? "Download PDF"
+                : "PDF export requires Pro or higher"
+            }
           >
-            {regenerate.isPending ? (
+            {exporting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
+            ) : pdfUnlocked ? (
+              <Download className="h-4 w-4" />
             ) : (
-              <RefreshCw className="h-4 w-4" />
+              <Lock className="h-4 w-4" />
             )}
-            Regenerate from screenplay
+            Download PDF
           </Button>
+
           <Button
             onClick={() => generate.mutate()}
-            disabled={busy}
+            disabled={generate.isPending}
             className="gap-1.5"
           >
             {generate.isPending ? (
@@ -192,7 +199,6 @@ function CharacterBiblePage() {
             )}
             Generate new version
           </Button>
-
         </header>
 
         {isLoading && (

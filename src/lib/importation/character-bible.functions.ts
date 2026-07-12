@@ -12,7 +12,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { promoteApprovedCharactersForDocument } from "./candidates.functions";
 
 type BibleEntry = {
   character_id: string;
@@ -394,79 +393,3 @@ export const getLatestCharacterBible = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return row ?? null;
   });
-
-// One-click: promote every approved character candidate across the universe's
-// source documents (so newly-approved screenplay identities become stable
-// characters first), then generate a fresh character bible version. Each call
-// writes a NEW version — the viewer's version selector surfaces prior ones.
-export const regenerateCharacterBibleFromScreenplay = createServerFn({
-  method: "POST",
-})
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
-    z
-      .object({
-        universe_id: z.string().uuid(),
-        project_id: z.string().uuid(),
-        summary: z.string().max(4000).optional(),
-      })
-      .parse(input),
-  )
-  .handler(async ({ data, context }) => {
-    const { supabase } = context;
-
-    // 1) List every source document in the universe. RLS scopes to caller.
-    const { data: docs, error: dErr } = await supabase
-      .from("source_documents")
-      .select("id")
-      .eq("universe_id", data.universe_id);
-    if (dErr) throw new Error(dErr.message);
-
-    // 2) Promote approved character candidates per document. Idempotent —
-    //    already-resolved identities reuse their existing `characters` row.
-    let promotedActions = 0;
-    let reusedActions = 0;
-    const docErrors: { document_id: string; message: string }[] = [];
-    for (const d of docs ?? []) {
-      try {
-        const res = await promoteApprovedCharactersForDocument({
-          data: {
-            document_id: d.id as string,
-            project_id: data.project_id,
-            include_pending: false,
-          },
-        });
-        const promoted =
-          (res as { promoted?: { created: boolean }[] })?.promoted ?? [];
-        for (const p of promoted) {
-          if (p.created) promotedActions += 1;
-          else reusedActions += 1;
-        }
-      } catch (e) {
-        docErrors.push({
-          document_id: d.id as string,
-          message: e instanceof Error ? e.message : "unknown error",
-        });
-      }
-    }
-
-    // 3) Generate the next bible version off the freshly-resolved identities.
-    //    We inline-call the same server function so the compose step stays in
-    //    one place; each call increments the version.
-    const bible = await generateCharacterBible({
-      data: {
-        universe_id: data.universe_id,
-        project_id: data.project_id,
-        ...(data.summary ? { summary: data.summary } : {}),
-      },
-    });
-
-    return {
-      ...bible,
-      promoted_created: promotedActions,
-      promoted_reused: reusedActions,
-      documents_scanned: docs?.length ?? 0,
-      document_errors: docErrors,
-    };
-  });
-
