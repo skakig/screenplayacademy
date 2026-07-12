@@ -215,6 +215,41 @@ function Pitch() {
         }
       }
 
+      let worldUsage: PitchDeckWorldUsage | null = null;
+      if (includeWorldUsage) {
+        try {
+          const report = await fetchWorldUsage({ data: { projectId } });
+          if (report.entities.length > 0) {
+            worldUsage = {
+              totals: report.totals,
+              entities: report.entities.map((e) => ({
+                name: e.entity.name,
+                entityKind: e.entity.entity_kind,
+                summary: e.entity.summary,
+                scenes: e.scenes.map((s) => ({
+                  sceneHeading: s.sceneHeading,
+                  title: s.title,
+                  sequence: s.sequence,
+                  usageKind: s.usageKind,
+                  source: s.source,
+                })),
+                edges: e.edges.map((edge) => ({
+                  direction: edge.direction,
+                  relationshipType: edge.relationshipType,
+                  otherName: edge.other?.name ?? null,
+                  otherKind: edge.other?.entity_kind ?? null,
+                  notes: edge.notes,
+                })),
+              })),
+            };
+          }
+        } catch (e: any) {
+          toast.error(
+            `Couldn't attach World Usage: ${e?.message ?? "unknown error"}`,
+          );
+        }
+      }
+
       downloadPitchDeckPdf({
         projectTitle: project?.title ?? "Untitled Project",
         projectType: (project as any)?.project_type ?? null,
@@ -225,6 +260,7 @@ function Pitch() {
         generatedAt: (pitch as any)?.generated_at ?? null,
         characterBible,
         sceneSnapshots: sceneSnapshots.length > 0 ? sceneSnapshots : null,
+        worldUsage,
       });
       const bibleNote = characterBible
         ? ` · Character Bible v${characterBible.version}`
@@ -233,7 +269,10 @@ function Pitch() {
         sceneSnapshots.length > 0
           ? ` · ${sceneSnapshots.length} scene snapshot${sceneSnapshots.length === 1 ? "" : "s"}`
           : "";
-      toast.success(`Pitch deck downloaded${bibleNote}${sceneNote}`);
+      const worldNote = worldUsage
+        ? ` · ${worldUsage.totals.entities} world entit${worldUsage.totals.entities === 1 ? "y" : "ies"}`
+        : "";
+      toast.success(`Pitch deck downloaded${bibleNote}${sceneNote}${worldNote}`);
     } catch (e: any) {
       toast.error(e?.message ?? "Couldn't export pitch deck");
     } finally {
