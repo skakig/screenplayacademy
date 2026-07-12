@@ -244,8 +244,8 @@ export const ingestSourceDocument = createServerFn({ method: "POST" })
         normalized_text: parsed.normalizedText,
         parser_adapter: screenplayHeuristicParser.adapter,
         parser_version: screenplayHeuristicParser.version,
-        structural_hints: parsed.structuralHints ?? {},
-        diagnostics: parsed.diagnostics ?? {},
+        structural_hints: (parsed.structuralHints ?? {}) as never,
+        diagnostics: (parsed.diagnostics ?? {}) as never,
         status: "segmented",
       })
       .eq("id", documentId);
