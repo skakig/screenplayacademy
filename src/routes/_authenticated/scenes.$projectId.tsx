@@ -100,6 +100,15 @@ function ScenesPage() {
                       <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
+                  {editing.id && (
+                    <div className="pt-2 border-t">
+                      <SceneWorldLocationsPanel
+                        projectId={projectId}
+                        sceneId={editing.id}
+                        universeId={project?.default_universe_id ?? null}
+                      />
+                    </div>
+                  )}
                   <Button className="w-full" disabled={save.isPending} onClick={() => save.mutate(editing)}>{save.isPending ? "Saving..." : "Save"}</Button>
                 </div>
               )}
