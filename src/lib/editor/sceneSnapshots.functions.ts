@@ -10,7 +10,7 @@ export type SceneSnapshotBlock = {
   content: string;
   order_index: number;
   character_id?: string | null;
-  metadata?: Record<string, unknown> | null;
+  metadata?: Record<string, any> | null;
 };
 
 export type SceneSnapshotPayload = {
@@ -129,6 +129,26 @@ export const listSceneSnapshots = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return (rows ?? []) as SceneSnapshotRow[];
   });
+
+export const getSceneSnapshot = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({ snapshot_id: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: row, error } = await supabase
+      .from("scene_snapshots")
+      .select(
+        "id, project_id, scene_id, label, summary, block_count, word_count, created_at, updated_at, snapshot",
+      )
+      .eq("id", data.snapshot_id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Snapshot not found");
+    return row as unknown as SceneSnapshotRow & { snapshot: SceneSnapshotPayload };
+  });
+
 
 export const renameSceneSnapshot = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

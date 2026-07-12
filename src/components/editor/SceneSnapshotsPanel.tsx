@@ -5,9 +5,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { Camera, RotateCcw, Trash2, Pencil, Check, X, Loader2, Film } from "lucide-react";
+import { Camera, RotateCcw, Trash2, Pencil, Check, X, Loader2, Film, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -24,11 +25,13 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   captureSceneSnapshot,
   deleteSceneSnapshot,
+  getSceneSnapshot,
   listSceneSnapshots,
   renameSceneSnapshot,
   restoreSceneSnapshot,
   type SceneSnapshotRow,
 } from "@/lib/editor/sceneSnapshots.functions";
+import { TakeDiffViewer, type TakeSummary } from "@/components/editor/TakeDiffViewer";
 
 type Props = {
   projectId: string;
@@ -50,6 +53,53 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
   const [editingValue, setEditingValue] = useState("");
   const [pendingRestore, setPendingRestore] = useState<SceneSnapshotRow | null>(null);
   const [pendingDelete, setPendingDelete] = useState<SceneSnapshotRow | null>(null);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [diffPair, setDiffPair] = useState<{ left: TakeSummary; right: TakeSummary } | null>(null);
+  const [loadingDiff, setLoadingDiff] = useState(false);
+  const getSnapshotFn = useServerFn(getSceneSnapshot);
+
+  const toggleCompare = useCallback((id: string) => {
+    setCompareIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= 2) return [prev[1], id];
+      return [...prev, id];
+    });
+  }, []);
+
+  const openCompare = useCallback(async () => {
+    if (compareIds.length !== 2) return;
+    setLoadingDiff(true);
+    try {
+      const [a, b] = await Promise.all(
+        compareIds.map((id) => getSnapshotFn({ data: { snapshot_id: id } })),
+      );
+      // Order chronologically: older on the left, newer on the right.
+      const [older, newer] =
+        new Date(a.created_at).getTime() <= new Date(b.created_at).getTime()
+          ? [a, b]
+          : [b, a];
+      const toSummary = (s: typeof a): TakeSummary => ({
+        id: s.id,
+        name: s.label ?? "Untitled snapshot",
+        capturedAt: new Date(s.created_at).getTime(),
+        payload: {
+          savedAt: new Date(s.created_at).getTime(),
+          blocks: (s.snapshot?.blocks ?? []).map((b) => ({
+            block_type: b.block_type,
+            content: b.content,
+            order_index: b.order_index,
+          })),
+        },
+      });
+      setDiffPair({ left: toSummary(older), right: toSummary(newer) });
+      setDiffOpen(true);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't load snapshots for comparison");
+    } finally {
+      setLoadingDiff(false);
+    }
+  }, [compareIds, getSnapshotFn]);
 
   // Resolve the scene the active block belongs to.
   useEffect(() => {
@@ -177,6 +227,40 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
         </Button>
       </div>
 
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          {compareIds.length > 0
+            ? `${compareIds.length}/2 selected`
+            : "Select two to compare"}
+        </span>
+        <div className="flex items-center gap-1">
+          {compareIds.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-[11px] px-2"
+              onClick={() => setCompareIds([])}
+            >
+              Clear
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[11px] px-2"
+            disabled={compareIds.length !== 2 || loadingDiff}
+            onClick={openCompare}
+          >
+            {loadingDiff ? (
+              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            ) : (
+              <ArrowLeftRight className="h-3 w-3 mr-1" />
+            )}
+            Compare
+          </Button>
+        </div>
+      </div>
+
       <ScrollArea className="max-h-[280px] rounded-md border border-border/40">
         {isLoading ? (
           <div className="p-3 text-xs text-muted-foreground">Loading…</div>
@@ -186,8 +270,16 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
           </div>
         ) : (
           <ul className="divide-y divide-border/40">
-            {snapshots.map((s) => (
+            {snapshots.map((s) => {
+              const checked = compareIds.includes(s.id);
+              return (
               <li key={s.id} className="p-2 flex items-start gap-2 text-xs">
+                <Checkbox
+                  checked={checked}
+                  onCheckedChange={() => toggleCompare(s.id)}
+                  className="mt-0.5"
+                  aria-label={`Select ${s.label ?? "snapshot"} for comparison`}
+                />
                 <div className="flex-1 min-w-0">
                   {editingId === s.id ? (
                     <div className="flex gap-1">
@@ -265,7 +357,8 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
                   </div>
                 )}
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </ScrollArea>
@@ -316,6 +409,13 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TakeDiffViewer
+        open={diffOpen}
+        onOpenChange={setDiffOpen}
+        left={diffPair?.left ?? null}
+        right={diffPair?.right ?? null}
+      />
     </div>
   );
 }
