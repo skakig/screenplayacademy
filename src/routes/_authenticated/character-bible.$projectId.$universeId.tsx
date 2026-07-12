@@ -150,6 +150,17 @@ function CharacterBiblePage() {
             </Select>
           )}
 
+          <Button asChild variant="ghost" size="sm" className="gap-1.5">
+            <Link
+              to="/importation/$projectId/$universeId"
+              params={{ projectId, universeId }}
+            >
+              <FileText className="h-4 w-4" /> Sources
+            </Link>
+          </Button>
+
+
+
           <Button
             variant="outline"
             onClick={async () => {
