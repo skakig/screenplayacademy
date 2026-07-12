@@ -27,6 +27,7 @@ import {
   deleteSceneSnapshot,
   getSceneSnapshot,
   listSceneSnapshots,
+  recreateSceneSnapshot,
   renameSceneSnapshot,
   restoreSceneSnapshot,
   type SceneSnapshotRow,
@@ -45,6 +46,7 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
   const renameFn = useServerFn(renameSceneSnapshot);
   const deleteFn = useServerFn(deleteSceneSnapshot);
   const restoreFn = useServerFn(restoreSceneSnapshot);
+  const recreateFn = useServerFn(recreateSceneSnapshot);
 
   const [sceneId, setSceneId] = useState<string | null>(null);
   const [sceneLabel, setSceneLabel] = useState<string | null>(null);
@@ -167,11 +169,38 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
   });
 
   const deleteMut = useMutation({
-    mutationFn: (id: string) => deleteFn({ data: { snapshot_id: id } }),
-    onSuccess: () => {
+    mutationFn: async (row: SceneSnapshotRow) => {
+      // Fetch the full payload first so we can offer Undo.
+      const full = await getSnapshotFn({ data: { snapshot_id: row.id } });
+      await deleteFn({ data: { snapshot_id: row.id } });
+      return full;
+    },
+    onSuccess: (full) => {
       setPendingDelete(null);
       invalidate();
-      toast.success("Snapshot deleted");
+      toast.success(`Deleted "${full.label ?? "snapshot"}"`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            try {
+              await recreateFn({
+                data: {
+                  project_id: full.project_id,
+                  scene_id: full.scene_id,
+                  label: full.label,
+                  summary: full.summary,
+                  snapshot: full.snapshot,
+                },
+              });
+              invalidate();
+              toast.success("Snapshot restored");
+            } catch (e: any) {
+              toast.error(e?.message ?? "Undo failed");
+            }
+          },
+        },
+        duration: 10000,
+      });
     },
     onError: (e: any) => toast.error(e?.message ?? "Delete failed"),
   });
@@ -179,11 +208,34 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
   const restoreMut = useMutation({
     mutationFn: (id: string) =>
       restoreFn({ data: { snapshot_id: id, capture_current: true } }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       setPendingRestore(null);
       invalidate();
       qc.invalidateQueries({ queryKey: ["blocks", projectId] });
-      toast.success("Scene restored — a pre-restore snapshot was auto-saved.");
+      const backupId = result?.backup_snapshot_id ?? null;
+      toast.success("Scene restored", {
+        description: backupId
+          ? "A pre-restore snapshot was auto-saved."
+          : undefined,
+        action: backupId
+          ? {
+              label: "Undo",
+              onClick: async () => {
+                try {
+                  await restoreFn({
+                    data: { snapshot_id: backupId, capture_current: false },
+                  });
+                  invalidate();
+                  qc.invalidateQueries({ queryKey: ["blocks", projectId] });
+                  toast.success("Reverted to previous scene contents");
+                } catch (e: any) {
+                  toast.error(e?.message ?? "Undo failed");
+                }
+              },
+            }
+          : undefined,
+        duration: 10000,
+      });
     },
     onError: (e: any) => toast.error(e?.message ?? "Restore failed"),
   });
@@ -369,19 +421,23 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Restore this scene snapshot?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Restore "{pendingRestore?.label ?? "snapshot"}"?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This will replace the current blocks in this scene with the snapshot
-              contents. A pre-restore snapshot will be captured automatically so you can
-              undo.
+              This replaces the {pendingRestore?.block_count ?? 0} current block
+              {pendingRestore?.block_count === 1 ? "" : "s"} in this scene with the
+              snapshot contents. A pre-restore snapshot is captured automatically, and
+              you'll have 10 seconds to undo from the confirmation toast.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => pendingRestore && restoreMut.mutate(pendingRestore.id)}
+              disabled={restoreMut.isPending}
             >
-              Restore
+              {restoreMut.isPending ? "Restoring…" : "Restore scene"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -393,18 +449,24 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete snapshot?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Delete "{pendingDelete?.label ?? "snapshot"}"?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This cannot be undone. Restore first if you're not sure.
+              The snapshot ({pendingDelete?.block_count ?? 0} block
+              {pendingDelete?.block_count === 1 ? "" : "s"},{" "}
+              {pendingDelete?.word_count ?? 0} words) will be removed. You'll have
+              10 seconds to undo from the confirmation toast.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => pendingDelete && deleteMut.mutate(pendingDelete.id)}
+              onClick={() => pendingDelete && deleteMut.mutate(pendingDelete)}
+              disabled={deleteMut.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {deleteMut.isPending ? "Deleting…" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
