@@ -82,6 +82,17 @@ function Pitch() {
   const [bibleVersionId, setBibleVersionId] = useState<string | "latest">(
     "latest",
   );
+  // scene_id -> snapshot_id ("" = don't include). Absent key = don't include.
+  const [sceneSnapshotSelections, setSceneSnapshotSelections] = useState<
+    Record<string, string>
+  >({});
+  const listSnapshots = useServerFn(listProjectSceneSnapshots);
+  const fetchSnapshot = useServerFn(getSceneSnapshot);
+
+  const { data: snapshotGroups = [] as ProjectSnapshotSceneGroup[] } = useQuery({
+    queryKey: ["pitch-scene-snapshots", projectId],
+    queryFn: () => listSnapshots({ data: { project_id: projectId } }),
+  });
 
   const { data: bibleVersions = [] } = useQuery({
     queryKey: ["pitch-bible-versions", projectId],
