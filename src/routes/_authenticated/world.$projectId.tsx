@@ -12,7 +12,11 @@ import {
 } from "@/hooks/useDefaultUniverse";
 import { getWorldHubSnapshot } from "@/lib/importation/world-hub.functions";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
-import { Loader2, Globe, FileText, Users, MapPin, Flag, Calendar, Scroll, Package, GitBranch, Clock } from "lucide-react";
+import {
+  Loader2, Globe, FileText, Users, MapPin, Flag, Calendar,
+  Scroll, Package, GitBranch, Clock, AlertTriangle,
+} from "lucide-react";
+import type { ProjectStoryIntelligence } from "@/lib/story-intelligence/projectStoryIntelligence.functions";
 
 export const Route = createFileRoute("/_authenticated/world/$projectId")({
   head: () => ({
@@ -44,9 +48,9 @@ function WorldHubPage() {
               {universeQuery.data?.projectTitle ?? "Loading…"}
             </h1>
             <p className="text-sm text-muted-foreground max-w-2xl mt-1">
-              Read-only view of every world entity that has been imported or
-              proposed for this project. Canon edits still happen inside the
-              existing Importation and Character Bible surfaces.
+              Read-only view of the connected story: characters, sources,
+              scenes, and world entities. Canon edits still happen in the
+              Cast, Importation Center, and Character Bible surfaces.
             </p>
           </div>
         </header>
@@ -132,19 +136,19 @@ function WorldHubTabs({ projectId, universeId }: { projectId: string; universeId
       </Card>
     );
   }
-  const d = snapshot.data!;
+  const { intelligence, samples } = snapshot.data!;
 
   const groups = [
     { key: "overview", label: "Overview", icon: Globe },
-    { key: "sources", label: `Sources · ${d.sources.count}`, icon: FileText },
-    { key: "bible", label: `Character Bible · ${d.bibles.count}`, icon: Users },
-    { key: "locations", label: `Locations · ${d.locations.count}`, icon: MapPin },
-    { key: "factions", label: `Factions · ${d.factions.count}`, icon: Flag },
-    { key: "events", label: `Events · ${d.events.count}`, icon: Calendar },
-    { key: "rules", label: `Rules · ${d.rules.count}`, icon: Scroll },
-    { key: "artifacts", label: `Artifacts · ${d.artifacts.count}`, icon: Package },
-    { key: "threads", label: `Threads · ${d.threads.count}`, icon: GitBranch },
-    { key: "timeline", label: `Timeline · ${d.timeline.count}`, icon: Clock },
+    { key: "sources", label: `Sources · ${intelligence.sources.length}`, icon: FileText },
+    { key: "bible", label: `Character Bible · ${intelligence.bibles.versions.length}`, icon: Users },
+    { key: "locations", label: `Locations · ${intelligence.world.locations.count}`, icon: MapPin },
+    { key: "factions", label: `Factions · ${intelligence.world.factions.count}`, icon: Flag },
+    { key: "events", label: `Events · ${intelligence.world.events.count}`, icon: Calendar },
+    { key: "rules", label: `Rules · ${intelligence.world.rules.count}`, icon: Scroll },
+    { key: "artifacts", label: `Artifacts · ${intelligence.world.artifacts.count}`, icon: Package },
+    { key: "threads", label: `Threads · ${intelligence.world.threads.count}`, icon: GitBranch },
+    { key: "timeline", label: `Timeline · ${intelligence.world.timeline.count}`, icon: Clock },
   ];
 
   return (
@@ -158,26 +162,14 @@ function WorldHubTabs({ projectId, universeId }: { projectId: string; universeId
       </TabsList>
 
       <TabsContent value="overview">
-        <Card>
-          <CardContent className="p-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-            <Stat label="Sources" value={d.sources.count} />
-            <Stat label="Character bibles" value={d.bibles.count} />
-            <Stat label="Locations" value={d.locations.count} />
-            <Stat label="Factions" value={d.factions.count} />
-            <Stat label="Events" value={d.events.count} />
-            <Stat label="Rules" value={d.rules.count} />
-            <Stat label="Artifacts" value={d.artifacts.count} />
-            <Stat label="Threads" value={d.threads.count} />
-            <Stat label="Timeline entries" value={d.timeline.count} />
-          </CardContent>
-        </Card>
+        <OverviewPanel intelligence={intelligence} projectId={projectId} universeId={universeId} />
       </TabsContent>
 
       <TabsContent value="sources">
         <SourcesList
           projectId={projectId}
           universeId={universeId}
-          rows={d.sources.rows}
+          rows={samples.sources}
         />
       </TabsContent>
 
@@ -185,7 +177,7 @@ function WorldHubTabs({ projectId, universeId }: { projectId: string; universeId
         <BiblesList
           projectId={projectId}
           universeId={universeId}
-          rows={d.bibles.rows}
+          rows={samples.bibles}
         />
       </TabsContent>
 
@@ -193,13 +185,161 @@ function WorldHubTabs({ projectId, universeId }: { projectId: string; universeId
         (k) => (
           <TabsContent key={k} value={k}>
             <SimpleEntityList
-              rows={d[k].rows}
+              rows={samples[k]}
               emptyLabel={`No ${k} yet. Import sources to populate this tab.`}
             />
           </TabsContent>
         ),
       )}
     </Tabs>
+  );
+}
+
+function OverviewPanel({
+  intelligence,
+  projectId,
+  universeId,
+}: {
+  intelligence: ProjectStoryIntelligence;
+  projectId: string;
+  universeId: string;
+}) {
+  const charsWithEvidence = intelligence.characters.filter(
+    (c) => c.evidenceCount > 0 && !c.quarantined,
+  ).length;
+  const projectCharacters = intelligence.characters.filter(
+    (c) => !c.quarantined,
+  ).length;
+  const unresolvedCastCandidates = intelligence.candidates.byKind["character"] ?? 0;
+  const scriptDetectedLocations = new Set(
+    intelligence.scenes
+      .flatMap((s) => s.detectedLocations.map((d) => d.normalizedKey))
+      .filter((k) => k),
+  ).size;
+  const approvedWorldLocations = intelligence.world.locations.count;
+  const unresolvedWorldCandidates =
+    intelligence.candidates.unresolved - unresolvedCastCandidates;
+  const continuityQuestions = intelligence.world.threads.count;
+
+  const d = intelligence.diagnostics;
+  const anyNeedsConnection =
+    d.manualCharactersMissingFromBible.length > 0 ||
+    d.importedCandidatesUnresolved.length > 0 ||
+    d.sceneLocationsWithoutWorldLink.length > 0 ||
+    d.worldEntitiesWithoutEvidence.length > 0 ||
+    d.possibleCharacterDuplicates.length > 0 ||
+    d.possibleLocationDuplicates.length > 0;
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="p-4 grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+          <Stat label="Characters" value={projectCharacters} />
+          <Stat label="Chars w/ Evidence" value={charsWithEvidence} />
+          <Stat label="Unresolved Cast" value={unresolvedCastCandidates} />
+          <Stat label="Bible Versions" value={intelligence.bibles.versions.length} />
+          <Stat label="Script Locations" value={scriptDetectedLocations} />
+
+          <Stat label="Approved Locations" value={approvedWorldLocations} />
+          <Stat label="Unresolved World" value={Math.max(0, unresolvedWorldCandidates)} />
+          <Stat label="Scenes" value={intelligence.scenes.length} />
+          <Stat label="Sources" value={intelligence.sources.length} />
+          <Stat label="Continuity Questions" value={continuityQuestions} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            Needs Connection
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          {!anyNeedsConnection && (
+            <p className="text-muted-foreground">
+              Everything connected. Nothing needs attention right now.
+            </p>
+          )}
+
+          <NeedsRow
+            visible={d.manualCharactersMissingFromBible.length > 0}
+            label={`${d.manualCharactersMissingFromBible.length} project character${d.manualCharactersMissingFromBible.length === 1 ? "" : "s"} missing from latest Bible`}
+            actionLabel="Open Character Bible"
+            to="/character-bible/$projectId/$universeId"
+            params={{ projectId, universeId }}
+          />
+
+          <NeedsRow
+            visible={d.importedCandidatesUnresolved.length > 0}
+            label={`${d.importedCandidatesUnresolved.length} imported character candidate${d.importedCandidatesUnresolved.length === 1 ? "" : "s"} unresolved`}
+            actionLabel="Open Candidate Inbox"
+            to="/cast/$projectId"
+            params={{ projectId }}
+          />
+
+          <NeedsRow
+            visible={d.sceneLocationsWithoutWorldLink.length > 0}
+            label={`${d.sceneLocationsWithoutWorldLink.length} scene location${d.sceneLocationsWithoutWorldLink.length === 1 ? "" : "s"} not linked to world_locations (Phase 4)`}
+            actionLabel="View Scenes"
+            to="/scenes/$projectId"
+            params={{ projectId }}
+          />
+
+          <NeedsRow
+            visible={d.worldEntitiesWithoutEvidence.length > 0}
+            label={`${d.worldEntitiesWithoutEvidence.length} world entit${d.worldEntitiesWithoutEvidence.length === 1 ? "y" : "ies"} without source evidence`}
+            actionLabel="Review in Importation"
+            to="/importation/$projectId/$universeId"
+            params={{ projectId, universeId }}
+          />
+
+          <NeedsRow
+            visible={d.possibleCharacterDuplicates.length > 0}
+            label={`${d.possibleCharacterDuplicates.length} possible duplicate character${d.possibleCharacterDuplicates.length === 1 ? "" : "s"} (review only, no auto-merge)`}
+            actionLabel="Open Cast"
+            to="/cast/$projectId"
+            params={{ projectId }}
+          />
+
+          <NeedsRow
+            visible={d.possibleLocationDuplicates.length > 0}
+            label={`${d.possibleLocationDuplicates.length} possible duplicate location${d.possibleLocationDuplicates.length === 1 ? "" : "s"}`}
+            actionLabel="Review in Importation"
+            to="/importation/$projectId/$universeId"
+            params={{ projectId, universeId }}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function NeedsRow({
+  visible,
+  label,
+  actionLabel,
+  to,
+  params,
+}: {
+  visible: boolean;
+  label: string;
+  actionLabel: string;
+  to: any;
+  params: any;
+}) {
+  if (!visible) return null;
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border border-border/40 p-2">
+      <span className="text-sm">{label}</span>
+      <Link
+        to={to}
+        params={params}
+        className="text-xs underline whitespace-nowrap"
+      >
+        {actionLabel}
+      </Link>
+    </div>
   );
 }
 
@@ -282,7 +422,7 @@ function BiblesList({
         )}
         {rows.map((r) => (
           <div
-            key={r.id}
+            key={r.version}
             className="flex items-center justify-between rounded-md border border-border/40 p-2 text-sm"
           >
             <span>Version {r.version}</span>
@@ -314,7 +454,7 @@ function SimpleEntityList({ rows, emptyLabel }: { rows: any[]; emptyLabel: strin
             key={r.id}
             className="rounded-md border border-border/40 p-2 text-sm"
           >
-            <div className="font-medium">{r.name ?? "(unnamed)"}</div>
+            <div className="font-medium">{r.name ?? r.label ?? "(unnamed)"}</div>
             {r.description && (
               <div className="text-xs text-muted-foreground line-clamp-2">
                 {r.description}
