@@ -20,6 +20,7 @@ export type SceneWorldLinkResult = {
   universeId: string | null;
   locationsEnsured: number;
   usageLinked: number;
+  usageUnlinked: number;
   scenesConsidered: number;
   skipped: number;
 };
