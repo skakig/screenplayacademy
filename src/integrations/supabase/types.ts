@@ -2879,6 +2879,63 @@ export type Database = {
         }
         Relationships: []
       }
+      scene_snapshots: {
+        Row: {
+          block_count: number
+          created_at: string
+          id: string
+          label: string | null
+          project_id: string
+          scene_id: string
+          snapshot: Json
+          summary: string | null
+          updated_at: string
+          user_id: string
+          word_count: number
+        }
+        Insert: {
+          block_count?: number
+          created_at?: string
+          id?: string
+          label?: string | null
+          project_id: string
+          scene_id: string
+          snapshot: Json
+          summary?: string | null
+          updated_at?: string
+          user_id: string
+          word_count?: number
+        }
+        Update: {
+          block_count?: number
+          created_at?: string
+          id?: string
+          label?: string | null
+          project_id?: string
+          scene_id?: string
+          snapshot?: Json
+          summary?: string | null
+          updated_at?: string
+          user_id?: string
+          word_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_snapshots_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_snapshots_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scenes: {
         Row: {
           conflict: string | null
