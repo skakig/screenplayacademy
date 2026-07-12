@@ -5,9 +5,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { Camera, RotateCcw, Trash2, Pencil, Check, X, Loader2, Film } from "lucide-react";
+import { Camera, RotateCcw, Trash2, Pencil, Check, X, Loader2, Film, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
