@@ -136,13 +136,21 @@ export function CharacterInboxDrawer({
 
   const doMerge = useMutation({
     mutationFn: async (v: { keepId: string; mergeId: string; keepName: string }) =>
-      callMerge({ data: { projectId, keepId: v.keepId, mergeId: v.mergeId, confirmName: v.keepName } }),
+      callMerge({
+        data: {
+          projectId,
+          primaryId: v.keepId,
+          mergedIds: [v.mergeId],
+          chosenValues: {},
+          survivingName: v.keepName,
+        },
+      }),
     onSuccess: () => { invalidate(); toast.success("Merged"); },
     onError: (e: any) => toast.error(e?.message ?? "Merge failed"),
   });
   const keepSep = useMutation({
     mutationFn: async (v: { a: string; b: string }) =>
-      callKeepSep({ data: { projectId, aCharacterId: v.a, bCharacterId: v.b } }),
+      callKeepSep({ data: { projectId, characterIdA: v.a, characterIdB: v.b } }),
     onSuccess: () => { refetchProposals(); toast.success("Marked as separate"); },
     onError: (e: any) => toast.error(e?.message ?? "Update failed"),
   });
@@ -265,34 +273,41 @@ export function CharacterInboxDrawer({
               <p className="text-xs text-muted-foreground italic py-6 text-center">
                 No likely duplicates. The identity engine will flag near-matches here.
               </p>
-            ) : proposals.map((p: any) => (
-              <Card key={`${p.aId}-${p.bId}`} className="p-3 space-y-2">
+            ) : proposals.map((p: any) => {
+              const aId = p.a?.id ?? p.aId;
+              const bId = p.b?.id ?? p.bId;
+              const aName = p.a?.name ?? p.aName ?? "Unnamed";
+              const bName = p.b?.name ?? p.bName ?? "Unnamed";
+              const score = typeof p.score === "number" ? p.score : 0;
+              return (
+              <Card key={`${aId}-${bId}`} className="p-3 space-y-2">
                 <div className="flex items-start gap-2">
                   <Scale className="h-4 w-4 mt-0.5 text-muted-foreground" />
                   <div className="flex-1">
                     <div className="text-sm">
-                      <span className="font-medium">{p.aName}</span>
+                      <span className="font-medium">{aName}</span>
                       <span className="text-muted-foreground mx-1.5">↔</span>
-                      <span className="font-medium">{p.bName}</span>
+                      <span className="font-medium">{bName}</span>
                     </div>
                     <div className="text-[11px] text-muted-foreground">
-                      similarity {(p.score * 100).toFixed(0)}% · {p.reasons?.join(" · ")}
+                      similarity {(score * 100).toFixed(0)}% · {(p.reasons ?? []).join(" · ")}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 justify-end">
-                  <Button size="sm" variant="ghost" onClick={() => keepSep.mutate({ a: p.aId, b: p.bId })}>
+                  <Button size="sm" variant="ghost" onClick={() => keepSep.mutate({ a: aId, b: bId })}>
                     Keep separate
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => doMerge.mutate({ keepId: p.bId, mergeId: p.aId, keepName: p.bName })}>
-                    Keep {truncate(p.bName)}
+                  <Button size="sm" variant="outline" onClick={() => doMerge.mutate({ keepId: bId, mergeId: aId, keepName: bName })}>
+                    Keep {truncate(bName)}
                   </Button>
-                  <Button size="sm" onClick={() => doMerge.mutate({ keepId: p.aId, mergeId: p.bId, keepName: p.aName })}>
-                    Keep {truncate(p.aName)}
+                  <Button size="sm" onClick={() => doMerge.mutate({ keepId: aId, mergeId: bId, keepName: aName })}>
+                    Keep {truncate(aName)}
                   </Button>
                 </div>
               </Card>
-            ))}
+              );
+            })}
           </TabsContent>
 
           {/* CLEANUP */}
