@@ -306,8 +306,24 @@ function OverviewPanel({
     d.possibleCharacterDuplicates.length > 0 ||
     d.possibleLocationDuplicates.length > 0;
 
+  const qc = useQueryClient();
+  const runAutoLink = useServerFn(autoLinkSceneLocations);
+  const relink = useMutation({
+    mutationFn: () => runAutoLink({ data: { projectId } }),
+    onSuccess: (r) => {
+      toast.success(
+        `Re-linked scenes — ${r.usageLinked} linked, ${r.usageUnlinked} pruned, ${r.locationsEnsured} locations ensured`,
+      );
+      qc.invalidateQueries({ queryKey: ["world-hub-snapshot", projectId] });
+      qc.invalidateQueries({ queryKey: ["scene-world-locations"] });
+      qc.invalidateQueries({ queryKey: ["world-usage"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Re-link failed"),
+  });
+
   return (
     <div className="space-y-4">
+
       <Card>
         <CardContent className="p-4 grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
           <Stat label="Characters" value={projectCharacters} />
