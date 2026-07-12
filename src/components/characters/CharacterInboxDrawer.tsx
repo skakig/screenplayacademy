@@ -136,13 +136,21 @@ export function CharacterInboxDrawer({
 
   const doMerge = useMutation({
     mutationFn: async (v: { keepId: string; mergeId: string; keepName: string }) =>
-      callMerge({ data: { projectId, keepId: v.keepId, mergeId: v.mergeId, confirmName: v.keepName } }),
+      callMerge({
+        data: {
+          projectId,
+          primaryId: v.keepId,
+          mergedIds: [v.mergeId],
+          chosenValues: {},
+          survivingName: v.keepName,
+        },
+      }),
     onSuccess: () => { invalidate(); toast.success("Merged"); },
     onError: (e: any) => toast.error(e?.message ?? "Merge failed"),
   });
   const keepSep = useMutation({
     mutationFn: async (v: { a: string; b: string }) =>
-      callKeepSep({ data: { projectId, aCharacterId: v.a, bCharacterId: v.b } }),
+      callKeepSep({ data: { projectId, characterIdA: v.a, characterIdB: v.b } }),
     onSuccess: () => { refetchProposals(); toast.success("Marked as separate"); },
     onError: (e: any) => toast.error(e?.message ?? "Update failed"),
   });
