@@ -178,13 +178,33 @@ function CharacterBiblePage() {
           </Card>
         )}
 
-        {active && <BibleView bible={active} />}
+        {active && (
+          <BibleView
+            bible={active}
+            projectId={projectId}
+            universeId={universeId}
+            onEdited={() => qc.invalidateQueries({ queryKey })}
+          />
+        )}
       </div>
     </AppShell>
   );
 }
 
-function BibleView({ bible }: { bible: BibleRow }) {
+function BibleView({
+  bible,
+  projectId,
+  universeId,
+  onEdited,
+}: {
+  bible: BibleRow;
+  projectId: string;
+  universeId: string;
+  onEdited: () => void;
+}) {
+  const [editing, setEditing] = useState<{ id: string; name: string } | null>(
+    null,
+  );
   const entries = bible.entries ?? [];
   return (
     <div className="space-y-4">
