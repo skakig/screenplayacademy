@@ -298,6 +298,19 @@ function BibleView({
           ))}
         </div>
       )}
+
+      {editing && (
+        <CharacterBibleEditor
+          open={!!editing}
+          onOpenChange={(v) => !v && setEditing(null)}
+          projectId={projectId}
+          universeId={universeId}
+          characterId={editing.id}
+          characterName={editing.name}
+          onSaved={onEdited}
+        />
+      )}
     </div>
   );
 }
+
