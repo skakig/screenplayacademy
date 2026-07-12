@@ -317,6 +317,8 @@ function OverviewPanel({
       qc.invalidateQueries({ queryKey: ["world-hub-snapshot", projectId] });
       qc.invalidateQueries({ queryKey: ["scene-world-locations"] });
       qc.invalidateQueries({ queryKey: ["world-usage"] });
+      qc.invalidateQueries({ queryKey: ["scene-heading-link-index", projectId] });
+
     },
     onError: (e: any) => toast.error(e?.message ?? "Re-link failed"),
   });

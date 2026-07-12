@@ -58,6 +58,8 @@ function ScenesPage() {
         if (res?.usageUpserted || res?.usageUnlinked) {
           qc.invalidateQueries({ queryKey: ["scene-world-locations"] });
           qc.invalidateQueries({ queryKey: ["world-usage", projectId] });
+          qc.invalidateQueries({ queryKey: ["scene-heading-link-index", projectId] });
+
         }
       })
       .catch((e: any) => {
