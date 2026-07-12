@@ -42,6 +42,7 @@ import { MENU_MANIFEST } from "./studioMenuManifest";
 import { useProjectReadiness } from "@/lib/readiness/useProjectReadiness";
 import { resolveMenuGate } from "@/lib/readiness/menuGate";
 import { useCurrentProjectId } from "@/lib/readiness/useMenuGate";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 /**
  * Fire-and-forget menu telemetry. Emits studio_menu_item_clicked with the
@@ -195,6 +196,7 @@ export function StudioMenu() {
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const { tier, loading: subLoading } = useSubscription();
   const stripeReady = isStripeConfigured();
+  const { isAdmin } = useIsAdmin();
   const { data: counts } = useProjectReadiness(projectId);
   const ctx = {
     tier,
@@ -331,6 +333,36 @@ export function StudioMenu() {
               </div>
             );
           })}
+          {isAdmin && (
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/80 font-semibold px-2 mb-1.5">
+                Admin
+              </div>
+              <div className="space-y-0.5">
+                <Link
+                  to="/admin/coupons"
+                  onClick={() => setOpen(false)}
+                  className="block"
+                >
+                  <div className={`flex items-start gap-3 rounded-md px-2.5 py-2 transition-colors ${
+                    currentPath === "/admin/coupons"
+                      ? "bg-primary/10 text-foreground"
+                      : "hover:bg-secondary text-foreground/90"
+                  }`}>
+                    <div className="mt-0.5 shrink-0 w-7 h-7 rounded-md bg-muted/60 flex items-center justify-center">
+                      <CreditCard className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium">Coupons & Promo Codes</div>
+                      <div className="text-[11px] text-muted-foreground leading-snug">
+                        Create and manage Stripe discount codes.
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>

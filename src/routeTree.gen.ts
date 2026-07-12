@@ -45,6 +45,7 @@ import { Route as AuthenticatedCharactersProjectIdRouteImport } from './routes/_
 import { Route as AuthenticatedCharacterProjectIdRouteImport } from './routes/_authenticated/character.$projectId'
 import { Route as AuthenticatedCastProjectIdRouteImport } from './routes/_authenticated/cast.$projectId'
 import { Route as AuthenticatedArcTimelineProjectIdRouteImport } from './routes/_authenticated/arc-timeline.$projectId'
+import { Route as AuthenticatedAdminCouponsRouteImport } from './routes/_authenticated/admin.coupons'
 import { Route as AuthenticatedAcademyModuleSlugRouteImport } from './routes/_authenticated/academy.$moduleSlug'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -260,6 +261,12 @@ const AuthenticatedArcTimelineProjectIdRoute =
     path: '/arc-timeline/$projectId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminCouponsRoute =
+  AuthenticatedAdminCouponsRouteImport.update({
+    id: '/admin/coupons',
+    path: '/admin/coupons',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAcademyModuleSlugRoute =
   AuthenticatedAcademyModuleSlugRouteImport.update({
     id: '/academy/$moduleSlug',
@@ -379,6 +386,7 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
+  '/admin/coupons': typeof AuthenticatedAdminCouponsRoute
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/cast/$projectId': typeof AuthenticatedCastProjectIdRouteWithChildren
   '/character/$projectId': typeof AuthenticatedCharacterProjectIdRouteWithChildren
@@ -432,6 +440,7 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
+  '/admin/coupons': typeof AuthenticatedAdminCouponsRoute
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/cast/$projectId': typeof AuthenticatedCastProjectIdRouteWithChildren
   '/character/$projectId': typeof AuthenticatedCharacterProjectIdRouteWithChildren
@@ -486,6 +495,7 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
+  '/_authenticated/admin/coupons': typeof AuthenticatedAdminCouponsRoute
   '/_authenticated/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
   '/_authenticated/cast/$projectId': typeof AuthenticatedCastProjectIdRouteWithChildren
   '/_authenticated/character/$projectId': typeof AuthenticatedCharacterProjectIdRouteWithChildren
@@ -541,6 +551,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/academy/$moduleSlug'
+    | '/admin/coupons'
     | '/arc-timeline/$projectId'
     | '/cast/$projectId'
     | '/character/$projectId'
@@ -594,6 +605,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/academy/$moduleSlug'
+    | '/admin/coupons'
     | '/arc-timeline/$projectId'
     | '/cast/$projectId'
     | '/character/$projectId'
@@ -647,6 +659,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/academy/$moduleSlug'
+    | '/_authenticated/admin/coupons'
     | '/_authenticated/arc-timeline/$projectId'
     | '/_authenticated/cast/$projectId'
     | '/_authenticated/character/$projectId'
@@ -955,6 +968,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedArcTimelineProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/coupons': {
+      id: '/_authenticated/admin/coupons'
+      path: '/admin/coupons'
+      fullPath: '/admin/coupons'
+      preLoaderRoute: typeof AuthenticatedAdminCouponsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/academy/$moduleSlug': {
       id: '/_authenticated/academy/$moduleSlug'
       path: '/academy/$moduleSlug'
@@ -1179,6 +1199,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRouteWithChildren
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedAcademyModuleSlugRoute: typeof AuthenticatedAcademyModuleSlugRouteWithChildren
+  AuthenticatedAdminCouponsRoute: typeof AuthenticatedAdminCouponsRoute
   AuthenticatedArcTimelineProjectIdRoute: typeof AuthenticatedArcTimelineProjectIdRoute
   AuthenticatedCastProjectIdRoute: typeof AuthenticatedCastProjectIdRouteWithChildren
   AuthenticatedCharacterProjectIdRoute: typeof AuthenticatedCharacterProjectIdRouteWithChildren
@@ -1204,6 +1225,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedAcademyModuleSlugRoute:
     AuthenticatedAcademyModuleSlugRouteWithChildren,
+  AuthenticatedAdminCouponsRoute: AuthenticatedAdminCouponsRoute,
   AuthenticatedArcTimelineProjectIdRoute:
     AuthenticatedArcTimelineProjectIdRoute,
   AuthenticatedCastProjectIdRoute: AuthenticatedCastProjectIdRouteWithChildren,
