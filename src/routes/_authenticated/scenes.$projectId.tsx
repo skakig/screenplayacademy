@@ -17,6 +17,7 @@ import { Plus, LayoutGrid, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { SceneCleanupPanel } from "@/components/scenes/SceneCleanupPanel";
 import { SceneWorldLocationsPanel } from "@/components/scenes/SceneWorldLocationsPanel";
+import { SceneWorldContextPanel } from "@/components/scenes/SceneWorldContextPanel";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { useServerFn } from "@tanstack/react-start";
 import { autoLinkSceneLocations } from "@/lib/editor/sceneWorldLink.functions";
@@ -132,11 +133,15 @@ function ScenesPage() {
                     </Select>
                   </div>
                   {editing.id && (
-                    <div className="pt-2 border-t">
+                    <div className="pt-2 border-t space-y-4">
                       <SceneWorldLocationsPanel
                         projectId={projectId}
                         sceneId={editing.id}
                         universeId={project?.default_universe_id ?? null}
+                      />
+                      <SceneWorldContextPanel
+                        projectId={projectId}
+                        sceneId={editing.id}
                       />
                     </div>
                   )}
