@@ -21,6 +21,8 @@ import {
   type WorldEntityLink,
   type WorldEntityRelationship,
   type ProjectWorldUsage,
+  type SceneWorldContext,
+  type SceneWorldEntityContext,
 } from "./worldGraph";
 
 const kindEnum = z.enum(WORLD_ENTITY_KINDS);
@@ -353,6 +355,100 @@ export const unlinkProjectWorldUsage = createServerFn({ method: "POST" })
     if (error) throw error;
     return { id: data.id };
   });
+
+// ---------- Read: scene world context (linked entities + edges) ----------
+const GetSceneWorldContextInput = z.object({
+  projectId: z.string().uuid(),
+  sceneId: z.string().uuid(),
+});
+
+export const getSceneWorldContext = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => GetSceneWorldContextInput.parse(input))
+  .handler(async ({ data, context }): Promise<SceneWorldContext> => {
+    const { supabase } = context;
+    const { data: usageRows, error: usageErr } = await supabase
+      .from("project_world_usage")
+      .select("*")
+      .eq("project_id", data.projectId)
+      .eq("scene_id", data.sceneId)
+      .order("created_at", { ascending: true });
+    if (usageErr) throw usageErr;
+    const usage = (usageRows ?? []) as unknown as ProjectWorldUsage[];
+    const entityIds = Array.from(new Set(usage.map((u) => u.entity_id)));
+    if (entityIds.length === 0) {
+      return { sceneId: data.sceneId, projectId: data.projectId, entities: [] };
+    }
+
+    const [entitiesQ, linksQ, outQ, inQ] = await Promise.all([
+      supabase.from("world_entities").select("*").in("id", entityIds),
+      supabase.from("world_entity_links").select("*").in("entity_id", entityIds),
+      supabase
+        .from("world_entity_relationships")
+        .select("*")
+        .in("from_entity_id", entityIds),
+      supabase
+        .from("world_entity_relationships")
+        .select("*")
+        .in("to_entity_id", entityIds),
+    ]);
+    if (entitiesQ.error) throw entitiesQ.error;
+    if (linksQ.error) throw linksQ.error;
+    if (outQ.error) throw outQ.error;
+    if (inQ.error) throw inQ.error;
+
+    const entities = (entitiesQ.data ?? []) as unknown as WorldEntity[];
+    const links = (linksQ.data ?? []) as unknown as WorldEntityLink[];
+    const outRows = (outQ.data ?? []) as unknown as WorldEntityRelationship[];
+    const inRows = (inQ.data ?? []) as unknown as WorldEntityRelationship[];
+
+    const otherIds = Array.from(
+      new Set(
+        [
+          ...outRows.map((r) => r.to_entity_id),
+          ...inRows.map((r) => r.from_entity_id),
+        ].filter((id) => !entityIds.includes(id)),
+      ),
+    );
+    let others: Array<Pick<WorldEntity, "id" | "name" | "entity_kind">> =
+      entities.map((e) => ({ id: e.id, name: e.name, entity_kind: e.entity_kind }));
+    if (otherIds.length) {
+      const { data: o, error: oe } = await supabase
+        .from("world_entities")
+        .select("id, name, entity_kind")
+        .in("id", otherIds);
+      if (oe) throw oe;
+      others = [...others, ...((o ?? []) as any)];
+    }
+    const entityById = new Map(entities.map((e) => [e.id, e]));
+    const linkByEntity = new Map(links.map((l) => [l.entity_id, l]));
+    const otherById = new Map(others.map((o) => [o.id, o]));
+
+    const contexts: SceneWorldEntityContext[] = usage
+      .map((u): SceneWorldEntityContext | null => {
+        const entity = entityById.get(u.entity_id);
+        if (!entity) return null;
+        return {
+          usage: u,
+          entity,
+          link: linkByEntity.get(u.entity_id) ?? null,
+          outgoing: outRows
+            .filter((r) => r.from_entity_id === u.entity_id)
+            .map((r) => ({ ...r, other: otherById.get(r.to_entity_id) ?? null })),
+          incoming: inRows
+            .filter((r) => r.to_entity_id === u.entity_id)
+            .map((r) => ({ ...r, other: otherById.get(r.from_entity_id) ?? null })),
+        };
+      })
+      .filter((v): v is SceneWorldEntityContext => v !== null);
+
+    return {
+      sceneId: data.sceneId,
+      projectId: data.projectId,
+      entities: contexts,
+    };
+  });
+
 
 // ---------- Entity ↔ specialized-row link CRUD ----------
 const SetLinkInput = z.object({

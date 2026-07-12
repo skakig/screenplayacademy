@@ -121,6 +121,28 @@ export interface WorldEntityDetail {
  * Canonical, deterministic normalization for entity keys.
  * Lowercase, strip diacritics, collapse punctuation/whitespace.
  */
+export interface SceneWorldEntityContext {
+  usage: ProjectWorldUsage;
+  entity: WorldEntity;
+  link: WorldEntityLink | null;
+  outgoing: Array<
+    WorldEntityRelationship & {
+      other: Pick<WorldEntity, "id" | "name" | "entity_kind"> | null;
+    }
+  >;
+  incoming: Array<
+    WorldEntityRelationship & {
+      other: Pick<WorldEntity, "id" | "name" | "entity_kind"> | null;
+    }
+  >;
+}
+
+export interface SceneWorldContext {
+  sceneId: string;
+  projectId: string;
+  entities: SceneWorldEntityContext[];
+}
+
 export function normalizeWorldKey(input: string): string {
   return input
     .normalize("NFKD")
