@@ -7,6 +7,23 @@ import { format } from "date-fns";
 
 export type PitchDeckSection = { key: string; label: string; value: string };
 
+export type PitchDeckBibleEntry = {
+  name: string;
+  importance?: string | null;
+  aliases?: string[];
+  first_appearance?: { heading: string | null; sequence: number } | null;
+  speaking_segments?: number;
+  mention_segments?: number;
+  top_evidence?: { excerpt: string; confidence: number }[];
+};
+
+export type PitchDeckCharacterBible = {
+  version: number;
+  summary: string | null;
+  created_at: string;
+  entries: PitchDeckBibleEntry[];
+};
+
 export type PitchDeckOptions = {
   projectTitle: string;
   projectType?: string | null;
@@ -15,6 +32,7 @@ export type PitchDeckOptions = {
   logline?: string | null;
   sections: PitchDeckSection[];
   generatedAt?: string | null;
+  characterBible?: PitchDeckCharacterBible | null;
 };
 
 // Landscape A4 in points
