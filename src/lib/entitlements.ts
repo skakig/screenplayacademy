@@ -24,6 +24,7 @@ export type Feature =
   | "script_brain"
   | "pitch"
   | "pitch_character_bible"
+  | "character_bible_pdf"
   | "table_read"
   | "storyboard"
   | "mcp_writes"
@@ -34,6 +35,7 @@ export const FEATURE_MIN_TIER: Record<Feature, Tier> = {
   script_brain: "creator",
   pitch: "creator",
   pitch_character_bible: "pro",
+  character_bible_pdf: "pro",
   table_read: "pro",
   storyboard: "pro",
   mcp_writes: "pro",
@@ -45,6 +47,7 @@ export const FEATURE_LABEL: Record<Feature, string> = {
   script_brain: "Script Brain",
   pitch: "Pitch Deck",
   pitch_character_bible: "Character Bible in pitch export",
+  character_bible_pdf: "Character Bible PDF export",
   table_read: "Table Read",
   storyboard: "Storyboard",
   mcp_writes: "MCP write tools",
