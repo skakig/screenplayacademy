@@ -226,11 +226,19 @@ export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Pro
                   variant="ghost"
                   className="h-6 w-6"
                   disabled={unlink.isPending}
-                  onClick={() => unlink.mutate(u.id)}
+                  onClick={() =>
+                    setPendingUnlink({
+                      id: u.id,
+                      entityId: u.entity_id,
+                      usageKind: u.usage_kind,
+                      name: ent?.name ?? "this location",
+                    })
+                  }
                   aria-label="Unlink location"
                 >
                   <Link2Off className="h-3 w-3" />
                 </Button>
+
               </li>
             );
           })}
