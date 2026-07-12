@@ -830,6 +830,37 @@ export const promoteApprovedCharactersForDocument = createServerFn({
 
     type Payload = { name?: string; importance?: string };
 
+    // Prefetch active characters for this project so name-based reuse is
+    // deterministic and the promotion decisions are testable in isolation.
+    const { data: existingChars, error: exErr } = await supabase
+      .from("characters")
+      .select("id, name")
+      .eq("project_id", data.project_id)
+      .is("quarantined_at", null);
+    if (exErr) throw new Error(exErr.message);
+
+    const existingByKey = new Map<string, { id: string; name: string }>();
+    for (const c of existingChars ?? []) {
+      if (c?.name) existingByKey.set(c.name.trim().toUpperCase(), { id: c.id, name: c.name });
+    }
+
+    const candidateInputs: CandidateInput[] = (cands ?? []).map((c) => ({
+      id: c.id,
+      normalized_key: c.normalized_key,
+      proposed_payload: (c.proposed_payload ?? null) as Payload | null,
+      promoted_ref: (c.promoted_ref ?? null) as { table?: string; id?: string } | null,
+    }));
+
+    // Ids for `create` actions are minted lazily so tests can inject a
+    // deterministic generator; here we defer to Postgres by inserting first.
+    // We plan first with placeholder ids, then swap them for the real inserted
+    // ids as we create rows.
+    const plan = planPromotions(
+      candidateInputs,
+      (name) => existingByKey.get(name.trim().toUpperCase()) ?? null,
+      () => `__pending__:${Math.random().toString(36).slice(2)}`,
+    );
+
     const promoted: {
       candidate_id: string;
       character_id: string;
@@ -839,61 +870,33 @@ export const promoteApprovedCharactersForDocument = createServerFn({
     }[] = [];
     const candidateToCharacter = new Map<string, string>();
     const nameKeyToCharacter = new Map<string, { id: string; name: string }>();
+    const placeholderToReal = new Map<string, string>();
 
-    for (const cand of cands ?? []) {
-      const payload = (cand.proposed_payload ?? {}) as Payload;
-      const finalName =
-        (payload.name && payload.name.trim()) || cand.normalized_key;
-      const key = finalName.trim().toUpperCase();
+    for (const action of plan.actions) {
+      const cand = candidateInputs.find((c) => c.id === action.candidate_id)!;
+      let characterId = action.character_id;
 
-      // Fast path: candidate was already promoted previously.
-      const existingRef = cand.promoted_ref as
-        | { table?: string; id?: string }
-        | null;
-      if (existingRef?.table === "characters" && existingRef.id) {
-        candidateToCharacter.set(cand.id, existingRef.id);
-        nameKeyToCharacter.set(key, { id: existingRef.id, name: finalName });
-        promoted.push({
-          candidate_id: cand.id,
-          character_id: existingRef.id,
-          name: finalName,
-          created: false,
-          normalized_key: cand.normalized_key,
-        });
-        continue;
-      }
-
-      // Reuse in-batch by normalized name (two candidates for the same person).
-      let characterId = nameKeyToCharacter.get(key)?.id ?? null;
-      let created = false;
-
-      if (!characterId) {
-        const { data: existing } = await supabase
+      if (action.kind === "create") {
+        const { data: ins, error: insErr } = await supabase
           .from("characters")
-          .select("id, name")
-          .eq("project_id", data.project_id)
-          .is("quarantined_at", null)
-          .ilike("name", finalName)
-          .maybeSingle();
-        if (existing) {
-          characterId = existing.id;
-        } else {
-          const { data: ins, error: insErr } = await supabase
-            .from("characters")
-            .insert({
-              project_id: data.project_id,
-              name: finalName,
-              importance: payload.importance ?? "unassigned",
-            })
-            .select("id")
-            .single();
-          if (insErr || !ins)
-            throw new Error(insErr?.message ?? "Character insert failed");
-          characterId = ins.id;
-          created = true;
-        }
+          .insert({
+            project_id: data.project_id,
+            name: action.name,
+            importance: action.importance,
+          })
+          .select("id")
+          .single();
+        if (insErr || !ins)
+          throw new Error(insErr?.message ?? "Character insert failed");
+        placeholderToReal.set(action.character_id, ins.id);
+        characterId = ins.id;
+        existingByKey.set(action.name.trim().toUpperCase(), { id: ins.id, name: action.name });
+      } else if (action.kind === "reuse_in_batch") {
+        // Batch reuse may reference a placeholder minted by an earlier `create`.
+        characterId = placeholderToReal.get(action.character_id) ?? action.character_id;
       }
 
+      // Persist promoted_ref (idempotent — same value on re-run).
       await supabase
         .from("import_candidates")
         .update({
@@ -903,15 +906,16 @@ export const promoteApprovedCharactersForDocument = createServerFn({
         .eq("id", cand.id);
 
       candidateToCharacter.set(cand.id, characterId);
-      nameKeyToCharacter.set(key, { id: characterId, name: finalName });
+      nameKeyToCharacter.set(action.name.trim().toUpperCase(), { id: characterId, name: action.name });
       promoted.push({
         candidate_id: cand.id,
         character_id: characterId,
-        name: finalName,
-        created,
+        name: action.name,
+        created: action.kind === "create",
         normalized_key: cand.normalized_key,
       });
     }
+
 
     // Load segments for the document.
     const { data: segRows, error: sErr } = await supabase
