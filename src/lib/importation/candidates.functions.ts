@@ -18,25 +18,9 @@ import type { SourceSegment } from "./contracts";
 
 // --- helpers ---
 
-async function assertUniverseOwner(
-  supabase: {
-    from: (t: string) => {
-      select: (c: string) => {
-        eq: (col: string, val: string) => {
-          maybeSingle: () => Promise<{ data: { id: string } | null; error: unknown }>;
-        };
-      };
-    };
-  },
-  universeId: string,
-) {
-  const { data, error } = await supabase
-    .from("story_universes")
-    .select("id")
-    .eq("id", universeId)
-    .maybeSingle();
-  if (error || !data) throw new Error("Universe not found");
-}
+// (universe ownership is enforced by RLS on every table we touch)
+
+
 
 function loadSegments(rows: {
   id: string;
