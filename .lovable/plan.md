@@ -1,157 +1,64 @@
-# ITS/PfHU Importation — Systematic Implementation Plan
 
-## Where we stand today (audit)
+# Where we stand vs. the docs (audit) and where to go next
 
-What exists:
+## 1. Completion audit against recent `.md` docs
 
-- `import_sessions` + `import_block_candidates` (screenplay-only, single-file, one-session-per-upload).
-- `src/lib/import/*` — parser, extractors, diagnose, commit into project blocks.
-- `src/components/import/ImportWizard.tsx` (966 lines) — one-shot screenplay wizard.
-- `src/lib/its/*` — `writerEvents`, `writerProfile`, `coachRecommendations` (event-driven learner profile only).
+### Solidly implemented (Stage-1 through mid-stage)
+- **Screenplay editor engine** (`docs/SCREENPLAY_EDITOR_CONTRACT.md`, `EDITOR_LAB_SPEC.md`, `EDITOR_ACCEPTANCE_TESTS.md`, `LOVABLE_PASS_SEQUENCE.md`): local-first blocks, stable local IDs, keymap, autoformat, persistence, scene navigator, focus accessory bar, chips, guided step strip, draft backup, `editor-lab` route. Passes 1–3 largely landed.
+- **Characters system** (`CHARACTERS_REBUILD.md`, `CHARACTER_TRUTH_ENGINE*.md`): Identity Engine, Candidate Inbox, Cast landing, Guided Builder, portrait candidates + approval, style presets, voice preview, cross-project style import, Truth Engine + Truth Coach with tests.
+- **ITS/PfHU Importation** (`docs/ITS_PfHU_Importation.md`, `lovable/ITS_IMPORTATION_AUDIT.md`): Phases 1–5 in `src/lib/importation/` — source preservation, extraction runs, world entities, identity resolution, promotion (idempotent + tested), knowledge map spine, resolved-segment rendering, promote-characters API with idempotency, Character Bible + versions + edit + PDF + pitch embed.
+- **Payments/entitlements**: Stripe replaced Paddle, yearly + promo codes, metered AI, buy-credits, tier gating.
+- **Table Read / Voice**: cached audio, shared voice-settings, in-builder preview.
+- **Menu / readiness**: StudioMenu pillars, readiness gate system, route-matrix tests.
 
-What does NOT exist yet (measured against the doc):
+### Partially implemented
+- **Writers' Room / collaboration** (`04_WRITERS_ROOM_COLLAB.md`, `lovable/collaboration.md`): invites, roles, members, presence + carets, comments/suggestions scaffolding, live scene session hook. Missing: scene locking, change attribution, revision comparison, full multiplayer editing, permissions matrix wired end-to-end into every editor action.
+- **Draft revisions** (`05_DRAFT_REVISIONS.md`): local editor history + `DraftHistoryPanel` + backup, but no scene-level snapshots, named drafts, compare/restore, branch-from-snapshot, or AI change summaries.
+- **Script Brain** (`03_SCRIPT_BRAIN.md`): manuscript analyzer + coach recommendations exist; no project-wide diagnostics dashboard (setup/payoff, pacing, theme, revision missions).
+- **Screenplay Import** (`SCREENPLAY_IMPORT_PIPELINE.md`): screenplay `.txt` heuristic only. Missing docx/pdf/rtf/fountain/fdx, OCR, transcription, LLM extractor.
+- **World / Universe** (`SCENESMITH_WORLD_BUILDING.md`, `EPIC_FANTASY_UNIVERSE_PLATFORM.md`): entity extraction, universes, world tiers in bible PDF. Missing: World Graph views, maps, timelines UI, canon governance workflow, continuation package.
+- **Arena** (`SCENESMITH_ARENA_*`): v1 tables + flows exist but gated; SceneSmith Studio Score, blind judging, TMH/Anti-Thesis scoring pipeline, Round 2/3 progression not yet wired end-to-end.
+- **Academy** (`SCENESMITH_ACADEMY.md`): lessons + filters + contextual help, coach persistence. Missing: repair loops keyed to writer_profile weaknesses, level-aware progression, mastery gates.
+- **i18n** (`10_I18N.md`): sweep done for many surfaces but still incomplete across new importation/bible/arena UI.
 
-- Universe / corpus / multi-document model.
-- Durable source preservation (`source_documents`, `source_segments`, checksums, rights metadata, storage buckets).
-- Typed `import_candidates` beyond screenplay blocks (characters, aliases, world, relationships, threads).
-- `import_evidence` with segment citations.
-- `import_identity_decisions` (Keep Separate memory).
-- `source_authority_rules` and contradiction/retcon classification.
-- `series_knowledge_nodes` + `writer_knowledge_state` (ITS map).
-- PfHU continuation package and role-aware onboarding.
-- Editorial Review (evidence-backed draft comparison).
-- Provider-neutral adapter contracts (parse / OCR / transcription / extract / embed).
-- Import Center UX (setup → dashboard → Review Inbox → Continuation Dashboard).
+### Not yet implemented (per current docs)
+- **Voice Studio** (`SCENESMITH_VOICE_STUDIO.md`): dictation/STT, spoken brainstorming, session preservation → artifact proposals.
+- **Scene-to-Screen pipeline** (`SCENESMITH_SCENE_TO_SCREEN_PIPELINE.md`): Production Graph, shot planning, storyboards→video, lip sync, sequence assembly.
+- **Review Intelligence & Argument Studio** (`SCENESMITH_REVIEW_INTELLIGENCE_AND_ARGUMENT_STUDIO.md`): continuity audits, adaptation compare, counterargument tests, evidence-backed reviewer packs.
+- **Story Production Platform** (`SCENESMITH_STORY_PRODUCTION_PLATFORM.md`): Story Graph, approvals, production graph, departments.
+- **Writer Modes** (`WRITER_MODES_FOCUS_BASIC_ADVANCED.md`): three-mode UI is partial (Focus/Studio toggles present; Basic/Advanced feature gating incomplete).
+- **World Lore Canon Architecture** (`WORLD_LORE_CANON_ARCHITECTURE.md`): canon/belief/inference typing, retcon workflow.
+- **Screenplay Language Intelligence** (`SCREENPLAY_LANGUAGE_INTELLIGENCE.md`): partial (autoformat, chips); dialogue voice/style diagnostics not wired.
 
-The existing screenplay import is exactly the "screenplay-only import schema" the doctrine warns against. It stays as a fast path but must be re-wired to write through the new corpus + candidate + evidence spine — never directly into canon tables.
+## 2. Recommended next direction (careful, small passes)
 
-## Guiding contracts (apply to every phase)
+Order chosen to (a) protect the writing engine, (b) finish threads already in-flight before opening new ones, and (c) keep each pass shippable and testable.
 
-- Preserve source before interpreting. Every derived claim links to a `source_segment_id`.
-- Candidates, never automatic canon. All Character Bible / World Graph writes go through a review + promotion step.
-- Provider-neutral adapters. No provider name in a canonical column; adapters are swappable.
-- Local-first Writer's Desk. All import work runs in `createServerFn` handlers or background jobs, never in the typing path.
-- Cost idempotency. Every stage keyed by `checksum + extractor_version + policy_version`; retry re-uses cached stages.
-- Rights + RLS. `source_documents.rights_status` required at upload; RLS on every new table; `service_role` only inside handlers.
-- i18n keys, not literal strings, for every Import Center surface.
+**Pass A — Finish ITS/PfHU thread (small, low-risk).**
+- Wire Character Bible → Editor: click a character mention to open the resolved identity in a side panel.
+- Extend `import` UI to expose the new resolved-segment pipeline (badges for canon vs. inferred, source doc chips) in `ImportWizard.tsx`.
+- Add a document upload → `source_documents` path for `.txt` beyond screenplay (paste + docx text extraction), still one provider, so the corpus spine gets exercised.
 
-## Phase 0 — Foundations (repo audit + provider-neutral contracts)
+**Pass B — Draft Revisions Stage 5 (fills a documented gap that unblocks Writers' Room).**
+- Add scene-level snapshots (`scene_revisions`) + named project drafts (`drafts`).
+- UI: version dropdown on scene, compare view (text diff), restore scene, restore full draft.
+- Wire authorship (`created_by`) so it plugs directly into collaboration later.
 
-Deliverables:
+**Pass C — Writers' Room Stage 6 core (build on Pass B).**
+- Scene locking + assignments (already partly scaffolded in `assignments.ts`, `live-collab/permissions.ts`).
+- Change attribution using the revisions table from Pass B.
+- Permissions matrix wired to editor actions (edit, comment, resolve, lock).
+- Defer live multiplayer editing until locking + revisions are stable.
 
-- `docs/lovable/ITS_IMPORTATION_AUDIT.md` — current capabilities, gaps, migration map from `import_sessions` → new corpus spine.
-- `src/lib/importation/contracts/` — TypeScript interfaces for `DocumentParser`, `Transcriber`, `Segmenter`, `EntityExtractor`, `IdentityResolver`, `EmbeddingProvider`, `ContinuityAnalyzer`. Each returns typed output; no provider leaks into callers.
-- Wire the existing screenplay parser as the first `DocumentParser` adapter behind the new contract, unchanged behavior.
+**Pass D — Script Brain Stage 4 dashboard.**
+- Project-level diagnostics page using existing `manuscriptAnalyzer`, Truth Engine, and coach recs.
+- Setup/payoff and pacing analyzers as pure TS modules with tests, surfaced as a `Revision Missions` inbox.
 
-Acceptance: audit doc merged; unit tests instantiate two mock adapters against the same contract.
+**Pass E — Arena stabilization to first public gate** (per `ARENA_SCORING_AND_PROGRESSION.md`).
+- Implement solo SceneSmith Studio Score path (TMH + Anti-Thesis + Truth) returning immediate results; keep public Arena disabled until release gates pass.
 
-## Phase 1 — Source preservation + segmentation spine
+Everything past Pass E (Voice Studio, Scene-to-Screen, Review Intelligence, World Graph/Atlas) is intentionally deferred: they are large, cross-cutting, and depend on the revisions + collaboration + diagnostics foundations above.
 
-New tables (all `public`, all with GRANT + RLS + policies scoped by `project_id`/`universe_id` membership):
+## 3. What I need from you before building
 
-- `story_universes` (project may belong to a universe; default one-per-project).
-- `source_corpora`, `source_documents`, `source_segments`, `source_versions`.
-- `import_extraction_runs` (checksum-keyed, cost + provider + policy_version metadata).
-
-Storage:
-
-- Private bucket `source-documents`; durable path `universe/{id}/document/{sha256}`; short-lived signed URLs only.
-
-Server functions (`src/lib/importation/*.functions.ts`):
-
-- `createSourceDocument` (rights attestation required), `listSources`, `getSourceSegments`, `retryStage`.
-- Segmenter runs after parse; produces typed `source_segments` (scene / block / chapter / paragraph / timestamp).
-
-UI: `/import/$projectId` Import Center shell with Upload → Rights → Parsed → Segmented status per document. **No** candidate creation yet.
-
-Acceptance test 19.1 passes: original file retained, checksum recorded, scenes+blocks segmented, no canonical character/world row created.
-
-## Phase 2 — Character candidates + identity resolution
-
-Tables: `import_candidates` (typed: `character | alias | relationship | ...`), `import_evidence`, `import_identity_decisions`.
-
-Adapters: `EntityExtractor` (LLM via Lovable AI Gateway) + deterministic speaker-label extractor for screenplays. Cached by `(document_checksum, extractor_version)`.
-
-Server functions: `runCharacterExtraction`, `listCandidates`, `groupIdentity`, `keepSeparate`, `promoteCharacterCandidate` (writes into existing Character candidate lifecycle, not canonical fields).
-
-UI: Review Inbox tab — Character candidates with evidence excerpts, alias groups, Keep Separate memory.
-
-Acceptance: 19.2 (Hans variants grouped, not auto-merged), 19.3 (two Johns stay separate).
-
-## Phase 3 — World, relationship, and story candidates
-
-Extend `import_candidates` with `location | faction | rule | event | artifact | thread | relationship | belief`. Feed into World Review Inbox (create `world_candidates` view over `import_candidates`).
-
-Belief vs canon: `evidence_type` includes `character_belief | rumor | objective_narration | production_note`. Location-state changes only promote when `evidence_type = objective_narration`.
-
-Acceptance: 19.4 passes (false claim proposes belief, not location change).
-
-## Phase 4 — Multi-source corpus + source authority + contradictions
-
-Tables: `source_authority_rules` (per corpus, per role), `import_contradictions` (linked candidates + classification: `continuity_error | retcon | alt_continuity | draft_diff | unreliable_narrator`).
-
-Reprocessing: incremental — only rerun stages whose `extractor_version` or `policy_version` changed; billing skipped for cached successes.
-
-Acceptance: 19.5 and 19.10 pass.
-
-## Phase 5 — ITS knowledge map
-
-Tables: `series_knowledge_nodes` (concept, entity refs, evidence refs, prerequisites, role relevance, importance), `writer_knowledge_state` (status enum, last_checked_at, confidence — no personality inference).
-
-Builder: `buildKnowledgeMap(corpusId)` runs after Phase 2–4 promotion; nodes cite evidence.
-
-Acceptance: importing a season yields a queryable knowledge graph whose nodes each cite ≥1 segment.
-
-## Phase 6 — PfHU continuation package + adaptive onboarding
-
-Server function: `getContinuationPackage({ universeId, role, assignmentId? })` returns cast / states / relationships / world state / threads / required knowledge, all with evidence links.
-
-UI: Continuation Dashboard route; role selector (writer / editor / actor / director); PfHU presentation adapts depth + format using existing `writerProfile`. Lightweight understanding checks are optional and never block the editor.
-
-Acceptance: 19.6 and 19.7 pass; two roles get different briefings from the same evidence.
-
-## Phase 7 — Editorial Review integration
-
-New surface in the editor: "Continuity check" (idle / on-demand) compares current draft against knowledge map + Character Bible + World Graph. Findings table `editorial_findings` with evidence, affected block, severity, suggested resolutions. Never mutates the draft.
-
-Acceptance: 19.8 passes (secret given to uninformed character → knowledge-state finding with citations).
-
-## Phase 8 — Cross-media + multilingual
-
-Transcriber adapter (audio → timestamped segments), translation-aware segment linking, adaptation-vs-translation classification.
-
-Acceptance: audiobook import produces timestamped evidence usable in continuity findings.
-
-## Permissions, pricing, safety (runs across every phase)
-
-- Phase 1 adds role gates (owner / editor / commenter / viewer / non-member) enforced by RLS + `has_role`.
-- Cost meter surfaces in Import Center before any paid stage (Creator / Pro / Studio tiers per §17).
-- No training assumption; provider disclosure shown before first paid run.
-- 19.9 permission matrix test added in Phase 1 and extended each phase.
-
-## Technical section (reference)
-
-```text
-src/lib/importation/
-  contracts/            # provider-neutral interfaces
-  adapters/             # screenplay parser, LLM extractor, OCR, transcription
-  server/               # createServerFn handlers
-  knowledgeMap/         # ITS builder + query
-  continuation/         # PfHU package assembler
-supabase/migrations/    # one migration per phase, additive only
-src/routes/_authenticated/import.$projectId.*   # Import Center + Review Inbox + Continuation Dashboard
-```
-
-Cutover: the existing `ImportWizard.tsx` becomes a thin front-end that calls Phase 1 `createSourceDocument` + Phase 2 promotion; no direct writes to project blocks after Phase 2 ships. Legacy `import_sessions` rows remain readable; new imports flow through the corpus spine.
-
-## Sequencing rules
-
-- One migration + one PR per phase; each phase ends with the acceptance test from §19 landed as an automated test where feasible, otherwise as a documented manual script.
-- Do not start Phase N+1 until Phase N's acceptance test is green.
-- No phase may write directly into `characters`, `world_*`, or `story_*` canon tables — only through review + promotion.
-
-## What I need from you before Phase 0
-
-1. Confirm the universe scope: one-universe-per-project by default, with optional multi-project universes later? (matches doc §6.1) Universes should be applied to our subscription plans. Free - 50% of features. Paid: 1, Pro 5, Studio: Unlimited
-2. Which tier gates paid extraction on day one — Pro, or gate everything behind Studio until Phase 4? We're starting out: Let's let the Pro get a universe. More than one: Studio subscription.
-3. Should the legacy screenplay `ImportWizard` keep its current one-shot UX during Phase 1, or move behind the new Import Center immediately?It should be moved behind the new Import Center from the get-go. Let's get this right so it works.
+Pick the next pass (A / B / C / D / E) — or confirm A → B → C in that order — and I’ll produce the concrete build plan for just that pass and stop at its acceptance test, per `LOVABLE_PASS_SEQUENCE.md`.
