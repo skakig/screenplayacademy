@@ -531,8 +531,8 @@ function drawWorldUsageEntitySlide(
         break;
       }
       const arrow = edge.direction === "outgoing" ? "→" : "←";
-      const other = edge.other?.name ?? "(unknown)";
-      const kind = edge.other?.kind ? ` · ${edge.other.kind}` : edge.otherKind ? ` · ${edge.otherKind}` : "";
+      const other = edge.otherName ?? "(unknown)";
+      const kind = edge.otherKind ? ` · ${edge.otherKind}` : "";
       const primary = `${arrow} ${edge.relationshipType.replace(/_/g, " ")}  ${other}${kind}`;
       const wrapped = doc.splitTextToSize(primary, colW);
       for (const w of wrapped) {
