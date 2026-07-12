@@ -107,14 +107,14 @@ import { getSceneWorldContext } from "@/lib/world/worldGraph.functions";
 
 // -------- Fixtures --------------------------------------------------------
 
-const PROJECT_A = "11111111-1111-1111-1111-111111111111";
-const PROJECT_B = "22222222-2222-2222-2222-222222222222";
-const SCENE_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
-const SCENE_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
-const E1 = "e1111111-1111-1111-1111-111111111111"; // linked to SCENE_A
-const E2 = "e2222222-2222-2222-2222-222222222222"; // linked to SCENE_A
-const E_OTHER = "e0000000-0000-0000-0000-000000000000"; // in same universe, edge target
-const E_FOREIGN = "efffffff-ffff-ffff-ffff-ffffffffffff"; // hidden by RLS
+const PROJECT_A = "11111111-1111-4111-8111-111111111111";
+const PROJECT_B = "22222222-2222-4222-8222-222222222222";
+const SCENE_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const SCENE_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const E1 = "e1111111-1111-4111-8111-111111111111"; // linked to SCENE_A
+const E2 = "e2222222-2222-4222-8222-222222222222"; // linked to SCENE_A
+const E_OTHER = "e0000000-0000-4000-8000-000000000000"; // in same universe, edge target
+const E_FOREIGN = "effffff0-ffff-4fff-8fff-ffffffffffff"; // hidden by RLS
 
 function seed() {
   Object.keys(store).forEach((k) => ((store as any)[k].length = 0));
