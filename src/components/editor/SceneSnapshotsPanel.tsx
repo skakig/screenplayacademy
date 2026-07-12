@@ -409,6 +409,13 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TakeDiffViewer
+        open={diffOpen}
+        onOpenChange={setDiffOpen}
+        left={diffPair?.left ?? null}
+        right={diffPair?.right ?? null}
+      />
     </div>
   );
 }
