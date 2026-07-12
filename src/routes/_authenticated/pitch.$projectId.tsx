@@ -206,6 +206,36 @@ function Pitch() {
           </div>
         </div>
 
+        {pitch && (
+          <Card className="p-3 mb-6 flex flex-wrap items-center gap-3">
+            <BookOpen className="h-4 w-4 text-primary" />
+            <div className="flex-1 min-w-[220px]">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">
+                  Include Character Bible in pitch deck
+                </span>
+                {!bibleUnlocked && (
+                  <Badge variant="outline" className="gap-1 text-xs">
+                    <Lock className="h-3 w-3" /> Pro
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {bibleUnlocked
+                  ? "Attaches the latest generated Character Bible as extra slides."
+                  : "Upgrade to Pro or higher to attach the Character Bible to pitch exports."}
+              </p>
+            </div>
+            <Switch
+              checked={bibleUnlocked && includeBible}
+              disabled={!bibleUnlocked}
+              onCheckedChange={(v) => setIncludeBible(v)}
+              aria-label="Include Character Bible in pitch deck"
+            />
+          </Card>
+        )}
+
+
         {!pitch ? (
           <Card className="p-12 text-center border-dashed">
             <Sparkles className="h-10 w-10 text-primary mx-auto mb-3" />
