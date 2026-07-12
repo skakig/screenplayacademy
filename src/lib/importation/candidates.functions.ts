@@ -437,29 +437,6 @@ export const promoteCharacterCandidate = createServerFn({ method: "POST" })
 
 // --- promote to world / story entities (Phase 3) ---
 
-type WorldPromoteTable =
-  | "world_locations"
-  | "world_factions"
-  | "world_events"
-  | "world_artifacts"
-  | "world_rules"
-  | "world_threads";
-
-async function promoteWorldRow(
-  supabase: Awaited<
-    ReturnType<typeof requireSupabaseAuth extends never ? never : never>
-  > extends never
-    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      any
-    : never,
-  _ignore?: never,
-): Promise<never> {
-  throw new Error("unreachable");
-}
-// (helper placeholder above kept out of the split boundary; the real work
-// lives in each server function so createServerFn's code-splitter can strip
-// module-scope helpers safely.)
-void promoteWorldRow;
 
 function pickString(v: unknown): string | null {
   return typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
