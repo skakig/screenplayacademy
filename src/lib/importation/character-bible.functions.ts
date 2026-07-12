@@ -276,6 +276,7 @@ export const generateCharacterBible = createServerFn({ method: "POST" })
 
       entries.push({
         character_id: charId,
+        source: "imported",
         name: (ch.name as string) ?? "Unknown",
         importance:
           (ch.importance as string | null) ??
