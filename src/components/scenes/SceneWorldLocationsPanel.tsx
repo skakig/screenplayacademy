@@ -63,7 +63,6 @@ interface Props {
 export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Props) {
   const qc = useQueryClient();
   const [choice, setChoice] = useState<string>("");
-  const [choice, setChoice] = useState<string>("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
