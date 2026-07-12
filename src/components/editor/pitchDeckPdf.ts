@@ -264,6 +264,104 @@ function drawBibleEntrySlide(doc: jsPDF, entry: PitchDeckBibleEntry) {
   doc.setTextColor(0);
 }
 
+function drawSceneSnapshotsDivider(doc: jsPDF, count: number) {
+  doc.setFillColor(20, 20, 28);
+  doc.rect(0, 0, PAGE.w, PAGE.h, "F");
+  doc.setFillColor(210, 170, 90);
+  doc.rect(0, PAGE.h - 8, PAGE.w, 8, "F");
+
+  doc.setTextColor(210, 170, 90);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.text("KEY SCENES", M, M + 8);
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(36);
+  doc.text("Selected Scene Snapshots", M, M + 70);
+
+  doc.setTextColor(180, 180, 180);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(
+    `${count} scene${count === 1 ? "" : "s"} · versioned from the writer's revision history`,
+    M,
+    PAGE.h - 40,
+  );
+  doc.setTextColor(0);
+}
+
+function drawSceneSnapshotSlide(doc: jsPDF, snap: PitchDeckSceneSnapshot) {
+  // Header band
+  doc.setFillColor(245, 243, 238);
+  doc.rect(0, 0, PAGE.w, 78, "F");
+  doc.setFillColor(210, 170, 90);
+  doc.rect(M, 62, 48, 4, "F");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.setTextColor(20, 20, 28);
+  const title = snap.sceneHeading || snap.sceneLabel;
+  doc.text(doc.splitTextToSize(title, CONTENT_W - 220)[0] ?? title, M, 40);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(120, 100, 60);
+  const meta = `${snap.snapshotLabel}  ·  ${format(new Date(snap.capturedAt), "MMM d, yyyy · HH:mm")}`;
+  doc.text(meta, PAGE.w - M, 40, { align: "right" });
+
+  let y = 78 + 24;
+  doc.setFont("courier", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(30, 30, 30);
+  const usableW = CONTENT_W;
+  const bottomLimit = PAGE.h - M - 20;
+  const lineH = 13;
+
+  const drawContHeader = () => {
+    doc.setFillColor(245, 243, 238);
+    doc.rect(0, 0, PAGE.w, 78, "F");
+    doc.setFillColor(210, 170, 90);
+    doc.rect(M, 62, 48, 4, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(20, 20, 28);
+    doc.text(`${title} (cont.)`, M, 40);
+    doc.setFont("courier", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(30, 30, 30);
+  };
+
+  for (const b of snap.blocks) {
+    const type = (b.block_type ?? "action").toLowerCase();
+    const content = (b.content ?? "").trim();
+    if (!content) continue;
+
+    let indent = 0;
+    let upper = false;
+    if (type === "character") { indent = 200; upper = true; }
+    else if (type === "dialogue") { indent = 120; }
+    else if (type === "parenthetical") { indent = 160; }
+    else if (type === "transition") { indent = usableW - 120; upper = true; }
+    else if (type === "scene_heading") { upper = true; doc.setFont("courier", "bold"); }
+
+    const text = upper ? content.toUpperCase() : content;
+    const lines = doc.splitTextToSize(text, usableW - indent);
+    for (const line of lines) {
+      if (y > bottomLimit) {
+        doc.addPage();
+        drawContHeader();
+        y = 78 + 24;
+      }
+      doc.text(line, M + indent, y);
+      y += lineH;
+    }
+    if (type === "scene_heading") doc.setFont("courier", "normal");
+    y += 4;
+  }
+  doc.setTextColor(0);
+}
+
 export function generatePitchDeckPdf(opts: PitchDeckOptions): jsPDF {
   const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
 
