@@ -37,6 +37,31 @@ export type PitchDeckSceneSnapshot = {
   blocks: PitchDeckSnapshotBlock[];
 };
 
+export type PitchDeckWorldEntityUsage = {
+  name: string;
+  entityKind: string;
+  summary?: string | null;
+  scenes: Array<{
+    sceneHeading: string | null;
+    title: string | null;
+    sequence: number | null;
+    usageKind: string;
+    source?: string | null;
+  }>;
+  edges: Array<{
+    direction: "outgoing" | "incoming";
+    relationshipType: string;
+    otherName: string | null;
+    otherKind: string | null;
+    notes: string | null;
+  }>;
+};
+
+export type PitchDeckWorldUsage = {
+  totals: { entities: number; scenes: number; edges: number };
+  entities: PitchDeckWorldEntityUsage[];
+};
+
 export type PitchDeckOptions = {
   projectTitle: string;
   projectType?: string | null;
@@ -47,6 +72,7 @@ export type PitchDeckOptions = {
   generatedAt?: string | null;
   characterBible?: PitchDeckCharacterBible | null;
   sceneSnapshots?: PitchDeckSceneSnapshot[] | null;
+  worldUsage?: PitchDeckWorldUsage | null;
 };
 
 // Landscape A4 in points
