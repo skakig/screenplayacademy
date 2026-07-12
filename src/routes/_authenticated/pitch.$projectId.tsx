@@ -14,11 +14,21 @@ import { generatePitchPackage } from "@/lib/ai.functions";
 import { format } from "date-fns";
 import { downloadPitchKitPdf } from "@/components/editor/pitchKitPdf";
 import { downloadPitchDeckPdf, type PitchDeckSection } from "@/components/editor/pitchDeckPdf";
-import { getPitchCharacterBible } from "@/lib/importation/pitch-bible.functions";
+import {
+  getPitchCharacterBible,
+  listPitchCharacterBibleVersions,
+} from "@/lib/importation/pitch-bible.functions";
 import { useSubscription } from "@/hooks/useSubscription";
 import { hasFeature } from "@/lib/entitlements";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { PageFeatureGate } from "@/components/PageFeatureGate";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
@@ -58,9 +68,19 @@ function Pitch() {
   const qc = useQueryClient();
   const callGen = useServerFn(generatePitchPackage);
   const fetchBible = useServerFn(getPitchCharacterBible);
+  const listBibleVersions = useServerFn(listPitchCharacterBibleVersions);
   const { tier } = useSubscription();
   const bibleUnlocked = hasFeature(tier, "pitch_character_bible");
   const [includeBible, setIncludeBible] = useState(true);
+  const [bibleVersionId, setBibleVersionId] = useState<string | "latest">(
+    "latest",
+  );
+
+  const { data: bibleVersions = [] } = useQuery({
+    queryKey: ["pitch-bible-versions", projectId],
+    queryFn: () => listBibleVersions({ data: { project_id: projectId } }),
+    enabled: bibleUnlocked,
+  });
 
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
@@ -105,7 +125,14 @@ function Pitch() {
       let characterBible = null;
       if (bibleUnlocked && includeBible) {
         try {
-          const b = await fetchBible({ data: { project_id: projectId } });
+          const b = await fetchBible({
+            data: {
+              project_id: projectId,
+              ...(bibleVersionId !== "latest"
+                ? { bible_id: bibleVersionId }
+                : {}),
+            },
+          });
           if (b && b.entries.length > 0) {
             characterBible = b;
           } else if (b === null) {
@@ -226,6 +253,32 @@ function Pitch() {
                   : "Upgrade to Pro or higher to attach the Character Bible to pitch exports."}
               </p>
             </div>
+            {bibleUnlocked && includeBible && bibleVersions.length > 0 && (
+              <Select
+                value={bibleVersionId}
+                onValueChange={(v) =>
+                  setBibleVersionId(v as string | "latest")
+                }
+              >
+                <SelectTrigger className="w-[240px]">
+                  <SelectValue placeholder="Version" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="latest">
+                    Latest (v{bibleVersions[0].version})
+                  </SelectItem>
+                  {bibleVersions.map((v, i) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      v{v.version}
+                      {i === 0 ? " · latest" : ""} ·{" "}
+                      {format(new Date(v.created_at), "MMM d, yyyy")} ·{" "}
+                      {v.entry_count} char
+                      {v.entry_count === 1 ? "" : "s"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Switch
               checked={bibleUnlocked && includeBible}
               disabled={!bibleUnlocked}

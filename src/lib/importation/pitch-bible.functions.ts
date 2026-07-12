@@ -36,37 +36,78 @@ export type PitchCharacterBible = {
   entries: PitchBibleEntry[];
 };
 
-export const getPitchCharacterBible = createServerFn({ method: "GET" })
+export type PitchBibleVersion = {
+  id: string;
+  version: number;
+  created_at: string;
+  entry_count: number;
+};
+
+async function resolveCallerTier(
+  supabase: import("@supabase/supabase-js").SupabaseClient,
+  userId: string,
+) {
+  const environment = serverStripeEnv();
+  const { data: subRow } = await supabase
+    .from("subscriptions")
+    .select("price_id, status, current_period_end")
+    .eq("user_id", userId)
+    .eq("environment", environment)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let tier: ReturnType<typeof tierFromPriceId> = "free";
+  if (subRow) {
+    const periodOk =
+      !subRow.current_period_end ||
+      new Date(subRow.current_period_end as string).getTime() > Date.now();
+    const isActive =
+      (["active", "trialing", "past_due"].includes(subRow.status as string) &&
+        periodOk) ||
+      (subRow.status === "canceled" && periodOk);
+    if (isActive) tier = tierFromPriceId(subRow.price_id as string | null);
+  }
+  return tier;
+}
+
+export const listPitchCharacterBibleVersions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
     z.object({ project_id: z.string().uuid() }).parse(input),
   )
+  .handler(async ({ data, context }): Promise<PitchBibleVersion[]> => {
+    const { supabase, userId } = context;
+    const tier = await resolveCallerTier(supabase, userId);
+    if (!hasFeature(tier, "pitch_character_bible")) return [];
+
+    const { data: rows, error } = await supabase
+      .from("character_bibles")
+      .select("id, version, created_at, entries")
+      .eq("project_id", data.project_id)
+      .order("version", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((r) => ({
+      id: r.id as string,
+      version: r.version as number,
+      created_at: r.created_at as string,
+      entry_count: Array.isArray(r.entries) ? (r.entries as unknown[]).length : 0,
+    }));
+  });
+
+export const getPitchCharacterBible = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        project_id: z.string().uuid(),
+        bible_id: z.string().uuid().optional(),
+      })
+      .parse(input),
+  )
   .handler(async ({ data, context }): Promise<PitchCharacterBible | null> => {
     const { supabase, userId } = context;
-
-    // Resolve caller tier from the most recent subscription row in the
-    // current Stripe environment. Mirrors createProjectGated.
-    const environment = serverStripeEnv();
-    const { data: subRow } = await supabase
-      .from("subscriptions")
-      .select("price_id, status, current_period_end")
-      .eq("user_id", userId)
-      .eq("environment", environment)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    let tier: ReturnType<typeof tierFromPriceId> = "free";
-    if (subRow) {
-      const periodOk =
-        !subRow.current_period_end ||
-        new Date(subRow.current_period_end as string).getTime() > Date.now();
-      const isActive =
-        (["active", "trialing", "past_due"].includes(subRow.status as string) &&
-          periodOk) ||
-        (subRow.status === "canceled" && periodOk);
-      if (isActive) tier = tierFromPriceId(subRow.price_id as string | null);
-    }
+    const tier = await resolveCallerTier(supabase, userId);
 
     if (!hasFeature(tier, "pitch_character_bible")) {
       throw new Error(
@@ -75,13 +116,18 @@ export const getPitchCharacterBible = createServerFn({ method: "GET" })
     }
 
     // RLS on character_bibles scopes to the project owner/member.
-    const { data: row, error } = await supabase
+    let query = supabase
       .from("character_bibles")
       .select("id, version, summary, entries, created_at")
-      .eq("project_id", data.project_id)
-      .order("version", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .eq("project_id", data.project_id);
+
+    if (data.bible_id) {
+      query = query.eq("id", data.bible_id);
+    } else {
+      query = query.order("version", { ascending: false });
+    }
+
+    const { data: row, error } = await query.limit(1).maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) return null;
 
