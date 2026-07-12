@@ -24,6 +24,19 @@ export type PitchDeckCharacterBible = {
   entries: PitchDeckBibleEntry[];
 };
 
+export type PitchDeckSnapshotBlock = {
+  block_type: string;
+  content: string;
+};
+
+export type PitchDeckSceneSnapshot = {
+  sceneLabel: string;
+  sceneHeading?: string | null;
+  snapshotLabel: string;
+  capturedAt: string;
+  blocks: PitchDeckSnapshotBlock[];
+};
+
 export type PitchDeckOptions = {
   projectTitle: string;
   projectType?: string | null;
@@ -33,6 +46,7 @@ export type PitchDeckOptions = {
   sections: PitchDeckSection[];
   generatedAt?: string | null;
   characterBible?: PitchDeckCharacterBible | null;
+  sceneSnapshots?: PitchDeckSceneSnapshot[] | null;
 };
 
 // Landscape A4 in points
