@@ -54,6 +54,8 @@ interface Props {
 export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Props) {
   const qc = useQueryClient();
   const [choice, setChoice] = useState<string>("");
+  const [pendingUnlink, setPendingUnlink] = useState<PendingUnlink | null>(null);
+
 
   const listUsage = useServerFn(listProjectWorldUsage);
   const listEntities = useServerFn(listWorldEntities);
