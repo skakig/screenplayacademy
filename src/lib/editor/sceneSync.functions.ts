@@ -65,7 +65,18 @@ export const syncManuscriptScenes = createServerFn({ method: "POST" })
       }
     }
 
-    return { created, updated };
+    let worldLink: SceneWorldLinkResult | null = null;
+    try {
+      worldLink = await linkSceneLocationsForProject(
+        context.supabase,
+        data.projectId,
+      );
+    } catch (err) {
+      // Auto-linking is best-effort — never fail the scene sync because of it.
+      console.error("[sceneSync] auto-link failed", err);
+    }
+
+    return { created, updated, worldLink };
   });
 
 function deriveTitle(heading: string): string {
