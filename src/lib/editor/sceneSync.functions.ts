@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import {
+  linkSceneLocationsForProject,
+  type SceneWorldLinkResult,
+} from "@/lib/editor/sceneWorldLink.functions";
 
 const SceneIn = z.object({
   heading: z.string().min(1).max(500),
