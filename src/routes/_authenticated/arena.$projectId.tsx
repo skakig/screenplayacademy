@@ -135,7 +135,7 @@ function ArenaOwnerPreviewPage() {
             </div>
           </Card>
         ) : (
-          <PresenceProvider projectId={projectId} userId={userId}>
+          <PresenceProvider projectId={projectId} role={role ?? null}>
             <ArenaPanel projectId={projectId} role={role ?? null} />
           </PresenceProvider>
         )}
