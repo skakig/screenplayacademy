@@ -3,7 +3,7 @@
 // DocumentParser + Segmenter contracts. Behavior is unchanged; this only
 // gives Phase 1+ code a stable interface to call.
 
-import { parseScreenplay, type Candidate } from "@/lib/import/parser";
+import { parseScreenplayText, type Candidate } from "@/lib/import/parser";
 import type {
   DocumentParser,
   ParsedDocument,
@@ -94,7 +94,7 @@ export const screenplayHeuristicSegmenter: Segmenter = {
   adapter: ADAPTER,
   version: VERSION,
   async segment({ documentId, parsed }): Promise<SourceSegment[]> {
-    const candidates = parseScreenplay(parsed.normalizedText);
-    return candidates.map((c) => candidateToSegment(documentId, c));
+    const candidates = parseScreenplayText(parsed.normalizedText);
+    return candidates.map((c: Candidate) => candidateToSegment(documentId, c));
   },
 };
