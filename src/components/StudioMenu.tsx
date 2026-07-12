@@ -42,6 +42,7 @@ import { MENU_MANIFEST } from "./studioMenuManifest";
 import { useProjectReadiness } from "@/lib/readiness/useProjectReadiness";
 import { resolveMenuGate } from "@/lib/readiness/menuGate";
 import { useCurrentProjectId } from "@/lib/readiness/useMenuGate";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 /**
  * Fire-and-forget menu telemetry. Emits studio_menu_item_clicked with the
