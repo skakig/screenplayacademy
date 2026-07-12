@@ -294,6 +294,12 @@ function BibleView({ bible }: { bible: BibleRow }) {
                     {e.importance}
                   </Badge>
                 )}
+                <Badge
+                  variant={e.source === "manual" ? "secondary" : "default"}
+                  className="text-xs"
+                >
+                  {e.source === "manual" ? "Manual" : "Imported"}
+                </Badge>
                 <span className="text-xs text-muted-foreground ml-auto">
                   {e.speaking_segments} speaking · {e.mention_segments} mentions
                 </span>
