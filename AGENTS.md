@@ -24,6 +24,8 @@ Scene parsing, production breakdown, shot planning, storyboards, image/video gen
 
 Arena, timed creative challenges, blind judging, peer or hybrid evaluation, AI Coach judging, writer-development profiles, Academy practice loops, Arena reputation, and ITS/PfHU skill development must follow `docs/SCENESMITH_ARENA_INTELLIGENCE_AND_WRITER_DEVELOPMENT.md`: stabilize the existing implementation before exposure, keep scoring blind and profile-neutral, personalize feedback only after scoring, require evidence for AI judgments, and keep public Arena disabled until every release gate passes.
 
+Arena scoring, round progression, cumulative skill evidence, TMH/Anti-Thesis behavioral fidelity, SceneSmith Studio Score, and the separation of Studio scoring from Fan Votes must follow `docs/SCENESMITH_ARENA_SCORING_AND_PROGRESSION.md`: Arena must work for one user with no human judges, return an immediate SceneSmith Studio Score, run evaluation through SceneSmith intelligence, and treat Fan Votes as a separate later social signal.
+
 Authorized source ingestion, corpus extraction, adaptive series onboarding, writer knowledge mapping, Character/World population proposals, source authority, and evidence-backed continuity or editorial review must follow `docs/ITS_PfHU_Importation.md`: preserve the source, attach evidence, let humans control identity and canon, use ITS to determine what must be understood, and use PfHU to determine how that understanding is presented.
 
 ## Prime Directive
@@ -72,6 +74,8 @@ For table reads, voice previews, live manuscript readings, audiobooks, audio dra
 For screenplay parsing into scenes and dialogue, production breakdown, shot planning, image/video provider adapters, consistent character/location references, lip sync, edit timelines, creator-video assembly, or film-generation workflows, `docs/SCENESMITH_SCENE_TO_SCREEN_PIPELINE.md` is the canonical doctrine.
 
 For Arena, creative competitions, solo practice, blind or hybrid judging, Arena routes and menu wiring, AI evaluation, writer skill observations, Academy repair loops, writer profile updates, awards, or Arena monetization, `docs/SCENESMITH_ARENA_INTELLIGENCE_AND_WRITER_DEVELOPMENT.md` is the canonical doctrine and release gate.
+
+For Arena scoring authority, SceneSmith Studio Score, TMH/Anti-Thesis fidelity, immediate round results, Round 2/3 progression, cumulative metrics, zero-user-base launch, and Fan Vote separation, `docs/SCENESMITH_ARENA_SCORING_AND_PROGRESSION.md` is the canonical scoring doctrine and supersedes conflicting human-judge assumptions.
 
 For ITS/PfHU Importation, authorized corpus ingestion, character or world auto-population proposals, identity resolution from prior works, source authority, adaptive series onboarding, writer knowledge maps, continuation packages, or imported-canon editorial review, `docs/ITS_PfHU_Importation.md` is the canonical product doctrine.
 
@@ -129,7 +133,9 @@ Audiobook & Table Read work must follow the phased sequence in `docs/SCENESMITH_
 
 Scene-to-Screen work must follow the phased sequence in `docs/SCENESMITH_SCENE_TO_SCREEN_PIPELINE.md`. Deterministic scene parsing, dialogue/action lineage, Production Graph breakdown, approved Character/World reference packages, cost estimates, shot approvals, and asset lineage must be proven before creator-video or film-generation claims are made.
 
-Arena work must follow the phased sequence in `docs/SCENESMITH_ARENA_INTELLIGENCE_AND_WRITER_DEVELOPMENT.md`. Keep Arena publicly disabled until current dependencies are stable, completed results and blind identity UX are fixed, first-class routing and menu wiring are ready, scoring is profile-neutral, profile updates are transparent, and cost, retry, RLS, and release gates pass. Stabilize existing Arena v1 before adding AI judges or ITS/PfHU profile updates.
+Arena work must follow the phased sequence in `docs/SCENESMITH_ARENA_INTELLIGENCE_AND_WRITER_DEVELOPMENT.md`. Keep Arena publicly disabled until current dependencies are stable, completed results and blind identity UX are fixed, first-class routing and menu wiring are ready, scoring is profile-neutral, profile updates are transparent, and cost, retry, RLS, and release gates pass. Stabilize existing Arena v1 before adding ITS/PfHU profile updates.
+
+Arena scoring must follow `docs/SCENESMITH_ARENA_SCORING_AND_PROGRESSION.md`. The first public scoring path is solo-capable SceneSmith Studio evaluation through TMH, Anti-Thesis, Character Truth, Relationship, Story, World, ITS, and PfHU systems. Do not require human judges or Fan Votes. Fan Votes remain a later, separate scoreboard.
 
 ITS/PfHU Importation must follow the phased sequence in `docs/ITS_PfHU_Importation.md`. Source preservation, segmentation, evidence, candidate review, identity decisions, source authority, and canon governance must be proven before adaptive onboarding, continuation guidance, or imported-canon editorial review is treated as authoritative.
 
