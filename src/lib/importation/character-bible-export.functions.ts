@@ -160,12 +160,15 @@ export const getCharacterBibleExport = createServerFn({ method: "GET" })
 
       // Refresh signed URLs for any storage-backed portraits so the PDF
       // renderer can actually fetch the bytes.
+      const { supabaseAdmin } = await import(
+        "@/integrations/supabase/client.server"
+      );
       portraits = await Promise.all(
         (chars ?? []).map(async (c) => {
           const path = (c as { portrait_path?: string | null }).portrait_path;
           if (path) {
-            const { data: signed } = await supabase.storage
-              .from("character-portraits")
+            const { data: signed } = await supabaseAdmin.storage
+              .from("storyboards")
               .createSignedUrl(path, 60 * 60);
             if (signed?.signedUrl) {
               return {
