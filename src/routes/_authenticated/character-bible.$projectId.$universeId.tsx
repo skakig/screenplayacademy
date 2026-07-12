@@ -144,6 +144,50 @@ function CharacterBiblePage() {
           )}
 
           <Button
+            variant="outline"
+            onClick={async () => {
+              if (!active) return;
+              setExporting(true);
+              try {
+                const payload = await exportFn({
+                  data: {
+                    project_id: projectId,
+                    universe_id: universeId,
+                    bible_id: active.id,
+                  },
+                });
+                await downloadCharacterBiblePdf(payload);
+                toast.success(`Downloaded v${payload.bible.version}`);
+              } catch (e: unknown) {
+                const msg = e instanceof Error ? e.message : "Export failed";
+                if (msg.startsWith("PLAN_LIMIT")) {
+                  toast.error("PDF export requires Pro or higher.");
+                } else {
+                  toast.error(msg);
+                }
+              } finally {
+                setExporting(false);
+              }
+            }}
+            disabled={!active || exporting}
+            className="gap-1.5"
+            title={
+              pdfUnlocked
+                ? "Download PDF"
+                : "PDF export requires Pro or higher"
+            }
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : pdfUnlocked ? (
+              <Download className="h-4 w-4" />
+            ) : (
+              <Lock className="h-4 w-4" />
+            )}
+            Download PDF
+          </Button>
+
+          <Button
             onClick={() => generate.mutate()}
             disabled={generate.isPending}
             className="gap-1.5"
