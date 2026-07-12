@@ -18,7 +18,12 @@ import {
 } from "lucide-react";
 import { useServerFn as useServerFn2 } from "@tanstack/react-start";
 import { listWorldEntities } from "@/lib/world/worldGraph.functions";
-import { autoLinkSceneLocations } from "@/lib/editor/sceneWorldLink.functions";
+import {
+  autoLinkSceneLocations,
+  listSceneAutolinkRuns,
+  type AutoLinkRunRow,
+} from "@/lib/editor/sceneWorldLink.functions";
+
 import { toast } from "sonner";
 import type { ProjectStoryIntelligence } from "@/lib/story-intelligence/projectStoryIntelligence.functions";
 
@@ -309,7 +314,7 @@ function OverviewPanel({
   const qc = useQueryClient();
   const runAutoLink = useServerFn(autoLinkSceneLocations);
   const relink = useMutation({
-    mutationFn: () => runAutoLink({ data: { projectId } }),
+    mutationFn: () => runAutoLink({ data: { projectId, trigger: "manual" } }),
     onSuccess: (r) => {
       toast.success(
         `Re-linked scenes — ${r.usageLinked} linked, ${r.usageUnlinked} pruned, ${r.locationsEnsured} locations ensured`,
@@ -318,10 +323,11 @@ function OverviewPanel({
       qc.invalidateQueries({ queryKey: ["scene-world-locations"] });
       qc.invalidateQueries({ queryKey: ["world-usage"] });
       qc.invalidateQueries({ queryKey: ["scene-heading-link-index", projectId] });
-
+      qc.invalidateQueries({ queryKey: ["scene-autolink-runs", projectId] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Re-link failed"),
   });
+
 
   return (
     <div className="space-y-4">
@@ -362,6 +368,9 @@ function OverviewPanel({
           </Button>
         </CardContent>
       </Card>
+
+      <AutolinkHistoryCard projectId={projectId} refreshKey={relink.isPending} />
+
 
       <Card>
 
@@ -582,3 +591,115 @@ function SimpleEntityList({ rows, emptyLabel }: { rows: any[]; emptyLabel: strin
     </Card>
   );
 }
+
+function triggerLabel(t: string): string {
+  switch (t) {
+    case "manual":
+      return "Manual";
+    case "manuscript_sync":
+      return "Manuscript sync";
+    case "scene_edit":
+      return "Scene edit";
+    default:
+      return t;
+  }
+}
+
+function formatRelative(iso: string): string {
+  const then = new Date(iso).getTime();
+  const now = Date.now();
+  const s = Math.max(0, Math.round((now - then) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.round(h / 24);
+  return `${d}d ago`;
+}
+
+function AutolinkHistoryCard({
+  projectId,
+  refreshKey,
+}: {
+  projectId: string;
+  refreshKey: boolean;
+}) {
+  const listRuns = useServerFn(listSceneAutolinkRuns);
+  const query = useQuery({
+    queryKey: ["scene-autolink-runs", projectId, refreshKey],
+    queryFn: () => listRuns({ data: { projectId, limit: 25 } }),
+    staleTime: 15_000,
+  });
+  const rows = (query.data ?? []) as AutoLinkRunRow[];
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          Auto-link history
+          <Badge variant="outline" className="text-[10px]">
+            last {rows.length}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-3 pt-0">
+        {query.isLoading ? (
+          <div className="text-xs text-muted-foreground flex items-center gap-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            No auto-link runs recorded yet. Edit a scene heading or press
+            "Re-link scene locations" to record the first run.
+          </p>
+        ) : (
+          <div className="divide-y divide-border/40">
+            {rows.map((r) => (
+              <div
+                key={r.id}
+                className="py-2 text-xs flex items-start justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-[10px]">
+                      {triggerLabel(r.trigger)}
+                    </Badge>
+                    <span
+                      className="text-muted-foreground"
+                      title={new Date(r.created_at).toLocaleString()}
+                    >
+                      {formatRelative(r.created_at)}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 text-muted-foreground truncate">
+                    {r.actor_label ?? (r.user_id ? r.user_id.slice(0, 8) : "system")}
+                  </div>
+                </div>
+                <div className="shrink-0 text-right tabular-nums text-muted-foreground">
+                  <div>
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                      +{r.usage_linked}
+                    </span>
+                    {" · "}
+                    <span className="text-rose-600 dark:text-rose-400">
+                      −{r.usage_unlinked}
+                    </span>
+                    {" · "}
+                    <span>{r.locations_ensured} loc</span>
+                  </div>
+                  <div className="text-[10px]">
+                    {r.scenes_considered} scenes
+                    {r.skipped > 0 ? ` · ${r.skipped} skipped` : ""}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+

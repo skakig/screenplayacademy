@@ -70,11 +70,20 @@ export const syncManuscriptScenes = createServerFn({ method: "POST" })
       worldLink = await linkSceneLocationsForProject(
         context.supabase,
         data.projectId,
+        {
+          trigger: "manuscript_sync",
+          userId: context.userId,
+          actorLabel:
+            (context.claims as any)?.email ??
+            (context.claims as any)?.sub ??
+            null,
+        },
       );
     } catch (err) {
       // Auto-linking is best-effort — never fail the scene sync because of it.
       console.error("[sceneSync] auto-link failed", err);
     }
+
 
     return { created, updated, worldLink };
   });

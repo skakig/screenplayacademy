@@ -25,6 +25,18 @@ export type SceneWorldLinkResult = {
   skipped: number;
 };
 
+export type AutoLinkTrigger =
+  | "manual"
+  | "manuscript_sync"
+  | "scene_edit"
+  | "unknown";
+
+export type AutoLinkAudit = {
+  trigger?: AutoLinkTrigger;
+  userId?: string | null;
+  actorLabel?: string | null;
+};
+
 /**
  * Shared helper — safe to call from any server-side handler that already has
  * an RLS-scoped supabase client. Callers control auth; this function performs
@@ -33,6 +45,7 @@ export type SceneWorldLinkResult = {
 export async function linkSceneLocationsForProject(
   supabase: any,
   projectId: string,
+  audit: AutoLinkAudit = {},
 ): Promise<SceneWorldLinkResult> {
   const { data: project, error: projErr } = await supabase
     .from("projects")
@@ -44,7 +57,7 @@ export async function linkSceneLocationsForProject(
 
   const universeId: string | null = project.default_universe_id ?? null;
   if (!universeId) {
-    return {
+    const empty: SceneWorldLinkResult = {
       universeId: null,
       locationsEnsured: 0,
       usageLinked: 0,
@@ -52,7 +65,10 @@ export async function linkSceneLocationsForProject(
       scenesConsidered: 0,
       skipped: 0,
     };
+    await recordAutoLinkRun(supabase, projectId, empty, audit);
+    return empty;
   }
+
 
   const { data: scenes, error: sceneErr } = await supabase
     .from("scenes")
@@ -226,7 +242,7 @@ export async function linkSceneLocationsForProject(
     }
   }
 
-  return {
+  const result: SceneWorldLinkResult = {
     universeId,
     locationsEnsured,
     usageLinked,
@@ -234,12 +250,90 @@ export async function linkSceneLocationsForProject(
     scenesConsidered: rows.length,
     skipped,
   };
+  await recordAutoLinkRun(supabase, projectId, result, audit);
+  return result;
 }
 
+async function recordAutoLinkRun(
+  supabase: any,
+  projectId: string,
+  result: SceneWorldLinkResult,
+  audit: AutoLinkAudit,
+): Promise<void> {
+  try {
+    await supabase.from("scene_autolink_runs").insert({
+      project_id: projectId,
+      universe_id: result.universeId,
+      user_id: audit.userId ?? null,
+      actor_label: audit.actorLabel ?? null,
+      trigger: audit.trigger ?? "unknown",
+      locations_ensured: result.locationsEnsured,
+      usage_linked: result.usageLinked,
+      usage_unlinked: result.usageUnlinked,
+      scenes_considered: result.scenesConsidered,
+      skipped: result.skipped,
+    });
+  } catch (err) {
+    console.error("[sceneWorldLink] failed to record run", err);
+  }
+}
 
 export const autoLinkSceneLocations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => Input.parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        projectId: z.string().uuid(),
+        trigger: z
+          .enum(["manual", "manuscript_sync", "scene_edit", "unknown"])
+          .optional(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }): Promise<SceneWorldLinkResult> => {
-    return linkSceneLocationsForProject(context.supabase, data.projectId);
+    return linkSceneLocationsForProject(context.supabase, data.projectId, {
+      trigger: data.trigger ?? "manual",
+      userId: context.userId,
+      actorLabel:
+        (context.claims as any)?.email ?? (context.claims as any)?.sub ?? null,
+    });
   });
+
+export type AutoLinkRunRow = {
+  id: string;
+  project_id: string;
+  universe_id: string | null;
+  user_id: string | null;
+  actor_label: string | null;
+  trigger: string;
+  locations_ensured: number;
+  usage_linked: number;
+  usage_unlinked: number;
+  scenes_considered: number;
+  skipped: number;
+  created_at: string;
+};
+
+export const listSceneAutolinkRuns = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        projectId: z.string().uuid(),
+        limit: z.number().int().min(1).max(100).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<AutoLinkRunRow[]> => {
+    const { data: rows, error } = await context.supabase
+      .from("scene_autolink_runs")
+      .select(
+        "id, project_id, universe_id, user_id, actor_label, trigger, locations_ensured, usage_linked, usage_unlinked, scenes_considered, skipped, created_at",
+      )
+      .eq("project_id", data.projectId)
+      .order("created_at", { ascending: false })
+      .limit(data.limit ?? 25);
+    if (error) throw error;
+    return (rows ?? []) as AutoLinkRunRow[];
+  });
+

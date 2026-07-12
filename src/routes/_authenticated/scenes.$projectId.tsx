@@ -53,7 +53,7 @@ function ScenesPage() {
   const autoLinkAfter = (hadHeading: boolean) => {
     if (!hadHeading) return;
     // Fire-and-forget; idempotent project-wide relink.
-    runAutoLink({ data: { projectId } })
+    runAutoLink({ data: { projectId, trigger: "scene_edit" } })
       .then((res: any) => {
         if (res?.usageUpserted || res?.usageUnlinked) {
           qc.invalidateQueries({ queryKey: ["scene-world-locations"] });
