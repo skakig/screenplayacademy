@@ -196,6 +196,7 @@ export function StudioMenu() {
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const { tier, loading: subLoading } = useSubscription();
   const stripeReady = isStripeConfigured();
+  const { isAdmin } = useIsAdmin();
   const { data: counts } = useProjectReadiness(projectId);
   const ctx = {
     tier,
