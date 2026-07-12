@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -14,11 +14,14 @@ import { getWorldHubSnapshot } from "@/lib/importation/world-hub.functions";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import {
   Loader2, Globe, FileText, Users, MapPin, Flag, Calendar,
-  Scroll, Package, GitBranch, Clock, AlertTriangle, Network,
+  Scroll, Package, GitBranch, Clock, AlertTriangle, Network, Link2,
 } from "lucide-react";
 import { useServerFn as useServerFn2 } from "@tanstack/react-start";
 import { listWorldEntities } from "@/lib/world/worldGraph.functions";
+import { autoLinkSceneLocations } from "@/lib/editor/sceneWorldLink.functions";
+import { toast } from "sonner";
 import type { ProjectStoryIntelligence } from "@/lib/story-intelligence/projectStoryIntelligence.functions";
+
 
 export const Route = createFileRoute("/_authenticated/world/$projectId")({
   head: () => ({
