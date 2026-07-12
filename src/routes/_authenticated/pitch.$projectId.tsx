@@ -57,6 +57,10 @@ function Pitch() {
   const { projectId } = Route.useParams();
   const qc = useQueryClient();
   const callGen = useServerFn(generatePitchPackage);
+  const fetchBible = useServerFn(getPitchCharacterBible);
+  const { tier } = useSubscription();
+  const bibleUnlocked = hasFeature(tier, "pitch_character_bible");
+  const [includeBible, setIncludeBible] = useState(true);
 
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
@@ -97,6 +101,26 @@ function Pitch() {
         toast.error("Pitch package is empty — regenerate it first.");
         return;
       }
+
+      let characterBible = null;
+      if (bibleUnlocked && includeBible) {
+        try {
+          const b = await fetchBible({ data: { project_id: projectId } });
+          if (b && b.entries.length > 0) {
+            characterBible = b;
+          } else if (b === null) {
+            toast.info("No Character Bible generated yet — export continues without it.");
+          }
+        } catch (e: any) {
+          const msg = String(e?.message ?? "");
+          if (msg.startsWith("PLAN_LIMIT")) {
+            toast.error("Character Bible export requires Pro or higher.");
+          } else {
+            toast.error(`Couldn't attach Character Bible: ${msg || "unknown error"}`);
+          }
+        }
+      }
+
       downloadPitchDeckPdf({
         projectTitle: project?.title ?? "Untitled Project",
         projectType: (project as any)?.project_type ?? null,
@@ -105,8 +129,13 @@ function Pitch() {
         logline: (pitch as any)?.logline ?? (project as any)?.logline ?? null,
         sections,
         generatedAt: (pitch as any)?.generated_at ?? null,
+        characterBible,
       });
-      toast.success("Pitch deck downloaded");
+      toast.success(
+        characterBible
+          ? `Pitch deck downloaded (Character Bible v${characterBible.version} attached)`
+          : "Pitch deck downloaded",
+      );
     } catch (e: any) {
       toast.error(e?.message ?? "Couldn't export pitch deck");
     } finally {
