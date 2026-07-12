@@ -361,6 +361,33 @@ export const generateCharacterBible = createServerFn({ method: "POST" })
     if (bErr || !bible)
       throw new Error(bErr?.message ?? "Failed to persist character bible");
 
+    // 8) Per-character bible entries table (server-side write bypasses the
+    //    client-write-deny policy via the service role client).
+    const { supabaseAdmin } = await import(
+      "@/integrations/supabase/client.server"
+    );
+    const entryRows = entries.map((e) => ({
+      bible_id: bible.id as string,
+      project_id: data.project_id,
+      universe_id: data.universe_id,
+      character_id: e.character_id,
+      source: e.source,
+      promoted_candidate_id: e.candidate_ids[0] ?? null,
+      evidence_count: e.top_evidence.length,
+      alias_count: e.aliases.length,
+      scene_appearance_count: e.speaking_segments + e.mention_segments,
+      snapshot: e as unknown as Record<string, unknown>,
+    }));
+    if (entryRows.length > 0) {
+      const { error: entriesErr } = await supabaseAdmin
+        .from("character_bible_entries")
+        .insert(entryRows as never);
+      if (entriesErr) {
+        console.error("character_bible_entries insert failed", entriesErr);
+      }
+    }
+
+
     return {
       bible_id: bible.id as string,
       version: bible.version as number,
