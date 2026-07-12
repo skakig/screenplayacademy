@@ -276,6 +276,36 @@ export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Pro
           Link
         </Button>
       </div>
+
+      <AlertDialog
+        open={pendingUnlink !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingUnlink(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unlink this world location?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingUnlink
+                ? `"${pendingUnlink.name}" will be removed from this scene. You can undo this for 10 seconds.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingUnlink) unlink.mutate(pendingUnlink);
+                setPendingUnlink(null);
+              }}
+            >
+              Unlink
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
+
 }
