@@ -22,6 +22,7 @@ import {
 import {
   listCharacterBibles,
   generateCharacterBible,
+  regenerateCharacterBibleFromScreenplay,
 } from "@/lib/importation/character-bible.functions";
 
 type BibleEntry = {
@@ -69,6 +70,7 @@ function CharacterBiblePage() {
   const qc = useQueryClient();
   const listFn = useServerFn(listCharacterBibles);
   const generateFn = useServerFn(generateCharacterBible);
+  const regenerateFn = useServerFn(regenerateCharacterBibleFromScreenplay);
 
   const queryKey = ["character-bibles", universeId, projectId] as const;
 
@@ -104,6 +106,35 @@ function CharacterBiblePage() {
     onError: (e: unknown) =>
       toast.error(e instanceof Error ? e.message : "Failed to generate"),
   });
+
+  const regenerate = useMutation({
+    mutationFn: () =>
+      regenerateFn({
+        data: { universe_id: universeId, project_id: projectId },
+      }),
+    onSuccess: (res) => {
+      if (res?.skipped) {
+        toast.info(
+          `Scanned ${res.documents_scanned ?? 0} document${
+            (res.documents_scanned ?? 0) === 1 ? "" : "s"
+          } — no approved characters to compile yet.`,
+        );
+        return;
+      }
+      const created = res?.promoted_created ?? 0;
+      const reused = res?.promoted_reused ?? 0;
+      toast.success(
+        `Regenerated v${res?.version ?? "?"} — ${created} new, ${reused} reused`,
+      );
+      setSelectedId(res?.bible_id ?? null);
+      qc.invalidateQueries({ queryKey });
+    },
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Failed to regenerate"),
+  });
+
+  const busy = generate.isPending || regenerate.isPending;
+
 
   return (
     <AppShell title="Character Bible">
