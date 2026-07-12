@@ -146,8 +146,9 @@ export const getSceneSnapshot = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Snapshot not found");
-    return row as SceneSnapshotRow & { snapshot: SceneSnapshotPayload };
+    return row as unknown as SceneSnapshotRow & { snapshot: SceneSnapshotPayload };
   });
+
 
 export const renameSceneSnapshot = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
