@@ -2690,6 +2690,71 @@ export type Database = {
           },
         ]
       }
+      project_world_usage: {
+        Row: {
+          created_at: string
+          entity_id: string
+          id: string
+          metadata: Json
+          project_id: string
+          scene_id: string | null
+          script_block_id: string | null
+          updated_at: string
+          usage_kind: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          id?: string
+          metadata?: Json
+          project_id: string
+          scene_id?: string | null
+          script_block_id?: string | null
+          updated_at?: string
+          usage_kind?: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          id?: string
+          metadata?: Json
+          project_id?: string
+          scene_id?: string | null
+          script_block_id?: string | null
+          updated_at?: string
+          usage_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_world_usage_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_world_usage_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_world_usage_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_world_usage_script_block_id_fkey"
+            columns: ["script_block_id"]
+            isOneToOne: false
+            referencedRelation: "script_blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           ai_help_level: string | null
@@ -4046,6 +4111,153 @@ export type Database = {
           },
           {
             foreignKeyName: "world_artifacts_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_entities: {
+        Row: {
+          candidate_id: string | null
+          created_at: string
+          entity_kind: string
+          id: string
+          metadata: Json
+          name: string
+          normalized_key: string
+          source: string
+          summary: string | null
+          universe_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id?: string | null
+          created_at?: string
+          entity_kind: string
+          id?: string
+          metadata?: Json
+          name: string
+          normalized_key: string
+          source?: string
+          summary?: string | null
+          universe_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string | null
+          created_at?: string
+          entity_kind?: string
+          id?: string
+          metadata?: Json
+          name?: string
+          normalized_key?: string
+          source?: string
+          summary?: string | null
+          universe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_entities_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "import_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_entities_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_entity_links: {
+        Row: {
+          created_at: string
+          entity_id: string
+          id: string
+          target_id: string
+          target_table: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          id?: string
+          target_id: string
+          target_table: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          id?: string
+          target_id?: string
+          target_table?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_entity_links_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_entity_relationships: {
+        Row: {
+          created_at: string
+          from_entity_id: string
+          id: string
+          metadata: Json
+          notes: string | null
+          relationship_type: string
+          to_entity_id: string
+          universe_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          from_entity_id: string
+          id?: string
+          metadata?: Json
+          notes?: string | null
+          relationship_type: string
+          to_entity_id: string
+          universe_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          from_entity_id?: string
+          id?: string
+          metadata?: Json
+          notes?: string | null
+          relationship_type?: string
+          to_entity_id?: string
+          universe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_entity_relationships_from_entity_id_fkey"
+            columns: ["from_entity_id"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_entity_relationships_to_entity_id_fkey"
+            columns: ["to_entity_id"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_entity_relationships_universe_id_fkey"
             columns: ["universe_id"]
             isOneToOne: false
             referencedRelation: "story_universes"
