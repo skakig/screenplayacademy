@@ -369,6 +369,9 @@ function OverviewPanel({
         </CardContent>
       </Card>
 
+      <AutolinkHistoryCard projectId={projectId} refreshKey={relink.isPending} />
+
+
       <Card>
 
         <CardHeader className="pb-2">
