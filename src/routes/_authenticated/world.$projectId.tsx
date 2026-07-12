@@ -314,7 +314,7 @@ function OverviewPanel({
   const qc = useQueryClient();
   const runAutoLink = useServerFn(autoLinkSceneLocations);
   const relink = useMutation({
-    mutationFn: () => runAutoLink({ data: { projectId } }),
+    mutationFn: () => runAutoLink({ data: { projectId, trigger: "manual" } }),
     onSuccess: (r) => {
       toast.success(
         `Re-linked scenes — ${r.usageLinked} linked, ${r.usageUnlinked} pruned, ${r.locationsEnsured} locations ensured`,
@@ -323,10 +323,11 @@ function OverviewPanel({
       qc.invalidateQueries({ queryKey: ["scene-world-locations"] });
       qc.invalidateQueries({ queryKey: ["world-usage"] });
       qc.invalidateQueries({ queryKey: ["scene-heading-link-index", projectId] });
-
+      qc.invalidateQueries({ queryKey: ["scene-autolink-runs", projectId] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Re-link failed"),
   });
+
 
   return (
     <div className="space-y-4">
