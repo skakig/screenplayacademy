@@ -14,11 +14,21 @@ import { generatePitchPackage } from "@/lib/ai.functions";
 import { format } from "date-fns";
 import { downloadPitchKitPdf } from "@/components/editor/pitchKitPdf";
 import { downloadPitchDeckPdf, type PitchDeckSection } from "@/components/editor/pitchDeckPdf";
-import { getPitchCharacterBible } from "@/lib/importation/pitch-bible.functions";
+import {
+  getPitchCharacterBible,
+  listPitchCharacterBibleVersions,
+} from "@/lib/importation/pitch-bible.functions";
 import { useSubscription } from "@/hooks/useSubscription";
 import { hasFeature } from "@/lib/entitlements";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { PageFeatureGate } from "@/components/PageFeatureGate";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
