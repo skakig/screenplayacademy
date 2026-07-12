@@ -3,8 +3,9 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { format } from "date-fns";
-import { Loader2, Sparkles, BookOpen } from "lucide-react";
+import { Loader2, Sparkles, BookOpen, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { CharacterBibleEditor } from "@/components/importation/CharacterBibleEditor";
 
 import { AppShell } from "@/components/AppShell";
 import { ProjectNav } from "@/components/ProjectNav";
@@ -177,13 +178,33 @@ function CharacterBiblePage() {
           </Card>
         )}
 
-        {active && <BibleView bible={active} />}
+        {active && (
+          <BibleView
+            bible={active}
+            projectId={projectId}
+            universeId={universeId}
+            onEdited={() => qc.invalidateQueries({ queryKey })}
+          />
+        )}
       </div>
     </AppShell>
   );
 }
 
-function BibleView({ bible }: { bible: BibleRow }) {
+function BibleView({
+  bible,
+  projectId,
+  universeId,
+  onEdited,
+}: {
+  bible: BibleRow;
+  projectId: string;
+  universeId: string;
+  onEdited: () => void;
+}) {
+  const [editing, setEditing] = useState<{ id: string; name: string } | null>(
+    null,
+  );
   const entries = bible.entries ?? [];
   return (
     <div className="space-y-4">
@@ -226,6 +247,16 @@ function BibleView({ bible }: { bible: BibleRow }) {
                 <span className="text-xs text-muted-foreground ml-auto">
                   {e.speaking_segments} speaking · {e.mention_segments} mentions
                 </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1.5 h-7"
+                  onClick={() =>
+                    setEditing({ id: e.character_id, name: e.name })
+                  }
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Edit
+                </Button>
               </div>
 
               {e.aliases.length > 0 && (
@@ -267,6 +298,19 @@ function BibleView({ bible }: { bible: BibleRow }) {
           ))}
         </div>
       )}
+
+      {editing && (
+        <CharacterBibleEditor
+          open={!!editing}
+          onOpenChange={(v) => !v && setEditing(null)}
+          projectId={projectId}
+          universeId={universeId}
+          characterId={editing.id}
+          characterName={editing.name}
+          onSaved={onEdited}
+        />
+      )}
     </div>
   );
 }
+
