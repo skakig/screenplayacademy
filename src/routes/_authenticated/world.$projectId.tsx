@@ -151,6 +151,7 @@ function WorldHubTabs({ projectId, universeId }: { projectId: string; universeId
     { key: "artifacts", label: `Artifacts · ${intelligence.world.artifacts.count}`, icon: Package },
     { key: "threads", label: `Threads · ${intelligence.world.threads.count}`, icon: GitBranch },
     { key: "timeline", label: `Timeline · ${intelligence.world.timeline.count}`, icon: Clock },
+    { key: "relationships", label: "Relationships", icon: Network },
   ];
 
   return (
