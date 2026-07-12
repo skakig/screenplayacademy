@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -14,11 +14,14 @@ import { getWorldHubSnapshot } from "@/lib/importation/world-hub.functions";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import {
   Loader2, Globe, FileText, Users, MapPin, Flag, Calendar,
-  Scroll, Package, GitBranch, Clock, AlertTriangle, Network,
+  Scroll, Package, GitBranch, Clock, AlertTriangle, Network, Link2,
 } from "lucide-react";
 import { useServerFn as useServerFn2 } from "@tanstack/react-start";
 import { listWorldEntities } from "@/lib/world/worldGraph.functions";
+import { autoLinkSceneLocations } from "@/lib/editor/sceneWorldLink.functions";
+import { toast } from "sonner";
 import type { ProjectStoryIntelligence } from "@/lib/story-intelligence/projectStoryIntelligence.functions";
+
 
 export const Route = createFileRoute("/_authenticated/world/$projectId")({
   head: () => ({
@@ -303,8 +306,24 @@ function OverviewPanel({
     d.possibleCharacterDuplicates.length > 0 ||
     d.possibleLocationDuplicates.length > 0;
 
+  const qc = useQueryClient();
+  const runAutoLink = useServerFn(autoLinkSceneLocations);
+  const relink = useMutation({
+    mutationFn: () => runAutoLink({ data: { projectId } }),
+    onSuccess: (r) => {
+      toast.success(
+        `Re-linked scenes — ${r.usageLinked} linked, ${r.usageUnlinked} pruned, ${r.locationsEnsured} locations ensured`,
+      );
+      qc.invalidateQueries({ queryKey: ["world-hub-snapshot", projectId] });
+      qc.invalidateQueries({ queryKey: ["scene-world-locations"] });
+      qc.invalidateQueries({ queryKey: ["world-usage"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Re-link failed"),
+  });
+
   return (
     <div className="space-y-4">
+
       <Card>
         <CardContent className="p-4 grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
           <Stat label="Characters" value={projectCharacters} />
@@ -322,6 +341,28 @@ function OverviewPanel({
       </Card>
 
       <Card>
+        <CardContent className="p-3 flex items-center justify-between gap-3">
+          <div className="text-xs text-muted-foreground">
+            Re-run scene heading auto-linking against world locations. Idempotent — preserves manual edits.
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => relink.mutate()}
+            disabled={relink.isPending}
+          >
+            {relink.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+            ) : (
+              <Link2 className="h-3.5 w-3.5 mr-1.5" />
+            )}
+            Re-link scene locations
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
