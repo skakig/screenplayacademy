@@ -169,11 +169,38 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
   });
 
   const deleteMut = useMutation({
-    mutationFn: (id: string) => deleteFn({ data: { snapshot_id: id } }),
-    onSuccess: () => {
+    mutationFn: async (row: SceneSnapshotRow) => {
+      // Fetch the full payload first so we can offer Undo.
+      const full = await getSnapshotFn({ data: { snapshot_id: row.id } });
+      await deleteFn({ data: { snapshot_id: row.id } });
+      return full;
+    },
+    onSuccess: (full) => {
       setPendingDelete(null);
       invalidate();
-      toast.success("Snapshot deleted");
+      toast.success(`Deleted "${full.label ?? "snapshot"}"`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            try {
+              await recreateFn({
+                data: {
+                  project_id: full.project_id,
+                  scene_id: full.scene_id,
+                  label: full.label,
+                  summary: full.summary,
+                  snapshot: full.snapshot,
+                },
+              });
+              invalidate();
+              toast.success("Snapshot restored");
+            } catch (e: any) {
+              toast.error(e?.message ?? "Undo failed");
+            }
+          },
+        },
+        duration: 10000,
+      });
     },
     onError: (e: any) => toast.error(e?.message ?? "Delete failed"),
   });
@@ -181,11 +208,34 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
   const restoreMut = useMutation({
     mutationFn: (id: string) =>
       restoreFn({ data: { snapshot_id: id, capture_current: true } }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       setPendingRestore(null);
       invalidate();
       qc.invalidateQueries({ queryKey: ["blocks", projectId] });
-      toast.success("Scene restored — a pre-restore snapshot was auto-saved.");
+      const backupId = result?.backup_snapshot_id ?? null;
+      toast.success("Scene restored", {
+        description: backupId
+          ? "A pre-restore snapshot was auto-saved."
+          : undefined,
+        action: backupId
+          ? {
+              label: "Undo",
+              onClick: async () => {
+                try {
+                  await restoreFn({
+                    data: { snapshot_id: backupId, capture_current: false },
+                  });
+                  invalidate();
+                  qc.invalidateQueries({ queryKey: ["blocks", projectId] });
+                  toast.success("Reverted to previous scene contents");
+                } catch (e: any) {
+                  toast.error(e?.message ?? "Undo failed");
+                }
+              },
+            }
+          : undefined,
+        duration: 10000,
+      });
     },
     onError: (e: any) => toast.error(e?.message ?? "Restore failed"),
   });
