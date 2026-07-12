@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, LayoutGrid, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { SceneCleanupPanel } from "@/components/scenes/SceneCleanupPanel";
+import { SceneWorldLocationsPanel } from "@/components/scenes/SceneWorldLocationsPanel";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/scenes/$projectId")({
@@ -99,6 +100,15 @@ function ScenesPage() {
                       <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
+                  {editing.id && (
+                    <div className="pt-2 border-t">
+                      <SceneWorldLocationsPanel
+                        projectId={projectId}
+                        sceneId={editing.id}
+                        universeId={project?.default_universe_id ?? null}
+                      />
+                    </div>
+                  )}
                   <Button className="w-full" disabled={save.isPending} onClick={() => save.mutate(editing)}>{save.isPending ? "Saving..." : "Save"}</Button>
                 </div>
               )}
