@@ -285,6 +285,15 @@ export function generatePitchDeckPdf(opts: PitchDeckOptions): jsPDF {
     }
   }
 
+  if (opts.sceneSnapshots && opts.sceneSnapshots.length > 0) {
+    doc.addPage();
+    drawSceneSnapshotsDivider(doc, opts.sceneSnapshots.length);
+    for (const snap of opts.sceneSnapshots) {
+      doc.addPage();
+      drawSceneSnapshotSlide(doc, snap);
+    }
+  }
+
   // Footers on every page
   const total = doc.getNumberOfPages();
   for (let p = 1; p <= total; p++) {
