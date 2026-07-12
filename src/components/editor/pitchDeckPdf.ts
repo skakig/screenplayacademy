@@ -388,6 +388,174 @@ function drawSceneSnapshotSlide(doc: jsPDF, snap: PitchDeckSceneSnapshot) {
   doc.setTextColor(0);
 }
 
+function drawWorldUsageDivider(doc: jsPDF, usage: PitchDeckWorldUsage) {
+  doc.setFillColor(20, 20, 28);
+  doc.rect(0, 0, PAGE.w, PAGE.h, "F");
+  doc.setFillColor(210, 170, 90);
+  doc.rect(0, PAGE.h - 8, PAGE.w, 8, "F");
+
+  doc.setTextColor(210, 170, 90);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.text("WORLD USAGE", M, M + 8);
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(36);
+  doc.text("Where the world shows up", M, M + 70);
+
+  doc.setTextColor(180, 180, 180);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  const t = usage.totals;
+  doc.text(
+    `${t.entities} entit${t.entities === 1 ? "y" : "ies"} · ${t.scenes} scene${t.scenes === 1 ? "" : "s"} · ${t.edges} relationship${t.edges === 1 ? "" : "s"}`,
+    M,
+    PAGE.h - 40,
+  );
+  doc.setTextColor(0);
+}
+
+function drawWorldUsageEntitySlide(
+  doc: jsPDF,
+  entry: PitchDeckWorldEntityUsage,
+) {
+  // Header band
+  doc.setFillColor(245, 243, 238);
+  doc.rect(0, 0, PAGE.w, 78, "F");
+  doc.setFillColor(210, 170, 90);
+  doc.rect(M, 62, 48, 4, "F");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  doc.setTextColor(20, 20, 28);
+  doc.text(
+    doc.splitTextToSize(entry.name, CONTENT_W - 220)[0] ?? entry.name,
+    M,
+    40,
+  );
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(120, 100, 60);
+  doc.text(entry.entityKind.toUpperCase(), PAGE.w - M, 40, { align: "right" });
+
+  let y = 78 + 24;
+  const bottomLimit = PAGE.h - M - 20;
+  const colGap = 24;
+  const colW = (CONTENT_W - colGap) / 2;
+
+  const ensure = (needed: number, contHeader: string) => {
+    if (y + needed > bottomLimit) {
+      doc.addPage();
+      doc.setFillColor(245, 243, 238);
+      doc.rect(0, 0, PAGE.w, 78, "F");
+      doc.setFillColor(210, 170, 90);
+      doc.rect(M, 62, 48, 4, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(20, 20, 28);
+      doc.text(`${entry.name} · ${contHeader} (cont.)`, M, 40);
+      y = 78 + 24;
+    }
+  };
+
+  if (entry.summary && entry.summary.trim()) {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(11);
+    doc.setTextColor(60, 60, 60);
+    const lines = doc.splitTextToSize(entry.summary.trim(), CONTENT_W);
+    for (const line of lines.slice(0, 4)) {
+      ensure(14, "Overview");
+      doc.text(line, M, y);
+      y += 14;
+    }
+    y += 8;
+  }
+
+  // Two-column layout: Scenes (left), Relationships (right).
+  const columnTop = y;
+  const leftX = M;
+  const rightX = M + colW + colGap;
+
+  // LEFT — Scenes
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(20, 20, 28);
+  doc.text(`SCENES (${entry.scenes.length})`, leftX, columnTop);
+  let ly = columnTop + 16;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(40, 40, 40);
+  if (entry.scenes.length === 0) {
+    doc.setTextColor(140);
+    doc.text("Not referenced by any scene yet.", leftX, ly);
+    doc.setTextColor(40, 40, 40);
+  } else {
+    for (const s of entry.scenes) {
+      if (ly > bottomLimit - 30) {
+        doc.text("…", leftX, ly);
+        break;
+      }
+      const label = s.sceneHeading || s.title || "Untitled scene";
+      const seq = s.sequence != null ? `#${s.sequence} · ` : "";
+      const kind = `[${s.usageKind}]`;
+      const line = `${seq}${label}  ${kind}`;
+      const wrapped = doc.splitTextToSize(line, colW);
+      for (const w of wrapped) {
+        if (ly > bottomLimit - 20) break;
+        doc.text(w, leftX, ly);
+        ly += 13;
+      }
+      ly += 2;
+    }
+  }
+
+  // RIGHT — Relationships
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(20, 20, 28);
+  doc.text(`RELATIONSHIPS (${entry.edges.length})`, rightX, columnTop);
+  let ry = columnTop + 16;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(40, 40, 40);
+  if (entry.edges.length === 0) {
+    doc.setTextColor(140);
+    doc.text("No relationship edges recorded.", rightX, ry);
+    doc.setTextColor(40, 40, 40);
+  } else {
+    for (const edge of entry.edges) {
+      if (ry > bottomLimit - 30) {
+        doc.text("…", rightX, ry);
+        break;
+      }
+      const arrow = edge.direction === "outgoing" ? "→" : "←";
+      const other = edge.other?.name ?? "(unknown)";
+      const kind = edge.other?.kind ? ` · ${edge.other.kind}` : edge.otherKind ? ` · ${edge.otherKind}` : "";
+      const primary = `${arrow} ${edge.relationshipType.replace(/_/g, " ")}  ${other}${kind}`;
+      const wrapped = doc.splitTextToSize(primary, colW);
+      for (const w of wrapped) {
+        if (ry > bottomLimit - 20) break;
+        doc.text(w, rightX, ry);
+        ry += 13;
+      }
+      if (edge.notes) {
+        doc.setTextColor(110);
+        const noteLines = doc.splitTextToSize(`"${edge.notes}"`, colW - 12);
+        for (const nl of noteLines.slice(0, 2)) {
+          if (ry > bottomLimit - 20) break;
+          doc.text(nl, rightX + 12, ry);
+          ry += 12;
+        }
+        doc.setTextColor(40, 40, 40);
+      }
+      ry += 2;
+    }
+  }
+  doc.setTextColor(0);
+}
+
 export function generatePitchDeckPdf(opts: PitchDeckOptions): jsPDF {
   const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
 
