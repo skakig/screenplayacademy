@@ -21,6 +21,8 @@ import {
   type WorldEntityLink,
   type WorldEntityRelationship,
   type ProjectWorldUsage,
+  type SceneWorldContext,
+  type SceneWorldEntityContext,
 } from "./worldGraph";
 
 const kindEnum = z.enum(WORLD_ENTITY_KINDS);
