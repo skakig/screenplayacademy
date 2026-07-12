@@ -14,6 +14,7 @@ import {
   listWorldEntities,
 } from "@/lib/world/worldGraph.functions";
 import { autoLinkSceneLocations } from "@/lib/editor/sceneWorldLink.functions";
+import { sceneWorldContextQueryKey } from "@/hooks/useSceneWorldContext";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
