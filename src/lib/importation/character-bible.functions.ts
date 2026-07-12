@@ -156,12 +156,12 @@ export const generateCharacterBible = createServerFn({ method: "POST" })
     // 4) Aliases per character.
     const { data: aliasRows } = await supabase
       .from("character_aliases")
-      .select("character_id, alias")
+      .select("character_id, alias_text")
       .in("character_id", characterIds);
     const aliasByChar = new Map<string, string[]>();
     for (const a of aliasRows ?? []) {
       const arr = aliasByChar.get(a.character_id as string) ?? [];
-      arr.push(a.alias as string);
+      arr.push(a.alias_text as string);
       aliasByChar.set(a.character_id as string, arr);
     }
 
