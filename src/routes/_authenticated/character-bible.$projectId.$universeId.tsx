@@ -73,6 +73,10 @@ function CharacterBiblePage() {
   const qc = useQueryClient();
   const listFn = useServerFn(listCharacterBibles);
   const generateFn = useServerFn(generateCharacterBible);
+  const exportFn = useServerFn(getCharacterBibleExport);
+  const { tier } = useSubscription();
+  const pdfUnlocked = hasFeature(tier, "character_bible_pdf");
+  const [exporting, setExporting] = useState(false);
 
   const queryKey = ["character-bibles", universeId, projectId] as const;
 
