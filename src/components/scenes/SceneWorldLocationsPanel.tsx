@@ -118,13 +118,39 @@ export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Pro
   });
 
   const unlink = useMutation({
-    mutationFn: async (id: string) => unlinkUsage({ data: { id } }),
-    onSuccess: () => {
+    mutationFn: async (target: PendingUnlink) =>
+      unlinkUsage({ data: { id: target.id } }).then(() => target),
+    onSuccess: (target) => {
       qc.invalidateQueries({ queryKey: ["scene-world-usage", projectId, sceneId] });
-      toast.success("Unlinked");
+      toast.success(`Unlinked ${target.name}`, {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            linkUsage({
+              data: {
+                projectId,
+                entityId: target.entityId,
+                sceneId,
+                usageKind: target.usageKind as any,
+              },
+            })
+              .then(() => {
+                qc.invalidateQueries({
+                  queryKey: ["scene-world-usage", projectId, sceneId],
+                });
+                toast.success(`Restored ${target.name}`);
+              })
+              .catch((e: any) =>
+                toast.error(e?.message ?? "Failed to restore link"),
+              );
+          },
+        },
+        duration: 10000,
+      });
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to unlink"),
   });
+
 
   const auto = useMutation({
     mutationFn: async () => autoLink({ data: { projectId } }),
