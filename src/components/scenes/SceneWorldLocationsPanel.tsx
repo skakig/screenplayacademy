@@ -257,37 +257,109 @@ export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Pro
         </ul>
       )}
 
-      <div className="flex items-center gap-2 pt-1">
-        <Select value={choice} onValueChange={setChoice}>
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue
-              placeholder={
-                entitiesQ.isLoading
-                  ? "Loading locations…"
-                  : linkable.length === 0
-                    ? "All locations already linked"
-                    : "Link a location…"
-              }
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {linkable.map((e) => (
-              <SelectItem key={e.id} value={e.id}>
-                {e.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          type="button"
-          size="sm"
-          className="h-8"
-          disabled={!choice || link.isPending}
-          onClick={() => choice && link.mutate(choice)}
-        >
-          Link
-        </Button>
+      <div className="space-y-1.5 pt-1">
+        <div className="flex items-center gap-2">
+          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                role="combobox"
+                aria-expanded={pickerOpen}
+                className="h-8 flex-1 justify-between text-xs font-normal"
+                disabled={entitiesQ.isLoading || linkable.length === 0}
+              >
+                <span className="truncate">
+                  {choice
+                    ? (linkable.find((e) => e.id === choice)?.name ?? "Link a location…")
+                    : entitiesQ.isLoading
+                      ? "Loading locations…"
+                      : linkable.length === 0
+                        ? "All locations already linked"
+                        : `Link a location… (${linkable.length})`}
+                </span>
+                <ChevronsUpDown className="h-3 w-3 opacity-50 shrink-0 ml-1" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-[--radix-popover-trigger-width]" align="start">
+              <Command
+                filter={(value, s) =>
+                  value.toLowerCase().includes(s.toLowerCase()) ? 1 : 0
+                }
+              >
+                <CommandInput
+                  placeholder="Search locations…"
+                  value={search}
+                  onValueChange={setSearch}
+                  className="h-8 text-xs"
+                />
+                <div className="flex items-center gap-1 border-b px-2 py-1.5">
+                  {(["all", "canon", "user", "ai"] as SourceFilter[]).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSourceFilter(s)}
+                      className={cn(
+                        "text-[10px] px-1.5 py-0.5 rounded capitalize",
+                        sourceFilter === s
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-muted",
+                      )}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                <CommandList>
+                  <CommandEmpty>No locations found.</CommandEmpty>
+                  <CommandGroup>
+                    {linkable
+                      .filter((e) =>
+                        sourceFilter === "all"
+                          ? true
+                          : (e as any).source === sourceFilter,
+                      )
+                      .map((e) => (
+                        <CommandItem
+                          key={e.id}
+                          value={`${e.name} ${(e as any).source ?? ""}`}
+                          onSelect={() => {
+                            setChoice(e.id);
+                            setPickerOpen(false);
+                          }}
+                          className="text-xs"
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-3 w-3",
+                              choice === e.id ? "opacity-100" : "opacity-0",
+                            )}
+                          />
+                          <span className="truncate flex-1">{e.name}</span>
+                          {(e as any).source && (
+                            <Badge variant="outline" className="text-[9px] ml-1 capitalize">
+                              {(e as any).source}
+                            </Badge>
+                          )}
+                        </CommandItem>
+                      ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          <Button
+            type="button"
+            size="sm"
+            className="h-8"
+            disabled={!choice || link.isPending}
+            onClick={() => choice && link.mutate(choice)}
+          >
+            Link
+          </Button>
+        </div>
       </div>
+
 
       <AlertDialog
         open={pendingUnlink !== null}
