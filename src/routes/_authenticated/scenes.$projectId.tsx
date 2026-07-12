@@ -18,6 +18,8 @@ import { toast } from "sonner";
 import { SceneCleanupPanel } from "@/components/scenes/SceneCleanupPanel";
 import { SceneWorldLocationsPanel } from "@/components/scenes/SceneWorldLocationsPanel";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
+import { useServerFn } from "@tanstack/react-start";
+import { autoLinkSceneLocations } from "@/lib/editor/sceneWorldLink.functions";
 
 export const Route = createFileRoute("/_authenticated/scenes/$projectId")({
   head: () => ({ meta: [{ title: "Scene Board — SceneSmith Studio" }] }),
