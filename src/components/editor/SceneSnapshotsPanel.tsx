@@ -357,7 +357,8 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
                   </div>
                 )}
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </ScrollArea>
