@@ -205,7 +205,12 @@ export const updateEvidence = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
+    const patch: {
+      excerpt?: string;
+      evidence_type?: string;
+      direct_or_inferred?: string;
+      confidence?: number;
+    } = {};
     if (data.excerpt !== undefined) patch.excerpt = data.excerpt.trim();
     if (data.evidence_type !== undefined) patch.evidence_type = data.evidence_type;
     if (data.direct_or_inferred !== undefined)
