@@ -582,6 +582,60 @@ export type Database = {
         }
         Relationships: []
       }
+      character_bibles: {
+        Row: {
+          created_at: string
+          entries: Json
+          generated_by: string
+          id: string
+          project_id: string
+          source_document_ids: string[]
+          summary: string | null
+          universe_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          entries?: Json
+          generated_by: string
+          id?: string
+          project_id: string
+          source_document_ids?: string[]
+          summary?: string | null
+          universe_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          entries?: Json
+          generated_by?: string
+          id?: string
+          project_id?: string
+          source_document_ids?: string[]
+          summary?: string | null
+          universe_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_bibles_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_bibles_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_candidates: {
         Row: {
           candidate_type: string
