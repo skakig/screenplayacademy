@@ -6,11 +6,15 @@
  * Read-only — editing lives in `SceneWorldLocationsPanel` and the world
  * entity editor routes.
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getSceneWorldContext } from "@/lib/world/worldGraph.functions";
+import { autoLinkSceneLocations } from "@/lib/editor/sceneWorldLink.functions";
+import { sceneWorldContextQueryKey } from "@/hooks/useSceneWorldContext";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
 import {
   ArrowRight,
   ArrowLeft,
@@ -23,6 +27,8 @@ import {
   Swords,
   Boxes,
   Clock,
+  Wand2,
+  Loader2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -50,9 +56,27 @@ function kindIcon(kind: string): LucideIcon {
 
 export function SceneWorldContextPanel({ projectId, sceneId }: Props) {
   const getCtx = useServerFn(getSceneWorldContext);
+  const autoLink = useServerFn(autoLinkSceneLocations);
+  const qc = useQueryClient();
   const ctxQ = useQuery({
-    queryKey: ["scene-world-context", projectId, sceneId],
+    queryKey: sceneWorldContextQueryKey(projectId, sceneId),
     queryFn: () => getCtx({ data: { projectId, sceneId } }),
+  });
+
+  const auto = useMutation({
+    mutationFn: async () => autoLink({ data: { projectId } }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: sceneWorldContextQueryKey(projectId, sceneId) });
+      qc.invalidateQueries({ queryKey: ["scene-world-usage", projectId, sceneId] });
+      const linked = (res as any)?.usageLinked ?? 0;
+      const created = (res as any)?.locationsEnsured ?? 0;
+      toast.success(
+        linked > 0 || created > 0
+          ? `Auto-linked ${linked} usage row${linked === 1 ? "" : "s"}${created > 0 ? ` (${created} new)` : ""}`
+          : "No new links found from scene headings",
+      );
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Auto-link failed"),
   });
 
   if (ctxQ.isLoading) {
@@ -72,12 +96,31 @@ export function SceneWorldContextPanel({ projectId, sceneId }: Props) {
 
   if (entities.length === 0) {
     return (
-      <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-        No world entities linked to this scene yet. Link a location or entity to
-        see relationship context here.
+      <div className="rounded-md border border-dashed p-4 flex flex-col items-center text-center gap-2">
+        <Globe2 className="h-5 w-5 text-muted-foreground" />
+        <div className="text-sm font-medium">No world entities linked</div>
+        <p className="text-xs text-muted-foreground max-w-xs">
+          Link a location manually above, or auto-link from this scene's
+          heading (e.g. <span className="font-mono">INT. FORT AEGIS</span>).
+        </p>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="mt-1"
+          onClick={() => auto.mutate()}
+          disabled={auto.isPending}
+        >
+          {auto.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+          ) : (
+            <Wand2 className="h-3.5 w-3.5 mr-1.5" />
+          )}
+          Auto-link from headings
+        </Button>
       </div>
     );
   }
+
 
   return (
     <div className="space-y-2">
