@@ -1,677 +1,265 @@
-# World / Character / Universe Integration Audit & Plan
+# Phases 3 & 4 — Story Integration Plan
 
-Stop-line: audit + plan only. No UI redesign, no Atlas, no maps, no AI gen. Nothing is implemented until you approve each phase.
-
----
-
-## 1. System-of-Record Diagram
-
-```text
-                    projects
-                       │ user_id (owner) / project_members
-                       │
-              default_universe_id
-                       ▼
-                 story_universes ─────────────┐
-                       │                      │
-   ┌────────── source_documents ── source_segments ── import_evidence
-   │                   │                      │
-   │              import_extraction_runs      │
-   │                   ▼                      │
-   │            import_candidates ── promoted_ref ─┐
-   │            (character | world_*)              │
-   │                                               ▼
-   ├─► characters ◄────────── character_aliases    world_locations
-   │       │                                        world_factions
-   │       ├─ character_relationships               world_events
-   │       ├─ character_scene_states                world_rules
-   │       ├─ character_arcs                        world_artifacts
-   │       └─ character_evidence_events             world_threads
-   │                                                world_timeline_entries
-   ├─► scenes ── script_blocks (scene_heading = location string)
-   │
-   └─► character_bibles (versioned snapshot)
-```
-
-Two writer surfaces (manual character creation, script-detected location strings) currently do NOT reach the World Hub or Bible. Two importer surfaces (candidates, evidence) reach them but bypass the manual side.
+Building on Phases 1–2 (unified read model in `projectStoryIntelligence.functions.ts`, World Hub Overview showing truthful counts + "Needs Connection" diagnostics), we now unify the Character Bible and make World a first-class connected surface. I'll ship Phase 3 first, verify, then move to Phase 4.
 
 ---
 
-## 2. Source-of-Truth Audit (per table)
+## Phase 3 — Character Bible Unification
 
-For each table: purpose · linkage · create · update · evidence · UI reads · UI writes · convergence · duplication risk · missing links · RLS · tests.
+**Problem today:** `character_bibles` only includes candidates promoted through Importation. Manually created characters never appear, and there's no single "who is in this project's bible" answer.
 
+**Goal:** Every project character (manual or imported) becomes a first-class Bible entry, with source + evidence provenance preserved.
 
-| #   | Table                                                              | Purpose                                             | Owner link                      | Create path                                                                                | Update path                                              | Evidence path                                                                | Read UI                                                | Write UI              | Manual+Imported converge?                                                                | Duplicate risk                                                                                                             | Missing links                                                     | RLS                | Tests            |
-| --- | ------------------------------------------------------------------ | --------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------ | --------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------ | ---------------- |
-| 1   | `projects`                                                         | Project root                                        | `user_id`                       | Projects new                                                                               | Project edit                                             | —                                                                            | Everywhere                                             | Projects              | n/a                                                                                      | —                                                                                                                          | `default_universe_id` optional                                    | owner+members      | route matrix     |
-| 2   | `characters`                                                       | Canonical cast                                      | `project_id`                    | Manual (`characters.functions`), Import promotion (`promoteApprovedCharactersForDocument`) | Builder, cleanup, quarantine                             | via `character_evidence_events` + `import_evidence`→candidate→`promoted_ref` | Cast, Builder, Editor chips, Truth Engine              | Builder, Inbox        | **Both write here, but Bible only reads promoted subset**                                | name collisions (relies on `identityEngine`)                                                                               | no direct FK to `story_universes`; no scene-location FK           | project-member RLS | identity tests   |
-| 3   | `character_relationships`                                          | Cast graph                                          | `project_id` + 2 character_ids  | Builder, imports (none)                                                                    | Builder                                                  | none                                                                         | Cast, Bible                                            | Builder               | manual only                                                                              | orphan on delete                                                                                                           | not exposed in World Hub                                          | member RLS         | —                |
-| 4   | `character_scene_states`                                           | Per-scene beat state                                | scene_id + character_id         | Editor beat panel, arc adapter                                                             | same                                                     | none                                                                         | ArcSidebar, Truth Engine                               | ArcSidebar            | manual                                                                                   | none                                                                                                                       | not surfaced in World Hub                                         | member RLS         | —                |
-| 5   | `scenes`                                                           | Structural scene list                               | `project_id`                    | Scenes route, script parse                                                                 | Editor, scenes route                                     | derived from script_blocks headings                                          | Editor, Storyboard, Cast usage                         | Editor, Scenes        | manual                                                                                   | none                                                                                                                       | **scene ↔ world_locations** unlinked                              | member RLS         | —                |
-| 6   | `script_blocks`                                                    | Editor text (incl. SCENE HEADING → location string) | `scene_id`                      | Editor autosave                                                                            | Editor                                                   | none                                                                         | Editor                                                 | Editor                | manual                                                                                   | duplicate heading strings                                                                                                  | no location entity extraction                                     | member RLS         | screenplay tests |
-| 7   | `story_universes`                                                  | World workspace                                     | `project_id` (+ owner)          | `ensureDefaultUniverse`                                                                    | universe funcs                                           | none                                                                         | World Hub, Importation, Character Bible                | Importation, ensure   | n/a                                                                                      | multiple universes possible; only "default" used                                                                           | project has no FK back                                            | member RLS         | universe unit    |
-| 8   | `source_documents`                                                 | Uploaded corpus                                     | universe+project                | Importation upload                                                                         | Importation                                              | is evidence root                                                             | Importation, World Hub sources tab                     | Importation           | n/a                                                                                      | duplicate uploads                                                                                                          | not visible on characters/scenes                                  | member RLS         | —                |
-| 9   | `source_segments`                                                  | Parsed segments                                     | document_id                     | ingestion                                                                                  | ingestion                                                | contains excerpts                                                            | Segment renderer, Importation                          | ingestion             | n/a                                                                                      | none                                                                                                                       | —                                                                 | member RLS         | —                |
-| 10  | `import_candidates`                                                | Extraction proposals (character/world)              | universe+project(+document+run) | extractor                                                                                  | inbox accept/reject/merge (`accept_character_candidate`) | via `import_evidence`                                                        | Character Inbox, Importation                           | Inbox, world importer | promoted → `characters` / `world_*` via `promoted_ref`                                   | **candidate accepted → no manual character reuse for existing manual by name unless normalized name match already in RPC** | world candidates flow to `world_*` inconsistently                 | member RLS         | promotion.test   |
-| 11  | `import_evidence`                                                  | Excerpt + confidence                                | candidate_id → segment_id       | extractor                                                                                  | —                                                        | itself                                                                       | Bible peek, Importation                                | —                     | evidence keyed to candidate not character; **manual characters have zero evidence rows** | —                                                                                                                          | no direct `character_id` FK; join only via candidate.promoted_ref | member RLS         | —                |
-| 12  | Identity resolution (`import_identity_decisions` + `promoted_ref`) | Which candidate = which character                   | candidate+decision              | inbox merge                                                                                | inbox                                                    | via decision row                                                             | Inbox                                                  | Inbox                 | partial                                                                                  | **no reverse index from `characters` → decisions**                                                                         | manual characters never surface here                              | member RLS         | identity test    |
-| 13  | `character_bibles`                                                 | Versioned snapshot                                  | universe+project                | `generateCharacterBible`                                                                   | regenerate                                               | reads `import_evidence`                                                      | Character Bible page, World Hub bible tab, Pitch (Pro) | Bible page            | **NO — only promoted candidates**                                                        | version churn on regenerate                                                                                                | manual characters missing                                         | member RLS         | —                |
-| 14  | `world_locations`                                                  | Canon locations                                     | `universe_id`                   | manual (none exposed) + import promotion                                                   | none exposed                                             | via candidate                                                                | World Hub locations tab (read-only)                    | **no writer UI**      | manual side missing                                                                      | duplicates on re-import                                                                                                    | **not linked to `scenes` or script heading strings**              | member RLS         | —                |
-| 15  | `world_factions`                                                   | Groups                                              | universe_id                     | import promotion                                                                           | none exposed                                             | via candidate                                                                | World Hub tab                                          | none                  | manual missing                                                                           | —                                                                                                                          | not linked to characters                                          | member RLS         | —                |
-| 16  | `world_events`                                                     | Story-world events                                  | universe_id                     | import promotion                                                                           | none                                                     | via candidate                                                                | Hub tab                                                | none                  | manual missing                                                                           | —                                                                                                                          | not linked to scenes/timeline_entries                             | member RLS         | —                |
-| 17  | `world_rules`                                                      | Physics/magic/law                                   | universe_id                     | import promotion                                                                           | none                                                     | via candidate                                                                | Hub tab                                                | none                  | manual missing                                                                           | —                                                                                                                          | no consumer surface                                               | member RLS         | —                |
-| 18  | `world_artifacts`                                                  | Objects                                             | universe_id                     | import promotion                                                                           | none                                                     | via candidate                                                                | Hub tab                                                | none                  | manual missing                                                                           | —                                                                                                                          | not linked                                                        | member RLS         | —                |
-| 19  | `world_threads`                                                    | Plot threads                                        | universe_id                     | import promotion                                                                           | none                                                     | via candidate                                                                | Hub tab                                                | none                  | manual missing                                                                           | —                                                                                                                          | not linked to scenes/arcs                                         | member RLS         | —                |
-| 20  | `world_timeline_entries`                                           | Ordered events                                      | universe_id                     | import promotion                                                                           | none                                                     | via candidate                                                                | Hub tab                                                | none                  | manual missing                                                                           | —                                                                                                                          | not linked to `world_events` explicitly                           | member RLS         | —                |
+### 3.1 Data model
 
+- New table `character_bible_entries` keyed by `(bible_id, character_id)` — one row per project character per Bible version.
+- Columns: `source` (`manual` | `imported`), `evidence_count`, `alias_count`, `scene_appearance_count`, `promoted_candidate_id` (nullable), `snapshot` (jsonb — name/importance/story_function/wound/lie/arc frozen at version time).
+- Migration includes GRANTs + RLS (owner/project-member SELECT; service_role writes; INSERT/UPDATE/DELETE via server function only).
+- Backfill: on migration, for each existing `character_bibles` row, populate entries from current `characters` + `character_candidates` (promoted refs).
 
----
+### 3.2 Regeneration server function
 
-## 3. Confirmed Defects (files + functions)
+- `regenerateCharacterBible(projectId, universeId)`:
+  - Loads all non-quarantined `characters` for the project.
+  - Joins each to `character_candidates` (via `promoted_ref`) for evidence lineage; manual characters have `source = 'manual'` and `evidence_count = 0`.
+  - Writes a new `character_bibles` row (version = latest + 1) and inserts `character_bible_entries` in the same transaction.
+  - Idempotent: if inputs haven't changed since latest version (checksum on entry snapshots), returns latest without a new row.
 
-1. **Bible excludes manual characters.**
-  `src/lib/importation/character-bible.functions.ts` (lines ~70–110): reads `import_candidates` where `status in (accepted, approved)`, then loads only those `characters.id`. Manually created cast rows never enter a version.
-2. **World Hub misuses `character_bibles.count` as cast size.**
-  `src/routes/_authenticated/world.$projectId.tsx` uses the "Character bibles" count where the human would read "Characters". `src/lib/importation/world-hub.functions.ts` never selects from `characters`.
-3. **Script-detected locations invisible.**
-  No pipeline reads `script_blocks` `scene_heading` INT/EXT strings into `world_locations` (not even as candidates). Scenes and world are disjoint.
-4. **World Hub is read-only.** No create/update/merge/defer UIs for `world_*`. `world-hub.functions.ts` returns counts + 25 sample rows; nothing writes.
-5. **No reverse index** from `characters` → the identity decision / promoting candidate. Bible cannot reconstruct provenance for a manual character (there is none) and cannot show "writer-created" tag.
-6. `**import_evidence` has no `character_id` FK.** Evidence follows candidates only; once a candidate is merged into an existing manual character, evidence is reachable only through the historical candidate row.
-7. **World entities lack backlinks** to `scenes`, `characters`, `character_arcs`, `world_events → world_timeline_entries`.
-8. **RLS is member-scoped everywhere** — correct — but no policy currently blocks a project from writing into another project's universe entities; verify universe_id ownership in write paths added in Phase 4.
+### 3.3 UI updates
+
+- `/character-bible/$projectId/$universeId`: entries list now shows manual + imported, with a `Source` chip and evidence count. Filter tabs: All / Manual / Imported / Missing evidence.
+- World Hub Overview "Chars w/ Evidence" and "Needs Connection" now read the latest Bible entries (source of truth), not derived counts.
+- Pitch deck bible slides (`characterBiblePdf.ts`) already read `character_bibles`; no code change needed, but content now includes manuals.
+
+### 3.4 Verification
+
+- Unit test: `regenerateCharacterBible` includes manual + imported and dedupes on second call.
+- Integration: create project → add manual character → regenerate → confirm entry appears with `source=manual`.
+- All existing 946 tests still pass.
 
 ---
 
-## 4. Phase 1 — Unified Project Story Read Model (proposed contract)
+## Phase 4 — World Builder Action Plan
 
-New pure server function, no schema change:
+**Problem today:** `/world/$projectId` is a read-only counter dashboard. Scene headings don't resolve to `world_locations`. World entities have no backlinks to scenes or evidence. No way to create/edit world entities from the UI.
 
-`src/lib/story-intelligence/projectStoryIntelligence.functions.ts`
+**Goal:** Make World Hub a real builder that connects scenes ↔ locations, exposes evidence for every entity, and lets users create/edit locations/factions/events with proper linkage.
 
-```ts
-export type ProjectStoryIntelligence = {
-  project: { id: string; title: string; owner_id: string };
-  universe: { id: string | null; name: string | null; is_default: boolean };
+### 4.1 Scene ↔ Location resolution
 
-  characters: {
-    id: string; name: string; importance: string | null;
-    quarantined: boolean;
-    source: 'manual' | 'imported' | 'both';
-    latest_bible_version: number | null; // null = missing from Bible
-    evidence_count: number;              // via candidates.promoted_ref = this id
-    alias_count: number;
-    relationship_count: number;
-    scene_state_count: number;
-  }[];
+- Add `scene_location_links` table: `(scene_id, world_location_id, confidence, source)` where `source ∈ {auto_heading, manual, imported_candidate}`.
+- Migration + GRANTs + RLS scoped via `is_project_member(project_id)`.
+- Server function `resolveSceneLocations(projectId)`:
+  - For each scene with `scene_heading`, parse via existing `parseLocationFromHeading`.
+  - Match against `world_locations.normalized_key` for the project's universe.
+  - Auto-link when exact normalized match; propose (not auto-link) on fuzzy match ≥0.85.
+- Read model (`projectStoryIntelligence`) uses these links instead of ad-hoc matching. Diagnostic `sceneLocationsWithoutWorldLink` now becomes actionable proposals.
 
-  relationships: { id: string; a_id: string; b_id: string; type: string | null }[];
+### 4.2 World entity CRUD (locations first, then factions/events)
 
-  scenes: {
-    id: string; heading: string | null; order_index: number;
-    detected_location_string: string | null;   // parsed from heading
-    linked_world_location_id: string | null;   // null today; Phase 4 target
-    character_ids: string[];
-  }[];
+- Server functions in `src/lib/importation/world-entities.functions.ts`:
+  - `createWorldLocation`, `updateWorldLocation`, `deleteWorldLocation` (soft delete).
+  - Analogous fns for factions and events.
+  - All validate `can_edit_project`.
+- New route `/world/$projectId/locations/$locationId`:
+  - Details form (name, description, tags, aliases).
+  - "Appears in Scenes" list from `scene_location_links`.
+  - "Evidence" tab pulling from `import_evidence` via `candidate_id`.
+  - "Merge with…" action for duplicate locations.
+- Overview tab gets "New location" / "New faction" buttons for owners/editors.
 
-  sources: {
-    id: string; title: string; status: string;
-    candidate_totals: { pending: number; accepted: number; rejected: number; merged: number };
-  }[];
+### 4.3 World Hub Overview upgrades
 
-  candidates: {
-    unresolved: number;
-    by_kind: Record<'character' | 'location' | 'faction' | 'event' | 'rule' | 'artifact' | 'thread' | 'timeline', number>;
-    duplicates_suspected: number;
-  };
+- "Needs Connection" card gains actionable rows: each unlinked scene shows a "Link to…" dropdown of `world_locations` matches.
+- Duplicate-entity diagnostic added (mirroring character duplicate proposals).
+- Story Intelligence snapshot cached (React Query, 30s stale) — same pattern as Character Bible.
 
-  world: {
-    locations: { count: number; without_evidence: number; without_scene_link: number };
-    factions:  { count: number; without_evidence: number };
-    events:    { count: number; without_evidence: number };
-    rules:     { count: number };
-    artifacts: { count: number };
-    threads:   { count: number };
-    timeline:  { count: number };
-  };
+### 4.4 Verification
 
-  bibles: { latest_version: number | null; versions: { version: number; created_at: string }[] };
-
-  diagnostics: {
-    manual_characters_missing_from_bible: string[];   // character ids
-    imported_candidates_unresolved: string[];          // candidate ids
-    scene_locations_without_world_link: string[];      // scene ids
-    world_entities_without_evidence: { table: string; id: string }[];
-    possible_character_duplicates: { a_id: string; b_id: string; reason: string }[];
-    possible_location_duplicates: { a_id: string; b_id: string; reason: string }[];
-  };
-};
-
-export const getProjectStoryIntelligence = createServerFn({ method: 'GET' })
-  .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ projectId: z.string().uuid() }).parse)
-  .handler(async ({ data, context }) => { /* pure reads, RLS-scoped */ });
-```
-
-Tests: `projectStoryIntelligence.test.ts` — fixtures with 3 manual + 2 imported characters, 1 duplicate suspicion, 1 unlinked scene location.
-
-No table writes. No schema change in Phase 1.
+- Unit tests: `resolveSceneLocations` auto-links exact matches, proposes fuzzy, ignores headings that can't parse.
+- Route test: World Hub renders new "New location" CTA only for editors.
+- Full 946+ test run must stay green.
 
 ---
 
-## 5. Phase 2 — World Hub Overview Correction (bounded)
+## Sequencing & Checkpoints
 
-Files to change (small):
+1. Ship Phase 3.1 + 3.2 (migration + regeneration fn + tests). **Stop and confirm** the migration before touching UI.
+2. Ship Phase 3.3 + 3.4 (Bible route UI + verification).
+3. **Checkpoint:** confirm Phase 3 works end-to-end before starting Phase 4.
+4. Ship Phase 4.1 (scene-location resolution migration + fn + tests). Stop at migration approval.
+5. Ship Phase 4.2 (CRUD + location detail route).
+6. Ship Phase 4.3 + 4.4 (Overview upgrades + verification).
 
-- `src/lib/importation/world-hub.functions.ts` — remove use of `character_bibles.count` as character count; add `characters` count, evidence coverage, and read-through of `getProjectStoryIntelligence.diagnostics` (or call it directly).
-- `src/routes/_authenticated/world.$projectId.tsx` — Overview stat grid rewritten to the distinct concepts you listed; add "Needs Connection" card driven by diagnostics; keep existing tabs.
+### Explicitly out of scope for this pass
 
-No new tabs. No AI. No Atlas. Read-only stays read-only in Phase 2.
+- Faction hierarchies, event timelines beyond simple lists, map/coordinate visualizations, world-canon versioning (analogous to Bible versions) — these are follow-ups.
+- Any change to the screenplay editor typing path.
+- Any change to Arena, Academy, or payment flows.
 
-Acceptance: Overview shows Project Characters, Characters w/ Evidence, Unresolved Candidates, Bible Versions, Script-Detected Locations, Approved World Locations, Unresolved World Candidates, Scenes, Sources, Continuity Questions — each derived from Phase 1 contract. Never uses bible version count as character count.
-
----
-
-## 6. Phase 3 — Character Bible Unification (plan only)
-
-Approach (implement only after approval):
-
-1. In `character-bible.functions.ts`, replace "start from promoted candidates" with **"start from `characters` where `project_id = X AND quarantined_at IS NULL`"**.
-2. For each character, attempt to attach evidence via existing `import_candidates.promoted_ref->id = character.id` join (works for imported/promoted). Manual characters get `evidence: []` and `provenance: 'writer_created'`.
-3. Aliases: continue to read `character_aliases`; manual entries produce no aliases unless the writer added some.
-4. Do not fabricate first-appearance. If no evidence, first_appearance = null (rendered as "Writer-created — no source appearance").
-5. Version bump only if the resulting entry set differs from previous version (hash of stable JSON). Prevents churn on regenerate.
-6. Preserve prior versions unchanged — reproducibility guaranteed.
-7. No auto-merge, no cross-character evidence copy.
-8. Add tests: (a) manual-only project produces a bible with N entries and zero evidence; (b) mixed project preserves imported evidence and adds manual entries; (c) re-running with no changes does not create a new version.
-
-Risks: previous bibles omit manual characters — that is the current bug, not a regression. Rollback = feature flag `bible.include_manual` defaulting to true; flip false to restore old behavior.
-
-No schema migration required. Optional (deferred) migration: add `characters.origin` enum for faster provenance queries.
-
----
-
-## 7. Phase 4 — World Builder (smallest safe CRUD, plan only)
-
-Per entity table (`world_locations`, `world_factions`, `world_events`, `world_rules`, `world_artifacts`, `world_threads`, `world_timeline_entries`):
-
-- `list(universeId)` — already covered by Phase 1.
-- `create(universeId, fields)` — manual, writes `origin='manual'`.
-- `update(id, fields)` — owner/editor role only.
-- `acceptCandidate(candidateId)` — promote via existing pattern, mirrors `accept_character_candidate` RPC.
-- `rejectCandidate` / `deferCandidate` / `mergeIntoExisting(candidateId, targetId)`.
-- `linkToScene(entityId, sceneId)` — join table `world_entity_scene_links(entity_table, entity_id, scene_id)` (single new table).
-- `linkToCharacter(entityId, characterId)` where meaningful (faction, artifact).
-- Edit history via `world_entity_revisions` (single generic revision table) OR reuse pattern from `character_snapshots` — decide during Phase 4 spec.
-
-UI: replace read-only tab body with `EntityListPanel` (list · create · edit · candidate inbox side panel · evidence drawer). Loading/error/retry/empty states standardized via existing `RouteReadinessGate`/`AppShell` patterns.
-
-Proposed schema deltas (Phase 4, not now):
-
-- Add nullable `origin text` + `created_by uuid` + `updated_at` to each `world_*` table (idempotent migration).
-- Add `world_entity_scene_links` table (entity_table, entity_id, scene_id, project_id, universe_id, note).
-- Add `world_entity_revisions` table (entity_table, entity_id, before jsonb, after jsonb, author_id, created_at).
-- All new tables with GRANTs to `authenticated`+`service_role`, RLS via `is_project_member(project_id)`, deny direct client writes to `entity_table` mismatched with `universe_id`.
-
-Deferred: Atlas, maps, AI world generation, visual assets.
-
----
-
-## 8. Risks & Rollback
-
-- Phase 1 is pure additive read → zero risk; delete file to roll back.
-- Phase 2 is UI/query change → revert two files.
-- Phase 3 changes bible content shape; guard with `bible.include_manual` flag; previous versions immutable.
-- Phase 4 adds tables → each migration standalone, additive; drop tables to roll back.
-
----
-
-## 9. Acceptance Tests (must pass before Phase merges)
-
-- Unit: `projectStoryIntelligence` returns correct counts on fixture project.
-- Unit: bible generation includes manual characters and preserves imported evidence.
-- Unit: no-op regenerate does not bump version.
-- Integration: `world.$projectId` Overview shows Characters count = `characters` table count (never `character_bibles`).
-- Integration: "Needs Connection" lists a manual character absent from latest bible and disappears after regenerate.
-- RLS: cross-project user cannot read another project's `story_intelligence`.
-- Regression: 946 existing tests still pass; route matrix unchanged.
-
----
-
-## 10. Wireframe — Corrected World Overview
-
-```text
-┌ World Hub · <Project Title> ─────────────────────────────────┐
-│ Overview | Sources | Bible | Locations | Factions | ...      │
-├──────────────────────────────────────────────────────────────┤
-│  Characters       12    Chars w/ Evidence     7              │
-│  Unresolved Cast   3    Bible Versions        4              │
-│  Script Locations  9    Approved Locations    5              │
-│  Unresolved World  6    Scenes                42             │
-│  Sources           3    Continuity Questions  4              │
-├─ Needs Connection ───────────────────────────────────────────┤
-│  • 5 project characters missing from latest Bible  [Regen]   │
-│  • 3 imported candidates unresolved               [Inbox]    │
-│  • 4 scene locations not linked to world_locations [Link]    │
-│  • 2 world entities without evidence              [Review]   │
-│  • 1 possible duplicate character (JOHN / JOHN D.) [Merge]   │
-└──────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 11. Proposed File List (audit + Phase 1 only)
-
-- `src/lib/story-intelligence/projectStoryIntelligence.functions.ts` (new)
-- `src/lib/story-intelligence/projectStoryIntelligence.test.ts` (new)
-- (Phase 2) `src/lib/importation/world-hub.functions.ts` (edit)
-- (Phase 2) `src/routes/_authenticated/world.$projectId.tsx` (edit — Overview + Needs Connection card only)
-- (Phase 3) `src/lib/importation/character-bible.functions.ts` (edit, flagged)
-- (Phase 4) new `world-entities.functions.ts` per entity, `EntityListPanel.tsx`, migrations for links + revisions + origin.
-
----
-
-**Waiting for approval on Phases 1 & 2 before any code changes. Phases 3 and 4 require separate go-ahead.**
+If you approve, I'll start with **Phase 3.1** — the migration for `character_bible_entries` — as the next step.
 
 &nbsp;
 
-This is a **good recovery plan**, and Lovable correctly found the core architectural problem rather than merely proposing prettier cards.
+Yes. Phase 4 is important enough that Lovable should not improvise the data model.
 
-I would approve **Phases 1 and 2**, but not exactly as written. There are several factual inconsistencies and a few design choices that could create another layer of technical debt.
+The prompt should force Lovable to design the **World Graph foundation first**, then build the smallest usable World Builder on top of it.
 
-**What the plan gets right**
-
-The central diagnosis is correct:
-
-Manual creation, import intelligence, generated Bibles, scenes, and world entities currently converge only partially.
-
-The proposed unified read model is the right first move because it gives SceneSmith one project-facing interpretation of its data without prematurely rewriting every table.
-
-The sequence is also appropriate:
-
-Understand the fragmented data
-
-→ create one unified read model
-
-→ correct the World Overview
-
-→ unify Character Bible generation
-
-→ add controlled World Builder writes
-
-That is much safer than immediately building Atlas, maps, or more isolated panels.
-
-**Corrections Lovable should make before implementation**
-
-**1. The audit contradicts the current universe model**
-
-The table says:
-
-story_universes → project_id (+ owner)
-
-But the implementation we inspected links the project through:
-
-projects.default_universe_id
-
-and ensureDefaultUniverse() creates the universe with:
-
-{
-
-  owner_id: userId,
-
-  name: universeName
-
-}
-
-It does not insert a project_id into story_universes.
-
-The audit also says:
-
-project has no FK back
-
-but the recent migration explicitly added:
-
-projects.default_universe_id → story_[universes.id](http://universes.id)
-
-Those statements cannot both be true.
-
-Lovable must verify the live schema before writing the unified model. Otherwise, the new function could be built on an imagined relationship.
-
-**2.**
-
-**projects.owner_id**
-
-**is likely incorrect**
-
-The proposed contract says:
-
-project: {
-
-  id: string;
-
-  title: string;
-
-  owner_id: string;
-
-}
-
-The existing code consistently refers to:
-
-projects.user_id
-
-The unified contract should either use the real column name:
-
-user_id
-
-or normalize it deliberately:
-
-ownerId
-
-It should not invent owner_id unless that column actually exists.
-
-**3. The timeline audit appears inaccurate**
-
-The plan says:
-
-world timeline entries are not linked to world events explicitly
-
-But the world schema previously showed:
-
-world_timeline_entries.event_id
-
-→ world_[events.id](http://events.id)
-
-It is nullable, but it is an explicit relationship.
-
-This matters because the audit must distinguish:
-
-Relationship absent
-
-from:
-
-Relationship exists but is optional, underused, or not surfaced
-
-Those require different repairs.
-
-**4. “RLS is member-scoped everywhere” is too confident**
-
-That statement should be changed to:
-
-Existing RLS appears intended to be project/member scoped; each table and write path must be verified independently.
-
-The audit itself says the universe ownership enforcement on future writes still needs verification. Therefore, it cannot simultaneously claim RLS is correct everywhere.
-
-**Changes to the Phase 1 contract**
-
-The contract is directionally strong, but I would revise several fields.
-
-**Character Bible membership**
-
-This:
-
-latest_bible_version: number | null
-
-inside each character record is ambiguous.
-
-A Bible version is project-wide, not character-specific.
-
-Use:
-
-latest_bible: {
-
-  version: number;
-
-  included: boolean;
-
-} | null;
-
-That answers:
-
-- Is there a current Bible?
-- Is this character included in it?
-- Which version was checked?
-
-**Character provenance**
-
-This is good:
-
-source: "manual" | "imported" | "both";
-
-But it must be derived from evidence, not guessed from whether evidence exists.
-
-Suggested logic:
-
-manual:
-
-created through writer-facing character workflow and no promoted candidate
+Here is the prompt I would use:
 
 &nbsp;
 
-imported:
+**Lovable Prompt — Phase 4 World Graph and World Builder Foundation**
 
-created exclusively through approved promotion
+Read first:
 
-&nbsp;
+[AGENTS.md](http://AGENTS.md)
 
-both:
+docs/SCENESMITH_WORLD_[BUILDING.md](http://BUILDING.md)
 
-existing character was later connected to one or more imported candidates
+docs/SCENESMITH_EPIC_FANTASY_UNIVERSE_[PLATFORM.md](http://PLATFORM.md)
 
-A manually created character may later gain source evidence, becoming both.
+docs/ITS_PfHU_[Importation.md](http://Importation.md)
 
-**Scene locations**
+docs/CHARACTER_TRUTH_[ENGINE.md](http://ENGINE.md)
 
-This:
+docs/CHARACTER_TRUTH_ENGINE_SOURCE_[SYSTEMS.md](http://SYSTEMS.md)
 
-detected_location_string: string | null
+Also review the completed outputs from:
 
-may be too narrow.
+Phase 1 — getProjectStoryIntelligence
 
-A scene can have:
+Phase 2 — corrected World Overview
 
-- a stored scene_heading,
-- multiple heading blocks,
-- aliases,
-- sublocations,
-- montage locations,
-- changing locations.
+Phase 3 — unified Character Bible
 
-Use:
+Do not begin implementation until the Phase 1–3 tests pass.
 
-detectedLocations: {
+**Objective**
 
-  rawText: string;
+Build the smallest safe and coherent World Builder foundation.
 
-  normalizedKey: string;
+This phase must unify manual creation, imported proposals, project characters, scenes, evidence, and universe-wide world entities.
 
-  sourceBlockId: string | null;
+Do not build Atlas, generated maps, video, image generation, cosmology simulation, military simulation, or advanced AI world generation in this phase.
 
-  confidence: number;
+The result must be a genuinely usable World Builder—not another read-only counter dashboard.
 
-}[];
+**Core architectural rule**
 
-Even if v1 usually has one entry, the contract should not hard-code one location forever.
+Do not use an unconstrained polymorphic relationship pattern such as:
 
-**Scene-character participation**
+entity_table
 
-This:
+entity_id
 
-character_ids: string[];
+unless PostgreSQL can enforce the referenced entity.
 
-must define how it is calculated.
+Use a canonical shared World Graph root.
 
-Possible sources include:
+**Phase 4A — Canonical World Entity Root**
 
-- character_scene_states,
-- dialogue speaker resolution,
-- manually assigned scene characters,
-- imported mentions.
-
-The model should return both the IDs and their basis:
-
-characters: {
-
-  characterId: string;
-
-  basis: "scene_state" | "dialogue" | "mention" | "manual";
-
-}[];
-
-Otherwise, a future consumer will treat an inferred mention as equivalent to confirmed scene presence.
-
-**Diagnostics must remain proposals**
-
-These are useful:
-
-possible_character_duplicates
-
-possible_location_duplicates
-
-But they must include:
-
-confidence
-
-evidence
-
-reasonCode
-
-and they must never trigger automatic merging.
-
-For example:
-
-{
-
-  aId,
-
-  bId,
-
-  confidence: 0.72,
-
-  reasonCode: "normalized_name_similarity",
-
-  evidence: [...]
-
-}
-
-**Phase 2 is necessary—but still not enough for the user experience**
-
-Phase 2 will make the page truthful. It will no longer say:
-
-Characters: 0
-
-when the project actually contains characters.
-
-That is important.
-
-But it will still be mostly read-only. After Phases 1 and 2, you will see a more intelligent dashboard, but you still will not truly be “building the world.”
-
-Therefore, I would approve Phases 1 and 2 as a short repair pass, with Phase 3 queued immediately afterward.
-
-The visible call-to-action should not say things like:
-
-[Regen]
-
-[Link]
-
-[Merge]
-
-unless those actions genuinely work.
-
-During read-only Phase 2, use:
-
-[Open Character Bible]
-
-[Open Candidate Inbox]
-
-[View Scenes]
-
-[Review Evidence]
-
-Do not create fake action buttons that lead nowhere.
-
-**Phase 3 is strong**
-
-The Character Bible unification proposal is one of the best parts of the plan.
-
-Starting from:
-
-all active project characters
-
-instead of:
-
-only approved imported characters
-
-is exactly right.
-
-Imported characters retain evidence.
-
-Manually created characters remain valid and display:
-
-Writer-created
-
-No imported evidence yet
-
-The no-op regeneration rule is also good:
-
-Do not create another version if the stable content has not changed.
-
-I would add two requirements:
-
-1. The generated snapshot must record the generator/schema version.
-2. The content hash should be stored with the Bible row rather than recalculated only in application memory.
-
-That supports reproducibility and prevents accidental version churn.
-
-The feature flag may be unnecessary unless the repository already has a reliable flag system for server behavior. A clean, tested implementation with rollback through Git is probably safer than introducing another hidden switch.
-
-**Phase 4 needs redesign before approval**
-
-I would **not approve Phase 4’s schema yet**.
-
-The proposed generic join table:
-
-world_entity_scene_links
-
-(entity_table, entity_id, scene_id)
-
-has a serious weakness: PostgreSQL cannot enforce a normal foreign key where entity_table dynamically determines which table entity_id belongs to.
-
-That allows invalid combinations such as:
-
-entity_table = "world_locations"
-
-entity_id = an artifact UUID
-
-The same issue affects a generic revision table.
-
-Better options include:
-
-**Option A — Unified world entity root**
-
-Create:
+Design and implement:
 
 world_entities
 
-with a shared entity ID and type:
+Suggested minimum fields:
 
-world_entities
+id uuid primary key
 
-- id
+universe_id uuid not null
 
-- universe_id
+entity_type text not null
 
-- project_id
+name text not null
 
-- entity_type
+normalized_key text not null
 
-- name
+description text
 
-- canon_status
+canon_status text not null
 
-- origin
+origin text not null
 
-Then specialized tables extend it:
+visibility text not null
+
+created_by uuid
+
+created_at timestamptz
+
+updated_at timestamptz
+
+archived_at timestamptz
+
+metadata jsonb
+
+Supported initial entity_type values:
+
+location
+
+faction
+
+event
+
+rule
+
+artifact
+
+thread
+
+timeline_entry
+
+Do not add future entity types merely to appear comprehensive.
+
+Requirements:
+
+- universe_id must be enforced with a foreign key.
+- created_by must reference the authenticated user where appropriate.
+- origin must distinguish at least:
+  - writer_created
+  - imported
+  - ai_proposed
+  - system_derived
+- canon_status must distinguish at least:
+  - proposal
+  - approved
+  - rejected
+  - superseded
+  - archived
+- Do not silently mark imported or AI-generated entities as approved canon.
+- Preserve current IDs and records from existing world_* tables.
+
+**Phase 4B — Migration strategy**
+
+Audit the existing tables:
+
+world_locations
+
+world_factions
+
+world_events
+
+world_rules
+
+world_artifacts
+
+world_threads
+
+world_timeline_entries
+
+Choose one of these strategies and justify it before implementation:
+
+**Preferred strategy**
+
+Keep specialized tables and add:
+
+entity_id uuid unique not null
+
+references world_entities(id)
+
+Each specialized table remains responsible for type-specific fields.
+
+Examples:
 
 world_locations.entity_id
 
@@ -679,119 +267,780 @@ world_factions.entity_id
 
 world_events.entity_id
 
-All links can safely point to:
+**Alternative strategy**
+
+Migrate common fields entirely into world_entities and retain only type-specific extension tables.
+
+Do not duplicate mutable fields such as name, canon status, origin, or description across both layers unless synchronization is guaranteed.
+
+Requirements:
+
+- Existing records must be backfilled.
+- Existing IDs and links must not be lost.
+- Migration must be idempotent.
+- Provide rollback SQL.
+- No destructive table drops in this phase.
+- Existing World Hub reads must continue to work during migration.
+
+**Phase 4C — Typed relationships**
+
+Add a canonical relationship table:
+
+world_entity_relationships
+
+Suggested fields:
+
+id uuid primary key
+
+universe_id uuid not null
+
+source_entity_id uuid not null
+
+target_entity_id uuid not null
+
+relationship_type text not null
+
+directionality text not null
+
+valid_from text
+
+valid_to text
+
+canon_status text not null
+
+origin text not null
+
+evidence_count integer
+
+created_by uuid
+
+created_at timestamptz
+
+updated_at timestamptz
+
+metadata jsonb
+
+Foreign keys must reference:
 
 world_[entities.id](http://entities.id)
 
-This is architecturally strongest for World Graph, evidence, links, Atlas, search, and revisions.
+Examples:
 
-**Option B — Typed link tables**
+located_in
 
-Use:
+member_of
 
-world_location_scene_links
+controls
 
-world_event_scene_links
+opposes
 
-world_artifact_character_links
+allied_with
 
-faction_character_memberships
+created
 
-This is more verbose but gives proper foreign keys and domain meaning.
+destroyed
 
-I would lean toward a **shared world_entities root**, because your long-term doctrine already requires a real World Graph across many entity types.
+owns
 
-Do not let Lovable implement entity_table + entity_id merely because it is faster.
+uses
 
-**One missing concept: one project, one default universe, but possibly many projects per universe**
+governed_by
 
-The current model appears to make a project point to a default universe.
+caused
 
-That works for one story.
+precedes
 
-But your epic-fantasy/shared-universe doctrine requires:
+succeeds
 
-One universe
+connected_to
 
-→ multiple books
+Do not use unrestricted free-text relationship types without validation.
 
-→ multiple screenplays
+Create a versioned registry or validated constant set.
 
-→ multiple seasons
-
-→ adaptations
-
-A single projects.default_universe_id supports many projects pointing to one universe, which is good.
-
-However, all new queries must avoid assuming:
-
-universe belongs exclusively to this one project
-
-World entities may belong to the universe and be referenced by several projects.
-
-The unified read model should distinguish:
-
-Universe-wide world data
-
-Project-specific story data
-
-Project-specific evidence and appearances
+Relationship direction must be explicit.
 
 For example:
 
-world.locations[]
+Faction A controls Location B
 
-may be universe-wide, while:
+must not be indistinguishable from:
 
-projectLocationUsage[]
+Location B controls Faction A
 
-describes which locations this project actually uses.
+**Phase 4D — Project-specific usage and backlinks**
 
-That distinction becomes essential for franchises.
+Universe entities and project usage must remain separate.
 
-**Recommended approval message**
+Add typed linking tables or a properly constrained common table for:
 
-Send Lovable this:
+world entity ↔ scene
 
-Approved for Phases 1 and 2 only, subject to the following corrections:
+world entity ↔ character
 
-1. Verify the actual live schema before coding. The audit currently contradicts the repository regarding story_universes.project_id, projects.default_universe_id, and the project owner column.
-2. Correct the timeline audit: verify whether world_timeline_entries.event_id already links to world_events.
-3. Do not state that RLS is correct everywhere until each relevant table and write path has been tested.
-4. Normalize project ownership in the TypeScript contract using the actual schema column or a deliberate camelCase field.
-5. Replace per-character latest_bible_version with an explicit latest-Bible membership structure.
-6. Model scene locations as an array of detected references with raw text, normalized key, evidence/source block, and confidence.
-7. Model scene-character participation with its basis: scene state, dialogue, mention, or manual assignment.
-8. Duplicate diagnostics must contain confidence, reason codes, and evidence, and must remain review-only proposals.
-9. Phase 2 must not display buttons for operations that are not yet implemented. Link only to working surfaces.
-10. Keep universe-wide World data distinct from project-specific appearances and usage so multiple projects can share a universe safely.
+world entity ↔ project
 
-Implement Phase 1 and Phase 2, run the full test suite, and stop with:
+Preferred shared linking design:
 
-- the verified system-of-record diagram,
-- actual schema findings,
-- changed files,
-- test results,
-- a screenshot of the corrected World Overview,
-- sample output from getProjectStoryIntelligence,
-- and remaining known disconnections.
+world_entity_project_links
 
-Do not implement Phase 3 or Phase 4 until separately approved.
+world_entity_scene_links
 
-For Phase 4 planning, do not use an unconstrained polymorphic entity_table + entity_id join. Evaluate a canonical world_entities root table or typed relationship tables with enforceable foreign keys.
+world_entity_character_links
 
-**Verdict**
+Each table must have real foreign keys.
 
-**Approve Phases 1 and 2 after those corrections.**
+Minimum requirements:
 
-The plan now addresses the real problem:
+**Project links**
 
-Not “make the World Hub prettier”
+entity_id
 
-but
+project_id
 
-“make SceneSmith understand that all of these records belong to one story system.”
+usage_type
 
-Phase 3 should follow immediately because that is what will finally make your existing Character list and Character Bible behave like one connected product.
+first_appearance_scene_id
 
-Phase 4 should be redesigned around a proper World Graph entity root before any CRUD tables are added.
+notes
+
+**Scene links**
+
+entity_id
+
+scene_id
+
+link_type
+
+source_block_id
+
+confidence
+
+origin
+
+canon_status
+
+Possible link_type values:
+
+setting
+
+mentioned
+
+affected
+
+created
+
+destroyed
+
+used
+
+revealed
+
+**Character links**
+
+entity_id
+
+character_id
+
+link_type
+
+valid_from
+
+valid_to
+
+canon_status
+
+Examples:
+
+member
+
+leader
+
+owner
+
+creator
+
+resident
+
+enemy
+
+worshipper
+
+knows_about
+
+Do not automatically convert text mentions into approved links.
+
+Detected links must begin as proposals unless deterministically confirmed.
+
+**Phase 4E — Evidence and provenance**
+
+Do not attach evidence only through historical import candidates.
+
+Add a shared evidence-link model:
+
+world_entity_evidence_links
+
+Suggested fields:
+
+id
+
+entity_id
+
+source_document_id
+
+source_segment_id
+
+import_candidate_id
+
+evidence_type
+
+direct_or_inferred
+
+confidence
+
+excerpt
+
+created_at
+
+Requirements:
+
+- Evidence may support a manually created entity.
+- Imported evidence must remain traceable to its source.
+- Writer-created entities may have zero evidence.
+- Zero evidence must not mean invalid.
+- AI inferences must be labeled as inferred.
+- Evidence must never be fabricated.
+- Rejecting a proposal must not delete source evidence.
+
+**Phase 4F — Revision and audit history**
+
+Add an enforceable revision model.
+
+Preferred:
+
+world_entity_revisions
+
+Fields:
+
+id
+
+entity_id
+
+revision_number
+
+before_state jsonb
+
+after_state jsonb
+
+change_type
+
+author_id
+
+created_at
+
+reason
+
+Requirements:
+
+- Every canonical create, update, archive, merge, approve, reject, and supersede action must be auditable.
+- Revisions must not expose data across projects or universes.
+- Restore may be deferred, but history must be readable.
+- Merges must preserve both source IDs and evidence lineage.
+
+**Phase 4G — Manual creation and editing**
+
+Create a bounded World Builder UI using the existing /world/$projectId route.
+
+Initial editable entity types:
+
+Locations
+
+Factions
+
+Events
+
+Rules
+
+Artifacts
+
+Story Threads
+
+Timeline Entries
+
+Each tab must support:
+
+Create
+
+View
+
+Edit
+
+Archive
+
+Review proposals
+
+Inspect evidence
+
+Link to scenes
+
+Link to characters
+
+Do not implement permanent deletion through the normal UI.
+
+Use archive or supersede.
+
+Each entity form must contain only fields appropriate to its type.
+
+Examples:
+
+**Location**
+
+Name
+
+Description
+
+Location type
+
+Parent location
+
+Interior / exterior
+
+Era or validity range
+
+Aliases
+
+Canon status
+
+Linked scenes
+
+Linked characters
+
+Evidence
+
+**Faction**
+
+Name
+
+Description
+
+Faction type
+
+Leaders
+
+Members
+
+Allies
+
+Enemies
+
+Controlled locations
+
+Beliefs or goals
+
+Era
+
+Evidence
+
+**Event**
+
+Name
+
+Summary
+
+Time or sequence
+
+Location
+
+Participants
+
+Causes
+
+Consequences
+
+Evidence
+
+**Rule**
+
+Name
+
+Statement
+
+Scope
+
+Cost
+
+Constraint
+
+Exception
+
+Known by
+
+Evidence
+
+**Artifact**
+
+Name
+
+Description
+
+Type
+
+Creator
+
+Owner or custodian
+
+Current location
+
+Capabilities
+
+Limits
+
+History
+
+Evidence
+
+**Story Thread**
+
+Name
+
+Question
+
+Status
+
+Introduced in
+
+Linked characters
+
+Linked entities
+
+Payoff target
+
+Evidence
+
+**Timeline Entry**
+
+Label
+
+Linked event
+
+Sequence
+
+Date or calendar expression
+
+Era
+
+Evidence
+
+**Phase 4H — Proposal Review Inbox**
+
+Add a World Review Inbox inside the World Hub.
+
+Supported actions:
+
+Accept as new entity
+
+Merge into existing entity
+
+Reject
+
+Defer
+
+Open evidence
+
+Edit before approval
+
+Requirements:
+
+- Acceptance must be idempotent.
+- Merge must not discard candidate or evidence history.
+- Reject must not delete the candidate.
+- Defer must preserve the proposal.
+- Every action must create an audit record.
+- No automatic merge based only on name similarity.
+- Duplicate suggestions must show confidence, reason, and evidence.
+
+**Phase 4I — Scene-derived location proposals**
+
+Build only the minimal deterministic bridge from screenplay headings.
+
+Read scene headings from:
+
+scenes
+
+script_blocks
+
+Produce normalized location proposals.
+
+Example:
+
+INT. HOTEL LOBBY - NIGHT
+
+may produce:
+
+HOTEL LOBBY
+
+Requirements:
+
+- Preserve the original heading text.
+- Store the source block or scene.
+- Do not automatically create approved locations.
+- Match against existing locations by normalized key and aliases.
+- Exact match may be suggested as a link.
+- Fuzzy matches remain review proposals.
+- One scene may contain multiple detected locations.
+- Montages, intercuts, and compound headings must not be silently flattened.
+
+**Phase 4J — Character integration**
+
+World entities must use the existing canonical characters table.
+
+Do not create a separate World Character table.
+
+The World Builder should be able to:
+
+link characters to factions
+
+link characters to locations
+
+link characters to artifacts
+
+link characters to events
+
+link character knowledge to rules or world facts
+
+Manual and imported characters must behave identically once they exist in characters.
+
+Imported provenance remains additional metadata, not a separate identity.
+
+**Phase 4K — UX requirements**
+
+The World Builder must not feel like a database admin panel.
+
+World Hub Overview should show:
+
+World at a glance
+
+Needs review
+
+Recently changed
+
+Entities used in the current project
+
+Unlinked story elements
+
+Continuity concerns
+
+Each entity card should show:
+
+name
+
+type
+
+canon status
+
+origin
+
+evidence coverage
+
+linked scenes
+
+linked characters
+
+last updated
+
+Provide clear empty states:
+
+No factions yet
+
+Create one manually or review detected proposals
+
+Do not display empty grids filled with zeros as the primary experience.
+
+On tablet and mobile:
+
+- tabs may scroll horizontally,
+- forms must fit without sideways page overflow,
+- evidence drawers must become full-screen sheets,
+- actions must remain reachable.
+
+**Phase 4L — RLS and authorization**
+
+Before implementing writes, document and test:
+
+Owner
+
+Editor
+
+Commenter
+
+Viewer
+
+Suggested capabilities:
+
+
+|           |          |                 |                   |              |             |
+| --------- | -------- | --------------- | ----------------- | ------------ | ----------- |
+| **Role**  | **Read** | **Create/Edit** | **Approve Canon** | **Merge**    | **Archive** |
+| Owner     | Yes      | Yes             | Yes               | Yes          | Yes         |
+| Editor    | Yes      | Yes             | Configurable      | Configurable | No          |
+| Commenter | Yes      | No              | No                | No           | No          |
+| Viewer    | Yes      | No              | No                | No           | No          |
+
+
+All writes must verify:
+
+project access
+
+universe access
+
+entity belongs to universe
+
+linked character belongs to allowed project
+
+linked scene belongs to allowed project
+
+Do not rely only on client-side role checks.
+
+Add RLS tests for cross-project and cross-universe access.
+
+**Phase 4M — Tests**
+
+Required before completion:
+
+Migration backfill preserves existing world records
+
+Manual location creation works
+
+Manual faction creation works
+
+Proposal acceptance is idempotent
+
+Merge preserves evidence
+
+Rejected proposal remains auditable
+
+Scene link enforces valid foreign keys
+
+Character link enforces valid foreign keys
+
+Cross-project writes fail
+
+Cross-universe writes fail
+
+Archived entity no longer appears in active lists
+
+Existing World Hub routes still work
+
+Existing Character and Editor tests still pass
+
+Add one full integration test:
+
+Writer creates a location
+
+→ links an existing character
+
+→ links a scene
+
+→ imports a source mentioning that location
+
+→ reviews the proposal
+
+→ merges the evidence into the existing location
+
+→ World Overview updates
+
+→ no duplicate canonical location is created
+
+**Implementation sequence**
+
+Implement in this order only:
+
+4A World entity root
+
+4B migrations and backfill
+
+4C relationships
+
+4D project/scene/character links
+
+4E evidence
+
+4F revisions
+
+4G manual CRUD
+
+4H proposal inbox
+
+4I scene-location proposals
+
+4J character integration
+
+4K UX refinement
+
+4L RLS
+
+4M acceptance
+
+Stop after each numbered subphase and report:
+
+changed files
+
+migration result
+
+tests
+
+screenshots
+
+known risks
+
+next subphase
+
+Do not combine the entire phase into one uncontrolled implementation.
+
+**Deliverables before coding**
+
+Before implementing Phase 4A, return:
+
+1. Verified live schema.
+2. Proposed ER diagram.
+3. Migration/backfill plan.
+4. Decision on common versus specialized fields.
+5. Relationship-type registry.
+6. RLS matrix.
+7. Exact files to create or modify.
+8. Rollback plan.
+9. Phase 4A acceptance tests.
+
+Stop and wait for approval.
+
+&nbsp;
+
+That gives Lovable a very narrow path:
+
+one canonical World identity layer
+
+→ enforceable relationships
+
+→ evidence
+
+→ project usage
+
+→ manual creation
+
+→ proposal review
+
+→ integrated characters and scenes
+
+It also prevents the two most likely mistakes:
+
+building another disconnected set of tables
+
+and:
+
+using generic entity_table/entity_id links with no foreign-key safety
+
+&nbsp;
+
+Proceed with Phase 3.1
+
+&nbsp;

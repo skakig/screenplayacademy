@@ -20,6 +20,7 @@ type BibleEntry = {
   aliases: string[];
   candidate_ids: string[];
   source_document_ids: string[];
+  source: "manual" | "imported";
   first_appearance: {
     document_id: string;
     segment_id: string;
@@ -84,9 +85,8 @@ export const generateCharacterBible = createServerFn({ method: "POST" })
       const ref = c.promoted_ref as { table?: string; id?: string } | null;
       return ref?.table === "characters" && typeof ref.id === "string";
     });
-    if (promotedRows.length === 0) {
-      return { bible_id: null, entries: [], version: 0, skipped: true };
-    }
+    // Note: we no longer bail out when there are no promoted candidates —
+    // manually-created characters must still appear in the Bible.
 
     const characterIds = Array.from(
       new Set(
@@ -275,6 +275,7 @@ export const generateCharacterBible = createServerFn({ method: "POST" })
 
       entries.push({
         character_id: charId,
+        source: "imported",
         name: (ch.name as string) ?? "Unknown",
         importance:
           (ch.importance as string | null) ??
@@ -287,6 +288,34 @@ export const generateCharacterBible = createServerFn({ method: "POST" })
         speaking_segments: speakingSegs.size,
         mention_segments: mentionSegs.size,
         top_evidence: topEvidence,
+      });
+    }
+
+    // 6b) Manual characters — every non-quarantined character in the project
+    //     not already covered by a promoted candidate.
+    const importedIds = new Set(entries.map((e) => e.character_id));
+    const { data: allProjChars, error: apErr } = await supabase
+      .from("characters")
+      .select("id, name, importance")
+      .eq("project_id", data.project_id)
+      .is("quarantined_at", null);
+    if (apErr) throw new Error(apErr.message);
+    for (const ch of allProjChars ?? []) {
+      const id = ch.id as string;
+      if (importedIds.has(id)) continue;
+      const aliases = aliasByChar.get(id) ?? [];
+      entries.push({
+        character_id: id,
+        source: "manual",
+        name: (ch.name as string) ?? "Unknown",
+        importance: (ch.importance as string | null) ?? null,
+        aliases: [...aliases].sort((a, b) => a.localeCompare(b)),
+        candidate_ids: [],
+        source_document_ids: [],
+        first_appearance: null,
+        speaking_segments: 0,
+        mention_segments: 0,
+        top_evidence: [],
       });
     }
 
@@ -331,6 +360,33 @@ export const generateCharacterBible = createServerFn({ method: "POST" })
       .single();
     if (bErr || !bible)
       throw new Error(bErr?.message ?? "Failed to persist character bible");
+
+    // 8) Per-character bible entries table (server-side write bypasses the
+    //    client-write-deny policy via the service role client).
+    const { supabaseAdmin } = await import(
+      "@/integrations/supabase/client.server"
+    );
+    const entryRows = entries.map((e) => ({
+      bible_id: bible.id as string,
+      project_id: data.project_id,
+      universe_id: data.universe_id,
+      character_id: e.character_id,
+      source: e.source,
+      promoted_candidate_id: e.candidate_ids[0] ?? null,
+      evidence_count: e.top_evidence.length,
+      alias_count: e.aliases.length,
+      scene_appearance_count: e.speaking_segments + e.mention_segments,
+      snapshot: e as unknown as Record<string, unknown>,
+    }));
+    if (entryRows.length > 0) {
+      const { error: entriesErr } = await supabaseAdmin
+        .from("character_bible_entries")
+        .insert(entryRows as never);
+      if (entriesErr) {
+        console.error("character_bible_entries insert failed", entriesErr);
+      }
+    }
+
 
     return {
       bible_id: bible.id as string,

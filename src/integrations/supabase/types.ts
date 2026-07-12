@@ -582,6 +582,90 @@ export type Database = {
         }
         Relationships: []
       }
+      character_bible_entries: {
+        Row: {
+          alias_count: number
+          bible_id: string
+          character_id: string
+          created_at: string
+          evidence_count: number
+          id: string
+          project_id: string
+          promoted_candidate_id: string | null
+          scene_appearance_count: number
+          snapshot: Json
+          source: string
+          universe_id: string
+          updated_at: string
+        }
+        Insert: {
+          alias_count?: number
+          bible_id: string
+          character_id: string
+          created_at?: string
+          evidence_count?: number
+          id?: string
+          project_id: string
+          promoted_candidate_id?: string | null
+          scene_appearance_count?: number
+          snapshot?: Json
+          source: string
+          universe_id: string
+          updated_at?: string
+        }
+        Update: {
+          alias_count?: number
+          bible_id?: string
+          character_id?: string
+          created_at?: string
+          evidence_count?: number
+          id?: string
+          project_id?: string
+          promoted_candidate_id?: string | null
+          scene_appearance_count?: number
+          snapshot?: Json
+          source?: string
+          universe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_bible_entries_bible_id_fkey"
+            columns: ["bible_id"]
+            isOneToOne: false
+            referencedRelation: "character_bibles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_bible_entries_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_bible_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_bible_entries_promoted_candidate_id_fkey"
+            columns: ["promoted_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "character_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_bible_entries_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_bibles: {
         Row: {
           created_at: string
