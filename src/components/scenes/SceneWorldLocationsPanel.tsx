@@ -24,8 +24,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { MapPin, Link2Off, Wand2 } from "lucide-react";
 import { toast } from "sonner";
+
+type PendingUnlink = {
+  id: string;
+  entityId: string;
+  usageKind: string;
+  name: string;
+};
+
 
 interface Props {
   projectId: string;
@@ -36,6 +54,8 @@ interface Props {
 export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Props) {
   const qc = useQueryClient();
   const [choice, setChoice] = useState<string>("");
+  const [pendingUnlink, setPendingUnlink] = useState<PendingUnlink | null>(null);
+
 
   const listUsage = useServerFn(listProjectWorldUsage);
   const listEntities = useServerFn(listWorldEntities);
@@ -98,13 +118,39 @@ export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Pro
   });
 
   const unlink = useMutation({
-    mutationFn: async (id: string) => unlinkUsage({ data: { id } }),
-    onSuccess: () => {
+    mutationFn: async (target: PendingUnlink) =>
+      unlinkUsage({ data: { id: target.id } }).then(() => target),
+    onSuccess: (target) => {
       qc.invalidateQueries({ queryKey: ["scene-world-usage", projectId, sceneId] });
-      toast.success("Unlinked");
+      toast.success(`Unlinked ${target.name}`, {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            linkUsage({
+              data: {
+                projectId,
+                entityId: target.entityId,
+                sceneId,
+                usageKind: target.usageKind as any,
+              },
+            })
+              .then(() => {
+                qc.invalidateQueries({
+                  queryKey: ["scene-world-usage", projectId, sceneId],
+                });
+                toast.success(`Restored ${target.name}`);
+              })
+              .catch((e: any) =>
+                toast.error(e?.message ?? "Failed to restore link"),
+              );
+          },
+        },
+        duration: 10000,
+      });
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to unlink"),
   });
+
 
   const auto = useMutation({
     mutationFn: async () => autoLink({ data: { projectId } }),
@@ -180,11 +226,19 @@ export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Pro
                   variant="ghost"
                   className="h-6 w-6"
                   disabled={unlink.isPending}
-                  onClick={() => unlink.mutate(u.id)}
+                  onClick={() =>
+                    setPendingUnlink({
+                      id: u.id,
+                      entityId: u.entity_id,
+                      usageKind: u.usage_kind,
+                      name: ent?.name ?? "this location",
+                    })
+                  }
                   aria-label="Unlink location"
                 >
                   <Link2Off className="h-3 w-3" />
                 </Button>
+
               </li>
             );
           })}
@@ -222,6 +276,36 @@ export function SceneWorldLocationsPanel({ projectId, sceneId, universeId }: Pro
           Link
         </Button>
       </div>
+
+      <AlertDialog
+        open={pendingUnlink !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingUnlink(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unlink this world location?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingUnlink
+                ? `"${pendingUnlink.name}" will be removed from this scene. You can undo this for 10 seconds.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingUnlink) unlink.mutate(pendingUnlink);
+                setPendingUnlink(null);
+              }}
+            >
+              Unlink
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
+
 }
