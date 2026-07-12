@@ -45,6 +45,7 @@ import { Route as AuthenticatedEditorProjectIdRouteImport } from './routes/_auth
 import { Route as AuthenticatedCharactersProjectIdRouteImport } from './routes/_authenticated/characters.$projectId'
 import { Route as AuthenticatedCharacterProjectIdRouteImport } from './routes/_authenticated/character.$projectId'
 import { Route as AuthenticatedCastProjectIdRouteImport } from './routes/_authenticated/cast.$projectId'
+import { Route as AuthenticatedArenaProjectIdRouteImport } from './routes/_authenticated/arena.$projectId'
 import { Route as AuthenticatedArcTimelineProjectIdRouteImport } from './routes/_authenticated/arc-timeline.$projectId'
 import { Route as AuthenticatedAdminCouponsRouteImport } from './routes/_authenticated/admin.coupons'
 import { Route as AuthenticatedAcademyModuleSlugRouteImport } from './routes/_authenticated/academy.$moduleSlug'
@@ -262,6 +263,12 @@ const AuthenticatedCastProjectIdRoute =
     path: '/cast/$projectId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedArenaProjectIdRoute =
+  AuthenticatedArenaProjectIdRouteImport.update({
+    id: '/arena/$projectId',
+    path: '/arena/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedArcTimelineProjectIdRoute =
   AuthenticatedArcTimelineProjectIdRouteImport.update({
     id: '/arc-timeline/$projectId',
@@ -395,6 +402,7 @@ export interface FileRoutesByFullPath {
   '/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   '/admin/coupons': typeof AuthenticatedAdminCouponsRoute
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
+  '/arena/$projectId': typeof AuthenticatedArenaProjectIdRoute
   '/cast/$projectId': typeof AuthenticatedCastProjectIdRouteWithChildren
   '/character/$projectId': typeof AuthenticatedCharacterProjectIdRouteWithChildren
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdRouteWithChildren
@@ -450,6 +458,7 @@ export interface FileRoutesByTo {
   '/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   '/admin/coupons': typeof AuthenticatedAdminCouponsRoute
   '/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
+  '/arena/$projectId': typeof AuthenticatedArenaProjectIdRoute
   '/cast/$projectId': typeof AuthenticatedCastProjectIdRouteWithChildren
   '/character/$projectId': typeof AuthenticatedCharacterProjectIdRouteWithChildren
   '/editor/$projectId': typeof AuthenticatedEditorProjectIdRoute
@@ -506,6 +515,7 @@ export interface FileRoutesById {
   '/_authenticated/academy/$moduleSlug': typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   '/_authenticated/admin/coupons': typeof AuthenticatedAdminCouponsRoute
   '/_authenticated/arc-timeline/$projectId': typeof AuthenticatedArcTimelineProjectIdRoute
+  '/_authenticated/arena/$projectId': typeof AuthenticatedArenaProjectIdRoute
   '/_authenticated/cast/$projectId': typeof AuthenticatedCastProjectIdRouteWithChildren
   '/_authenticated/character/$projectId': typeof AuthenticatedCharacterProjectIdRouteWithChildren
   '/_authenticated/characters/$projectId': typeof AuthenticatedCharactersProjectIdRouteWithChildren
@@ -563,6 +573,7 @@ export interface FileRouteTypes {
     | '/academy/$moduleSlug'
     | '/admin/coupons'
     | '/arc-timeline/$projectId'
+    | '/arena/$projectId'
     | '/cast/$projectId'
     | '/character/$projectId'
     | '/characters/$projectId'
@@ -618,6 +629,7 @@ export interface FileRouteTypes {
     | '/academy/$moduleSlug'
     | '/admin/coupons'
     | '/arc-timeline/$projectId'
+    | '/arena/$projectId'
     | '/cast/$projectId'
     | '/character/$projectId'
     | '/editor/$projectId'
@@ -673,6 +685,7 @@ export interface FileRouteTypes {
     | '/_authenticated/academy/$moduleSlug'
     | '/_authenticated/admin/coupons'
     | '/_authenticated/arc-timeline/$projectId'
+    | '/_authenticated/arena/$projectId'
     | '/_authenticated/cast/$projectId'
     | '/_authenticated/character/$projectId'
     | '/_authenticated/characters/$projectId'
@@ -981,6 +994,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCastProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/arena/$projectId': {
+      id: '/_authenticated/arena/$projectId'
+      path: '/arena/$projectId'
+      fullPath: '/arena/$projectId'
+      preLoaderRoute: typeof AuthenticatedArenaProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/arc-timeline/$projectId': {
       id: '/_authenticated/arc-timeline/$projectId'
       path: '/arc-timeline/$projectId'
@@ -1221,6 +1241,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAcademyModuleSlugRoute: typeof AuthenticatedAcademyModuleSlugRouteWithChildren
   AuthenticatedAdminCouponsRoute: typeof AuthenticatedAdminCouponsRoute
   AuthenticatedArcTimelineProjectIdRoute: typeof AuthenticatedArcTimelineProjectIdRoute
+  AuthenticatedArenaProjectIdRoute: typeof AuthenticatedArenaProjectIdRoute
   AuthenticatedCastProjectIdRoute: typeof AuthenticatedCastProjectIdRouteWithChildren
   AuthenticatedCharacterProjectIdRoute: typeof AuthenticatedCharacterProjectIdRouteWithChildren
   AuthenticatedCharactersProjectIdRoute: typeof AuthenticatedCharactersProjectIdRouteWithChildren
@@ -1249,6 +1270,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminCouponsRoute: AuthenticatedAdminCouponsRoute,
   AuthenticatedArcTimelineProjectIdRoute:
     AuthenticatedArcTimelineProjectIdRoute,
+  AuthenticatedArenaProjectIdRoute: AuthenticatedArenaProjectIdRoute,
   AuthenticatedCastProjectIdRoute: AuthenticatedCastProjectIdRouteWithChildren,
   AuthenticatedCharacterProjectIdRoute:
     AuthenticatedCharacterProjectIdRouteWithChildren,
