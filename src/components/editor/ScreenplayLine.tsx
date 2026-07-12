@@ -14,7 +14,9 @@ import {
 import { CharacterAutocomplete, type CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import { SceneBeatPicker } from "@/components/editor/SceneBeatPicker";
 import { SceneBeatGutterDot } from "@/components/editor/SceneBeatGutterDot";
+import { SceneHeadingLinkBadge } from "@/components/editor/SceneHeadingLinkBadge";
 import type { LocalBlock } from "./useScreenplayDocument";
+
 
 
 const BLOCK_TYPES = [
