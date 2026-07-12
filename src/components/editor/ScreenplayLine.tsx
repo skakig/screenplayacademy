@@ -14,7 +14,9 @@ import {
 import { CharacterAutocomplete, type CharacterHit } from "@/components/editor/CharacterAutocomplete";
 import { SceneBeatPicker } from "@/components/editor/SceneBeatPicker";
 import { SceneBeatGutterDot } from "@/components/editor/SceneBeatGutterDot";
+import { SceneHeadingLinkBadge } from "@/components/editor/SceneHeadingLinkBadge";
 import type { LocalBlock } from "./useScreenplayDocument";
+
 
 
 const BLOCK_TYPES = [
@@ -659,6 +661,13 @@ export function ScreenplayLine({
           />
         </div>
       )}
+
+      {isSceneHeading && projectId && block.content.trim().length > 0 && (
+        <div className="absolute left-0 -bottom-5 z-10 font-sans pointer-events-auto">
+          <SceneHeadingLinkBadge projectId={projectId} headingText={block.content} />
+        </div>
+      )}
+
 
       {focused && !slashOpen && (
         <div
