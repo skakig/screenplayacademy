@@ -247,6 +247,16 @@ function BibleView({
                 <span className="text-xs text-muted-foreground ml-auto">
                   {e.speaking_segments} speaking · {e.mention_segments} mentions
                 </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1.5 h-7"
+                  onClick={() =>
+                    setEditing({ id: e.character_id, name: e.name })
+                  }
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Edit
+                </Button>
               </div>
 
               {e.aliases.length > 0 && (
