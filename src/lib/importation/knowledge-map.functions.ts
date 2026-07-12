@@ -468,7 +468,7 @@ export const setWriterKnowledgeState = createServerFn({ method: "POST" })
           status: data.status,
           confidence: data.confidence,
           preferred_presentation: data.preferred_presentation,
-          evidence_of_understanding: data.evidence_of_understanding,
+          evidence_of_understanding: data.evidence_of_understanding as never,
           last_checked_at: new Date().toISOString(),
         },
         { onConflict: "user_id,knowledge_node_id" },
