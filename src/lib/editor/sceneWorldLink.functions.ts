@@ -25,6 +25,18 @@ export type SceneWorldLinkResult = {
   skipped: number;
 };
 
+export type AutoLinkTrigger =
+  | "manual"
+  | "manuscript_sync"
+  | "scene_edit"
+  | "unknown";
+
+export type AutoLinkAudit = {
+  trigger?: AutoLinkTrigger;
+  userId?: string | null;
+  actorLabel?: string | null;
+};
+
 /**
  * Shared helper — safe to call from any server-side handler that already has
  * an RLS-scoped supabase client. Callers control auth; this function performs
@@ -33,6 +45,7 @@ export type SceneWorldLinkResult = {
 export async function linkSceneLocationsForProject(
   supabase: any,
   projectId: string,
+  audit: AutoLinkAudit = {},
 ): Promise<SceneWorldLinkResult> {
   const { data: project, error: projErr } = await supabase
     .from("projects")
@@ -44,7 +57,7 @@ export async function linkSceneLocationsForProject(
 
   const universeId: string | null = project.default_universe_id ?? null;
   if (!universeId) {
-    return {
+    const empty: SceneWorldLinkResult = {
       universeId: null,
       locationsEnsured: 0,
       usageLinked: 0,
@@ -52,7 +65,10 @@ export async function linkSceneLocationsForProject(
       scenesConsidered: 0,
       skipped: 0,
     };
+    await recordAutoLinkRun(supabase, projectId, empty, audit);
+    return empty;
   }
+
 
   const { data: scenes, error: sceneErr } = await supabase
     .from("scenes")
