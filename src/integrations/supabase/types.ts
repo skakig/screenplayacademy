@@ -2943,6 +2943,59 @@ export type Database = {
           },
         ]
       }
+      scene_autolink_runs: {
+        Row: {
+          actor_label: string | null
+          created_at: string
+          id: string
+          locations_ensured: number
+          project_id: string
+          scenes_considered: number
+          skipped: number
+          trigger: string
+          universe_id: string | null
+          usage_linked: number
+          usage_unlinked: number
+          user_id: string | null
+        }
+        Insert: {
+          actor_label?: string | null
+          created_at?: string
+          id?: string
+          locations_ensured?: number
+          project_id: string
+          scenes_considered?: number
+          skipped?: number
+          trigger?: string
+          universe_id?: string | null
+          usage_linked?: number
+          usage_unlinked?: number
+          user_id?: string | null
+        }
+        Update: {
+          actor_label?: string | null
+          created_at?: string
+          id?: string
+          locations_ensured?: number
+          project_id?: string
+          scenes_considered?: number
+          skipped?: number
+          trigger?: string
+          universe_id?: string | null
+          usage_linked?: number
+          usage_unlinked?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_autolink_runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scene_locks: {
         Row: {
           created_at: string
