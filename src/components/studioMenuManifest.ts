@@ -53,6 +53,13 @@ export const MENU_MANIFEST: MenuGroupManifest[] = [
     ],
   },
   {
+    key: "world",
+    label: "World — Sources, bible, lore",
+    items: [
+      { to: "/world/$projectId", label: "World Hub", desc: "Sources, character bible, locations, factions, events, lore.", iconName: "Compass", needsProject: true, experimental: true },
+    ],
+  },
+  {
     key: "producer",
     label: "Producer — Ship the screenplay",
     items: [

@@ -230,3 +230,23 @@ describe("StudioMenu destinations — Beta chip", () => {
     }
   }
 });
+
+describe("StudioMenu destinations — no duplicate project destinations", () => {
+  it("no two project-scoped items resolve to the same href", () => {
+    const projectId = "00000000-0000-0000-0000-000000000042";
+    const seen = new Map<string, string>();
+    for (const group of MENU_MANIFEST) {
+      for (const item of group.items) {
+        if (!item.needsProject) continue;
+        const href = item.to.replace("$projectId", projectId);
+        const prior = seen.get(href);
+        if (prior) {
+          throw new Error(
+            `Duplicate project menu destination "${href}" for both "${prior}" and "${item.label}"`,
+          );
+        }
+        seen.set(href, item.label);
+      }
+    }
+  });
+});

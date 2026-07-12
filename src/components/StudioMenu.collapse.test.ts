@@ -32,6 +32,7 @@ describe("Studio Menu — group collapse behavior", () => {
     expect(shape).toEqual([
       { key: "school", collapsed: false }, // Academy is always available
       { key: "editor", collapsed: true },
+      { key: "world", collapsed: false }, // single-item group → CTA row, not collapse
       { key: "producer", collapsed: true },
       { key: "studio", collapsed: false }, // project-independent
     ]);

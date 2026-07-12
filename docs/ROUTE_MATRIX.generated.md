@@ -24,6 +24,12 @@ Legend: **Locked tiers** = plans where the item is tier-gated. **Blocking scenar
 | `/characters/$projectId` (Characters) | — | — | — | — | — | — | — | no_project |
 | `/arc-timeline/$projectId` (Dramatic Pulse) | — | — | — | — | scenes | — | — | no_project, empty_project |
 
+## World — Sources, bible, lore
+
+| Route | Feature | Tier gate | Beta | Setup | Needs data | Guided-only | Locked tiers | Blocking scenarios |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `/world/$projectId` (World Hub) | — | — | Yes | — | — | — | — | no_project |
+
 ## Producer — Ship the screenplay
 
 | Route | Feature | Tier gate | Beta | Setup | Needs data | Guided-only | Locked tiers | Blocking scenarios |
@@ -44,7 +50,7 @@ Legend: **Locked tiers** = plans where the item is tier-gated. **Blocking scenar
 
 ## Coverage
 
-- Permutations audited: **1280**
-- Friction-bearing permutations: **428**
+- Permutations audited: **1360**
+- Friction-bearing permutations: **444**
 - Hidden permutations (guided-only filter): **40**
 

@@ -2610,6 +2610,7 @@ export type Database = {
         Row: {
           ai_help_level: string | null
           created_at: string
+          default_universe_id: string | null
           genre: string | null
           id: string
           logline: string | null
@@ -2627,6 +2628,7 @@ export type Database = {
         Insert: {
           ai_help_level?: string | null
           created_at?: string
+          default_universe_id?: string | null
           genre?: string | null
           id?: string
           logline?: string | null
@@ -2644,6 +2646,7 @@ export type Database = {
         Update: {
           ai_help_level?: string | null
           created_at?: string
+          default_universe_id?: string | null
           genre?: string | null
           id?: string
           logline?: string | null
@@ -2658,7 +2661,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_default_universe_id_fkey"
+            columns: ["default_universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scene_arc_beats: {
         Row: {

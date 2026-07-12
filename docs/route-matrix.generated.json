@@ -130,6 +130,22 @@
       ]
     },
     {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "feature": null,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequires": null,
+      "needsData": null,
+      "guidedOnly": false,
+      "needsProject": true,
+      "lockedTiers": [],
+      "blockingScenarios": [
+        "no_project"
+      ]
+    },
+    {
       "group": "producer",
       "label": "Pitch Deck",
       "to": "/pitch/$projectId",
@@ -12076,6 +12092,1622 @@
       "needsData": null,
       "blockedBy": "none",
       "badgeOrder": []
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "no_project",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "no_project",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "no_project",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "no_project",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "empty_project",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "empty_project",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "empty_project",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "empty_project",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "has_scenes",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "has_scenes",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "has_scenes",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "has_scenes",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "populated",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "populated",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "populated",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "free",
+      "scenario": "populated",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "no_project",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "no_project",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "no_project",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "no_project",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "empty_project",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "empty_project",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "empty_project",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "empty_project",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "has_scenes",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "has_scenes",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "has_scenes",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "has_scenes",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "populated",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "populated",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "populated",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "creator",
+      "scenario": "populated",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "no_project",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "no_project",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "no_project",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "no_project",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "empty_project",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "empty_project",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "empty_project",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "empty_project",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "has_scenes",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "has_scenes",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "has_scenes",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "has_scenes",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "populated",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "populated",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "populated",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "pro",
+      "scenario": "populated",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "no_project",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "no_project",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "no_project",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "no_project",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": true,
+      "needsData": null,
+      "blockedBy": "pick_project",
+      "badgeOrder": [
+        "Beta",
+        "Pick a project"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "empty_project",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "empty_project",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "empty_project",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "empty_project",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "has_scenes",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "has_scenes",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "has_scenes",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "has_scenes",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "has_scenes_and_characters",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "populated",
+      "stripeReady": true,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "populated",
+      "stripeReady": true,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "populated",
+      "stripeReady": false,
+      "isGuided": true,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
+    },
+    {
+      "group": "world",
+      "label": "World Hub",
+      "to": "/world/$projectId",
+      "tier": "studio",
+      "scenario": "populated",
+      "stripeReady": false,
+      "isGuided": false,
+      "hidden": false,
+      "locked": false,
+      "requiredTier": null,
+      "experimental": true,
+      "setupRequired": false,
+      "missingProject": false,
+      "needsData": null,
+      "blockedBy": "none",
+      "badgeOrder": [
+        "Beta"
+      ]
     },
     {
       "group": "producer",
