@@ -214,7 +214,13 @@ export function CoachPane({
             Roll cameras · slate · roll back
           </p>
         </div>
-        <DraftHistoryPanel projectId={projectId} />
+        <SceneSnapshotsPanel projectId={projectId} activeBlockId={activeBlockId ?? null} />
+        <div className="border-t border-border/40 pt-3 mt-3">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-mono mb-2">
+            Project-level takes
+          </p>
+          <DraftHistoryPanel projectId={projectId} />
+        </div>
       </TabsContent>
 
       {/* FORMAT */}
