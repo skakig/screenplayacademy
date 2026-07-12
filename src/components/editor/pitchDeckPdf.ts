@@ -586,6 +586,16 @@ export function generatePitchDeckPdf(opts: PitchDeckOptions): jsPDF {
     }
   }
 
+  if (opts.worldUsage && opts.worldUsage.entities.length > 0) {
+    doc.addPage();
+    drawWorldUsageDivider(doc, opts.worldUsage);
+    for (const entry of opts.worldUsage.entities) {
+      doc.addPage();
+      drawWorldUsageEntitySlide(doc, entry);
+    }
+  }
+
+
   // Footers on every page
   const total = doc.getNumberOfPages();
   for (let p = 1; p <= total; p++) {
