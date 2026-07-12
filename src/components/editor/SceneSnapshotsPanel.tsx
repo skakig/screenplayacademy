@@ -421,19 +421,23 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Restore this scene snapshot?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Restore "{pendingRestore?.label ?? "snapshot"}"?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This will replace the current blocks in this scene with the snapshot
-              contents. A pre-restore snapshot will be captured automatically so you can
-              undo.
+              This replaces the {pendingRestore?.block_count ?? 0} current block
+              {pendingRestore?.block_count === 1 ? "" : "s"} in this scene with the
+              snapshot contents. A pre-restore snapshot is captured automatically, and
+              you'll have 10 seconds to undo from the confirmation toast.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => pendingRestore && restoreMut.mutate(pendingRestore.id)}
+              disabled={restoreMut.isPending}
             >
-              Restore
+              {restoreMut.isPending ? "Restoring…" : "Restore scene"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -445,18 +449,24 @@ export function SceneSnapshotsPanel({ projectId, activeBlockId }: Props) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete snapshot?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Delete "{pendingDelete?.label ?? "snapshot"}"?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This cannot be undone. Restore first if you're not sure.
+              The snapshot ({pendingDelete?.block_count ?? 0} block
+              {pendingDelete?.block_count === 1 ? "" : "s"},{" "}
+              {pendingDelete?.word_count ?? 0} words) will be removed. You'll have
+              10 seconds to undo from the confirmation toast.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => pendingDelete && deleteMut.mutate(pendingDelete.id)}
+              onClick={() => pendingDelete && deleteMut.mutate(pendingDelete)}
+              disabled={deleteMut.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {deleteMut.isPending ? "Deleting…" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
