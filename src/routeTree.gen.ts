@@ -50,9 +50,9 @@ import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedCharactersProjectIdIndexRouteImport } from './routes/_authenticated/characters.$projectId.index'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
-import { Route as AuthenticatedImportationDocumentDocumentIdRouteImport } from './routes/_authenticated/importation.document.$documentId'
 import { Route as AuthenticatedCharactersProjectIdCharacterIdRouteImport } from './routes/_authenticated/characters.$projectId.$characterId'
 import { Route as AuthenticatedCharacterProjectIdCharacterIdRouteImport } from './routes/_authenticated/character.$projectId.$characterId'
+import { Route as AuthenticatedCharacterBibleProjectIdUniverseIdRouteImport } from './routes/_authenticated/character-bible.$projectId.$universeId'
 import { Route as AuthenticatedCastProjectIdCharacterIdRouteImport } from './routes/_authenticated/cast.$projectId.$characterId'
 import { Route as AuthenticatedAcademyModuleSlugLessonSlugRouteImport } from './routes/_authenticated/academy.$moduleSlug.$lessonSlug'
 import { Route as AuthenticatedCharactersProjectIdBuildIndexRouteImport } from './routes/_authenticated/characters.$projectId.build.index'
@@ -287,12 +287,6 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedImportationDocumentDocumentIdRoute =
-  AuthenticatedImportationDocumentDocumentIdRouteImport.update({
-    id: '/importation/document/$documentId',
-    path: '/importation/document/$documentId',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedCharactersProjectIdCharacterIdRoute =
   AuthenticatedCharactersProjectIdCharacterIdRouteImport.update({
     id: '/$characterId',
@@ -304,6 +298,12 @@ const AuthenticatedCharacterProjectIdCharacterIdRoute =
     id: '/$characterId',
     path: '/$characterId',
     getParentRoute: () => AuthenticatedCharacterProjectIdRoute,
+  } as any)
+const AuthenticatedCharacterBibleProjectIdUniverseIdRoute =
+  AuthenticatedCharacterBibleProjectIdUniverseIdRouteImport.update({
+    id: '/character-bible/$projectId/$universeId',
+    path: '/character-bible/$projectId/$universeId',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedCastProjectIdCharacterIdRoute =
   AuthenticatedCastProjectIdCharacterIdRouteImport.update({
@@ -383,9 +383,9 @@ export interface FileRoutesByFullPath {
   '/academy/': typeof AuthenticatedAcademyIndexRoute
   '/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
   '/cast/$projectId/$characterId': typeof AuthenticatedCastProjectIdCharacterIdRoute
+  '/character-bible/$projectId/$universeId': typeof AuthenticatedCharacterBibleProjectIdUniverseIdRoute
   '/character/$projectId/$characterId': typeof AuthenticatedCharacterProjectIdCharacterIdRoute
   '/characters/$projectId/$characterId': typeof AuthenticatedCharactersProjectIdCharacterIdRoute
-  '/importation/document/$documentId': typeof AuthenticatedImportationDocumentDocumentIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/characters/$projectId/': typeof AuthenticatedCharactersProjectIdIndexRoute
   '/characters/$projectId/build/$characterId': typeof AuthenticatedCharactersProjectIdBuildCharacterIdRoute
@@ -433,9 +433,9 @@ export interface FileRoutesByTo {
   '/academy': typeof AuthenticatedAcademyIndexRoute
   '/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
   '/cast/$projectId/$characterId': typeof AuthenticatedCastProjectIdCharacterIdRoute
+  '/character-bible/$projectId/$universeId': typeof AuthenticatedCharacterBibleProjectIdUniverseIdRoute
   '/character/$projectId/$characterId': typeof AuthenticatedCharacterProjectIdCharacterIdRoute
   '/characters/$projectId/$characterId': typeof AuthenticatedCharactersProjectIdCharacterIdRoute
-  '/importation/document/$documentId': typeof AuthenticatedImportationDocumentDocumentIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/characters/$projectId': typeof AuthenticatedCharactersProjectIdIndexRoute
   '/characters/$projectId/build/$characterId': typeof AuthenticatedCharactersProjectIdBuildCharacterIdRoute
@@ -486,9 +486,9 @@ export interface FileRoutesById {
   '/_authenticated/academy/': typeof AuthenticatedAcademyIndexRoute
   '/_authenticated/academy/$moduleSlug/$lessonSlug': typeof AuthenticatedAcademyModuleSlugLessonSlugRoute
   '/_authenticated/cast/$projectId/$characterId': typeof AuthenticatedCastProjectIdCharacterIdRoute
+  '/_authenticated/character-bible/$projectId/$universeId': typeof AuthenticatedCharacterBibleProjectIdUniverseIdRoute
   '/_authenticated/character/$projectId/$characterId': typeof AuthenticatedCharacterProjectIdCharacterIdRoute
   '/_authenticated/characters/$projectId/$characterId': typeof AuthenticatedCharactersProjectIdCharacterIdRoute
-  '/_authenticated/importation/document/$documentId': typeof AuthenticatedImportationDocumentDocumentIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/_authenticated/characters/$projectId/': typeof AuthenticatedCharactersProjectIdIndexRoute
   '/_authenticated/characters/$projectId/build/$characterId': typeof AuthenticatedCharactersProjectIdBuildCharacterIdRoute
@@ -539,9 +539,9 @@ export interface FileRouteTypes {
     | '/academy/'
     | '/academy/$moduleSlug/$lessonSlug'
     | '/cast/$projectId/$characterId'
+    | '/character-bible/$projectId/$universeId'
     | '/character/$projectId/$characterId'
     | '/characters/$projectId/$characterId'
-    | '/importation/document/$documentId'
     | '/api/public/payments/webhook'
     | '/characters/$projectId/'
     | '/characters/$projectId/build/$characterId'
@@ -589,9 +589,9 @@ export interface FileRouteTypes {
     | '/academy'
     | '/academy/$moduleSlug/$lessonSlug'
     | '/cast/$projectId/$characterId'
+    | '/character-bible/$projectId/$universeId'
     | '/character/$projectId/$characterId'
     | '/characters/$projectId/$characterId'
-    | '/importation/document/$documentId'
     | '/api/public/payments/webhook'
     | '/characters/$projectId'
     | '/characters/$projectId/build/$characterId'
@@ -641,9 +641,9 @@ export interface FileRouteTypes {
     | '/_authenticated/academy/'
     | '/_authenticated/academy/$moduleSlug/$lessonSlug'
     | '/_authenticated/cast/$projectId/$characterId'
+    | '/_authenticated/character-bible/$projectId/$universeId'
     | '/_authenticated/character/$projectId/$characterId'
     | '/_authenticated/characters/$projectId/$characterId'
-    | '/_authenticated/importation/document/$documentId'
     | '/api/public/payments/webhook'
     | '/_authenticated/characters/$projectId/'
     | '/_authenticated/characters/$projectId/build/$characterId'
@@ -964,13 +964,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/importation/document/$documentId': {
-      id: '/_authenticated/importation/document/$documentId'
-      path: '/importation/document/$documentId'
-      fullPath: '/importation/document/$documentId'
-      preLoaderRoute: typeof AuthenticatedImportationDocumentDocumentIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/characters/$projectId/$characterId': {
       id: '/_authenticated/characters/$projectId/$characterId'
       path: '/$characterId'
@@ -984,6 +977,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/character/$projectId/$characterId'
       preLoaderRoute: typeof AuthenticatedCharacterProjectIdCharacterIdRouteImport
       parentRoute: typeof AuthenticatedCharacterProjectIdRoute
+    }
+    '/_authenticated/character-bible/$projectId/$universeId': {
+      id: '/_authenticated/character-bible/$projectId/$universeId'
+      path: '/character-bible/$projectId/$universeId'
+      fullPath: '/character-bible/$projectId/$universeId'
+      preLoaderRoute: typeof AuthenticatedCharacterBibleProjectIdUniverseIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/cast/$projectId/$characterId': {
       id: '/_authenticated/cast/$projectId/$characterId'
@@ -1138,7 +1138,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedVaultProjectIdRoute: typeof AuthenticatedVaultProjectIdRoute
   AuthenticatedWritersRoomProjectIdRoute: typeof AuthenticatedWritersRoomProjectIdRoute
   AuthenticatedAcademyIndexRoute: typeof AuthenticatedAcademyIndexRoute
-  AuthenticatedImportationDocumentDocumentIdRoute: typeof AuthenticatedImportationDocumentDocumentIdRoute
+  AuthenticatedCharacterBibleProjectIdUniverseIdRoute: typeof AuthenticatedCharacterBibleProjectIdUniverseIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -1167,8 +1167,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedWritersRoomProjectIdRoute:
     AuthenticatedWritersRoomProjectIdRoute,
   AuthenticatedAcademyIndexRoute: AuthenticatedAcademyIndexRoute,
-  AuthenticatedImportationDocumentDocumentIdRoute:
-    AuthenticatedImportationDocumentDocumentIdRoute,
+  AuthenticatedCharacterBibleProjectIdUniverseIdRoute:
+    AuthenticatedCharacterBibleProjectIdUniverseIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
