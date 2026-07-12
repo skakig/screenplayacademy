@@ -16,6 +16,7 @@ import { z } from "zod";
 import { screenplayHeuristicEntityExtractor } from "./adapters/screenplay-entity-extractor";
 import { screenplayHeuristicWorldExtractor } from "./adapters/screenplay-world-extractor";
 import type { CandidateType, EntityExtractor, ImportCandidate, SourceSegment } from "./contracts";
+import { planPromotions, type CandidateInput } from "./promotion-core";
 
 // --- helpers ---
 
