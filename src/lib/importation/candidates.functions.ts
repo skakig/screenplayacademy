@@ -438,9 +438,6 @@ export const promoteCharacterCandidate = createServerFn({ method: "POST" })
 // --- promote to world / story entities (Phase 3) ---
 
 
-function pickString(v: unknown): string | null {
-  return typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
-}
 
 export const promoteLocationCandidate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -527,7 +524,7 @@ export const promoteFactionCandidate = createServerFn({ method: "POST" })
           candidate_id: cand.id,
           name,
           normalized_key: cand.normalized_key,
-          kind: data.kind ?? pickString(payload.kind),
+          kind: data.kind ?? (typeof payload.kind === "string" && payload.kind.trim() ? payload.kind.trim() : null),
           description: data.description ?? null,
         },
         { onConflict: "universe_id,normalized_key" },
@@ -575,7 +572,7 @@ export const promoteEventCandidate = createServerFn({ method: "POST" })
 
     // Resolve location by normalized key if the extractor tagged one.
     let locationId: string | null = null;
-    const locKey = pickString(payload.location_key);
+    const locKey = typeof payload.location_key === "string" && payload.location_key.trim() ? payload.location_key.trim() : null;
     if (locKey) {
       const { data: loc } = await supabase
         .from("world_locations")
@@ -612,7 +609,7 @@ export const promoteEventCandidate = createServerFn({ method: "POST" })
         candidate_id: cand.id,
         label: name,
         sequence,
-        when_hint: pickString(payload.time),
+        when_hint: typeof payload.time === "string" && payload.time.trim() ? payload.time.trim() : null,
       });
     }
 
