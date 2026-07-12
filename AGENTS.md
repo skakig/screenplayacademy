@@ -22,6 +22,8 @@ Table reads, voice previews, live manuscript readings, audiobook creation, audio
 
 Scene parsing, production breakdown, shot planning, storyboards, image/video generation, dialogue audio, lip sync, sequence assembly, creator-video export, AI-native production, and scene-to-film workflows must follow `docs/SCENESMITH_SCENE_TO_SCREEN_PIPELINE.md`: parse before producing, compile scenes into reviewable shots, use approved Character/World state, track cost and lineage, and never reduce a film to one giant provider prompt.
 
+Arena, timed creative challenges, blind judging, peer or hybrid evaluation, AI Coach judging, writer-development profiles, Academy practice loops, Arena reputation, and ITS/PfHU skill development must follow `docs/SCENESMITH_ARENA_INTELLIGENCE_AND_WRITER_DEVELOPMENT.md`: stabilize the existing implementation before exposure, keep scoring blind and profile-neutral, personalize feedback only after scoring, require evidence for AI judgments, and keep public Arena disabled until every release gate passes.
+
 Authorized source ingestion, corpus extraction, adaptive series onboarding, writer knowledge mapping, Character/World population proposals, source authority, and evidence-backed continuity or editorial review must follow `docs/ITS_PfHU_Importation.md`: preserve the source, attach evidence, let humans control identity and canon, use ITS to determine what must be understood, and use PfHU to determine how that understanding is presented.
 
 ## Prime Directive
@@ -68,6 +70,8 @@ For self-review, continuity audits, Character/World alignment, adaptation or can
 For table reads, voice previews, live manuscript readings, audiobooks, audio drama, narration, pronunciation, provider rate limits, retry UX, audio credits, mastering, or audio exports, `docs/SCENESMITH_AUDIOBOOK_TABLE_READ_STUDIO.md` is the canonical doctrine.
 
 For screenplay parsing into scenes and dialogue, production breakdown, shot planning, image/video provider adapters, consistent character/location references, lip sync, edit timelines, creator-video assembly, or film-generation workflows, `docs/SCENESMITH_SCENE_TO_SCREEN_PIPELINE.md` is the canonical doctrine.
+
+For Arena, creative competitions, solo practice, blind or hybrid judging, Arena routes and menu wiring, AI evaluation, writer skill observations, Academy repair loops, writer profile updates, awards, or Arena monetization, `docs/SCENESMITH_ARENA_INTELLIGENCE_AND_WRITER_DEVELOPMENT.md` is the canonical doctrine and release gate.
 
 For ITS/PfHU Importation, authorized corpus ingestion, character or world auto-population proposals, identity resolution from prior works, source authority, adaptive series onboarding, writer knowledge maps, continuation packages, or imported-canon editorial review, `docs/ITS_PfHU_Importation.md` is the canonical product doctrine.
 
@@ -124,6 +128,8 @@ Review Intelligence must follow the phased sequence in `docs/SCENESMITH_REVIEW_I
 Audiobook & Table Read work must follow the phased sequence in `docs/SCENESMITH_AUDIOBOOK_TABLE_READ_STUDIO.md`. Reliable previews, explicit job states, idempotent billing, credit reservation, provider-rate-limit handling, pronunciation, source hashes, and selective retry must be proven before long-form audiobook generation is considered ready.
 
 Scene-to-Screen work must follow the phased sequence in `docs/SCENESMITH_SCENE_TO_SCREEN_PIPELINE.md`. Deterministic scene parsing, dialogue/action lineage, Production Graph breakdown, approved Character/World reference packages, cost estimates, shot approvals, and asset lineage must be proven before creator-video or film-generation claims are made.
+
+Arena work must follow the phased sequence in `docs/SCENESMITH_ARENA_INTELLIGENCE_AND_WRITER_DEVELOPMENT.md`. Keep Arena publicly disabled until current dependencies are stable, completed results and blind identity UX are fixed, first-class routing and menu wiring are ready, scoring is profile-neutral, profile updates are transparent, and cost, retry, RLS, and release gates pass. Stabilize existing Arena v1 before adding AI judges or ITS/PfHU profile updates.
 
 ITS/PfHU Importation must follow the phased sequence in `docs/ITS_PfHU_Importation.md`. Source preservation, segmentation, evidence, candidate review, identity decisions, source authority, and canon governance must be proven before adaptive onboarding, continuation guidance, or imported-canon editorial review is treated as authoritative.
 
