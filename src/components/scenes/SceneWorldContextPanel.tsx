@@ -91,11 +91,8 @@ export function SceneWorldContextPanel({ projectId, sceneId }: Props) {
         {entities.map((ctx) => {
           const Icon = kindIcon(ctx.entity.entity_kind);
           return (
-            <Card
-              key={ctx.entity.id}
-              className="p-3 space-y-2 bg-muted/20"
-              as="li"
-            >
+            <li key={ctx.entity.id}>
+            <Card className="p-3 space-y-2 bg-muted/20">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
