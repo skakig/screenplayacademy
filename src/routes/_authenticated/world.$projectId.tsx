@@ -14,8 +14,10 @@ import { getWorldHubSnapshot } from "@/lib/importation/world-hub.functions";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import {
   Loader2, Globe, FileText, Users, MapPin, Flag, Calendar,
-  Scroll, Package, GitBranch, Clock, AlertTriangle,
+  Scroll, Package, GitBranch, Clock, AlertTriangle, Network,
 } from "lucide-react";
+import { useServerFn as useServerFn2 } from "@tanstack/react-start";
+import { listWorldEntities } from "@/lib/world/worldGraph.functions";
 import type { ProjectStoryIntelligence } from "@/lib/story-intelligence/projectStoryIntelligence.functions";
 
 export const Route = createFileRoute("/_authenticated/world/$projectId")({
