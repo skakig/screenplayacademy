@@ -1,9 +1,7 @@
 /**
- * Read-only World Hub aggregator.
- *
- * Loads counts + sample rows for every currently implemented world entity
- * table so the Hub UI can render tabs without opening N connections. All
- * reads run under RLS as the signed-in user.
+ * Read-only World Hub aggregator. Loads counts + sample rows for every
+ * currently implemented world entity table so the Hub UI can render tabs
+ * from a single request. All reads run under RLS as the signed-in user.
  */
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -14,21 +12,19 @@ const Input = z.object({
   projectId: z.string().uuid(),
 });
 
-type Row = { id: string; name: string | null; description?: string | null; created_at: string };
-
-async function fetchTable(
+async function loadTable(
   supabase: any,
   table: string,
   universeId: string,
-  columns = "id, name, description, created_at",
-): Promise<{ count: number; rows: Row[] }> {
+  columns: string,
+) {
   const { data, count } = await supabase
     .from(table)
     .select(columns, { count: "exact" })
     .eq("universe_id", universeId)
     .order("created_at", { ascending: false })
     .limit(25);
-  return { count: count ?? 0, rows: (data as Row[]) ?? [] };
+  return { count: count ?? 0, rows: (data as any[]) ?? [] };
 }
 
 export const getWorldHubSnapshot = createServerFn({ method: "GET" })
@@ -57,18 +53,18 @@ export const getWorldHubSnapshot = createServerFn({ method: "GET" })
         .limit(25),
       supabase
         .from("character_bibles")
-        .select("id, version, created_at, character_count", { count: "exact" })
+        .select("id, version, created_at", { count: "exact" })
         .eq("universe_id", data.universeId)
         .eq("project_id", data.projectId)
         .order("created_at", { ascending: false })
         .limit(5),
-      fetchTable(supabase, "world_locations", data.universeId),
-      fetchTable(supabase, "world_factions", data.universeId),
-      fetchTable(supabase, "world_events", data.universeId),
-      fetchTable(supabase, "world_rules", data.universeId),
-      fetchTable(supabase, "world_artifacts", data.universeId),
-      fetchTable(supabase, "world_threads", data.universeId),
-      fetchTable(supabase, "world_timeline_entries", data.universeId, "id, name, description, created_at"),
+      loadTable(supabase, "world_locations", data.universeId, "id, name, description, created_at"),
+      loadTable(supabase, "world_factions", data.universeId, "id, name, description, created_at"),
+      loadTable(supabase, "world_events", data.universeId, "id, name, created_at"),
+      loadTable(supabase, "world_rules", data.universeId, "id, name, created_at"),
+      loadTable(supabase, "world_artifacts", data.universeId, "id, name, description, created_at"),
+      loadTable(supabase, "world_threads", data.universeId, "id, name, status, created_at"),
+      loadTable(supabase, "world_timeline_entries", data.universeId, "id, created_at"),
     ]);
 
     return {
