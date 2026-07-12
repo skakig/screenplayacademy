@@ -1712,6 +1712,136 @@ export type Database = {
           },
         ]
       }
+      import_candidates: {
+        Row: {
+          candidate_type: string
+          confidence: number
+          created_at: string
+          created_by: string
+          document_id: string | null
+          extractor_adapter: string
+          extractor_version: string
+          id: string
+          normalized_key: string
+          promoted_ref: Json | null
+          proposed_payload: Json
+          review_notes: string | null
+          status: string
+          universe_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_type: string
+          confidence?: number
+          created_at?: string
+          created_by: string
+          document_id?: string | null
+          extractor_adapter: string
+          extractor_version: string
+          id?: string
+          normalized_key: string
+          promoted_ref?: Json | null
+          proposed_payload?: Json
+          review_notes?: string | null
+          status?: string
+          universe_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_type?: string
+          confidence?: number
+          created_at?: string
+          created_by?: string
+          document_id?: string | null
+          extractor_adapter?: string
+          extractor_version?: string
+          id?: string
+          normalized_key?: string
+          promoted_ref?: Json | null
+          proposed_payload?: Json
+          review_notes?: string | null
+          status?: string
+          universe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_candidates_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_candidates_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_evidence: {
+        Row: {
+          candidate_id: string
+          confidence: number
+          created_at: string
+          direct_or_inferred: string
+          evidence_type: string
+          excerpt: string
+          id: string
+          location_hint: string | null
+          segment_id: string
+          universe_id: string
+        }
+        Insert: {
+          candidate_id: string
+          confidence?: number
+          created_at?: string
+          direct_or_inferred?: string
+          evidence_type?: string
+          excerpt: string
+          id?: string
+          location_hint?: string | null
+          segment_id: string
+          universe_id: string
+        }
+        Update: {
+          candidate_id?: string
+          confidence?: number
+          created_at?: string
+          direct_or_inferred?: string
+          evidence_type?: string
+          excerpt?: string
+          id?: string
+          location_hint?: string | null
+          segment_id?: string
+          universe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_evidence_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "import_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_evidence_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "source_segments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_evidence_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_extraction_runs: {
         Row: {
           adapter: string
@@ -1762,6 +1892,59 @@ export type Database = {
           },
           {
             foreignKeyName: "import_extraction_runs_universe_id_fkey"
+            columns: ["universe_id"]
+            isOneToOne: false
+            referencedRelation: "story_universes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_identity_decisions: {
+        Row: {
+          canonical_name: string | null
+          created_at: string
+          decided_by: string
+          decision: string
+          id: string
+          kept_separate_candidate_ids: string[]
+          merged_candidate_ids: string[]
+          reason: string | null
+          subject_key: string
+          subject_type: string
+          universe_id: string
+          updated_at: string
+        }
+        Insert: {
+          canonical_name?: string | null
+          created_at?: string
+          decided_by: string
+          decision: string
+          id?: string
+          kept_separate_candidate_ids?: string[]
+          merged_candidate_ids?: string[]
+          reason?: string | null
+          subject_key: string
+          subject_type: string
+          universe_id: string
+          updated_at?: string
+        }
+        Update: {
+          canonical_name?: string | null
+          created_at?: string
+          decided_by?: string
+          decision?: string
+          id?: string
+          kept_separate_candidate_ids?: string[]
+          merged_candidate_ids?: string[]
+          reason?: string | null
+          subject_key?: string
+          subject_type?: string
+          universe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_identity_decisions_universe_id_fkey"
             columns: ["universe_id"]
             isOneToOne: false
             referencedRelation: "story_universes"
