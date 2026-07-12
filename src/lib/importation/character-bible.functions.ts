@@ -436,10 +436,11 @@ export const regenerateCharacterBibleFromScreenplay = createServerFn({
             include_pending: false,
           },
         });
-        const actions = (res as { actions?: { type: string }[] })?.actions ?? [];
-        for (const a of actions) {
-          if (a.type === "create") promotedActions += 1;
-          else if (a.type === "reuse") reusedActions += 1;
+        const promoted =
+          (res as { promoted?: { created: boolean }[] })?.promoted ?? [];
+        for (const p of promoted) {
+          if (p.created) promotedActions += 1;
+          else reusedActions += 1;
         }
       } catch (e) {
         docErrors.push({
