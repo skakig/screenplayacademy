@@ -452,7 +452,7 @@ export const setWriterKnowledgeState = createServerFn({ method: "POST" })
             "card",
           ])
           .default("evidence_first"),
-        evidence_of_understanding: z.record(z.any()).default({}),
+        evidence_of_understanding: z.record(z.string(), z.unknown()).default({}),
       })
       .parse(input),
   )
