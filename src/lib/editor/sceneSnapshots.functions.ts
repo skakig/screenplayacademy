@@ -10,7 +10,7 @@ export type SceneSnapshotBlock = {
   content: string;
   order_index: number;
   character_id?: string | null;
-  metadata?: Record<string, unknown> | null;
+  metadata?: Record<string, any> | null;
 };
 
 export type SceneSnapshotPayload = {
