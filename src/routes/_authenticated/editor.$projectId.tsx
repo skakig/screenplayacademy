@@ -937,6 +937,7 @@ function Editor() {
               )}
               {(blocks as any[]).length > 0 && !focus && (
                 <div className="max-w-[680px] mx-auto mt-4 flex justify-end gap-2">
+                  <SceneSnapshotButton projectId={projectId} activeBlockId={activeBlockId} />
                   <Button variant="outline" size="sm" onClick={() => {
                     const local = editorRef.current?.getBlocks() ?? (blocks as any[]);
                     const text = local.filter((b: any) => b.block_type !== "note").map(formatExport).join("\n\n");
