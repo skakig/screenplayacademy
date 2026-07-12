@@ -7,13 +7,18 @@ import { AppShell } from "@/components/AppShell";
 import { ProjectNav } from "@/components/ProjectNav";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Sparkles, Copy, Loader2, FileDown, Clapperboard } from "lucide-react";
+import { Sparkles, Copy, Loader2, FileDown, Clapperboard, BookOpen, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { generatePitchPackage } from "@/lib/ai.functions";
 import { format } from "date-fns";
 import { downloadPitchKitPdf } from "@/components/editor/pitchKitPdf";
 import { downloadPitchDeckPdf, type PitchDeckSection } from "@/components/editor/pitchDeckPdf";
+import { getPitchCharacterBible } from "@/lib/importation/pitch-bible.functions";
+import { useSubscription } from "@/hooks/useSubscription";
+import { hasFeature } from "@/lib/entitlements";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 
 import { PageFeatureGate } from "@/components/PageFeatureGate";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
@@ -52,6 +57,10 @@ function Pitch() {
   const { projectId } = Route.useParams();
   const qc = useQueryClient();
   const callGen = useServerFn(generatePitchPackage);
+  const fetchBible = useServerFn(getPitchCharacterBible);
+  const { tier } = useSubscription();
+  const bibleUnlocked = hasFeature(tier, "pitch_character_bible");
+  const [includeBible, setIncludeBible] = useState(true);
 
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
@@ -92,6 +101,26 @@ function Pitch() {
         toast.error("Pitch package is empty — regenerate it first.");
         return;
       }
+
+      let characterBible = null;
+      if (bibleUnlocked && includeBible) {
+        try {
+          const b = await fetchBible({ data: { project_id: projectId } });
+          if (b && b.entries.length > 0) {
+            characterBible = b;
+          } else if (b === null) {
+            toast.info("No Character Bible generated yet — export continues without it.");
+          }
+        } catch (e: any) {
+          const msg = String(e?.message ?? "");
+          if (msg.startsWith("PLAN_LIMIT")) {
+            toast.error("Character Bible export requires Pro or higher.");
+          } else {
+            toast.error(`Couldn't attach Character Bible: ${msg || "unknown error"}`);
+          }
+        }
+      }
+
       downloadPitchDeckPdf({
         projectTitle: project?.title ?? "Untitled Project",
         projectType: (project as any)?.project_type ?? null,
@@ -100,8 +129,13 @@ function Pitch() {
         logline: (pitch as any)?.logline ?? (project as any)?.logline ?? null,
         sections,
         generatedAt: (pitch as any)?.generated_at ?? null,
+        characterBible,
       });
-      toast.success("Pitch deck downloaded");
+      toast.success(
+        characterBible
+          ? `Pitch deck downloaded (Character Bible v${characterBible.version} attached)`
+          : "Pitch deck downloaded",
+      );
     } catch (e: any) {
       toast.error(e?.message ?? "Couldn't export pitch deck");
     } finally {
@@ -171,6 +205,36 @@ function Pitch() {
             </Button>
           </div>
         </div>
+
+        {pitch && (
+          <Card className="p-3 mb-6 flex flex-wrap items-center gap-3">
+            <BookOpen className="h-4 w-4 text-primary" />
+            <div className="flex-1 min-w-[220px]">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">
+                  Include Character Bible in pitch deck
+                </span>
+                {!bibleUnlocked && (
+                  <Badge variant="outline" className="gap-1 text-xs">
+                    <Lock className="h-3 w-3" /> Pro
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {bibleUnlocked
+                  ? "Attaches the latest generated Character Bible as extra slides."
+                  : "Upgrade to Pro or higher to attach the Character Bible to pitch exports."}
+              </p>
+            </div>
+            <Switch
+              checked={bibleUnlocked && includeBible}
+              disabled={!bibleUnlocked}
+              onCheckedChange={(v) => setIncludeBible(v)}
+              aria-label="Include Character Bible in pitch deck"
+            />
+          </Card>
+        )}
+
 
         {!pitch ? (
           <Card className="p-12 text-center border-dashed">
