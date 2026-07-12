@@ -90,6 +90,9 @@ function Pitch() {
   >({});
   const listSnapshots = useServerFn(listProjectSceneSnapshots);
   const fetchSnapshot = useServerFn(getSceneSnapshot);
+  const fetchWorldUsage = useServerFn(getWorldUsageReport);
+  const [includeWorldUsage, setIncludeWorldUsage] = useState(true);
+
 
   const { data: snapshotGroups = [] as ProjectSnapshotSceneGroup[] } = useQuery({
     queryKey: ["pitch-scene-snapshots", projectId],
