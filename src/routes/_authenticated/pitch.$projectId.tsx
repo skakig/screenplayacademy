@@ -18,6 +18,13 @@ import {
   getPitchCharacterBible,
   listPitchCharacterBibleVersions,
 } from "@/lib/importation/pitch-bible.functions";
+import {
+  listProjectSceneSnapshots,
+  getSceneSnapshot,
+  type ProjectSnapshotSceneGroup,
+} from "@/lib/editor/sceneSnapshots.functions";
+import type { PitchDeckSceneSnapshot } from "@/components/editor/pitchDeckPdf";
+import { Clapperboard as SceneIcon } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { hasFeature } from "@/lib/entitlements";
 import { Switch } from "@/components/ui/switch";
