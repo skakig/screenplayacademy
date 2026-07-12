@@ -8,6 +8,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import {
   WORLD_ENTITY_KINDS,
   WORLD_ENTITY_SOURCES,
