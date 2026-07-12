@@ -49,23 +49,50 @@ function ScenesPage() {
     },
   });
 
+  const runAutoLink = useServerFn(autoLinkSceneLocations);
+  const autoLinkAfter = (hadHeading: boolean) => {
+    if (!hadHeading) return;
+    // Fire-and-forget; idempotent project-wide relink.
+    runAutoLink({ data: { projectId } })
+      .then((res: any) => {
+        if (res?.usageUpserted || res?.usageUnlinked) {
+          qc.invalidateQueries({ queryKey: ["scene-world-locations"] });
+          qc.invalidateQueries({ queryKey: ["world-usage", projectId] });
+        }
+      })
+      .catch((e: any) => {
+        console.warn("[scenes] auto-link failed", e?.message ?? e);
+      });
+  };
+
   const save = useMutation({
     mutationFn: async (s: any) => {
       if (s.id) {
         const { id, ...rest } = s;
         const { error } = await supabase.from("scenes").update(rest).eq("id", id);
         if (error) throw error;
+        return { hadHeading: !!(rest.scene_heading ?? "").toString().trim() };
       } else {
         const { error } = await supabase.from("scenes").insert({ ...s, project_id: projectId, order_index: scenes.length });
         if (error) throw error;
+        return { hadHeading: !!(s.scene_heading ?? "").toString().trim() };
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["scenes", projectId] }); setOpen(false); setEditing(null); toast.success("Saved"); },
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["scenes", projectId] });
+      setOpen(false);
+      setEditing(null);
+      toast.success("Saved");
+      autoLinkAfter(!!res?.hadHeading);
+    },
   });
 
   const del = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("scenes").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["scenes", projectId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["scenes", projectId] });
+      autoLinkAfter(true);
+    },
   });
 
   return (
