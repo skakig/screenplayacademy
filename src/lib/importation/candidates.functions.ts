@@ -87,12 +87,6 @@ export const runCandidateExtraction = createServerFn({ method: "POST" })
       return { candidates_written: 0, evidence_written: 0, skipped: true };
     }
 
-    const candidates = await screenplayHeuristicEntityExtractor.extract({
-      segments,
-      sourceType: "screenplay",
-      types: ["character", "location", "relationship"],
-    });
-
     // Load any existing identity decisions so we don't re-propose merges
     // the user already rejected ("kept_separate").
     const { data: decisions } = await supabase
@@ -105,95 +99,133 @@ export const runCandidateExtraction = createServerFn({ method: "POST" })
         .map((d) => `${d.subject_type}:${d.subject_key}`),
     );
 
-    // Upsert candidates.
-    const candidateRows = candidates
-      .filter((c) => !keptSeparate.has(`${c.candidateType}:${c.normalizedKey}`))
-      .map((c) => ({
-        universe_id: doc.universe_id,
-        document_id: doc.id,
-        candidate_type: c.candidateType,
-        normalized_key: c.normalizedKey,
-        proposed_payload: c.proposedPayload as never,
-        confidence: c.confidence,
-        extractor_adapter: screenplayHeuristicEntityExtractor.adapter,
-        extractor_version: screenplayHeuristicEntityExtractor.version,
-        created_by: userId,
-        status: "pending",
-      }));
-
-    if (candidateRows.length === 0) {
-      return { candidates_written: 0, evidence_written: 0, skipped: false };
-    }
-
-    const { data: upserted, error: upErr } = await supabase
-      .from("import_candidates")
-      .upsert(candidateRows, {
-        onConflict:
-          "universe_id,candidate_type,normalized_key,extractor_adapter,extractor_version",
-      })
-      .select("id, candidate_type, normalized_key");
-    if (upErr) throw new Error(upErr.message);
-
-    // Key by (type, normalizedKey) → id so we can attach evidence.
-    const idByKey = new Map<string, string>();
-    for (const row of upserted ?? []) {
-      idByKey.set(`${row.candidate_type}:${row.normalized_key}`, row.id);
-    }
-
-    const evidenceRows: {
-      candidate_id: string;
-      segment_id: string;
-      universe_id: string;
-      excerpt: string;
-      evidence_type: string;
-      confidence: number;
-      direct_or_inferred: string;
-      location_hint: string | null;
-    }[] = [];
-    for (const c of candidates) {
-      const cid = idByKey.get(`${c.candidateType}:${c.normalizedKey}`);
-      if (!cid) continue;
-      for (const e of c.evidence) {
-        evidenceRows.push({
-          candidate_id: cid,
-          segment_id: e.segmentId,
-          universe_id: doc.universe_id,
-          excerpt: e.excerpt.slice(0, 1000),
-          evidence_type: e.evidenceType,
-          confidence: e.confidence,
-          direct_or_inferred: e.directOrInferred,
-          location_hint: e.locationHint ?? null,
-        });
-      }
-    }
-
-    if (evidenceRows.length > 0) {
-      const { error: evErr } = await supabase
-        .from("import_evidence")
-        .upsert(evidenceRows, { onConflict: "candidate_id,segment_id,excerpt" });
-      if (evErr) throw new Error(evErr.message);
-    }
-
-    await supabase.from("import_extraction_runs").upsert(
+    // Phase 2 + Phase 3 extractors run together; each records its own
+    // extraction_runs row so re-ingest is idempotent per adapter+version.
+    const extractors = [
       {
-        document_id: doc.id,
-        universe_id: doc.universe_id,
-        stage: "extract",
-        adapter: screenplayHeuristicEntityExtractor.adapter,
-        adapter_version: screenplayHeuristicEntityExtractor.version,
-        input_checksum: doc.checksum,
-        status: "succeeded",
-        output_summary: {
-          candidates: candidateRows.length,
-          evidence: evidenceRows.length,
-        } as never,
+        extractor: screenplayHeuristicEntityExtractor,
+        types: ["character", "location", "relationship"] as const,
       },
-      { onConflict: "document_id,stage,adapter,adapter_version,input_checksum" },
-    );
+      {
+        extractor: screenplayHeuristicWorldExtractor,
+        types: ["event", "artifact", "thread"] as const,
+      },
+    ];
+
+    let totalCandidates = 0;
+    let totalEvidence = 0;
+
+    for (const { extractor, types } of extractors) {
+      const candidates = await extractor.extract({
+        segments,
+        sourceType: "screenplay",
+        types: [...types],
+      });
+
+      const candidateRows = candidates
+        .filter((c) => !keptSeparate.has(`${c.candidateType}:${c.normalizedKey}`))
+        .map((c) => ({
+          universe_id: doc.universe_id,
+          document_id: doc.id,
+          candidate_type: c.candidateType,
+          normalized_key: c.normalizedKey,
+          proposed_payload: c.proposedPayload as never,
+          confidence: c.confidence,
+          extractor_adapter: extractor.adapter,
+          extractor_version: extractor.version,
+          created_by: userId,
+          status: "pending",
+        }));
+
+      if (candidateRows.length === 0) {
+        await supabase.from("import_extraction_runs").upsert(
+          {
+            document_id: doc.id,
+            universe_id: doc.universe_id,
+            stage: "extract",
+            adapter: extractor.adapter,
+            adapter_version: extractor.version,
+            input_checksum: doc.checksum,
+            status: "succeeded",
+            output_summary: { candidates: 0, evidence: 0 } as never,
+          },
+          { onConflict: "document_id,stage,adapter,adapter_version,input_checksum" },
+        );
+        continue;
+      }
+
+      const { data: upserted, error: upErr } = await supabase
+        .from("import_candidates")
+        .upsert(candidateRows, {
+          onConflict:
+            "universe_id,candidate_type,normalized_key,extractor_adapter,extractor_version",
+        })
+        .select("id, candidate_type, normalized_key");
+      if (upErr) throw new Error(upErr.message);
+
+      const idByKey = new Map<string, string>();
+      for (const row of upserted ?? []) {
+        idByKey.set(`${row.candidate_type}:${row.normalized_key}`, row.id);
+      }
+
+      const evidenceRows: {
+        candidate_id: string;
+        segment_id: string;
+        universe_id: string;
+        excerpt: string;
+        evidence_type: string;
+        confidence: number;
+        direct_or_inferred: string;
+        location_hint: string | null;
+      }[] = [];
+      for (const c of candidates) {
+        const cid = idByKey.get(`${c.candidateType}:${c.normalizedKey}`);
+        if (!cid) continue;
+        for (const e of c.evidence) {
+          evidenceRows.push({
+            candidate_id: cid,
+            segment_id: e.segmentId,
+            universe_id: doc.universe_id,
+            excerpt: e.excerpt.slice(0, 1000),
+            evidence_type: e.evidenceType,
+            confidence: e.confidence,
+            direct_or_inferred: e.directOrInferred,
+            location_hint: e.locationHint ?? null,
+          });
+        }
+      }
+
+      if (evidenceRows.length > 0) {
+        const { error: evErr } = await supabase
+          .from("import_evidence")
+          .upsert(evidenceRows, { onConflict: "candidate_id,segment_id,excerpt" });
+        if (evErr) throw new Error(evErr.message);
+      }
+
+      await supabase.from("import_extraction_runs").upsert(
+        {
+          document_id: doc.id,
+          universe_id: doc.universe_id,
+          stage: "extract",
+          adapter: extractor.adapter,
+          adapter_version: extractor.version,
+          input_checksum: doc.checksum,
+          status: "succeeded",
+          output_summary: {
+            candidates: candidateRows.length,
+            evidence: evidenceRows.length,
+          } as never,
+        },
+        { onConflict: "document_id,stage,adapter,adapter_version,input_checksum" },
+      );
+
+      totalCandidates += candidateRows.length;
+      totalEvidence += evidenceRows.length;
+    }
 
     return {
-      candidates_written: candidateRows.length,
-      evidence_written: evidenceRows.length,
+      candidates_written: totalCandidates,
+      evidence_written: totalEvidence,
       skipped: false,
     };
   });
