@@ -152,7 +152,7 @@ export const updateWorldEntity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => UpdateEntityInput.parse(input))
   .handler(async ({ data, context }): Promise<WorldEntity> => {
-    const patch: Record<string, any> = {};
+    const patch: TablesUpdate<"world_entities"> = {};
     if (data.name !== undefined) patch.name = data.name;
     if (data.summary !== undefined) patch.summary = data.summary;
     if (data.normalizedKey !== undefined) patch.normalized_key = data.normalizedKey;
@@ -252,7 +252,7 @@ export const updateWorldRelationship = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => UpdateRelInput.parse(input))
   .handler(async ({ data, context }): Promise<WorldEntityRelationship> => {
-    const patch: Record<string, any> = {};
+    const patch: TablesUpdate<"world_entity_relationships"> = {};
     if (data.notes !== undefined) patch.notes = data.notes;
     if (data.metadata !== undefined) patch.metadata = data.metadata;
     if (data.relationshipType !== undefined)
