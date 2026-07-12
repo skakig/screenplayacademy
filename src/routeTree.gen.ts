@@ -60,6 +60,7 @@ import { Route as AuthenticatedCharacterBibleProjectIdUniverseIdRouteImport } fr
 import { Route as AuthenticatedCastProjectIdCharacterIdRouteImport } from './routes/_authenticated/cast.$projectId.$characterId'
 import { Route as AuthenticatedAcademyModuleSlugLessonSlugRouteImport } from './routes/_authenticated/academy.$moduleSlug.$lessonSlug'
 import { Route as AuthenticatedCharactersProjectIdBuildIndexRouteImport } from './routes/_authenticated/characters.$projectId.build.index'
+import { Route as AuthenticatedWorldProjectIdEntityEntityIdRouteImport } from './routes/_authenticated/world.$projectId.entity.$entityId'
 import { Route as AuthenticatedImportationProjectIdUniverseIdDocumentIdRouteImport } from './routes/_authenticated/importation.$projectId.$universeId.$documentId'
 import { Route as AuthenticatedCharactersProjectIdProfileCharacterIdRouteImport } from './routes/_authenticated/characters.$projectId.profile.$characterId'
 import { Route as AuthenticatedCharactersProjectIdEditCharacterIdRouteImport } from './routes/_authenticated/characters.$projectId.edit.$characterId'
@@ -352,6 +353,12 @@ const AuthenticatedCharactersProjectIdBuildIndexRoute =
     path: '/build/',
     getParentRoute: () => AuthenticatedCharactersProjectIdRoute,
   } as any)
+const AuthenticatedWorldProjectIdEntityEntityIdRoute =
+  AuthenticatedWorldProjectIdEntityEntityIdRouteImport.update({
+    id: '/entity/$entityId',
+    path: '/entity/$entityId',
+    getParentRoute: () => AuthenticatedWorldProjectIdRoute,
+  } as any)
 const AuthenticatedImportationProjectIdUniverseIdDocumentIdRoute =
   AuthenticatedImportationProjectIdUniverseIdDocumentIdRouteImport.update({
     id: '/$documentId',
@@ -415,7 +422,7 @@ export interface FileRoutesByFullPath {
   '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
   '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
   '/vault/$projectId': typeof AuthenticatedVaultProjectIdRoute
-  '/world/$projectId': typeof AuthenticatedWorldProjectIdRoute
+  '/world/$projectId': typeof AuthenticatedWorldProjectIdRouteWithChildren
   '/writers-room/$projectId': typeof AuthenticatedWritersRoomProjectIdRoute
   '/api/importation/promote-characters': typeof ApiImportationPromoteCharactersRoute
   '/academy/': typeof AuthenticatedAcademyIndexRoute
@@ -431,6 +438,7 @@ export interface FileRoutesByFullPath {
   '/characters/$projectId/edit/$characterId': typeof AuthenticatedCharactersProjectIdEditCharacterIdRoute
   '/characters/$projectId/profile/$characterId': typeof AuthenticatedCharactersProjectIdProfileCharacterIdRoute
   '/importation/$projectId/$universeId/$documentId': typeof AuthenticatedImportationProjectIdUniverseIdDocumentIdRoute
+  '/world/$projectId/entity/$entityId': typeof AuthenticatedWorldProjectIdEntityEntityIdRoute
   '/characters/$projectId/build/': typeof AuthenticatedCharactersProjectIdBuildIndexRoute
 }
 export interface FileRoutesByTo {
@@ -470,7 +478,7 @@ export interface FileRoutesByTo {
   '/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
   '/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
   '/vault/$projectId': typeof AuthenticatedVaultProjectIdRoute
-  '/world/$projectId': typeof AuthenticatedWorldProjectIdRoute
+  '/world/$projectId': typeof AuthenticatedWorldProjectIdRouteWithChildren
   '/writers-room/$projectId': typeof AuthenticatedWritersRoomProjectIdRoute
   '/api/importation/promote-characters': typeof ApiImportationPromoteCharactersRoute
   '/academy': typeof AuthenticatedAcademyIndexRoute
@@ -486,6 +494,7 @@ export interface FileRoutesByTo {
   '/characters/$projectId/edit/$characterId': typeof AuthenticatedCharactersProjectIdEditCharacterIdRoute
   '/characters/$projectId/profile/$characterId': typeof AuthenticatedCharactersProjectIdProfileCharacterIdRoute
   '/importation/$projectId/$universeId/$documentId': typeof AuthenticatedImportationProjectIdUniverseIdDocumentIdRoute
+  '/world/$projectId/entity/$entityId': typeof AuthenticatedWorldProjectIdEntityEntityIdRoute
   '/characters/$projectId/build': typeof AuthenticatedCharactersProjectIdBuildIndexRoute
 }
 export interface FileRoutesById {
@@ -528,7 +537,7 @@ export interface FileRoutesById {
   '/_authenticated/storyboard/$projectId': typeof AuthenticatedStoryboardProjectIdRoute
   '/_authenticated/tableread/$projectId': typeof AuthenticatedTablereadProjectIdRoute
   '/_authenticated/vault/$projectId': typeof AuthenticatedVaultProjectIdRoute
-  '/_authenticated/world/$projectId': typeof AuthenticatedWorldProjectIdRoute
+  '/_authenticated/world/$projectId': typeof AuthenticatedWorldProjectIdRouteWithChildren
   '/_authenticated/writers-room/$projectId': typeof AuthenticatedWritersRoomProjectIdRoute
   '/api/importation/promote-characters': typeof ApiImportationPromoteCharactersRoute
   '/_authenticated/academy/': typeof AuthenticatedAcademyIndexRoute
@@ -544,6 +553,7 @@ export interface FileRoutesById {
   '/_authenticated/characters/$projectId/edit/$characterId': typeof AuthenticatedCharactersProjectIdEditCharacterIdRoute
   '/_authenticated/characters/$projectId/profile/$characterId': typeof AuthenticatedCharactersProjectIdProfileCharacterIdRoute
   '/_authenticated/importation/$projectId/$universeId/$documentId': typeof AuthenticatedImportationProjectIdUniverseIdDocumentIdRoute
+  '/_authenticated/world/$projectId/entity/$entityId': typeof AuthenticatedWorldProjectIdEntityEntityIdRoute
   '/_authenticated/characters/$projectId/build/': typeof AuthenticatedCharactersProjectIdBuildIndexRoute
 }
 export interface FileRouteTypes {
@@ -602,6 +612,7 @@ export interface FileRouteTypes {
     | '/characters/$projectId/edit/$characterId'
     | '/characters/$projectId/profile/$characterId'
     | '/importation/$projectId/$universeId/$documentId'
+    | '/world/$projectId/entity/$entityId'
     | '/characters/$projectId/build/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -657,6 +668,7 @@ export interface FileRouteTypes {
     | '/characters/$projectId/edit/$characterId'
     | '/characters/$projectId/profile/$characterId'
     | '/importation/$projectId/$universeId/$documentId'
+    | '/world/$projectId/entity/$entityId'
     | '/characters/$projectId/build'
   id:
     | '__root__'
@@ -714,6 +726,7 @@ export interface FileRouteTypes {
     | '/_authenticated/characters/$projectId/edit/$characterId'
     | '/_authenticated/characters/$projectId/profile/$characterId'
     | '/_authenticated/importation/$projectId/$universeId/$documentId'
+    | '/_authenticated/world/$projectId/entity/$entityId'
     | '/_authenticated/characters/$projectId/build/'
   fileRoutesById: FileRoutesById
 }
@@ -1099,6 +1112,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCharactersProjectIdBuildIndexRouteImport
       parentRoute: typeof AuthenticatedCharactersProjectIdRoute
     }
+    '/_authenticated/world/$projectId/entity/$entityId': {
+      id: '/_authenticated/world/$projectId/entity/$entityId'
+      path: '/entity/$entityId'
+      fullPath: '/world/$projectId/entity/$entityId'
+      preLoaderRoute: typeof AuthenticatedWorldProjectIdEntityEntityIdRouteImport
+      parentRoute: typeof AuthenticatedWorldProjectIdRoute
+    }
     '/_authenticated/importation/$projectId/$universeId/$documentId': {
       id: '/_authenticated/importation/$projectId/$universeId/$documentId'
       path: '/$documentId'
@@ -1218,6 +1238,21 @@ const AuthenticatedCharactersProjectIdRouteWithChildren =
     AuthenticatedCharactersProjectIdRouteChildren,
   )
 
+interface AuthenticatedWorldProjectIdRouteChildren {
+  AuthenticatedWorldProjectIdEntityEntityIdRoute: typeof AuthenticatedWorldProjectIdEntityEntityIdRoute
+}
+
+const AuthenticatedWorldProjectIdRouteChildren: AuthenticatedWorldProjectIdRouteChildren =
+  {
+    AuthenticatedWorldProjectIdEntityEntityIdRoute:
+      AuthenticatedWorldProjectIdEntityEntityIdRoute,
+  }
+
+const AuthenticatedWorldProjectIdRouteWithChildren =
+  AuthenticatedWorldProjectIdRoute._addFileChildren(
+    AuthenticatedWorldProjectIdRouteChildren,
+  )
+
 interface AuthenticatedImportationProjectIdUniverseIdRouteChildren {
   AuthenticatedImportationProjectIdUniverseIdDocumentIdRoute: typeof AuthenticatedImportationProjectIdUniverseIdDocumentIdRoute
 }
@@ -1253,7 +1288,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStoryboardProjectIdRoute: typeof AuthenticatedStoryboardProjectIdRoute
   AuthenticatedTablereadProjectIdRoute: typeof AuthenticatedTablereadProjectIdRoute
   AuthenticatedVaultProjectIdRoute: typeof AuthenticatedVaultProjectIdRoute
-  AuthenticatedWorldProjectIdRoute: typeof AuthenticatedWorldProjectIdRoute
+  AuthenticatedWorldProjectIdRoute: typeof AuthenticatedWorldProjectIdRouteWithChildren
   AuthenticatedWritersRoomProjectIdRoute: typeof AuthenticatedWritersRoomProjectIdRoute
   AuthenticatedAcademyIndexRoute: typeof AuthenticatedAcademyIndexRoute
   AuthenticatedCharacterBibleProjectIdUniverseIdRoute: typeof AuthenticatedCharacterBibleProjectIdUniverseIdRoute
@@ -1285,7 +1320,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedStoryboardProjectIdRoute: AuthenticatedStoryboardProjectIdRoute,
   AuthenticatedTablereadProjectIdRoute: AuthenticatedTablereadProjectIdRoute,
   AuthenticatedVaultProjectIdRoute: AuthenticatedVaultProjectIdRoute,
-  AuthenticatedWorldProjectIdRoute: AuthenticatedWorldProjectIdRoute,
+  AuthenticatedWorldProjectIdRoute:
+    AuthenticatedWorldProjectIdRouteWithChildren,
   AuthenticatedWritersRoomProjectIdRoute:
     AuthenticatedWritersRoomProjectIdRoute,
   AuthenticatedAcademyIndexRoute: AuthenticatedAcademyIndexRoute,
