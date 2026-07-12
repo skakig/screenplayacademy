@@ -166,6 +166,7 @@ export function SceneWorldContextPanel({ projectId, sceneId }: Props) {
                 </div>
               )}
             </Card>
+            </li>
           );
         })}
       </ul>
