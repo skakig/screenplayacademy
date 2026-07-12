@@ -18,7 +18,12 @@ import {
 } from "lucide-react";
 import { useServerFn as useServerFn2 } from "@tanstack/react-start";
 import { listWorldEntities } from "@/lib/world/worldGraph.functions";
-import { autoLinkSceneLocations } from "@/lib/editor/sceneWorldLink.functions";
+import {
+  autoLinkSceneLocations,
+  listSceneAutolinkRuns,
+  type AutoLinkRunRow,
+} from "@/lib/editor/sceneWorldLink.functions";
+
 import { toast } from "sonner";
 import type { ProjectStoryIntelligence } from "@/lib/story-intelligence/projectStoryIntelligence.functions";
 
