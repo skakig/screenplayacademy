@@ -14,7 +14,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { screenplayHeuristicEntityExtractor } from "./adapters/screenplay-entity-extractor";
-import type { SourceSegment } from "./contracts";
+import { screenplayHeuristicWorldExtractor } from "./adapters/screenplay-world-extractor";
+import type { EntityExtractor, ImportCandidate, SourceSegment } from "./contracts";
 
 // --- helpers ---
 
