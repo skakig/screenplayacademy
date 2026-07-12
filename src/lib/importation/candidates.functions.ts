@@ -102,14 +102,14 @@ export const runCandidateExtraction = createServerFn({ method: "POST" })
 
     // Phase 2 + Phase 3 extractors run together; each records its own
     // extraction_runs row so re-ingest is idempotent per adapter+version.
-    const extractors = [
+    const extractors: { extractor: EntityExtractor; types: string[] }[] = [
       {
         extractor: screenplayHeuristicEntityExtractor,
-        types: ["character", "location", "relationship"] as const,
+        types: ["character", "location", "relationship"],
       },
       {
         extractor: screenplayHeuristicWorldExtractor,
-        types: ["event", "artifact", "thread"] as const,
+        types: ["event", "artifact", "thread"],
       },
     ];
 
