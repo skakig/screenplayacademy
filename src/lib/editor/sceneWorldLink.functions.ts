@@ -20,6 +20,7 @@ export type SceneWorldLinkResult = {
   universeId: string | null;
   locationsEnsured: number;
   usageLinked: number;
+  usageUnlinked: number;
   scenesConsidered: number;
   skipped: number;
 };
@@ -47,6 +48,7 @@ export async function linkSceneLocationsForProject(
       universeId: null,
       locationsEnsured: 0,
       usageLinked: 0,
+      usageUnlinked: 0,
       scenesConsidered: 0,
       skipped: 0,
     };
@@ -74,7 +76,14 @@ export async function linkSceneLocationsForProject(
 
   let locationsEnsured = 0;
   let usageLinked = 0;
+  let usageUnlinked = 0;
   let skipped = 0;
+
+  // Desired state: which entityIds each scene should currently be linked to.
+  const desiredBySceneId = new Map<string, Set<string>>();
+  for (const s of (scenes ?? []) as any[]) {
+    desiredBySceneId.set(s.id, new Set());
+  }
 
   for (const [key, { name, sceneIds }] of buckets.entries()) {
     // world_locations row
@@ -159,8 +168,9 @@ export async function linkSceneLocationsForProject(
       }
     }
 
-    // project_world_usage per scene
+    // project_world_usage per scene — idempotent upsert.
     for (const sceneId of sceneIds) {
+      desiredBySceneId.get(sceneId)?.add(entityId!);
       const { error: usageErr } = await supabase
         .from("project_world_usage")
         .upsert(
@@ -183,14 +193,49 @@ export async function linkSceneLocationsForProject(
     }
   }
 
+  // Prune stale auto-links: any autolinked "setting" usage on a scene whose
+  // current heading no longer resolves to that entity. Only touches rows we
+  // created ourselves (metadata.source='scene_heading_autolink'), so manual
+  // links added via the UI are preserved.
+  const sceneIdsAll = Array.from(desiredBySceneId.keys());
+  if (sceneIdsAll.length > 0) {
+    const { data: existingUsage, error: exErr } = await supabase
+      .from("project_world_usage")
+      .select("id, scene_id, entity_id, metadata, usage_kind, script_block_id")
+      .eq("project_id", projectId)
+      .eq("usage_kind", "setting")
+      .is("script_block_id", null)
+      .in("scene_id", sceneIdsAll);
+    if (!exErr && existingUsage) {
+      const staleIds: string[] = [];
+      for (const row of existingUsage as any[]) {
+        const source = row?.metadata?.source;
+        if (source !== "scene_heading_autolink") continue;
+        const desired = desiredBySceneId.get(row.scene_id);
+        if (!desired || !desired.has(row.entity_id)) {
+          staleIds.push(row.id);
+        }
+      }
+      if (staleIds.length > 0) {
+        const { error: delErr, count } = await supabase
+          .from("project_world_usage")
+          .delete({ count: "exact" })
+          .in("id", staleIds);
+        if (!delErr) usageUnlinked += count ?? staleIds.length;
+      }
+    }
+  }
+
   return {
     universeId,
     locationsEnsured,
     usageLinked,
+    usageUnlinked,
     scenesConsidered: rows.length,
     skipped,
   };
 }
+
 
 export const autoLinkSceneLocations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
