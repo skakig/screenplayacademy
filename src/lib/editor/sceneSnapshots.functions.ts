@@ -130,6 +130,62 @@ export const listSceneSnapshots = createServerFn({ method: "GET" })
     return (rows ?? []) as SceneSnapshotRow[];
   });
 
+export type ProjectSnapshotSceneGroup = {
+  scene: {
+    id: string;
+    title: string | null;
+    scene_heading: string | null;
+    order_index: number | null;
+  };
+  snapshots: SceneSnapshotRow[];
+};
+
+export const listProjectSceneSnapshots = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({ project_id: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const [{ data: scenes, error: scenesErr }, { data: snaps, error: snapsErr }] =
+      await Promise.all([
+        supabase
+          .from("scenes")
+          .select("id, title, scene_heading, order_index")
+          .eq("project_id", data.project_id)
+          .order("order_index", { ascending: true }),
+        supabase
+          .from("scene_snapshots")
+          .select(
+            "id, project_id, scene_id, label, summary, block_count, word_count, created_at, updated_at",
+          )
+          .eq("project_id", data.project_id)
+          .order("created_at", { ascending: false })
+          .limit(500),
+      ]);
+    if (scenesErr) throw new Error(scenesErr.message);
+    if (snapsErr) throw new Error(snapsErr.message);
+
+    const bySceneId = new Map<string, SceneSnapshotRow[]>();
+    for (const s of (snaps ?? []) as SceneSnapshotRow[]) {
+      const arr = bySceneId.get(s.scene_id) ?? [];
+      arr.push(s);
+      bySceneId.set(s.scene_id, arr);
+    }
+    const groups: ProjectSnapshotSceneGroup[] = (scenes ?? [])
+      .map((sc: any) => ({
+        scene: {
+          id: sc.id,
+          title: sc.title,
+          scene_heading: sc.scene_heading,
+          order_index: sc.order_index,
+        },
+        snapshots: bySceneId.get(sc.id) ?? [],
+      }))
+      .filter((g) => g.snapshots.length > 0);
+    return groups;
+  });
+
 export const getSceneSnapshot = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
