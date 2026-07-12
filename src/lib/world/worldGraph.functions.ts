@@ -114,7 +114,7 @@ const CreateEntityInput = z.object({
   name: z.string().trim().min(1).max(200),
   summary: z.string().trim().max(4000).optional(),
   normalizedKey: z.string().trim().min(1).max(120).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export const createWorldEntity = createServerFn({ method: "POST" })
@@ -144,14 +144,14 @@ const UpdateEntityInput = z.object({
   name: z.string().trim().min(1).max(200).optional(),
   summary: z.string().trim().max(4000).nullable().optional(),
   normalizedKey: z.string().trim().min(1).max(120).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export const updateWorldEntity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => UpdateEntityInput.parse(input))
   .handler(async ({ data, context }): Promise<WorldEntity> => {
-    const patch: Record<string, unknown> = {};
+    const patch: Record<string, any> = {};
     if (data.name !== undefined) patch.name = data.name;
     if (data.summary !== undefined) patch.summary = data.summary;
     if (data.normalizedKey !== undefined) patch.normalized_key = data.normalizedKey;
@@ -214,7 +214,7 @@ const CreateRelInput = z.object({
   toEntityId: z.string().uuid(),
   relationshipType: relTypeEnum,
   notes: z.string().trim().max(2000).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export const createWorldRelationship = createServerFn({ method: "POST" })
@@ -243,7 +243,7 @@ export const createWorldRelationship = createServerFn({ method: "POST" })
 const UpdateRelInput = z.object({
   id: z.string().uuid(),
   notes: z.string().trim().max(2000).nullable().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   relationshipType: relTypeEnum.optional(),
 });
 
@@ -251,7 +251,7 @@ export const updateWorldRelationship = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => UpdateRelInput.parse(input))
   .handler(async ({ data, context }): Promise<WorldEntityRelationship> => {
-    const patch: Record<string, unknown> = {};
+    const patch: Record<string, any> = {};
     if (data.notes !== undefined) patch.notes = data.notes;
     if (data.metadata !== undefined) patch.metadata = data.metadata;
     if (data.relationshipType !== undefined)
@@ -311,7 +311,7 @@ const LinkUsageInput = z.object({
   sceneId: z.string().uuid().nullable().optional(),
   scriptBlockId: z.string().uuid().nullable().optional(),
   usageKind: usageKindEnum.optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export const linkProjectWorldUsage = createServerFn({ method: "POST" })

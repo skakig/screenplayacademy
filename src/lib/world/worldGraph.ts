@@ -65,7 +65,7 @@ export interface WorldEntity {
   summary: string | null;
   source: WorldEntitySource;
   candidate_id: string | null;
-  metadata: Record<string, unknown>;
+  metadata: Record<string, any>;
   created_at: string;
   updated_at: string;
 }
@@ -85,7 +85,7 @@ export interface WorldEntityRelationship {
   to_entity_id: string;
   relationship_type: WorldRelationshipType;
   notes: string | null;
-  metadata: Record<string, unknown>;
+  metadata: Record<string, any>;
   created_at: string;
   updated_at: string;
 }
@@ -97,7 +97,7 @@ export interface ProjectWorldUsage {
   scene_id: string | null;
   script_block_id: string | null;
   usage_kind: ProjectWorldUsageKind;
-  metadata: Record<string, unknown>;
+  metadata: Record<string, any>;
   created_at: string;
   updated_at: string;
 }
