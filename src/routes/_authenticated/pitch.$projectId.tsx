@@ -125,7 +125,14 @@ function Pitch() {
       let characterBible = null;
       if (bibleUnlocked && includeBible) {
         try {
-          const b = await fetchBible({ data: { project_id: projectId } });
+          const b = await fetchBible({
+            data: {
+              project_id: projectId,
+              ...(bibleVersionId !== "latest"
+                ? { bible_id: bibleVersionId }
+                : {}),
+            },
+          });
           if (b && b.entries.length > 0) {
             characterBible = b;
           } else if (b === null) {
