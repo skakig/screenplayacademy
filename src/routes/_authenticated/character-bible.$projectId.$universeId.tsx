@@ -167,8 +167,22 @@ function CharacterBiblePage() {
           )}
 
           <Button
+            variant="outline"
+            onClick={() => regenerate.mutate()}
+            disabled={busy}
+            className="gap-1.5"
+            title="Re-run character promotion across every source document, then compile the next version"
+          >
+            {regenerate.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Regenerate from screenplay
+          </Button>
+          <Button
             onClick={() => generate.mutate()}
-            disabled={generate.isPending}
+            disabled={busy}
             className="gap-1.5"
           >
             {generate.isPending ? (
@@ -178,6 +192,7 @@ function CharacterBiblePage() {
             )}
             Generate new version
           </Button>
+
         </header>
 
         {isLoading && (
