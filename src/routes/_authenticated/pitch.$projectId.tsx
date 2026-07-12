@@ -467,6 +467,27 @@ function Pitch() {
           </Card>
         )}
 
+        {pitch && (
+          <Card className="p-3 mb-6 flex flex-wrap items-center gap-3">
+            <Globe className="h-4 w-4 text-primary" />
+            <div className="flex-1 min-w-[220px]">
+              <div className="text-sm font-medium">
+                Include World Usage page
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Adds one slide per world entity with the scenes that reference it and its relationship edges.
+              </p>
+            </div>
+            <Switch
+              checked={includeWorldUsage}
+              onCheckedChange={(v) => setIncludeWorldUsage(v)}
+              aria-label="Include World Usage in pitch deck"
+            />
+          </Card>
+        )}
+
+
+
 
 
         {!pitch ? (
