@@ -96,7 +96,9 @@ export const runCandidateExtraction = createServerFn({ method: "POST" })
       .order("sequence", { ascending: true });
     if (sErr) throw new Error(sErr.message);
 
-    const segments = loadSegments(segRows ?? []);
+    const segments = loadSegments(
+      (segRows ?? []) as unknown as Parameters<typeof loadSegments>[0],
+    );
     if (segments.length === 0) {
       return { candidates_written: 0, evidence_written: 0, skipped: true };
     }
