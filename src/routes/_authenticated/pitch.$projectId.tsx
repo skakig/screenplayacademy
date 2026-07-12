@@ -18,6 +18,13 @@ import {
   getPitchCharacterBible,
   listPitchCharacterBibleVersions,
 } from "@/lib/importation/pitch-bible.functions";
+import {
+  listProjectSceneSnapshots,
+  getSceneSnapshot,
+  type ProjectSnapshotSceneGroup,
+} from "@/lib/editor/sceneSnapshots.functions";
+import type { PitchDeckSceneSnapshot } from "@/components/editor/pitchDeckPdf";
+import { Clapperboard as SceneIcon } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { hasFeature } from "@/lib/entitlements";
 import { Switch } from "@/components/ui/switch";
@@ -75,6 +82,17 @@ function Pitch() {
   const [bibleVersionId, setBibleVersionId] = useState<string | "latest">(
     "latest",
   );
+  // scene_id -> snapshot_id ("" = don't include). Absent key = don't include.
+  const [sceneSnapshotSelections, setSceneSnapshotSelections] = useState<
+    Record<string, string>
+  >({});
+  const listSnapshots = useServerFn(listProjectSceneSnapshots);
+  const fetchSnapshot = useServerFn(getSceneSnapshot);
+
+  const { data: snapshotGroups = [] as ProjectSnapshotSceneGroup[] } = useQuery({
+    queryKey: ["pitch-scene-snapshots", projectId],
+    queryFn: () => listSnapshots({ data: { project_id: projectId } }),
+  });
 
   const { data: bibleVersions = [] } = useQuery({
     queryKey: ["pitch-bible-versions", projectId],
@@ -148,6 +166,50 @@ function Pitch() {
         }
       }
 
+      // Resolve selected scene snapshots (fetch full payloads).
+      const chosen = Object.entries(sceneSnapshotSelections).filter(
+        ([, snapId]) => snapId && snapId.length > 0,
+      );
+      const sceneSnapshots: PitchDeckSceneSnapshot[] = [];
+      if (chosen.length > 0) {
+        // Preserve scene order from snapshotGroups.
+        const orderIndex = new Map(
+          snapshotGroups.map((g, i) => [g.scene.id, i] as const),
+        );
+        chosen.sort(
+          (a, b) => (orderIndex.get(a[0]) ?? 0) - (orderIndex.get(b[0]) ?? 0),
+        );
+        for (const [sceneId, snapshotId] of chosen) {
+          try {
+            const full = await fetchSnapshot({ data: { snapshot_id: snapshotId } });
+            const group = snapshotGroups.find((g) => g.scene.id === sceneId);
+            const sceneLabel =
+              group?.scene.title ||
+              group?.scene.scene_heading ||
+              full.snapshot.scene.title ||
+              full.snapshot.scene.scene_heading ||
+              "Scene";
+            sceneSnapshots.push({
+              sceneLabel,
+              sceneHeading:
+                full.snapshot.scene.scene_heading ??
+                group?.scene.scene_heading ??
+                null,
+              snapshotLabel: full.label ?? "Snapshot",
+              capturedAt: full.created_at,
+              blocks: full.snapshot.blocks.map((b) => ({
+                block_type: b.block_type,
+                content: b.content ?? "",
+              })),
+            });
+          } catch (e: any) {
+            toast.error(
+              `Couldn't attach snapshot for a scene: ${e?.message ?? "unknown error"}`,
+            );
+          }
+        }
+      }
+
       downloadPitchDeckPdf({
         projectTitle: project?.title ?? "Untitled Project",
         projectType: (project as any)?.project_type ?? null,
@@ -157,12 +219,16 @@ function Pitch() {
         sections,
         generatedAt: (pitch as any)?.generated_at ?? null,
         characterBible,
+        sceneSnapshots: sceneSnapshots.length > 0 ? sceneSnapshots : null,
       });
-      toast.success(
-        characterBible
-          ? `Pitch deck downloaded (Character Bible v${characterBible.version} attached)`
-          : "Pitch deck downloaded",
-      );
+      const bibleNote = characterBible
+        ? ` · Character Bible v${characterBible.version}`
+        : "";
+      const sceneNote =
+        sceneSnapshots.length > 0
+          ? ` · ${sceneSnapshots.length} scene snapshot${sceneSnapshots.length === 1 ? "" : "s"}`
+          : "";
+      toast.success(`Pitch deck downloaded${bibleNote}${sceneNote}`);
     } catch (e: any) {
       toast.error(e?.message ?? "Couldn't export pitch deck");
     } finally {
@@ -287,6 +353,76 @@ function Pitch() {
             />
           </Card>
         )}
+
+        {pitch && snapshotGroups.length > 0 && (
+          <Card className="p-4 mb-6">
+            <div className="flex items-start gap-3 mb-3">
+              <SceneIcon className="h-4 w-4 text-primary mt-0.5" />
+              <div className="flex-1">
+                <div className="text-sm font-medium">
+                  Include key scene snapshots
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Pick a saved snapshot version for each scene you want to
+                  attach as extra slides in the pitch deck.
+                </p>
+              </div>
+              {Object.values(sceneSnapshotSelections).filter(Boolean).length > 0 && (
+                <Badge variant="secondary" className="shrink-0">
+                  {Object.values(sceneSnapshotSelections).filter(Boolean).length} selected
+                </Badge>
+              )}
+            </div>
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {snapshotGroups.map((g) => {
+                const selected = sceneSnapshotSelections[g.scene.id] ?? "";
+                const heading =
+                  g.scene.scene_heading || g.scene.title || "Untitled scene";
+                return (
+                  <div
+                    key={g.scene.id}
+                    className="flex items-center gap-2 border rounded-md px-3 py-2"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">
+                        {heading}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {g.snapshots.length} snapshot
+                        {g.snapshots.length === 1 ? "" : "s"}
+                      </div>
+                    </div>
+                    <Select
+                      value={selected || "__none__"}
+                      onValueChange={(v) =>
+                        setSceneSnapshotSelections((prev) => ({
+                          ...prev,
+                          [g.scene.id]: v === "__none__" ? "" : v,
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="w-[260px]">
+                        <SelectValue placeholder="Don't include" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Don't include</SelectItem>
+                        {g.snapshots.map((s, i) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.label ?? `Snapshot ${i + 1}`}
+                            {i === 0 ? " · latest" : ""} ·{" "}
+                            {format(new Date(s.created_at), "MMM d, HH:mm")} ·{" "}
+                            {s.word_count.toLocaleString()} w
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        )}
+
 
 
         {!pitch ? (
