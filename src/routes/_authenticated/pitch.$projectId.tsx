@@ -23,7 +23,9 @@ import {
   getSceneSnapshot,
   type ProjectSnapshotSceneGroup,
 } from "@/lib/editor/sceneSnapshots.functions";
-import type { PitchDeckSceneSnapshot } from "@/components/editor/pitchDeckPdf";
+import type { PitchDeckSceneSnapshot, PitchDeckWorldUsage } from "@/components/editor/pitchDeckPdf";
+import { getWorldUsageReport } from "@/lib/world/worldUsageReport.functions";
+import { Globe } from "lucide-react";
 import { Clapperboard as SceneIcon } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { hasFeature } from "@/lib/entitlements";
